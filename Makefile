@@ -25,3 +25,7 @@ build:
 
 flex:
 	cd src/frontend && python build.py && cd -
+
+test:
+	node skewc.js $(SOURCES) src/lib/terminal.sk src/lib/timestamp.sk src/lib/unit.sk src/driver/tests.sk tests/simple.sk > build/test.js
+	mocha build/test.js

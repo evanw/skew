@@ -1,0 +1,205 @@
+namespace unit {
+  enum Status {
+    FAILURE
+    SUCCESS
+  }
+
+  class Report {
+    def begin(count int) {}
+    def completed(test Test, status Status) {}
+    def end {}
+  }
+
+  class Failure {
+    const expected string
+    const observed string
+  }
+
+  ################################################################################
+
+  class Test {
+    def new {
+      _all.append(self)
+    }
+
+    def name string { return _name }
+    def failure Failure { return _failure }
+    def rename(name string) { _name = name }
+
+    def before {}
+    def after {}
+    def run
+
+    def expectString(expected string, observed string) {
+      if expected != observed {
+        _failure = Failure.new(expected, observed)
+        dynamic.throw(_failure)
+      }
+    }
+
+    @private {
+      var _name = ""
+      var _failure Failure = null
+    }
+  }
+
+  namespace Test {
+    def runAll(report Report) {
+      var tests = _all
+
+      _all = []
+      report.begin(tests.count)
+
+      for test in tests {
+        test.before
+        # try {
+          test.run
+        # } catch {
+        #   if test._failure == null {
+        #     test._failure = Failure.new("", "(runtime error)")
+        #   }
+        # }
+        test.after
+        report.completed(test, test._failure == null ? .SUCCESS : .FAILURE)
+      }
+
+      report.end
+    }
+
+    @private
+    var _all List<Test> = []
+  }
+
+  ################################################################################
+
+  class TerminalReport : Report {
+    def failedCount int {
+      return _failed.count
+    }
+
+    over begin(count int) {
+      _wrapWidth = terminal.width * 3 / 4
+      _startTime = timestamp.now
+      _count = count
+      _completed = 0
+      terminal.write("\n  ")
+    }
+
+    over completed(test Test, status Status) {
+      _completed += 1
+      if status == .FAILURE {
+        _failed.append(test)
+        terminal.setColor(.RED)
+        terminal.write("x")
+      } else {
+        terminal.setColor(.GREEN)
+        terminal.write(".")
+      }
+      if _completed < _count && _wrapWidth != 0 && _completed % _wrapWidth == 0 {
+        terminal.write("\n  ")
+      }
+      terminal.setColor(.DEFAULT)
+      terminal.flush
+    }
+
+    over end {
+      terminal.print("\n")
+
+      # Print the summary
+      var totalTime = Math.floor((timestamp.now - _startTime) / 100) as int
+      terminal.setColor(.GREEN)
+      terminal.write("  " (_count - _failed.count) " passing")
+      terminal.setColor(.GRAY)
+      terminal.print("  (" (totalTime / 10) "." (totalTime % 10) "s)")
+      if _failed.count != 0 {
+        terminal.setColor(.RED)
+        terminal.print("  " _failed.count " failing")
+      }
+      terminal.setColor(.DEFAULT)
+      terminal.print("")
+
+      # Print the failed tests
+      var indent = " ".repeat(_failed.count.toString.count + 5)
+      for i in 0.._failed.count {
+        var test = _failed[i]
+        var text = "  " (i + 1) ")"
+        var failure = test.failure
+        terminal.setColor(.BOLD)
+        terminal.print(text + " ".repeat(indent.count - text.count) + test.name + "\n")
+        printDiff(indent,
+          failure.expected == "" ? [] : failure.expected.split("\n"),
+          failure.observed == "" ? [] : failure.observed.split("\n"))
+        terminal.setColor(.DEFAULT)
+        terminal.print("")
+      }
+    }
+
+    @private {
+      var _failed List<Test> = []
+      var _wrapWidth = 0
+      var _startTime = 0.0
+      var _completed = 0
+      var _count = 0
+    }
+  }
+
+  namespace TerminalReport {
+    @private
+    def printDiff(indent string, expected List<string>, observed List<string>) {
+      var m = expected.count
+      var n = observed.count
+      var matrix List<int> = []
+
+      # Solve for the lowest common subsequence length
+      if true {
+        var ij = 0
+        for i in 0..m {
+          for j in 0..n {
+            matrix.append(expected[i] == observed[j]
+              ? i > 0 && j > 0 ? matrix[ij - n - 1] + 1 : 1
+              : Math.max(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0))
+            ij += 1
+          }
+        }
+      }
+
+      # Extract the diff in reverse
+      var reversed List<string> = []
+      if true {
+        var i = m - 1
+        var j = n - 1
+        while i >= 0 || j >= 0 {
+          var ij = i * n + j
+
+          # Common
+          if i >= 0 && j >= 0 && expected[i] == observed[j] {
+            reversed.append(" " expected[i])
+            i -= 1
+            j -= 1
+          }
+
+          # Removal
+          else if j >= 0 && (i < 0 || (j > 0 ? matrix[ij - 1] : 0) > (i > 0 ? matrix[ij - n] : 0)) {
+            reversed.append("-" observed[j])
+            j -= 1
+          }
+
+          # Insertion
+          else {
+            assert(i >= 0 && (j < 0 || (j > 0 ? matrix[ij - 1] : 0) <= (i > 0 ? matrix[ij - n] : 0)))
+            reversed.append("+" expected[i])
+            i -= 1
+          }
+        }
+      }
+
+      # Print out the diff
+      for i in 0..reversed.count {
+        var text = reversed[reversed.count - i - 1]
+        var c = text[0]
+        terminal.setColor(c == '+' ? .GREEN : c == '-' ? .RED : .GRAY)
+        terminal.print(indent + text)
+      }
+    }
+  }
+}

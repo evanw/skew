@@ -1,0 +1,2806 @@
+namespace tests {
+  def testSimple {
+
+test("
+class Foo<T> {
+  def foo T
+}
+
+class Bar<T> {
+  def bar T
+}
+
+def main {
+  var x Foo<Bar<Foo<int>>>
+  var a bool = x
+  var b bool = x.foo
+  var c bool = x.foo.bar
+  var d bool = x.foo.bar.foo
+}
+", "
+<stdin>:11:16: error: Cannot convert from type \"Foo<Bar<Foo<int>>>\" to type \"bool\"
+  var a bool = x
+               ^
+<stdin>:12:16: error: Cannot convert from type \"Bar<Foo<int>>\" to type \"bool\"
+  var b bool = x.foo
+               ~~~~~
+<stdin>:13:16: error: Cannot convert from type \"Foo<int>\" to type \"bool\"
+  var c bool = x.foo.bar
+               ~~~~~~~~~
+<stdin>:14:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var d bool = x.foo.bar.foo
+               ~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  def new {}
+}
+
+namespace Foo {
+  def new(x int) Foo {
+    return new
+  }
+}
+", "
+")
+
+test("
+class Foo<T> {
+  def size int
+  def pop T
+  def shift T
+  def push(value T)
+  def unshift(value T)
+  def map<R>(callback fn(T) R) Foo<R>
+  def filter(callback fn(T) bool) Foo<T>
+}
+
+def main {
+  var x Foo<int>
+  x.push(x.size)
+  x.filter(1.0)
+  x.map(1.0)
+  x.map<string>(1.0)
+  x.filter(x => x + 100)
+  x.map(x => x + 100)
+  var y int = x.map<string>(1.0)
+}
+", "
+<stdin>:14:12: error: Cannot convert from type \"double\" to type \"fn(int) bool\"
+  x.filter(1.0)
+           ~~~
+<stdin>:15:3: error: Cannot use unparameterized type \"map\" here
+  x.map(1.0)
+  ~~~~~
+<stdin>:16:17: error: Cannot convert from type \"double\" to type \"fn(int) string\"
+  x.map<string>(1.0)
+                ~~~
+<stdin>:17:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  x.filter(x => x + 100)
+                ~~~~~~~
+<stdin>:18:3: error: Cannot use unparameterized type \"map\" here
+  x.map(x => x + 100)
+  ~~~~~
+<stdin>:18:9: error: Unable to determine the type of \"x\"
+  x.map(x => x + 100)
+        ^
+<stdin>:19:29: error: Cannot convert from type \"double\" to type \"fn(int) string\"
+  var y int = x.map<string>(1.0)
+                            ~~~
+<stdin>:19:15: error: Cannot convert from type \"Foo<string>\" to type \"int\"
+  var y int = x.map<string>(1.0)
+              ~~~~~~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  def new
+  def foo<T>(t T) Foo
+}
+
+def main {
+  Foo.new.foo(0).foo(0.0)
+  Foo.new.foo<bool>(0).foo<int>(0.0)
+}
+", "
+<stdin>:7:3: error: Cannot use unparameterized type \"foo\" here
+  Foo.new.foo(0).foo(0.0)
+  ~~~~~~~~~~~
+<stdin>:8:21: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  Foo.new.foo<bool>(0).foo<int>(0.0)
+                    ^
+<stdin>:8:33: error: Cannot convert from type \"double\" to type \"int\" without a cast
+  Foo.new.foo<bool>(0).foo<int>(0.0)
+                                ~~~
+")
+
+test("
+class Foo {
+  def new
+  def foo Foo
+  def bar
+}
+
+def main {
+  var x int = => Foo.new
+  var y int = => Foo.new.foo
+  var z int = => Foo.new.bar
+}
+", "
+<stdin>:8:15: error: Cannot convert from type \"fn() Foo\" to type \"int\"
+  var x int = => Foo.new
+              ~~~~~~~~~~
+<stdin>:9:15: error: Cannot convert from type \"fn() Foo\" to type \"int\"
+  var y int = => Foo.new.foo
+              ~~~~~~~~~~~~~~
+<stdin>:10:15: error: Cannot convert from type \"fn()\" to type \"int\"
+  var z int = => Foo.new.bar
+              ~~~~~~~~~~~~~~
+")
+
+test("
+def main(x int) {
+  main
+  x
+  x + 1
+  x ? x : x
+}
+", "
+<stdin>:2:3: error: The function \"main\" must be called
+  main
+  ~~~~
+<stdin>:3:3: warning: Unused expression
+  x
+  ^
+<stdin>:4:3: warning: Unused expression
+  x + 1
+  ~~~~~
+<stdin>:5:3: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  x ? x : x
+  ^
+<stdin>:5:7: warning: Unused expression
+  x ? x : x
+      ^
+<stdin>:5:11: warning: Unused expression
+  x ? x : x
+          ^
+")
+
+test("
+def main {
+  bar(x => foo(x))
+  bar(x => x + 1)
+  bar(x => x)
+}
+
+def foo(x int) int {
+  return 0
+}
+
+def bar(x fn(int)) {
+}
+", "
+<stdin>:3:12: warning: Unused expression
+  bar(x => x + 1)
+           ~~~~~
+<stdin>:4:12: warning: Unused expression
+  bar(x => x)
+           ^
+")
+
+test("
+def main {
+  var x = null
+  var y = => null
+}
+", "
+<stdin>:2:7: error: Implicitly typed variables cannot be of type \"null\"
+  var x = null
+      ^
+<stdin>:3:14: error: Cannot create a function with a return type of \"null\"
+  var y = => null
+             ~~~~
+")
+
+test("
+def main {
+  var a = => 0
+  var b = => {}
+  var c = () => 0
+  var d = () => {}
+  var e = () int => 0
+  var f = () int => { return 0 }
+  var g fn(int) = x => 0
+  var h fn(int) = x => {}
+  var i fn(int) int = (x) => 0
+  var j fn(int) int = (x) => { return 0 }
+  var k = (x int) => 0
+  var l = (x int) => {}
+  var m = (x int) int => 0
+  var n = (x int) int => { return 0 }
+}
+", "
+<stdin>:8:24: warning: Unused expression
+  var g fn(int) = x => 0
+                       ^
+")
+
+test("
+class Foo<T> {
+  def new
+}
+
+def main {
+  var foo Foo<int> = Foo<int>.new
+  var bar Foo<bool> = Foo<int>.new
+}
+", "
+<stdin>:7:23: error: Cannot convert from type \"Foo<int>\" to type \"Foo<bool>\"
+  var bar Foo<bool> = Foo<int>.new
+                      ~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  def in(x int) bool
+}
+
+def main(foo Foo) {
+  false in foo
+  0 in foo
+}
+", "
+<stdin>:6:3: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  false in foo
+  ~~~~~
+")
+
+test("
+namespace foo {
+  namespace bar {
+    def @baz
+  }
+}
+
+@foo.bar.bax
+@foo.bar.baz
+def main
+", "
+<stdin>:7:10: error: \"@bax\" is not declared on type \"bar\"
+@foo.bar.bax
+         ~~~
+")
+
+test("
+def @foo(x int)
+def @bar
+
+@foo
+@foo(1, 2)
+@bar(1)
+def main
+", "
+<stdin>:4:1: error: Expected 1 argument but found 0 arguments when calling \"@foo\"
+@foo
+~~~~
+<stdin>:5:5: error: Expected 1 argument but found 2 arguments when calling \"@foo\"
+@foo(1, 2)
+    ~~~~~~
+<stdin>:6:5: error: The function \"@bar\" takes no arguments and is already called implicitly
+@bar(1)
+    ~~~
+")
+
+# These shouldn't cause missing newline errors
+test("
+def @foo
+
+class foo {
+  def -
+  def new
+}
+
+class bar {
+  def -
+
+  @foo
+  def new
+}
+
+class baz {
+  def -
+
+  # foo
+  def new
+}
+
+def main bool {
+  return 1 -
+    1
+}
+", "
+<stdin>:23:10: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  return 1 -
+         ~~~
+")
+
+test("
+class Foo {
+  def foo {
+    var self int
+  }
+
+  def bar(self int) {
+  }
+
+  def baz {
+    if true {
+      var self int
+    }
+  }
+}
+", "
+<stdin>:3:9: error: \"self\" is already declared
+    var self int
+        ~~~~
+<stdin>:6:11: error: \"self\" is already declared
+  def bar(self int) {
+          ~~~~
+<stdin>:11:11: error: \"self\" shadows a previous declaration
+      var self int
+          ~~~~
+")
+
+test("
+namespace a {
+  class Foo.Bar {}
+  class Foo.Baz {}
+  class Foo {}
+  def main(foo Foo.Bar, bar Foo.Baz) {}
+}
+namespace b {
+  class Foo {
+    class Bar {}
+    class Baz {}
+  }
+  def main(foo Foo.Bar, bar Foo.Baz) {}
+}
+", "
+")
+
+test("
+class ns1.Foo {}
+var ns1 int
+var ns2 int
+class ns2.Foo {}
+", "
+<stdin>:2:5: error: \"ns1\" is already declared
+var ns1 int
+    ~~~
+<stdin>:1:7: note: The previous declaration is here
+class ns1.Foo {}
+      ~~~
+<stdin>:3:5: error: \"ns2\" is already declared
+var ns2 int
+    ~~~
+<stdin>:4:7: note: The previous declaration is here
+class ns2.Foo {}
+      ~~~
+")
+
+test("
+var ns.foo int
+", "
+<stdin>:1:7: error: Expected NEWLINE but found DOT
+var ns.foo int
+      ^
+")
+
+test("
+def ns.foo int
+", "
+<stdin>:1:7: error: Expected NEWLINE but found DOT
+def ns.foo int
+      ^
+")
+
+test("
+@skip
+var a int
+
+@skip {
+  var x int
+  var y int
+}
+
+@skip
+@skip
+def b
+
+@skip
+@skip {
+  def c
+}
+", "
+<stdin>:10:1: error: Duplicate annotation \"@skip\" on \"b\"
+@skip
+~~~~~
+<stdin>:14:1: error: Duplicate annotation \"@skip\" on \"c\"
+@skip {
+~~~~~
+<stdin>:1:1: error: Cannot use the annotation \"@skip\" on \"a\"
+@skip
+~~~~~
+<stdin>:4:1: error: Cannot use the annotation \"@skip\" on \"x\"
+@skip {
+~~~~~
+<stdin>:4:1: error: Cannot use the annotation \"@skip\" on \"y\"
+@skip {
+~~~~~
+")
+
+test("
+class Foo {
+  const a
+  const b int
+  const c = 0
+  const d bool = 0
+}
+
+@import
+class Bar {
+  const a
+  const b int
+  const c = 0
+  const d bool = 0
+}
+
+const a
+const b int
+const c = 0
+const d bool = 0
+
+@import {
+  const w
+  const x int
+  const y = 0
+  const z bool = 0
+}
+", "
+<stdin>:2:9: error: Unable to determine the type of \"a\"
+  const a
+        ^
+<stdin>:5:18: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  const d bool = 0
+                 ^
+<stdin>:10:9: error: Unable to determine the type of \"a\"
+  const a
+        ^
+<stdin>:13:18: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  const d bool = 0
+                 ^
+<stdin>:16:7: error: Unable to determine the type of \"a\"
+const a
+      ^
+<stdin>:17:7: error: The constant \"b\" must be initialized
+const b int
+      ^
+<stdin>:19:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+const d bool = 0
+               ^
+<stdin>:22:9: error: Unable to determine the type of \"w\"
+  const w
+        ^
+<stdin>:25:18: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  const z bool = 0
+                 ^
+")
+
+test("
+const a = 0
+var b = 0
+
+class Foo {
+  const x = 0
+}
+
+def main(foo Foo) {
+  const y = 0
+  a = 0
+  b = 0
+  foo.x = 0
+  y = 0
+}
+", "
+<stdin>:10:3: error: Cannot store to constant symbol \"a\"
+  a = 0
+  ^
+<stdin>:12:7: error: Cannot store to constant symbol \"x\"
+  foo.x = 0
+      ^
+<stdin>:13:3: error: Cannot store to constant symbol \"y\"
+  y = 0
+  ^
+")
+
+test("
+@private
+class Foo {
+  @private
+  var x int
+
+  @private
+  def foo {
+    x = 0
+    foo
+    var y = => x
+  }
+
+  @private
+  class Bar {}
+
+  var bar Bar
+}
+
+@private
+def main(foo Foo) {
+  foo.x = 0
+  foo.foo
+  var x = => foo.x
+  var y = => foo.foo
+  var z Foo.Bar
+}
+", "
+<stdin>:1:1: error: Cannot use the annotation \"@private\" on \"Foo\"
+@private
+~~~~~~~~
+<stdin>:19:1: error: Cannot use the annotation \"@private\" on \"main\"
+@private
+~~~~~~~~
+<stdin>:21:7: error: Cannot access \"@private\" symbol \"x\" here
+  foo.x = 0
+      ^
+<stdin>:22:7: error: Cannot access \"@private\" symbol \"foo\" here
+  foo.foo
+      ~~~
+<stdin>:23:18: error: Cannot access \"@private\" symbol \"x\" here
+  var x = => foo.x
+                 ^
+<stdin>:24:18: error: Cannot access \"@private\" symbol \"foo\" here
+  var y = => foo.foo
+                 ~~~
+<stdin>:25:13: error: Cannot access \"@private\" symbol \"Bar\" here
+  var z Foo.Bar
+            ~~~
+
+")
+
+test("
+class bool {
+  def +(x int, y int)
+  def -(x int, y int) {}
+}
+
+def main {
+  false + false
+  false - false
+}
+", "
+<stdin>:2:7: error: Expected \"+\" to take at most 1 argument
+  def +(x int, y int)
+      ^
+<stdin>:3:7: error: Expected \"-\" to take at most 1 argument
+  def -(x int, y int) {}
+      ^
+<stdin>:7:9: error: Expected 2 arguments but found 1 argument when calling \"+\"
+  false + false
+        ^
+<stdin>:8:9: error: Expected 2 arguments but found 1 argument when calling \"-\"
+  false - false
+        ^
+")
+
+test("
+class bool {
+  def +(x bool)
+  def -(x bool) {}
+}
+
+def main {
+  false + false + false
+  false - false - false
+}
+", "
+<stdin>:7:3: error: The function \"+\" does not return a value
+  false + false + false
+  ~~~~~~~~~~~~~
+<stdin>:8:3: error: The function \"-\" does not return a value
+  false - false - false
+  ~~~~~~~~~~~~~
+")
+
+test("
+def main {
+  0 + 0
+  0 + 0.5
+  0.5 + 0
+  0.5 + 0.5
+}
+", "
+<stdin>:2:3: warning: Unused expression
+  0 + 0
+  ~~~~~
+<stdin>:3:3: warning: Unused expression
+  0 + 0.5
+  ~~~~~~~
+<stdin>:4:3: warning: Unused expression
+  0.5 + 0
+  ~~~~~~~
+<stdin>:5:3: warning: Unused expression
+  0.5 + 0.5
+  ~~~~~~~~~
+")
+
+test("
+class Foo {
+  def *
+  def -(x int, y int)
+  def <=> int
+  def [...]
+  def []
+  def []=
+  def foo=
+  def !(x int)
+  def {...}
+}
+", "
+<stdin>:2:7: error: Expected \"*\" to take 1 argument
+  def *
+      ^
+<stdin>:3:7: error: Expected \"-\" to take at most 1 argument
+  def -(x int, y int)
+      ^
+<stdin>:4:7: error: Expected \"<=>\" to take 1 argument
+  def <=> int
+      ~~~
+<stdin>:5:7: error: Expected \"[...]\" to take 1 argument
+  def [...]
+      ~~~~~
+<stdin>:6:7: error: Expected \"[]\" to take at least 1 argument
+  def []
+      ~~
+<stdin>:7:7: error: Expected \"[]=\" to take at least 2 arguments
+  def []=
+      ~~~
+<stdin>:8:7: error: Expected \"foo=\" to take 1 argument
+  def foo=
+      ~~~~
+<stdin>:9:7: error: Expected \"!\" to take 0 arguments
+  def !(x int)
+      ^
+<stdin>:10:7: error: Expected \"{...}\" to take between 1 and 2 arguments
+  def {...}
+      ~~~~~
+")
+
+test("
+def main(x List<double>) {
+  var y bool = x[false]
+}
+", "
+<stdin>:2:18: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var y bool = x[false]
+                 ~~~~~
+<stdin>:2:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var y bool = x[false]
+               ~~~~~~~~
+")
+
+test("
+def main(i int) {
+  for i in false..false {
+    i = false
+  }
+  for i in List<string>.new {
+    i = false
+  }
+  for i in 0 {
+    i = false
+  }
+  for j in 0..10 {}
+  for j in 10..0 {}
+}
+", "
+<stdin>:2:12: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  for i in false..false {
+           ~~~~~
+<stdin>:2:19: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  for i in false..false {
+                  ~~~~~
+<stdin>:2:7: error: \"i\" shadows a previous declaration
+  for i in false..false {
+      ^
+<stdin>:1:10: note: The previous declaration is here
+def main(i int) {
+         ^
+<stdin>:3:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    i = false
+        ~~~~~
+<stdin>:5:7: error: \"i\" shadows a previous declaration
+  for i in List<string>.new {
+      ^
+<stdin>:1:10: note: The previous declaration is here
+def main(i int) {
+         ^
+<stdin>:6:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    i = false
+        ~~~~~
+<stdin>:8:12: error: Cannot iterate over type \"int\"
+  for i in 0 {
+           ^
+<stdin>:8:7: error: \"i\" shadows a previous declaration
+  for i in 0 {
+      ^
+<stdin>:1:10: note: The previous declaration is here
+def main(i int) {
+         ^
+<stdin>:9:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    i = false
+        ~~~~~
+<stdin>:12:12: warning: This range is empty
+  for j in 10..0 {}
+           ~~~~~
+")
+
+test("
+def main {
+  var foo = true ? false : 0
+  var bar bool = true ? 0 : 0.5
+}
+", "
+<stdin>:2:20: error: No common type for \"bool\" and \"int\"
+  var foo = true ? false : 0
+                   ~~~~~~~~~
+<stdin>:3:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var bar bool = true ? 0 : 0.5
+                        ^
+<stdin>:3:29: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var bar bool = true ? 0 : 0.5
+                            ~~~
+")
+
+test("
+def main {
+  var a int = [false]
+  var b List<int> = [false]
+  var c List<List<int>> = [[false]]
+  var d int = {1: 2}
+  var e IntMap<bool> = {\"a\": \"b\"}
+  var f StringMap<bool> = {1: 2}
+  [false, 0]
+  [0, 0.5] - 1
+  [null, [1], [0.5]]
+  [null]
+  []
+  {0: 1} - 1
+  {\"a\": 1} - 1
+  {0.5: 1} - 1
+  [foo]
+}
+
+def foo(x int) {
+}
+", "
+<stdin>:2:15: error: Cannot infer a type for this literal
+  var a int = [false]
+              ~~~~~~~
+<stdin>:3:22: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var b List<int> = [false]
+                     ~~~~~
+<stdin>:4:29: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var c List<List<int>> = [[false]]
+                            ~~~~~
+<stdin>:5:15: error: Cannot infer a type for this literal
+  var d int = {1: 2}
+              ~~~~~~
+<stdin>:6:25: error: Cannot convert from type \"string\" to type \"int\"
+  var e IntMap<bool> = {\"a\": \"b\"}
+                        ~~~
+<stdin>:6:30: error: Cannot convert from type \"string\" to type \"bool\"
+  var e IntMap<bool> = {\"a\": \"b\"}
+                             ~~~
+<stdin>:7:28: error: Cannot convert from type \"int\" to type \"string\"
+  var f StringMap<bool> = {1: 2}
+                           ^
+<stdin>:7:31: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var f StringMap<bool> = {1: 2}
+                              ^
+<stdin>:8:11: error: No common type for \"bool\" and \"int\"
+  [false, 0]
+          ^
+<stdin>:8:3: warning: Unused expression
+  [false, 0]
+  ~~~~~~~~~~
+<stdin>:9:12: error: \"-\" is not declared on type \"List<double>\"
+  [0, 0.5] - 1
+           ^
+<stdin>:10:15: error: No common type for \"List<int>\" and \"List<double>\"
+  [null, [1], [0.5]]
+              ~~~~~
+<stdin>:10:3: warning: Unused expression
+  [null, [1], [0.5]]
+  ~~~~~~~~~~~~~~~~~~
+<stdin>:11:3: error: Cannot infer a type for this literal
+  [null]
+  ~~~~~~
+<stdin>:12:3: error: Cannot infer a type for this literal
+  []
+  ~~
+<stdin>:13:10: error: \"-\" is not declared on type \"IntMap<int>\"
+  {0: 1} - 1
+         ^
+<stdin>:14:12: error: \"-\" is not declared on type \"StringMap<int>\"
+  {\"a\": 1} - 1
+           ^
+<stdin>:15:3: error: Cannot infer a type for this literal
+  {0.5: 1} - 1
+  ~~~~~~~~
+<stdin>:16:4: error: The function \"foo\" must be called
+  [foo]
+   ~~~
+<stdin>:16:3: warning: Unused expression
+  [foo]
+  ~~~~~
+")
+
+test("
+class A {}
+
+class B {
+  def [...] {}
+}
+
+class C {
+  def new {}
+  def [...] {}
+}
+
+class D {
+  def new {}
+  def [...](x bool) D { return self }
+}
+
+def main {
+  var a A = [1, 2]
+  var b B = [1, 2]
+  var c C = [1, 2]
+  var d D = [1, 2]
+}
+", "
+<stdin>:4:7: error: Expected \"[...]\" to take 1 argument
+  def [...] {}
+      ~~~~~
+<stdin>:9:7: error: Expected \"[...]\" to take 1 argument
+  def [...] {}
+      ~~~~~
+<stdin>:18:13: error: Cannot infer a type for this literal
+  var a A = [1, 2]
+            ~~~~~~
+<stdin>:19:14: error: The function \"[...]\" does not return a value
+  var b B = [1, 2]
+             ^
+<stdin>:19:14: error: Expected 0 arguments but found 1 argument when calling \"[...]\"
+  var b B = [1, 2]
+             ^
+<stdin>:20:14: error: The function \"[...]\" does not return a value
+  var c C = [1, 2]
+             ^
+<stdin>:20:14: error: Expected 0 arguments but found 1 argument when calling \"[...]\"
+  var c C = [1, 2]
+             ^
+<stdin>:21:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var d D = [1, 2]
+             ^
+<stdin>:21:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var d D = [1, 2]
+                ^
+")
+
+test("
+class Foo {
+  def [new](x int, y int, z int) int
+  def {new}(x int, y int, z int) int
+}
+", "
+<stdin>:2:34: error: Constructors cannot have a return type
+  def [new](x int, y int, z int) int
+                                 ~~~
+<stdin>:2:7: error: Expected \"[new]\" to take at most 1 argument
+  def [new](x int, y int, z int) int
+      ~~~~~
+<stdin>:3:34: error: Constructors cannot have a return type
+  def {new}(x int, y int, z int) int
+                                 ~~~
+<stdin>:3:7: error: Expected \"{new}\" to take at most 2 arguments
+  def {new}(x int, y int, z int) int
+      ~~~~~
+")
+
+test("
+class Foo {
+  def foo int {
+    return Bar<int>.new.foo
+  }
+
+  def bar List<int> {
+    return Bar<int>.new.foo
+  }
+}
+
+class Bar<X> {
+  def new
+  def foo List<X>
+}
+", "
+<stdin>:3:12: error: Cannot convert from type \"List<int>\" to type \"int\"
+    return Bar<int>.new.foo
+           ~~~~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  def foo int
+  def foo double
+  def bar(x int)
+  def bar(x double)
+  def bar(x int)
+}
+", "
+<stdin>:3:7: error: Duplicate overloaded function \"foo\"
+  def foo double
+      ~~~
+<stdin>:2:7: note: The previous declaration is here
+  def foo int
+      ~~~
+<stdin>:6:7: error: Duplicate overloaded function \"bar\"
+  def bar(x int)
+      ~~~
+<stdin>:4:7: note: The previous declaration is here
+  def bar(x int)
+      ~~~
+")
+
+test("
+def bar(x int) int
+def bar(x double) double
+def bar(x List<int>) List<int>
+
+def main {
+  var w bool = bar(null)
+  var x bool = bar(0)
+  var y bool = bar(0.5)
+  var z bool = bar([])
+}
+", "
+<stdin>:6:16: error: Cannot convert from type \"List<int>\" to type \"bool\"
+  var w bool = bar(null)
+               ~~~~~~~~~
+<stdin>:7:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var x bool = bar(0)
+               ~~~~~~
+<stdin>:8:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var y bool = bar(0.5)
+               ~~~~~~~~
+<stdin>:9:16: error: Cannot convert from type \"List<int>\" to type \"bool\"
+  var z bool = bar([])
+               ~~~~~~~
+")
+
+test("
+namespace Foo {
+  def [new](x List<int>)
+}
+
+class Foo {}
+
+def main(foo Foo) {
+  foo = []
+}
+", "
+<stdin>:8:9: error: The function \"[new]\" does not return a value
+  foo = []
+        ~~
+")
+
+test("
+namespace Foo {
+  def foo
+  var bar = 0
+}
+
+class Foo<T> {
+  def new
+  def ifoo
+  var ibar = 0
+}
+
+def main(foo Foo<int>) {
+  foo.new
+  Foo.new
+  Foo<int>.new
+
+  foo.foo
+  Foo.foo
+  Foo<int>.foo
+
+  foo.bar = 0
+  Foo.bar = 0
+  Foo<int>.bar = 0
+
+  foo.ifoo
+  Foo.ifoo
+  Foo<int>.ifoo
+
+  foo.ibar = 0
+  Foo.ibar = 0
+  Foo<int>.ibar = 0
+}
+", "
+<stdin>:13:7: error: Cannot access global member \"new\" from an instance context
+  foo.new
+      ~~~
+<stdin>:14:3: error: Cannot use unparameterized type \"Foo\" here
+  Foo.new
+  ~~~
+<stdin>:17:7: error: Cannot access global member \"foo\" from an instance context
+  foo.foo
+      ~~~
+<stdin>:18:3: error: Cannot use unparameterized type \"Foo\" here
+  Foo.foo
+  ~~~
+<stdin>:21:7: error: Cannot access global member \"bar\" from an instance context
+  foo.bar = 0
+      ~~~
+<stdin>:23:3: error: Cannot use parameterized type \"Foo<int>\" here
+  Foo<int>.bar = 0
+  ~~~~~~~~
+<stdin>:26:7: error: Cannot access instance member \"ifoo\" from a global context
+  Foo.ifoo
+      ~~~~
+<stdin>:27:12: error: Cannot access instance member \"ifoo\" from a global context
+  Foo<int>.ifoo
+           ~~~~
+<stdin>:30:7: error: Cannot access instance member \"ibar\" from a global context
+  Foo.ibar = 0
+      ~~~~
+<stdin>:31:12: error: Cannot access instance member \"ibar\" from a global context
+  Foo<int>.ibar = 0
+           ~~~~
+")
+
+test("
+class Foo : int {}
+class Bar : fn() {}
+class Baz : Baz {}
+", "
+<stdin>:1:13: error: Cannot derive from type \"int\"
+class Foo : int {}
+            ~~~
+<stdin>:2:13: error: Cannot derive from type \"fn()\"
+class Bar : fn() {}
+            ~~~~
+<stdin>:3:7: error: Cyclic declaration of \"Baz\"
+class Baz : Baz {}
+      ~~~
+")
+
+test("
+class Foo { def foo }
+class Bar : Foo { def bar }
+class Baz : Foo { def baz }
+
+def main(foo Foo, bar Bar, baz Baz) {
+  foo.foo
+  foo.bar
+  bar.foo
+  bar.bar
+  baz.foo
+  baz.bar
+}
+", "
+<stdin>:7:7: error: \"bar\" is not declared on type \"Foo\"
+  foo.bar
+      ~~~
+<stdin>:11:7: error: \"bar\" is not declared on type \"Baz\"
+  baz.bar
+      ~~~
+")
+
+test("
+class Foo { def new }
+class Bar : Foo { def new }
+class Baz : Foo { def new }
+
+def main {
+  var a Foo = Foo.new
+  var b Foo = Bar.new
+  var c Foo = Baz.new
+  var d Bar = Foo.new
+  var e Bar = Bar.new
+  var f Bar = Baz.new
+}
+", "
+<stdin>:9:15: error: Cannot convert from type \"Foo\" to type \"Bar\" without a cast
+  var d Bar = Foo.new
+              ~~~~~~~
+<stdin>:11:15: error: Cannot convert from type \"Baz\" to type \"Bar\"
+  var f Bar = Baz.new
+              ~~~~~~~
+")
+
+test("
+class Foo<T> { def new }
+class Bar : Foo<int> { def new }
+class Baz : Foo<int> { def new }
+
+def main {
+  var foo = true ? Bar.new : Baz.new
+  var bar int = foo
+}
+", "
+<stdin>:7:17: error: Cannot convert from type \"Foo<int>\" to type \"int\"
+  var bar int = foo
+                ~~~
+")
+
+test("
+class Foo<T> { def new }
+class Bar : Foo<int> { def new }
+class Baz : Foo<bool> { def new }
+
+def main {
+  var foo = true ? Bar.new : Baz.new
+  var bar int = foo
+}
+", "
+<stdin>:6:20: error: No common type for \"Bar\" and \"Baz\"
+  var foo = true ? Bar.new : Baz.new
+                   ~~~~~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  @protected
+  def foo
+
+  @private
+  def bar
+}
+
+class Bar : Foo {
+  def baz {
+    foo
+    bar
+    self.foo
+    self.bar
+  }
+}
+
+def main(foo Foo) {
+  foo.foo
+  foo.bar
+}
+", "
+<stdin>:12:5: error: Cannot access \"@private\" symbol \"bar\" here
+    bar
+    ~~~
+<stdin>:14:10: error: Cannot access \"@private\" symbol \"bar\" here
+    self.bar
+         ~~~
+<stdin>:19:7: error: Cannot access \"@protected\" symbol \"foo\" here
+  foo.foo
+      ~~~
+<stdin>:20:7: error: Cannot access \"@private\" symbol \"bar\" here
+  foo.bar
+      ~~~
+")
+
+test("
+class Foo<A, B> {
+  def foo(a A) Foo<A, B>
+  def bar(b B) A
+}
+
+class Bar<T> : Foo<int, T> {
+}
+
+class Baz : Bar<bool> {
+  def new
+}
+
+def foo string {
+  return Baz.new.foo(0.5).bar(null)
+}
+", "
+<stdin>:14:22: error: Cannot convert from type \"double\" to type \"int\" without a cast
+  return Baz.new.foo(0.5).bar(null)
+                     ~~~
+<stdin>:14:31: error: Cannot convert from type \"null\" to type \"bool\"
+  return Baz.new.foo(0.5).bar(null)
+                              ~~~~
+<stdin>:14:10: error: Cannot convert from type \"int\" to type \"string\"
+  return Baz.new.foo(0.5).bar(null)
+         ~~~~~~~~~~~~~~~~~~~~~~~~~~
+")
+
+test("
+var a = 0 # a
+var b = 0 # b
+# comment
+var c = 0 # c
+
+# comment
+var d = 0 # d
+", "
+")
+
+test("
+class Foo<T> {
+  def foo(x T)
+  def foo(x int)
+}
+
+def foo(foo Foo<bool>) {
+  foo.foo(0)
+  foo.foo(0.5)
+  foo.foo(false)
+}
+", "
+<stdin>:8:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  foo.foo(0.5)
+  ~~~~~~~
+")
+
+test("
+class Foo {
+  def +=(x int)
+  def +=(x List<int>)
+}
+
+def foo(foo Foo) {
+  foo += false
+  foo += []
+  foo += [false]
+  foo += {}
+  foo += {false}
+}
+", "
+<stdin>:7:7: error: No overload of \"+=\" was found that takes 1 argument of type bool
+  foo += false
+      ~~
+<stdin>:9:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  foo += [false]
+          ~~~~~
+<stdin>:10:10: error: Cannot infer a type for this literal
+  foo += {}
+         ~~
+<stdin>:10:7: error: No overload of \"+=\" was found that takes 1 argument of type dynamic
+  foo += {}
+      ~~
+<stdin>:11:10: error: Cannot infer a type for this literal
+  foo += {false}
+         ~~~~~~~
+<stdin>:11:7: error: No overload of \"+=\" was found that takes 1 argument of type dynamic
+  foo += {false}
+      ~~
+")
+
+test("
+class Foo {
+  def +=(x dynamic)
+  def +=(x List<int>)
+}
+
+def foo(foo Foo) {
+  foo += false
+  foo += [false]
+}
+", "
+<stdin>:8:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  foo += [false]
+          ~~~~~
+")
+
+test("
+class Foo {
+  def +=(x dynamic)
+  def +=(x double)
+}
+
+def foo(foo Foo) {
+  foo += 0
+}
+", "
+<stdin>:7:7: error: Multiple matching overloads of \"+=\" were found that can take 1 argument of type int
+  foo += 0
+      ~~
+")
+
+test("
+class Foo {
+  def +=(x dynamic) int
+  @prefer
+  def +=(x double) double
+}
+
+def foo(foo Foo) {
+  var bar bool = foo += 0
+}
+", "
+<stdin>:8:18: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var bar bool = foo += 0
+                 ~~~~~~~~
+")
+
+test("
+class Foo {
+  def new
+  def <=>(x Foo) int
+}
+
+var foo int = Foo.new < Foo.new
+var bar bool = Foo.new <=> Foo.new
+var baz int = 1 < 2
+", "
+<stdin>:6:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+var foo int = Foo.new < Foo.new
+              ~~~~~~~~~~~~~~~~~
+<stdin>:7:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+var bar bool = Foo.new <=> Foo.new
+               ~~~~~~~~~~~~~~~~~~~
+<stdin>:8:15: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+var baz int = 1 < 2
+              ~~~~~
+")
+
+test("
+def main(x List<List<int>>) {
+  var foo = [false] in x
+}
+", "
+<stdin>:2:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var foo = [false] in x
+             ~~~~~
+")
+
+test("
+def main {
+  for i in 0..10 {
+    0 += 1
+    0 = 1
+    i += 1
+    i = 1
+  }
+}
+", "
+<stdin>:3:5: error: Cannot store to this location
+    0 += 1
+    ^
+<stdin>:4:5: error: Cannot store to this location
+    0 = 1
+    ^
+<stdin>:5:5: error: Cannot store to constant symbol \"i\"
+    i += 1
+    ^
+<stdin>:6:5: error: Cannot store to constant symbol \"i\"
+    i = 1
+    ^
+")
+
+test("
+def main {
+  for i in 0..10 {
+    0 += 1
+    0 = 1
+    i += 1
+    i = 1
+  }
+}
+", "
+<stdin>:3:5: error: Cannot store to this location
+    0 += 1
+    ^
+<stdin>:4:5: error: Cannot store to this location
+    0 = 1
+    ^
+<stdin>:5:5: error: Cannot store to constant symbol \"i\"
+    i += 1
+    ^
+<stdin>:6:5: error: Cannot store to constant symbol \"i\"
+    i = 1
+    ^
+")
+
+test("
+class Foo {
+  def foo(x int)
+}
+
+class Bar : Foo {
+  def foo(x bool)
+}
+
+def main(x Bar) {
+  x.foo(0)
+  x.foo(0.5)
+  x.foo(false)
+}
+", "
+<stdin>:11:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  x.foo(0.5)
+  ~~~~~
+")
+
+test("
+class Foo {
+  def foo(x string)
+  def foo(x int)
+}
+
+class Bar : Foo {
+  def foo(x bool)
+}
+
+def main(x Bar) {
+  x.foo(0)
+  x.foo(\"\")
+  x.foo(0.5)
+  x.foo(false)
+}
+", "
+<stdin>:13:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  x.foo(0.5)
+  ~~~~~
+")
+
+test("
+class Foo {
+  def foo(x int)
+}
+
+class Bar : Foo {
+  def foo(x string)
+  def foo(x bool)
+}
+
+def main(x Bar) {
+  x.foo(0)
+  x.foo(\"\")
+  x.foo(0.5)
+  x.foo(false)
+}
+", "
+<stdin>:13:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  x.foo(0.5)
+  ~~~~~
+")
+
+test("
+class Foo {
+  def foo(x Foo)
+  def foo(x int)
+}
+
+class Bar : Foo {
+  def foo(x string)
+  def foo(x bool)
+}
+
+def main(x Bar) {
+  x.foo(0)
+  x.foo(\"\")
+  x.foo(0.5)
+  x.foo(null)
+  x.foo(false)
+}
+", "
+<stdin>:14:3: error: No overload of \"foo\" was found that takes 1 argument of type double
+  x.foo(0.5)
+  ~~~~~
+")
+
+test("
+class Foo<T> {
+  var foo int
+}
+
+class Bar : Foo<int> {
+  def foo
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  def foo
+      ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  var foo int
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo
+}
+
+class Bar : Foo<int> {
+  var foo int
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  var foo int
+      ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo<T> {
+  class foo {}
+}
+
+class Bar : Foo<int> {
+  def foo
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  def foo
+      ~~~
+<stdin>:2:9: note: The overridden declaration is here
+  class foo {}
+        ~~~
+")
+
+test("
+class Foo<T> {
+  def foo
+}
+
+class Bar : Foo<int> {
+  class foo {}
+}
+", "
+<stdin>:6:9: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  class foo {}
+        ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo<T> {
+}
+
+namespace Foo {
+  def foo
+}
+
+class Bar : Foo<int> {
+  def foo
+}
+", "
+<stdin>:9:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  def foo
+      ~~~
+<stdin>:5:7: note: The overridden declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo
+}
+
+class Bar : Foo<int> {
+}
+
+namespace Bar {
+  def foo
+}
+", "
+<stdin>:9:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
+  def foo
+      ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def new
+  def foo
+}
+
+class Bar : Foo<int> {
+  def new
+  over foo
+}
+
+namespace Foo {
+  def bar
+}
+
+namespace Bar {
+  def bar
+}
+", "
+")
+
+test("
+class Foo<T> {
+  def foo int
+}
+
+class Bar : Foo<int> {
+  def foo bool
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def foo bool
+      ~~~
+<stdin>:2:7: note: The overridden function is here
+  def foo int
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo int
+}
+
+class Bar : Foo<int> {
+  def foo bool
+  def bar int
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def foo bool
+      ~~~
+<stdin>:2:7: note: The overridden function is here
+  def foo int
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo int
+  def bar int
+}
+
+class Bar : Foo<int> {
+  def foo bool
+}
+", "
+<stdin>:7:7: error: \"foo\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def foo bool
+      ~~~
+<stdin>:2:7: note: The overridden function is here
+  def foo int
+      ~~~
+")
+
+test("
+class Foo<T> {
+  def foo int
+  def bar bool
+}
+
+class Bar : Foo<int> {
+  def foo bool
+  def bar int
+}
+", "
+<stdin>:7:7: error: \"foo\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def foo bool
+      ~~~
+<stdin>:2:7: note: The overridden function is here
+  def foo int
+      ~~~
+<stdin>:8:7: error: \"bar\" overrides another function with the same name and argument types but a different return type in base type \"Foo<int>\"
+  def bar int
+      ~~~
+<stdin>:3:7: note: The overridden function is here
+  def bar bool
+      ~~~
+")
+
+test("
+var x = super
+def foo { super }
+
+class Foo {
+  def new { super }
+  def foo { super }
+}
+
+namespace Foo {
+  def bar { super }
+}
+
+class Bar : Foo {
+  def new { super }
+  over foo { super }
+}
+
+namespace Bar {
+  def bar { super }
+}
+", "
+<stdin>:5:13: error: Cannot use \"super\" here
+  def new { super }
+            ~~~~~
+<stdin>:6:13: error: Cannot use \"super\" here
+  def foo { super }
+            ~~~~~
+<stdin>:10:13: error: Cannot use \"super\" here
+  def bar { super }
+            ~~~~~
+<stdin>:2:11: error: Cannot use \"super\" here
+def foo { super }
+          ~~~~~
+<stdin>:1:9: error: Cannot use \"super\" here
+var x = super
+        ~~~~~
+")
+
+test("
+class Foo {
+  def new(x int) {}
+  def foo(x int) {}
+}
+
+namespace Foo {
+  def bar(x int) {}
+}
+
+class Bar : Foo {
+  def new(x int) { super() }
+  over foo(x int) { super() }
+}
+
+namespace Bar {
+  def bar(x int) { super() }
+}
+", "
+<stdin>:11:25: error: Expected 1 argument but found 0 arguments when calling \"new\"
+  def new(x int) { super() }
+                        ~~
+<stdin>:12:26: error: Expected 1 argument but found 0 arguments when calling \"foo\"
+  over foo(x int) { super() }
+                         ~~
+<stdin>:16:25: error: Expected 1 argument but found 0 arguments when calling \"bar\"
+  def bar(x int) { super() }
+                        ~~
+")
+
+test("
+class Foo {
+  def new(x int) {}
+}
+
+class Bar : Foo {
+  def new(x bool) {
+    super(x)
+  }
+}
+", "
+<stdin>:7:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    super(x)
+          ^
+")
+
+test("
+class Foo {
+  def new(x int) {}
+}
+
+class Bar : Foo {
+  def new {
+    super(1, 2)
+  }
+}
+", "
+<stdin>:7:10: error: Expected 1 argument but found 2 arguments when calling \"new\"
+    super(1, 2)
+         ~~~~~~
+")
+
+test("
+class Foo {
+  def new(x int) {}
+  def new(x int, y int) {}
+}
+
+class Bar : Foo {
+  def new(z int) {
+    super(false)
+  }
+
+  def new(y int, z int) {
+    super(false, y)
+  }
+
+  def new(x int, y int, z int) {
+    super(x, y, z)
+  }
+}
+", "
+<stdin>:8:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    super(false)
+          ~~~~~
+<stdin>:12:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    super(false, y)
+          ~~~~~
+<stdin>:16:5: error: No overload of \"new\" was found that takes 3 arguments
+    super(x, y, z)
+    ~~~~~
+")
+
+test("
+class Foo {
+  def new(x int) {
+    super
+  }
+}
+", "
+<stdin>:3:5: error: Cannot use \"super\" here
+    super
+    ~~~~~
+")
+
+test("
+class Foo {
+  def foo(x int) {}
+  def foo {}
+}
+
+class Bar : Foo {
+  over foo { super(false) }
+  over foo(x int) { super }
+  def foo(x int, y int) { super(x, y) }
+}
+", "
+<stdin>:7:20: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  over foo { super(false) }
+                   ~~~~~
+<stdin>:9:27: error: No overload of \"foo\" was found that takes 2 arguments
+  def foo(x int, y int) { super(x, y) }
+                          ~~~~~
+")
+
+test("
+enum Foo {
+  FOO
+  BAR
+}
+
+def main {
+  var foo int = Foo.FOO == .BAR
+  var bar int = .FOO == Foo.BAR
+  var baz int = .FOO == .BAR
+}
+", "
+<stdin>:7:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var foo int = Foo.FOO == .BAR
+                ~~~~~~~~~~~~~~~
+<stdin>:8:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var bar int = .FOO == Foo.BAR
+                ~~~~~~~~~~~~~~~
+<stdin>:9:25: error: Cannot access \"BAR\" without type context
+  var baz int = .FOO == .BAR
+                        ~~~~
+<stdin>:9:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var baz int = .FOO == .BAR
+                ~~~~~~~~~~~~
+")
+
+test("
+enum Foo {
+  var foo
+  def bar
+  def new
+}
+
+namespace Foo {
+  var foo2
+  def bar2
+}
+", "
+<stdin>:2:3: error: Cannot use this declaration inside an enum
+  var foo
+  ~~~~~~~
+<stdin>:4:3: error: Cannot use this declaration inside an enum
+  def new
+  ~~~~~~~
+")
+
+test("
+enum Foo {
+  FOO
+}
+
+def main {
+  var a bool = Foo.FOO as string
+  var b bool = Foo.FOO as int
+  var c bool = Foo.FOO as double
+  var d bool = \"FOO\" as Foo
+  var e bool = 0 as Foo
+  var f bool = 0.0 as Foo
+  var g string = Foo.FOO
+  var h int = Foo.FOO
+}
+", "
+<stdin>:6:16: error: Cannot convert from type \"string\" to type \"bool\"
+  var a bool = Foo.FOO as string
+               ~~~~~~~~~~~~~~~~~
+<stdin>:7:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var b bool = Foo.FOO as int
+               ~~~~~~~~~~~~~~
+<stdin>:8:16: error: Cannot convert from type \"Foo\" to type \"double\"
+  var c bool = Foo.FOO as double
+               ~~~~~~~
+<stdin>:8:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var c bool = Foo.FOO as double
+               ~~~~~~~~~~~~~~~~~
+<stdin>:9:16: error: Cannot convert from type \"Foo\" to type \"bool\"
+  var d bool = \"FOO\" as Foo
+               ~~~~~~~~~~~~
+<stdin>:10:16: error: Cannot convert from type \"Foo\" to type \"bool\"
+  var e bool = 0 as Foo
+               ~~~~~~~~
+<stdin>:11:16: error: Cannot convert from type \"double\" to type \"Foo\"
+  var f bool = 0.0 as Foo
+               ~~~
+<stdin>:11:16: error: Cannot convert from type \"Foo\" to type \"bool\"
+  var f bool = 0.0 as Foo
+               ~~~~~~~~~~
+")
+
+test("
+def main {
+  if true {} else if true {} else {}
+
+  # A
+  if true {} # AA
+
+  # B
+  else if true {} # BB
+
+  # C
+  else {} # CC
+}
+", "
+")
+
+test("
+def main {
+  while true {} else {}
+}
+", "
+<stdin>:2:17: error: Unexpected ELSE
+  while true {} else {}
+                ~~~~
+")
+
+test("
+def main {
+  while true {
+    break
+    continue
+  }
+
+  break
+  continue
+
+  if true {
+    break
+    continue
+  }
+
+  while true {
+    if true {
+      break
+      continue
+    }
+  }
+}
+", "
+<stdin>:7:3: error: Cannot use \"break\" outside a loop
+  break
+  ~~~~~
+<stdin>:8:3: error: Cannot use \"continue\" outside a loop
+  continue
+  ~~~~~~~~
+<stdin>:11:5: error: Cannot use \"break\" outside a loop
+    break
+    ~~~~~
+<stdin>:12:5: error: Cannot use \"continue\" outside a loop
+    continue
+    ~~~~~~~~
+")
+
+test("
+def main {
+  while true {
+    var x = => {
+      break
+      continue
+    }
+  }
+}
+", "
+<stdin>:4:7: error: Cannot use \"break\" outside a loop
+      break
+      ~~~~~
+<stdin>:5:7: error: Cannot use \"continue\" outside a loop
+      continue
+      ~~~~~~~~
+")
+
+test("
+enum Foo {
+  FOO
+  BAR
+}
+
+def main {
+  switch Foo.FOO {
+    case .FOO, .BAR, .BAZ {}
+    case 0 {}
+    default {}
+  }
+}
+", "
+<stdin>:8:23: error: \"BAZ\" is not declared on type \"Foo\"
+    case .FOO, .BAR, .BAZ {}
+                      ~~~
+<stdin>:9:10: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
+    case 0 {}
+         ^
+")
+
+test("
+def foo(x double, y double) double
+def foo(x int, y int) int
+
+@prefer
+def bar(x double, y double) double
+def bar(x int, y int) int
+
+def main {
+  var a bool = foo(1, 2)
+  var b bool = foo(1, 2.0)
+  var c bool = foo(1, 2 as dynamic)
+
+  var x bool = bar(1, 2)
+  var y bool = bar(1, 2.0)
+  var z bool = bar(1, 2 as dynamic)
+}
+", "
+<stdin>:9:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var a bool = foo(1, 2)
+               ~~~~~~~~~
+<stdin>:10:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var b bool = foo(1, 2.0)
+               ~~~~~~~~~~~
+<stdin>:11:16: error: Multiple matching overloads of \"foo\" were found that can take 2 arguments of types int and dynamic
+  var c bool = foo(1, 2 as dynamic)
+               ~~~
+<stdin>:13:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var x bool = bar(1, 2)
+               ~~~~~~~~~
+<stdin>:14:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var y bool = bar(1, 2.0)
+               ~~~~~~~~~~~
+<stdin>:15:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
+  var z bool = bar(1, 2 as dynamic)
+               ~~~~~~~~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  var a bool
+  var b = 0
+}
+
+class Bar : Foo {
+  var c double
+  var d = \"\"
+}
+
+def main {
+  var foo int = Foo.new(0)
+  var bar int = Bar.new(0, 1)
+}
+", "
+<stdin>:12:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var foo int = Foo.new(0)
+                        ^
+<stdin>:12:17: error: Cannot convert from type \"Foo\" to type \"int\"
+  var foo int = Foo.new(0)
+                ~~~~~~~~~~
+<stdin>:13:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var bar int = Bar.new(0, 1)
+                        ^
+<stdin>:13:17: error: Cannot convert from type \"Bar\" to type \"int\"
+  var bar int = Bar.new(0, 1)
+                ~~~~~~~~~~~~~
+")
+
+test("
+class Foo {
+  const x int
+  def new {
+    x = 100
+  }
+}
+
+class Bar : Foo {
+  const y int
+  def new {
+    super
+    x = 0
+    y = 100
+  }
+}
+", "
+<stdin>:12:5: error: Cannot store to constant symbol \"x\"
+    x = 0
+    ^
+")
+
+test("
+@import
+class Foo {
+  def new
+  def foo { new }
+}
+
+@import
+class Bar : Foo {
+  over foo { new }
+}
+
+@import
+class Baz : Foo {
+  def new
+  over foo { new }
+}
+
+def main {
+  Foo.new
+  Bar.new
+  Baz.new
+}
+", "
+<stdin>:9:14: error: \"new\" is not declared
+  over foo { new }
+             ~~~
+<stdin>:20:7: error: \"new\" is not declared on type \"Bar\"
+  Bar.new
+      ~~~
+")
+
+test("
+class Foo {
+  var x int
+}
+
+class Bar : Foo {
+  var y int
+}
+
+def main {
+  Foo.new(0)
+  Bar.new(0)
+  Bar.new(0, 1)
+}
+", "
+<stdin>:11:10: error: Expected 2 arguments but found 1 argument when calling \"new\"
+  Bar.new(0)
+         ~~~
+")
+
+test("
+class Foo {}
+
+namespace Foo {
+  const x = 0
+}
+
+def main {
+  Foo.new
+}
+", "
+")
+
+test("
+class Foo {
+  var foo = Foo.new
+}
+
+class Bar {
+}
+
+namespace Bar {
+  var foo = Bar.new
+}
+", "
+<stdin>:1:7: error: Cyclic declaration of \"new\"
+class Foo {
+      ~~~
+")
+
+test("
+class Foo {
+}
+
+class Bar : Foo {
+}
+
+class Baz : Foo {
+}
+
+def main {
+  Foo.new
+  Bar.new
+  Baz.new
+}
+", "
+")
+
+test("
+class Foo {}
+class Bar : Foo {}
+
+def main {
+  var a Foo = null as Foo
+  var b = null as Bar
+  var c = a as Foo
+  var d = a as Bar
+  var e int = 0.5 as int
+  var f double = 0 as double
+}
+", "
+<stdin>:5:20: warning: Unnecessary cast from type \"null\" to type \"Foo\"
+  var a Foo = null as Foo
+                   ~~~~~~
+<stdin>:7:13: warning: Unnecessary cast from type \"Foo\" to type \"Foo\"
+  var c = a as Foo
+            ~~~~~~
+<stdin>:10:20: warning: Unnecessary cast from type \"int\" to type \"double\"
+  var f double = 0 as double
+                   ~~~~~~~~~
+")
+
+test("
+enum A { FOO }
+class B { def toString string }
+class C { def toString }
+class D { def toString(x int) string }
+class E {}
+
+def main {
+  A.FOO \" \"
+  \" \" B.new
+  C.new \" \" D.new \" \" \" \" E.new
+}
+", "
+<stdin>:8:3: warning: Unused expression
+  A.FOO \" \"
+  ~~~~~~~~~
+<stdin>:9:3: warning: Unused expression
+  \" \" B.new
+  ~~~~~~~~~
+<stdin>:10:3: error: Cannot convert from type \"C\" to type \"string\"
+  C.new \" \" D.new \" \" \" \" E.new
+  ~~~~~
+<stdin>:10:13: error: Cannot convert from type \"D\" to type \"string\"
+  C.new \" \" D.new \" \" \" \" E.new
+            ~~~~~
+<stdin>:10:27: error: Cannot convert from type \"E\" to type \"string\"
+  C.new \" \" D.new \" \" \" \" E.new
+                          ~~~~~
+<stdin>:10:3: warning: Unused expression
+  C.new \" \" D.new \" \" \" \" E.new
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+")
+
+test("
+def foo
+def foo
+", "
+<stdin>:2:5: error: Duplicate overloaded function \"foo\"
+def foo
+    ~~~
+<stdin>:1:5: note: The previous declaration is here
+def foo
+    ~~~
+")
+
+test("
+def foo {}
+def foo
+", "
+")
+
+test("
+def foo
+def foo {}
+", "
+")
+
+test("
+def foo {}
+def foo {}
+", "
+<stdin>:2:5: error: Duplicate overloaded function \"foo\"
+def foo {}
+    ~~~
+<stdin>:1:5: note: The previous declaration is here
+def foo {}
+    ~~~
+")
+
+test("
+def foo int
+def foo double { return 0 }
+", "
+<stdin>:2:5: error: Duplicate overloaded function \"foo\"
+def foo double { return 0 }
+    ~~~
+<stdin>:1:5: note: The previous declaration is here
+def foo int
+    ~~~
+")
+
+test("
+def foo(x int)
+def foo(x double)
+
+def foo(x int) {}
+def foo(x double) {}
+
+def main {
+  foo(null as dynamic)
+}
+", "
+<stdin>:8:3: error: Multiple matching overloads of \"foo\" were found that can take 1 argument of type dynamic
+  foo(null as dynamic)
+  ~~~
+")
+
+test("
+@prefer
+def foo(x int)
+def foo(x double)
+
+def foo(x int) {}
+def foo(x double) {}
+
+def main {
+  foo(null as dynamic)
+}
+", "
+")
+
+test("
+def foo(x int) {}
+def foo(x double) {}
+
+@prefer
+def foo(x int)
+def foo(x double)
+
+def main {
+  foo(null as dynamic)
+}
+", "
+")
+
+test("
+class Foo {
+  def new(x int)
+  def foo(x int)
+  def foo(x double)
+}
+
+def main {
+  Foo.new
+  Foo.new(0).foo
+}
+", "
+<stdin>:8:7: error: The function \"new\" must be called
+  Foo.new
+      ~~~
+<stdin>:9:14: error: The function \"foo\" must be called
+  Foo.new(0).foo
+             ~~~
+")
+
+test("
+class Foo {
+}
+
+namespace Foo {
+  def new(x int) Foo {
+    return null
+  }
+}
+
+def main {
+  var foo = Foo.new
+}
+", "
+<stdin>:11:17: error: The function \"new\" must be called
+  var foo = Foo.new
+                ~~~
+")
+
+test("
+class Foo {
+  var foo = 0
+  var bar = foo
+}
+", "
+<stdin>:3:13: error: Cannot access instance member \"foo\" from a global context
+  var bar = foo
+            ~~~
+")
+
+test("
+class Foo<T> {
+  var foo T
+
+  class Bar {
+    var foo T
+  }
+
+  namespace Bar {
+    var bar T
+  }
+}
+
+namespace Foo {
+  var bar T
+}
+", "
+<stdin>:5:13: error: Cannot access type parameter \"T\" here
+    var foo T
+            ^
+<stdin>:9:13: error: Cannot access type parameter \"T\" here
+    var bar T
+            ^
+<stdin>:14:11: error: Cannot access type parameter \"T\" here
+  var bar T
+          ^
+")
+
+test("
+# Nested uses of T should be fine inside instance functions
+class Foo<T> {
+  def new {
+    var x = (a T) => {
+      var y = (b T) => {}
+    }
+  }
+}
+
+namespace Foo {
+  var x = (a T) => {
+    var y = (b T) => {}
+  }
+}
+", "
+<stdin>:11:14: error: Cannot access type parameter \"T\" here
+  var x = (a T) => {
+             ^
+<stdin>:12:16: error: Cannot access type parameter \"T\" here
+    var y = (b T) => {}
+               ^
+")
+
+test("
+class Foo<T> {
+}
+
+namespace Foo {
+  def new(x T) T {
+    var y Foo<T>
+    return x
+  }
+
+  def foo {
+    var y Foo<T>
+  }
+}
+", "
+")
+
+test("
+class Foo<T> {
+}
+
+namespace Foo {
+  def foo
+  def bar T
+}
+
+def main {
+  Foo.foo
+  Foo<int>.foo
+  Foo.bar
+  Foo<int>.bar
+}
+", "
+<stdin>:10:3: error: Cannot use unparameterized type \"Foo\" here
+  Foo.foo
+  ~~~
+<stdin>:12:3: error: Cannot use unparameterized type \"Foo\" here
+  Foo.bar
+  ~~~
+")
+
+test("
+class Foo<A, B, C> {
+}
+
+class Foo<X, Y> {
+}
+", "
+<stdin>:4:11: error: \"Foo\" already has type parameters
+class Foo<X, Y> {
+          ~~~~
+<stdin>:1:11: note: Type parameters were previously declared here
+class Foo<A, B, C> {
+          ~~~~~~~
+")
+
+test("
+class Foo<T> {
+  def [new](t List<T>)
+}
+
+class Bar<T> {
+  def [new](t T)
+}
+
+def main {
+  var foo Foo<int> = [0]
+  var bar Foo<int> = [0]
+}
+", "
+<stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
+  def [new](t T)
+            ^
+")
+
+test("
+class Foo<T> {
+  def {new}(t List<T>)
+}
+
+class Bar<T> {
+  def {new}(t T)
+}
+
+def main {
+  var foo Foo<int> = {0}
+  var bar Foo<int> = {0}
+}
+", "
+<stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
+  def {new}(t T)
+            ^
+")
+
+test("
+class Foo<K, V> {
+  def {new}(k List<K>, v List<V>)
+}
+
+class Bar<K, V> {
+  def {new}(k K, v V)
+}
+
+def main {
+  var foo Foo<int, bool> = {1: false}
+  var bar Foo<int, bool> = {1: false}
+}
+", "
+<stdin>:6:13: error: Expected argument \"k\" to be of type \"List<T>\" instead of type \"K\"
+  def {new}(k K, v V)
+            ^
+<stdin>:6:18: error: Expected argument \"v\" to be of type \"List<T>\" instead of type \"V\"
+  def {new}(k K, v V)
+                 ^
+")
+
+test("
+class Foo<K, V> {
+  def []=(key K, value V)
+}
+
+namespace Foo {
+  def {new}(keys List<K>, values List<V>) Foo<K, V> {
+    var foo = Foo<K, V>.new
+    for i in 0..keys.count {
+      foo[keys[i]] = values[i]
+    }
+    return foo
+  }
+}
+
+def main {
+  var foo Foo<int, bool> = {false: 1}
+}
+", "
+<stdin>:16:29: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  var foo Foo<int, bool> = {false: 1}
+                            ~~~~~
+<stdin>:16:36: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var foo Foo<int, bool> = {false: 1}
+                                   ^
+")
+
+test("
+class Foo<T> {
+  def new
+  def {...}(x int, y T) Foo<T>
+}
+
+class Bar<T> {
+  def new
+  def {...}(x int, y T) Bar<T>
+}
+
+namespace Bar {
+  def new Bar<T> { return null }
+}
+
+def main {
+  var foo Foo<int> = {0: 1}
+  var bar Bar<int> = {0: 1}
+}
+", "
+")
+
+test("
+class Foo {
+  var ivar = 0
+  def ifun
+}
+class Bar : Foo {}
+class Baz : Bar {
+  over ifun
+}
+
+namespace Foo {
+  var gvar = 0
+  def gfun
+}
+namespace Bar {}
+namespace Baz {
+  def gfun
+}
+
+def main {
+  Foo.new.ivar = 0
+  Bar.new.ivar = 0
+  Baz.new.ivar = 0
+
+  Foo.new.ifun
+  Bar.new.ifun
+  Baz.new.ifun
+
+  Foo.gvar = 0
+  Bar.gvar = 0
+  Baz.gvar = 0
+
+  Foo.gfun
+  Bar.gfun
+  Baz.gfun
+}
+", "
+<stdin>:29:7: error: \"gvar\" is not declared on type \"Bar\"
+  Bar.gvar = 0
+      ~~~~
+<stdin>:30:7: error: \"gvar\" is not declared on type \"Baz\"
+  Baz.gvar = 0
+      ~~~~
+<stdin>:33:7: error: \"gfun\" is not declared on type \"Bar\"
+  Bar.gfun
+      ~~~~
+")
+
+test("
+def main {
+  var foo = dynamic
+}
+", "
+<stdin>:2:20: error: Expected DOT but found NEWLINE
+  var foo = dynamic
+                   ^
+")
+
+test("
+def main {
+  var bar = dynamic.foo
+}
+", "
+")
+
+test("
+class Bar : Foo {
+  var y int
+}
+
+class Foo {
+  var x int
+}
+
+def main {
+  Bar.new(0, 1) # This used to fail when Bar came before Foo since Foo.new wasn't initialized first and so had no arguments
+}
+", "
+")
+
+test("
+enum Foo {
+  FOO
+  BAR
+}
+
+def main {
+  if Foo.FOO in [.FOO, .BAR] {}
+  if .FOO in [Foo.FOO, Foo.BAR] {}
+}
+", "
+")
+
+test("
+def main {
+  var a = [.FOO, .BAR]
+  var b = [Foo.FOO, .BAR]
+  var c = [.FOO, Foo.BAR]
+  var d = [Foo.FOO, Foo.BAR]
+}
+
+enum Foo {
+  FOO
+  BAR
+}
+", "
+<stdin>:2:12: error: Cannot access \"FOO\" without type context
+  var a = [.FOO, .BAR]
+           ~~~~
+<stdin>:2:18: error: Cannot access \"BAR\" without type context
+  var a = [.FOO, .BAR]
+                 ~~~~
+")
+
+test("
+def main(x int) {
+  switch x {
+    case 0 { var foo = 0 }
+    case 1 { var foo = false }
+  }
+}
+", "
+")
+
+  }
+}

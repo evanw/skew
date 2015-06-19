@@ -1,0 +1,62 @@
+namespace tests {
+  class CompilerTest : unit.Test {
+    over run {
+      rename(compactWhitespace(input))
+      var log = skew.Log.new
+      var cache = skew.TypeCache.new
+      var global = skew.compile(log, [skew.Source.new("<stdin>", input)], cache)
+      var output = log.toString
+      expectString(trim(expected), trim(output))
+    }
+
+    @private {
+      var input string
+      var expected string
+    }
+  }
+
+  def isSpace(c int) bool {
+    return c == ' ' || c == '\n'
+  }
+
+  def trim(text string) string {
+    var length = text.count
+    var start = 0
+    var end = length
+    while start < length && isSpace(text[start]) {
+      start += 1
+    }
+    while start < end && isSpace(text[end - 1]) {
+      end -= 1
+    }
+    return text.slice(start, end)
+  }
+
+  def compactWhitespace(text string) string {
+    var wasSpace = false
+    var result = ""
+    for i in 0..text.count {
+      if !isSpace(text[i]) {
+        result += text.get(i)
+        wasSpace = false
+      } else if !wasSpace {
+        result += " "
+        wasSpace = true
+      }
+    }
+    return result
+  }
+
+  def test(input string, expected string) CompilerTest {
+    return CompilerTest.new(trim(input), expected)
+  }
+}
+
+@entry
+def main int {
+  tests.testSimple
+
+  var report = unit.TerminalReport.new
+  unit.Test.runAll(report)
+  return report.failedCount
+}

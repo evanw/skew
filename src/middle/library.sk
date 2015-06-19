@@ -105,7 +105,7 @@ class string {
   def +=(x string)
   def <=>(x string) int
   def [](x int) int
-  def at(x int) string
+  def get(x int) string
   def codePoints List<int>
   def codeUnits List<int>
   def count int

@@ -1,0 +1,5 @@
+namespace timestamp {
+  def now double {
+    return dynamic.Date.now()
+  }
+}
