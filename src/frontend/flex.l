@@ -7,6 +7,7 @@
 "as"                              AS;
 "break"                           BREAK;
 "case"                            CASE;
+"catch"                           CATCH;
 "class"                           CLASS;
 "const"                           CONST;
 "continue"                        CONTINUE;
@@ -16,6 +17,7 @@
 "else"                            ELSE;
 "enum"                            ENUM;
 "false"                           FALSE;
+"finally"                         FINALLY;
 "for"                             FOR;
 "if"                              IF;
 "in"                              IN;
@@ -27,7 +29,9 @@
 "return"                          RETURN;
 "super"                           SUPER;
 "switch"                          SWITCH;
+"throw"                           THROW;
 "true"                            TRUE;
+"try"                             TRY;
 "var"                             VAR;
 "while"                           WHILE;
 

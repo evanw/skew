@@ -1,6 +1,6 @@
 namespace skew {
   @entry
-  def main {
+  def main(args List<string>) int {
     var files List<string> = dynamic.process.argv.slice(2)
     var sources List<Source> = []
     var fs = dynamic.require("fs")
@@ -25,5 +25,7 @@ namespace skew {
         dynamic.process.stdout.write(source.contents)
       }
     }
+
+    return 0
   }
 }

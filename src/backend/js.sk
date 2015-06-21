@@ -263,6 +263,12 @@ namespace skew {
             emit(";\n")
           }
 
+          case .THROW {
+            emit(indent + "throw ")
+            emitExpression(node.throwValue, .LOWEST)
+            emit(";\n")
+          }
+
           case .FOR {
             var test = node.forTest
             var update = node.forUpdate
@@ -345,6 +351,23 @@ namespace skew {
             }
             decreaseIndent
             emit(indent + "}\n")
+          }
+
+          case .TRY {
+            var children = node.children
+            var finallyBlock = node.finallyBlock
+            emit(indent + "try")
+            emitBlock(node.tryBlock)
+            for i in 1..children.count - 1 {
+              var child = children[i]
+              emit(" catch (" + (child.symbol != null ? mangleName(child.symbol) : "$e") + ")")
+              emitBlock(child.catchBlock)
+            }
+            if finallyBlock != null {
+              emit(" finally")
+              emitBlock(finallyBlock)
+            }
+            emit("\n")
           }
 
           case .WHILE {

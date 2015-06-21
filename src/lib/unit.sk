@@ -33,7 +33,7 @@ namespace unit {
     def expectString(expected string, observed string) {
       if expected != observed {
         _failure = Failure.new(expected, observed)
-        dynamic.throw(_failure)
+        throw _failure
       }
     }
 
@@ -52,13 +52,13 @@ namespace unit {
 
       for test in tests {
         test.before
-        # try {
+        try {
           test.run
-        # } catch {
-        #   if test._failure == null {
-        #     test._failure = Failure.new("", "(runtime error)")
-        #   }
-        # }
+        } catch {
+          if test._failure == null {
+            test._failure = Failure.new("", "(runtime error)")
+          }
+        }
         test.after
         report.completed(test, test._failure == null ? .SUCCESS : .FAILURE)
       }

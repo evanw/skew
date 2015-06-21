@@ -4,6 +4,7 @@ namespace skew {
     ANNOTATION
     BLOCK
     CASE
+    CATCH
 
     # Statements
     BREAK
@@ -14,6 +15,8 @@ namespace skew {
     IF
     RETURN
     SWITCH
+    THROW
+    TRY
     VAR
     WHILE
 
@@ -376,6 +379,11 @@ namespace skew {
       return Node.new(.CASE).withChildren(values)
     }
 
+    def createCatch(symbol VariableSymbol, block Node) Node {
+      assert(block.kind == .BLOCK)
+      return Node.new(.CATCH).withChildren([block]).withSymbol(symbol)
+    }
+
     def createBreak Node {
       return Node.new(.BREAK)
     }
@@ -419,6 +427,19 @@ namespace skew {
       assert(value.kind.isExpression)
       cases.prepend(value)
       return Node.new(.SWITCH).withChildren(cases)
+    }
+
+    def createThrow(value Node) Node {
+      assert(value.kind.isExpression)
+      return Node.new(.THROW).withChildren([value])
+    }
+
+    def createTry(tryBlock Node, catches List<Node>, finallyBlock Node) Node {
+      assert(tryBlock.kind == .BLOCK)
+      assert(finallyBlock == null || finallyBlock.kind == .BLOCK)
+      catches.prepend(tryBlock)
+      catches.append(finallyBlock)
+      return Node.new(.TRY).withChildren(catches)
     }
 
     def createVar(symbol VariableSymbol) Node {
@@ -607,6 +628,13 @@ namespace skew {
       return children[0]
     }
 
+    def catchBlock Node {
+      assert(kind == .CATCH)
+      assert(children.count == 1)
+      assert(children[0].kind == .BLOCK)
+      return children[0]
+    }
+
     def expressionValue Node {
       assert(kind == .EXPRESSION)
       assert(children.count == 1)
@@ -696,6 +724,26 @@ namespace skew {
       assert(children.count == 2)
       assert(children[1].kind.isExpression)
       return children[1]
+    }
+
+    def throwValue Node {
+      assert(children.count == 1)
+      assert(children[0].kind.isExpression)
+      return children[0]
+    }
+
+    def tryBlock Node {
+      assert(kind == .TRY)
+      assert(children.count >= 2)
+      assert(children[0].kind == .BLOCK)
+      return children[0]
+    }
+
+    def finallyBlock Node {
+      assert(kind == .TRY)
+      assert(children.count >= 2)
+      assert(children.last == null || children.last.kind == .BLOCK)
+      return children.last
     }
 
     def whileTest Node {

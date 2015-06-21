@@ -226,4 +226,8 @@ class IntMap<T> {
   def values List<T>
   def {...}(key int, value T) IntMap<T>
 }
+
+class Box<T> {
+  var value T
+}
 "

@@ -712,6 +712,8 @@ namespace skew.resolving {
         case .IF { resolveIf(node, scope) }
         case .RETURN { resolveReturn(node, scope) }
         case .SWITCH { resolveSwitch(node, scope) }
+        case .THROW { resolveThrow(node, scope) }
+        case .TRY { resolveTry(node, scope) }
         case .VAR { resolveVar(node, scope) }
         case .WHILE { resolveWhile(node, scope) }
 
@@ -1120,10 +1122,36 @@ namespace skew.resolving {
       }
     }
 
+    def resolveThrow(node Node, scope Scope) {
+      var value = node.throwValue
+      resolveAsParameterizedExpression(value, scope)
+      checkExtraParentheses(value)
+      checkUnusedExpression(value)
+    }
+
     def resolveVar(node Node, scope Scope) {
       var symbol = node.symbol.asVariableSymbol
       scope.asLocalScope.define(symbol, log)
       resolveVariable(symbol)
+    }
+
+    def resolveTry(node Node, scope Scope) {
+      var children = node.children
+      var finallyBlock = node.finallyBlock
+      resolveBlock(node.tryBlock, LocalScope.new(scope, .NORMAL))
+      for i in 1..children.count - 1 {
+        var child = children[i]
+        var childScope = LocalScope.new(scope, .NORMAL)
+        if child.symbol != null {
+          var symbol = child.symbol.asVariableSymbol
+          scope.asLocalScope.define(symbol, log)
+          resolveVariable(symbol)
+        }
+        resolveBlock(child.catchBlock, childScope)
+      }
+      if finallyBlock != null {
+        resolveBlock(finallyBlock, LocalScope.new(scope, .NORMAL))
+      }
     }
 
     def resolveWhile(node Node, scope Scope) {

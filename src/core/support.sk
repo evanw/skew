@@ -1,6 +1,6 @@
 def assert(truth bool) {
   if !truth {
-    dynamic.throw("Assertion failed")
+    throw "Assertion failed"
   }
 }
 
