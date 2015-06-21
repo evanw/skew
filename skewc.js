@@ -1577,6 +1577,10 @@
     return ((self) | 0) >= ((skew.NodeKind.COMPLEMENT) | 0) && ((self) | 0) <= ((skew.NodeKind.POSITIVE) | 0);
   };
 
+  skew.NodeKind.isUnaryAssign = function(self) {
+    return ((self) | 0) >= ((skew.NodeKind.DECREMENT) | 0) && ((self) | 0) <= ((skew.NodeKind.INCREMENT) | 0);
+  };
+
   skew.NodeKind.isBinary = function(self) {
     return ((self) | 0) >= ((skew.NodeKind.ADD) | 0) && ((self) | 0) <= ((skew.NodeKind.ASSIGN_SUBTRACT) | 0);
   };
@@ -1591,6 +1595,10 @@
 
   skew.NodeKind.isJump = function(self) {
     return self === skew.NodeKind.BREAK || self === skew.NodeKind.CONTINUE || self === skew.NodeKind.RETURN;
+  };
+
+  skew.NodeKind.isAssign = function(self) {
+    return skew.NodeKind.isUnaryAssign(self) || skew.NodeKind.isBinaryAssign(self);
   };
 
   // Flags
@@ -7791,7 +7799,7 @@
     }
 
     // Check for a valid storage location even for overloadable operators
-    if (skew.NodeKind.isBinaryAssign(kind)) {
+    if (skew.NodeKind.isAssign(kind)) {
       self.checkStorage(target, scope);
     }
 

@@ -3050,5 +3050,20 @@ def foo int {
 ", "
 ")
 
+test("
+def main {
+  0--
+  0 += 1
+  [1][2]=3
+}
+", "
+<stdin>:2:3: error: Cannot store to this location
+  0--
+  ^
+<stdin>:3:3: error: Cannot store to this location
+  0 += 1
+  ^
+")
+
   }
 }

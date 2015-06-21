@@ -2005,7 +2005,7 @@ namespace skew.resolving {
       }
 
       # Check for a valid storage location even for overloadable operators
-      if kind.isBinaryAssign {
+      if kind.isAssign {
         checkStorage(target, scope)
       }
 

@@ -103,6 +103,10 @@ namespace skew {
       return self as int >= COMPLEMENT as int && self as int <= POSITIVE as int
     }
 
+    def isUnaryAssign bool {
+      return self as int >= DECREMENT as int && self as int <= INCREMENT as int
+    }
+
     def isBinary bool {
       return self as int >= ADD as int && self as int <= ASSIGN_SUBTRACT as int
     }
@@ -117,6 +121,10 @@ namespace skew {
 
     def isJump bool {
       return self == BREAK || self == CONTINUE || self == RETURN
+    }
+
+    def isAssign bool {
+      return isUnaryAssign || isBinaryAssign
     }
   }
 
