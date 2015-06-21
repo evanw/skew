@@ -165,7 +165,7 @@ namespace skew.resolving {
         for variable in symbol.variables {
           if variable.kind == .VARIABLE_ENUM {
             variable.enumValue = nextEnumValue
-            nextEnumValue += 1
+            nextEnumValue++
           }
         }
       }
@@ -284,7 +284,7 @@ namespace skew.resolving {
           # Use a C-style for loop to implement this foreach loop
           var setup = [Node.createVar(index), Node.createVar(list), Node.createVar(count)]
           var test = Node.createBinary(.LESS_THAN, indexName.clone, countName)
-          var update = Node.createBinary(.ASSIGN_ADD, indexName.clone, Node.createInt(1).withType(cache.intType))
+          var update = Node.createUnary(.INCREMENT, indexName.clone)
           node.replaceWith(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
 
           # Make sure the new expressions are resolved
@@ -556,7 +556,7 @@ namespace skew.resolving {
                 block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN,
                   createMemberReference(createSymbolReference(symbol.self), variable),
                   variable.value)))
-                index += 1
+                index++
                 variable.value = null
               }
             }
@@ -673,7 +673,7 @@ namespace skew.resolving {
         }
 
         types.append(function.argumentOnlyType)
-        i += 1
+        i++
       }
 
       # Include non-overridden overloads from the base class
@@ -971,12 +971,12 @@ namespace skew.resolving {
           var function = scope.findEnclosingFunctionOrLambda.symbol
           if function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null {
             child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue.replaceWithNull)
-            n -= 1
+            n--
           }
         }
 
         resolveNode(child, scope, null)
-        i += 1
+        i++
       }
     }
 
@@ -1298,11 +1298,11 @@ namespace skew.resolving {
               kind == .INITIALIZER_LIST && findMember(type, "[new]") == null && findMember(type, "[...]") == null ||
               (kind == .INITIALIZER_SET || kind == .INITIALIZER_MAP) && findMember(type, "{new}") == null && findMember(type, "{...}") == null {
             candidates.removeAt(index)
-            index -= 1
+            index--
             break
           }
         }
-        index += 1
+        index++
       }
 
       # Check for an unambiguous match
@@ -1322,11 +1322,11 @@ namespace skew.resolving {
         for i in 0..count {
           if !cache.canImplicitlyConvert(children[i + 1].resolvedType, argumentTypes[i]) {
             candidates.removeAt(index)
-            index -= 1
+            index--
             break
           }
         }
-        index += 1
+        index++
       }
 
       # Check for an unambiguous match

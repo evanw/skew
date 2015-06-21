@@ -90,7 +90,7 @@ namespace skew {
 
       # Compress tokens to eliminate unused null gaps
       tokens[count] = token
-      count += 1
+      count++
 
       # Tokens that start with a greater than may need to be split
       var tokenKind = token.kind
@@ -171,11 +171,11 @@ namespace skew {
       # Python, not like JavaScript ASI! Anything that is at all ambiguous
       # should be disallowed.
       if tokenKind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER && !(tokens[i + 1].kind in KEEP_NEWLINE_BEFORE) {
-        count -= 1
+        count--
         continue
       } else if previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE {
         tokens[count - 2] = token
-        count -= 1
+        count--
       }
       previousKind = tokenKind
     }

@@ -24,10 +24,10 @@ namespace tests {
     var start = 0
     var end = length
     while start < length && isSpace(text[start]) {
-      start += 1
+      start++
     }
     while start < end && isSpace(text[end - 1]) {
-      end -= 1
+      end--
     }
     return text.slice(start, end)
   }

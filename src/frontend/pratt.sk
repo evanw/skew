@@ -44,7 +44,7 @@ namespace skew {
     def next Token {
       var token = current
       if index + 1 < tokens.count {
-        index += 1
+        index++
       }
       return token
     }
@@ -68,7 +68,7 @@ namespace skew {
 
     def undo {
       assert(index > 0)
-      index -= 1
+      index--
     }
 
     def expect(kind TokenKind) bool {

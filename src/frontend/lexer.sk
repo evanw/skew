@@ -158,7 +158,7 @@ namespace skew {
           }
         }
         yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c]
-        yy_cp += 1
+        yy_cp++
       }
 
       # Find the action

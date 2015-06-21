@@ -101,7 +101,7 @@ namespace skew {
 
     @private {
       def createID int {
-        nextID += 1
+        nextID++
         return nextID
       }
 
@@ -131,7 +131,7 @@ namespace skew {
   namespace Environment {
     @private {
       def createID int {
-        nextID += 1
+        nextID++
         return nextID
       }
 

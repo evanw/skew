@@ -57,12 +57,12 @@ namespace skew {
 
     def error(range Range, text string) {
       diagnostics.append(Diagnostic.new(.ERROR, range, text))
-      errorCount += 1
+      errorCount++
     }
 
     def warning(range Range, text string) {
       diagnostics.append(Diagnostic.new(.WARNING, range, text))
-      warningCount += 1
+      warningCount++
     }
 
     def note(range Range, text string) {

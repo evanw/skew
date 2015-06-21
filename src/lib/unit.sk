@@ -86,7 +86,7 @@ namespace unit {
     }
 
     over completed(test Test, status Status) {
-      _completed += 1
+      _completed++
       if status == .FAILURE {
         _failed.append(test)
         terminal.setColor(.RED)
@@ -158,7 +158,7 @@ namespace unit {
             matrix.append(expected[i] == observed[j]
               ? i > 0 && j > 0 ? matrix[ij - n - 1] + 1 : 1
               : Math.max(i > 0 ? matrix[ij - n] : 0, j > 0 ? matrix[ij - 1] : 0))
-            ij += 1
+            ij++
           }
         }
       }
@@ -174,21 +174,21 @@ namespace unit {
           # Common
           if i >= 0 && j >= 0 && expected[i] == observed[j] {
             reversed.append(" " expected[i])
-            i -= 1
-            j -= 1
+            i--
+            j--
           }
 
           # Removal
           else if j >= 0 && (i < 0 || (j > 0 ? matrix[ij - 1] : 0) > (i > 0 ? matrix[ij - n] : 0)) {
             reversed.append("-" observed[j])
-            j -= 1
+            j--
           }
 
           # Insertion
           else {
             assert(i >= 0 && (j < 0 || (j > 0 ? matrix[ij - 1] : 0) <= (i > 0 ? matrix[ij - n] : 0)))
             reversed.append("+" expected[i])
-            i -= 1
+            i--
           }
         }
       }

@@ -46,12 +46,12 @@ namespace skew {
               if j != k && objectComesBefore(objects[k], object) {
                 break
               }
-              k += 1
+              k++
             }
             if k == objects.count {
               break
             }
-            j += 1
+            j++
           }
 
           # Swap the object into the correct order
