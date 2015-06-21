@@ -3065,5 +3065,15 @@ def main {
   ^
 ")
 
+test("
+class Foo {
+  class Bar {
+    def foo Foo
+    def bar Bar
+  }
+}
+", "
+")
+
   }
 }

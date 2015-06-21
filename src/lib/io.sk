@@ -1,0 +1,17 @@
+namespace io {
+  def readFile(path string) Box<string> {
+    try {
+      var contents string = dynamic.require("fs").readFileSync(path, "utf8")
+      return Box<string>.new(contents.replaceAll("\r\n", "\n"))
+    }
+    return null
+  }
+
+  def writeFile(path string, contents string) bool {
+    try {
+      dynamic.require("fs").writeFileSync(path, contents)
+      return true
+    }
+    return false
+  }
+}

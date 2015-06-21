@@ -78,6 +78,21 @@ namespace skew {
 
       return FormattedRange.new(line, " ".repeat(a) + (b - a < 2 ? "^" : "~".repeat(b - a)))
     }
+
+    def fromStart(count int) Range {
+      assert(count >= 0 && count <= end - start)
+      return Range.new(source, start, start + count)
+    }
+
+    def fromEnd(count int) Range {
+      assert(count >= 0 && count <= end - start)
+      return Range.new(source, end - count, end)
+    }
+
+    def slice(offsetStart int, offsetEnd int) Range {
+      assert(offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= end - start)
+      return Range.new(source, start + offsetStart, start + offsetEnd)
+    }
   }
 
   namespace Range {

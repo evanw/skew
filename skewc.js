@@ -5039,6 +5039,24 @@
     return new skew.FormattedRange(line, in_string.repeat(" ", a) + (b - a < 2 ? "^" : in_string.repeat("~", b - a)));
   };
 
+  skew.Range.prototype.fromStart = function(count) {
+    var self = this;
+    assert(count >= 0 && count <= self.end - self.start);
+    return new skew.Range(self.source, self.start, self.start + count);
+  };
+
+  skew.Range.prototype.fromEnd = function(count) {
+    var self = this;
+    assert(count >= 0 && count <= self.end - self.start);
+    return new skew.Range(self.source, self.end - count, self.end);
+  };
+
+  skew.Range.prototype.slice = function(offsetStart, offsetEnd) {
+    var self = this;
+    assert(offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= self.end - self.start);
+    return new skew.Range(self.source, self.start + offsetStart, self.start + offsetEnd);
+  };
+
   skew.Range.span = function(start, end) {
     assert(start.source === end.source);
     assert(start.start <= end.end);
@@ -6942,7 +6960,6 @@
     var value = node.throwValue();
     self.resolveAsParameterizedExpression(value, scope);
     self.checkExtraParentheses(value);
-    self.checkUnusedExpression(value);
   };
 
   skew.resolving.Resolver.prototype.resolveVar = function(node, scope) {
@@ -9048,6 +9065,68 @@
     return text;
   };
 
+  prettyPrint.wrapWords = function(text, width) {
+    // An invalid length means wrapping is disabled
+    if (width < 1) {
+      return [text];
+    }
+
+    var words = text.split(" ");
+    var lines = [];
+    var line = "";
+
+    // Run the word wrapping algorithm
+    var i = 0;
+
+    while (i < in_List.count(words)) {
+      var word = words[i];
+      var lineLength = in_string.count(line);
+      var wordLength = in_string.count(word);
+      var estimatedLength = lineLength + 1 + wordLength;
+      ++i;
+
+      // Collapse adjacent spaces
+      if (word === "") {
+        continue;
+      }
+
+      // Start the line
+      if (line === "") {
+        while (in_string.count(word) > width) {
+          in_List.append1(lines, word.slice(0, width));
+          word = word.slice(width, in_string.count(word));
+        }
+
+        line = word;
+      }
+
+      // Continue line
+      else if (estimatedLength < width) {
+        line += " " + word;
+      }
+
+      // Continue and wrap
+      else if (estimatedLength === width) {
+        in_List.append1(lines, line + " " + word);
+        line = "";
+      }
+
+      // Wrap and try again
+      else {
+        in_List.append1(lines, line);
+        line = "";
+        --i;
+      }
+    }
+
+    // Don't add an empty trailing line unless there are no other lines
+    if (line !== "" || in_List.isEmpty(lines)) {
+      in_List.append1(lines, line);
+    }
+
+    return lines;
+  };
+
   var unicode = {};
 
   unicode.Encoding = {
@@ -9157,6 +9236,71 @@
       self.index += 1;
       return c;
     }
+  };
+
+  var io = {};
+
+  io.readFile = function(path) {
+    try {
+      var contents = require("fs").readFileSync(path, "utf8");
+      return new Box(contents.replaceAll("\r\n", "\n"));
+    } catch ($e) {
+    }
+
+    return null;
+  };
+
+  io.writeFile = function(path, contents) {
+    try {
+      require("fs").writeFileSync(path, contents);
+      return true;
+    } catch ($e) {
+    }
+
+    return false;
+  };
+
+  var terminal = {};
+
+  terminal.setColor = function(color) {
+    if (process.stdout.isTTY) {
+      terminal.write("\x1B[0;" + terminal.Color.toEscapeCode(color).toString() + "m");
+    }
+  };
+
+  terminal.width = function() {
+    return process.stdout.columns;
+  };
+
+  terminal.height = function() {
+    return process.stdout.rows;
+  };
+
+  terminal.print = function(text) {
+    terminal.write(text + "\n");
+  };
+
+  terminal.flush = function() {
+  };
+
+  terminal.write = function(text) {
+    process.stdout.write(text);
+  };
+
+  terminal.Color = {
+    DEFAULT: 0, 0: "DEFAULT",
+    BOLD: 1, 1: "BOLD",
+    GRAY: 2, 2: "GRAY",
+    RED: 3, 3: "RED",
+    GREEN: 4, 4: "GREEN",
+    YELLOW: 5, 5: "YELLOW",
+    BLUE: 6, 6: "BLUE",
+    MAGENTA: 7, 7: "MAGENTA",
+    CYAN: 8, 8: "CYAN"
+};
+
+  terminal.Color.toEscapeCode = function(self) {
+    return terminal.colorToEscapeCode[((self) | 0)];
   };
 
   var in_string = {};
@@ -9608,6 +9752,7 @@
   skew.Environment.nextID = 0;
   unicode.STRING_ENCODING = unicode.Encoding.UTF16;
   unicode.StringIterator.INSTANCE = new unicode.StringIterator();
+  terminal.colorToEscapeCode = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((terminal.Color.DEFAULT) | 0), 0), ((terminal.Color.BOLD) | 0), 1), ((terminal.Color.GRAY) | 0), 90), ((terminal.Color.RED) | 0), 91), ((terminal.Color.GREEN) | 0), 92), ((terminal.Color.YELLOW) | 0), 93), ((terminal.Color.BLUE) | 0), 94), ((terminal.Color.MAGENTA) | 0), 95), ((terminal.Color.CYAN) | 0), 96);
 
   process.exit(skew.main(process.argv.slice(2)));
 }());

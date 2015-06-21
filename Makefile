@@ -3,16 +3,31 @@ SOURCES += src/core/*.sk
 SOURCES += src/frontend/*.sk
 SOURCES += src/middle/*.sk
 
+SOURCES_NODE += $(SOURCES)
+SOURCES_NODE += src/driver/node.sk
+SOURCES_NODE += src/lib/io.sk
+SOURCES_NODE += src/lib/terminal.sk
+
+SOURCES_BROWSER += $(SOURCES)
+SOURCES_BROWSER += src/driver/browser.sk
+
+SOURCES_TEST += $(SOURCES)
+SOURCES_TEST += src/driver/tests.sk
+SOURCES_TEST += src/lib/terminal.sk
+SOURCES_TEST += src/lib/timestamp.sk
+SOURCES_TEST += src/lib/unit.sk
+SOURCES_TEST += tests/simple.sk
+
 default: compile
 
 compile: | build
-	node skewc.js $(SOURCES) src/driver/node.sk > build/node.js
-	node skewc.js $(SOURCES) src/driver/browser.sk > build/browser.js
+	node skewc.js $(SOURCES_NODE) > build/node.js
+	node skewc.js $(SOURCES_BROWSER) > build/browser.js
 
 replace: | build
-	node skewc.js $(SOURCES) src/driver/node.sk > build/node.js
-	node build/node.js $(SOURCES) src/driver/node.sk > build/node2.js
-	node build/node2.js $(SOURCES) src/driver/node.sk > build/node3.js
+	node skewc.js $(SOURCES_NODE) > build/node.js
+	node build/node.js $(SOURCES_NODE) > build/node2.js
+	node build/node2.js $(SOURCES_NODE) > build/node3.js
 	cmp -s build/node2.js build/node3.js
 	mv build/node3.js skewc.js
 	rm build/node2.js
@@ -27,5 +42,5 @@ flex:
 	cd src/frontend && python build.py && cd -
 
 test:
-	node skewc.js $(SOURCES) src/lib/terminal.sk src/lib/timestamp.sk src/lib/unit.sk src/driver/tests.sk tests/simple.sk > build/test.js
+	node skewc.js $(SOURCES_TEST) > build/test.js
 	mocha build/test.js

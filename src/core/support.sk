@@ -25,6 +25,66 @@ namespace prettyPrint {
     }
     return text
   }
+
+  def wrapWords(text string, width int) List<string> {
+    # An invalid length means wrapping is disabled
+    if width < 1 {
+      return [text]
+    }
+
+    var words = text.split(" ")
+    var lines List<string> = []
+    var line = ""
+
+    # Run the word wrapping algorithm
+    var i = 0
+    while i < words.count {
+      var word = words[i]
+      var lineLength = line.count
+      var wordLength = word.count
+      var estimatedLength = lineLength + 1 + wordLength
+      i++
+
+      # Collapse adjacent spaces
+      if word == "" {
+        continue
+      }
+
+      # Start the line
+      if line == "" {
+        while word.count > width {
+          lines.append(word.slice(0, width))
+          word = word.slice(width, word.count)
+        }
+        line = word
+      }
+
+      # Continue line
+      else if estimatedLength < width {
+        line += " " + word
+      }
+
+      # Continue and wrap
+      else if estimatedLength == width {
+        lines.append(line + " " + word)
+        line = ""
+      }
+
+      # Wrap and try again
+      else {
+        lines.append(line)
+        line = ""
+        i--
+      }
+    }
+
+    # Don't add an empty trailing line unless there are no other lines
+    if line != "" || lines.isEmpty {
+      lines.append(line)
+    }
+
+    return lines
+  }
 }
 
 def hashCombine(left int, right int) int {

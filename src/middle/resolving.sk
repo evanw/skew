@@ -1126,7 +1126,6 @@ namespace skew.resolving {
       var value = node.throwValue
       resolveAsParameterizedExpression(value, scope)
       checkExtraParentheses(value)
-      checkUnusedExpression(value)
     }
 
     def resolveVar(node Node, scope Scope) {
