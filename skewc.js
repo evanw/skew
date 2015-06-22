@@ -1033,19 +1033,24 @@
         var finallyBlock = node.finallyBlock();
         self.emit(self.indent + "try");
         self.emitBlock(node.tryBlock());
+        self.emit("\n");
 
         for (var i = 1, count4 = in_List.count(children) - 1; i < count4; i += 1) {
           var child = children[i];
-          self.emit(" catch (" + (child.symbol !== null ? skew.JsEmitter.mangleName(child.symbol) : "$e") + ")");
+          self.emit("\n");
+          self.emitComments(child.comments);
+          self.emit(self.indent + "catch (" + (child.symbol !== null ? skew.JsEmitter.mangleName(child.symbol) : "$e") + ")");
           self.emitBlock(child.catchBlock());
+          self.emit("\n");
         }
 
         if (finallyBlock !== null) {
-          self.emit(" finally");
+          self.emit("\n");
+          self.emitComments(finallyBlock.comments);
+          self.emit(self.indent + "finally");
           self.emitBlock(finallyBlock);
+          self.emit("\n");
         }
-
-        self.emit("\n");
         break;
       }
 
@@ -3657,52 +3662,7 @@
       return null;
     }
 
-    // Optional catch blocks
-    var catches = [];
-
-    while (context.peek(skew.TokenKind.CATCH)) {
-      var catchToken = context.next();
-      var symbol = null;
-      var nameRange = context.current().range;
-
-      // Optional typed variable
-      if (context.eat(skew.TokenKind.IDENTIFIER)) {
-        symbol = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, nameRange.toString());
-        symbol.range = nameRange;
-        symbol.type = skew.parsing.parseType(context);
-
-        if (symbol.type === null) {
-          return null;
-        }
-      }
-
-      // Manditory catch block
-      var catchBlock = skew.parsing.parseBlock(context);
-
-      if (catchBlock === null) {
-        return null;
-      }
-
-      in_List.append1(catches, skew.Node.createCatch(symbol, catchBlock).withRange(context.spanSince(catchToken.range)));
-    }
-
-    // Optional finally block
-    var finallyBlock = null;
-
-    if (context.eat(skew.TokenKind.FINALLY)) {
-      finallyBlock = skew.parsing.parseBlock(context);
-
-      if (finallyBlock === null) {
-        return null;
-      }
-    }
-
-    // Ensure there's at least one other block
-    if (in_List.isEmpty(catches) && finallyBlock === null) {
-      in_List.append1(catches, skew.Node.createCatch(null, skew.Node.createBlock([])));
-    }
-
-    return skew.Node.createTry(tryBlock, catches, finallyBlock).withRange(context.spanSince(token.range));
+    return skew.Node.createTry(tryBlock, [], null).withRange(context.spanSince(token.range));
   };
 
   skew.parsing.parseWhile = function(context) {
@@ -3828,6 +3788,48 @@
         }
       }
 
+      // Merge "catch" statements with the previous "try"
+      else if (context.peek(skew.TokenKind.CATCH) && previous !== null && previous.kind === skew.NodeKind.TRY && previous.finallyBlock() === null) {
+        var catchToken = context.next();
+        var symbol = null;
+        var nameRange = context.current().range;
+
+        // Optional typed variable
+        if (context.eat(skew.TokenKind.IDENTIFIER)) {
+          symbol = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, nameRange.toString());
+          symbol.range = nameRange;
+          symbol.type = skew.parsing.parseType(context);
+
+          if (symbol.type === null) {
+            return null;
+          }
+        }
+
+        // Manditory catch block
+        var catchBlock = skew.parsing.parseBlock(context);
+
+        if (catchBlock === null) {
+          return null;
+        }
+
+        var child = skew.Node.createCatch(symbol, catchBlock).withRange(context.spanSince(catchToken.range));
+        child.comments = comments;
+        previous.insertChild(in_List.count(previous.children) - 1, child);
+      }
+
+      // Merge "finally" statements with the previous "try"
+      else if (context.peek(skew.TokenKind.FINALLY) && previous !== null && previous.kind === skew.NodeKind.TRY && previous.finallyBlock() === null) {
+        context.next();
+        var finallyBlock = skew.parsing.parseBlock(context);
+
+        if (finallyBlock === null) {
+          return null;
+        }
+
+        finallyBlock.comments = comments;
+        previous.replaceChild(in_List.count(previous.children) - 1, finallyBlock);
+      }
+
       // Parse a new statement
       else {
         var statement = skew.parsing.parseStatement(context);
@@ -3852,7 +3854,7 @@
         context.eat(skew.TokenKind.NEWLINE);
       }
 
-      else if (context.peek(skew.TokenKind.RIGHT_BRACE) || !context.peek(skew.TokenKind.ELSE) && !context.expect(skew.TokenKind.NEWLINE)) {
+      else if (context.peek(skew.TokenKind.RIGHT_BRACE) || !context.peek(skew.TokenKind.ELSE) && !context.peek(skew.TokenKind.CATCH) && !context.peek(skew.TokenKind.FINALLY) && !context.expect(skew.TokenKind.NEWLINE)) {
         break;
       }
     }
@@ -6975,6 +6977,11 @@
     var finallyBlock = node.finallyBlock();
     self.resolveBlock(node.tryBlock(), new skew.LocalScope(scope, skew.LocalType.NORMAL));
 
+    // Bare try statements catch all thrown values
+    if (in_List.count(children) === 2 && finallyBlock === null) {
+      node.insertChild(1, skew.Node.createCatch(null, skew.Node.createBlock([])));
+    }
+
     for (var i = 1, count = in_List.count(children) - 1; i < count; i += 1) {
       var child = children[i];
       var childScope = new skew.LocalScope(scope, skew.LocalType.NORMAL);
@@ -9244,7 +9251,9 @@
     try {
       var contents = require("fs").readFileSync(path, "utf8");
       return new Box(contents.replaceAll("\r\n", "\n"));
-    } catch ($e) {
+    }
+
+    catch ($e) {
     }
 
     return null;
@@ -9254,7 +9263,9 @@
     try {
       require("fs").writeFileSync(path, contents);
       return true;
-    } catch ($e) {
+    }
+
+    catch ($e) {
     }
 
     return false;

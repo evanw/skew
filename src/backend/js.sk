@@ -358,16 +358,22 @@ namespace skew {
             var finallyBlock = node.finallyBlock
             emit(indent + "try")
             emitBlock(node.tryBlock)
+            emit("\n")
             for i in 1..children.count - 1 {
               var child = children[i]
-              emit(" catch (" + (child.symbol != null ? mangleName(child.symbol) : "$e") + ")")
+              emit("\n")
+              emitComments(child.comments)
+              emit(indent + "catch (" + (child.symbol != null ? mangleName(child.symbol) : "$e") + ")")
               emitBlock(child.catchBlock)
+              emit("\n")
             }
             if finallyBlock != null {
-              emit(" finally")
+              emit("\n")
+              emitComments(finallyBlock.comments)
+              emit(indent + "finally")
               emitBlock(finallyBlock)
+              emit("\n")
             }
-            emit("\n")
           }
 
           case .WHILE {

@@ -1138,6 +1138,12 @@ namespace skew.resolving {
       var children = node.children
       var finallyBlock = node.finallyBlock
       resolveBlock(node.tryBlock, LocalScope.new(scope, .NORMAL))
+
+      # Bare try statements catch all thrown values
+      if children.count == 2 && finallyBlock == null {
+        node.insertChild(1, Node.createCatch(null, Node.createBlock([])))
+      }
+
       for i in 1..children.count - 1 {
         var child = children[i]
         var childScope = LocalScope.new(scope, .NORMAL)
@@ -1148,6 +1154,7 @@ namespace skew.resolving {
         }
         resolveBlock(child.catchBlock, childScope)
       }
+
       if finallyBlock != null {
         resolveBlock(finallyBlock, LocalScope.new(scope, .NORMAL))
       }

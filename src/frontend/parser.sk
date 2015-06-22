@@ -270,48 +270,7 @@ namespace skew.parsing {
     if tryBlock == null {
       return null
     }
-
-    # Optional catch blocks
-    var catches List<Node> = []
-    while context.peek(.CATCH) {
-      var catchToken = context.next
-      var symbol VariableSymbol = null
-      var nameRange = context.current.range
-
-      # Optional typed variable
-      if context.eat(.IDENTIFIER) {
-        symbol = VariableSymbol.new(.VARIABLE_LOCAL, nameRange.toString)
-        symbol.range = nameRange
-        symbol.type = parseType(context)
-        if symbol.type == null {
-          return null
-        }
-      }
-
-      # Manditory catch block
-      var catchBlock = parseBlock(context)
-      if catchBlock == null {
-        return null
-      }
-
-      catches.append(Node.createCatch(symbol, catchBlock).withRange(context.spanSince(catchToken.range)))
-    }
-
-    # Optional finally block
-    var finallyBlock Node = null
-    if context.eat(.FINALLY) {
-      finallyBlock = parseBlock(context)
-      if finallyBlock == null {
-        return null
-      }
-    }
-
-    # Ensure there's at least one other block
-    if catches.isEmpty && finallyBlock == null {
-      catches.append(Node.createCatch(null, Node.createBlock([])))
-    }
-
-    return Node.createTry(tryBlock, catches, finallyBlock).withRange(context.spanSince(token.range))
+    return Node.createTry(tryBlock, [], null).withRange(context.spanSince(token.range))
   }
 
   def parseWhile(context ParserContext) Node {
@@ -391,6 +350,44 @@ namespace skew.parsing {
         }
       }
 
+      # Merge "catch" statements with the previous "try"
+      else if context.peek(.CATCH) && previous != null && previous.kind == .TRY && previous.finallyBlock == null {
+        var catchToken = context.next
+        var symbol VariableSymbol = null
+        var nameRange = context.current.range
+
+        # Optional typed variable
+        if context.eat(.IDENTIFIER) {
+          symbol = VariableSymbol.new(.VARIABLE_LOCAL, nameRange.toString)
+          symbol.range = nameRange
+          symbol.type = parseType(context)
+          if symbol.type == null {
+            return null
+          }
+        }
+
+        # Manditory catch block
+        var catchBlock = parseBlock(context)
+        if catchBlock == null {
+          return null
+        }
+
+        var child = Node.createCatch(symbol, catchBlock).withRange(context.spanSince(catchToken.range))
+        child.comments = comments
+        previous.insertChild(previous.children.count - 1, child)
+      }
+
+      # Merge "finally" statements with the previous "try"
+      else if context.peek(.FINALLY) && previous != null && previous.kind == .TRY && previous.finallyBlock == null {
+        context.next
+        var finallyBlock = parseBlock(context)
+        if finallyBlock == null {
+          return null
+        }
+        finallyBlock.comments = comments
+        previous.replaceChild(previous.children.count - 1, finallyBlock)
+      }
+
       # Parse a new statement
       else {
         var statement = parseStatement(context)
@@ -409,7 +406,7 @@ namespace skew.parsing {
           previous.comments = comments
         }
         context.eat(.NEWLINE)
-      } else if context.peek(.RIGHT_BRACE) || !context.peek(.ELSE) && !context.expect(.NEWLINE) {
+      } else if context.peek(.RIGHT_BRACE) || !context.peek(.ELSE) && !context.peek(.CATCH) && !context.peek(.FINALLY) && !context.expect(.NEWLINE) {
         break
       }
     }
