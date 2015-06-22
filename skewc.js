@@ -7390,7 +7390,7 @@
     }
 
     // Forbid referencing a base class global or constructor function from a derived class
-    if (skew.resolving.Resolver.isBaseGlobalReference(target.resolvedType, symbol)) {
+    if (skew.resolving.Resolver.isBaseGlobalReference(target.resolvedType.symbol, symbol)) {
       self.log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType);
       return;
     }
@@ -7790,7 +7790,7 @@
     self.initializeSymbol(symbol);
 
     // Forbid referencing a base class global or constructor function from a derived class
-    if (enclosingFunction !== null && skew.resolving.Resolver.isBaseGlobalReference(enclosingFunction.symbol.parent.resolvedType, symbol)) {
+    if (enclosingFunction !== null && skew.resolving.Resolver.isBaseGlobalReference(enclosingFunction.symbol.parent, symbol)) {
       self.log.semanticErrorUndeclaredSymbol(node.range, name);
       return;
     }
@@ -8215,7 +8215,7 @@
   };
 
   skew.resolving.Resolver.isBaseGlobalReference = function(parent, member) {
-    return skew.SymbolKind.isGlobalReference(member.kind) && member.parent !== parent.symbol && member.parent.kind === skew.SymbolKind.OBJECT_CLASS;
+    return parent !== null && parent.kind === skew.SymbolKind.OBJECT_CLASS && skew.SymbolKind.isGlobalReference(member.kind) && member.parent !== parent && member.parent.kind === skew.SymbolKind.OBJECT_CLASS && parent.asObjectSymbol().hasBaseClass(member.parent);
   };
 
   skew.resolving.Resolver.isCallValue = function(node) {
