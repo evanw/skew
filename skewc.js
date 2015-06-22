@@ -560,7 +560,7 @@
     NONE: 0, 0: "NONE",
     LEFT: 1, 1: "LEFT",
     RIGHT: 2, 2: "RIGHT"
-};
+  };
 
   // The same operator precedence as C for the most part
   skew.Precedence = {
@@ -579,7 +579,7 @@
     UNARY_PREFIX: 12, 12: "UNARY_PREFIX",
     UNARY_POSTFIX: 13, 13: "UNARY_POSTFIX",
     MEMBER: 14, 14: "MEMBER"
-};
+  };
 
   skew.Precedence.incrementIfLeftAssociative = function(self, associativity) {
     return ((self) | 0) + (((associativity === skew.Associativity.LEFT)) | 0);
@@ -746,7 +746,7 @@
           self.emit("\n");
         }
 
-        self.emit("};\n");
+        self.emit(self.indent + "};\n");
         self.emitNewlineAfterSymbol(symbol);
         break;
       }
@@ -1430,7 +1430,7 @@
     INT: 1, 1: "INT",
     DOUBLE: 2, 2: "DOUBLE",
     STRING: 3, 3: "STRING"
-};
+  };
 
   skew.Content = function() {
     var self = this;
@@ -1602,7 +1602,7 @@
     ASSIGN_SHIFT_LEFT: 73, 73: "ASSIGN_SHIFT_LEFT",
     ASSIGN_SHIFT_RIGHT: 74, 74: "ASSIGN_SHIFT_RIGHT",
     ASSIGN_SUBTRACT: 75, 75: "ASSIGN_SUBTRACT"
-};
+  };
 
   skew.NodeKind.isStatement = function(self) {
     return ((self) | 0) >= ((skew.NodeKind.ASSIGN) | 0) && ((self) | 0) <= ((skew.NodeKind.WHILE) | 0);
@@ -2433,12 +2433,12 @@
     ZERO: 5, 5: "ZERO",
     ZERO_OR_MORE: 6, 6: "ZERO_OR_MORE",
     ZERO_OR_ONE: 7, 7: "ZERO_OR_ONE"
-};
+  };
 
   skew.OperatorKind = {
     FIXED: 0, 0: "FIXED",
     OVERRIDABLE: 1, 1: "OVERRIDABLE"
-};
+  };
 
   skew.SymbolKind = {
     NONE: 0, 0: "NONE",
@@ -2461,7 +2461,7 @@
     VARIABLE_GLOBAL: 17, 17: "VARIABLE_GLOBAL",
     VARIABLE_INSTANCE: 18, 18: "VARIABLE_INSTANCE",
     VARIABLE_LOCAL: 19, 19: "VARIABLE_LOCAL"
-};
+  };
 
   skew.SymbolKind.isType = function(self) {
     return ((self) | 0) >= ((skew.SymbolKind.PARAMETER_FUNCTION) | 0) && ((self) | 0) <= ((skew.SymbolKind.OBJECT_NAMESPACE) | 0);
@@ -2511,7 +2511,7 @@
     UNINITIALIZED: 0, 0: "UNINITIALIZED",
     INITIALIZING: 1, 1: "INITIALIZING",
     INITIALIZED: 2, 2: "INITIALIZED"
-};
+  };
 
   skew.Symbol = function(kind, name) {
     var self = this;
@@ -2848,12 +2848,12 @@
     // Token kinds not used by flex
     START_PARAMETER_LIST: 99, 99: "START_PARAMETER_LIST",
     END_PARAMETER_LIST: 100, 100: "END_PARAMETER_LIST"
-};
+  };
 
   skew.DiagnosticKind = {
     ERROR: 0, 0: "ERROR",
     WARNING: 1, 1: "WARNING"
-};
+  };
 
   skew.Diagnostic = function(kind, range, text) {
     var self = this;
@@ -5541,7 +5541,7 @@
   skew.resolving.ConversionKind = {
     IMPLICIT: 0, 0: "IMPLICIT",
     EXPLICIT: 1, 1: "EXPLICIT"
-};
+  };
 
   skew.resolving.Resolver = function(cache, log) {
     var self = this;
@@ -8249,7 +8249,7 @@
     LOCAL: 1, 1: "LOCAL",
     OBJECT: 2, 2: "OBJECT",
     VARIABLE: 3, 3: "VARIABLE"
-};
+  };
 
   skew.Scope = function(parent) {
     var self = this;
@@ -8424,7 +8424,7 @@
   skew.LocalType = {
     LOOP: 0, 0: "LOOP",
     NORMAL: 1, 1: "NORMAL"
-};
+  };
 
   skew.LocalScope = function(parent, type) {
     var self = this;
@@ -8481,7 +8481,7 @@
     LAMBDA: 0, 0: "LAMBDA",
     SPECIAL: 1, 1: "SPECIAL",
     SYMBOL: 2, 2: "SYMBOL"
-};
+  };
 
   skew.Type = function(kind, symbol) {
     var self = this;
@@ -9140,7 +9140,7 @@
     UTF8: 0, 0: "UTF8",
     UTF16: 1, 1: "UTF16",
     UTF32: 2, 2: "UTF32"
-};
+  };
 
   unicode.StringIterator = function() {
     var self = this;
@@ -9308,7 +9308,7 @@
     BLUE: 6, 6: "BLUE",
     MAGENTA: 7, 7: "MAGENTA",
     CYAN: 8, 8: "CYAN"
-};
+  };
 
   terminal.Color.toEscapeCode = function(self) {
     return terminal.colorToEscapeCode[((self) | 0)];
