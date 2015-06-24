@@ -206,12 +206,18 @@ namespace skew {
       }
     }
 
-    def semanticErrorGetterCalledTwice(range Range, name string) {
+    def semanticErrorGetterCalledTwice(range Range, name string, function Range) {
       error(range, "The function \"" name "\" takes no arguments and is already called implicitly")
+      if function != null {
+        note(function, "The function declaration is here")
+      }
     }
 
-    def semanticErrorUseOfVoidFunction(range Range, name string) {
+    def semanticErrorUseOfVoidFunction(range Range, name string, function Range) {
       error(range, "The function \"" name "\" does not return a value")
+      if function != null {
+        note(function, "The function declaration is here")
+      }
     }
 
     def semanticErrorUseOfVoidLambda(range Range) {

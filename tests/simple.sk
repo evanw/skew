@@ -296,6 +296,9 @@ def @foo(x int)
 <stdin>:6:5: error: The function \"@bar\" takes no arguments and is already called implicitly
 @bar(1)
     ~~~
+<stdin>:2:5: note: The function declaration is here
+def @bar
+    ~~~~
 ")
 
 # These shouldn't cause missing newline errors
@@ -627,9 +630,15 @@ def main {
 <stdin>:7:3: error: The function \"+\" does not return a value
   false + false + false
   ~~~~~~~~~~~~~
+<stdin>:2:7: note: The function declaration is here
+  def +(x bool)
+      ^
 <stdin>:8:3: error: The function \"-\" does not return a value
   false - false - false
   ~~~~~~~~~~~~~
+<stdin>:3:7: note: The function declaration is here
+  def -(x bool) {}
+      ^
 ")
 
 test("
@@ -902,6 +911,9 @@ def main {
 <stdin>:19:14: error: The function \"[...]\" does not return a value
   var b B = [1, 2]
              ^
+<stdin>:4:7: note: The function declaration is here
+  def [...] {}
+      ~~~~~
 <stdin>:19:14: error: Expected 0 arguments but found 1 argument when calling \"[...]\"
   var b B = [1, 2]
              ^
@@ -911,6 +923,9 @@ def main {
 <stdin>:20:14: error: The function \"[...]\" does not return a value
   var c C = [1, 2]
              ^
+<stdin>:9:7: note: The function declaration is here
+  def [...] {}
+      ~~~~~
 <stdin>:20:14: error: Expected 0 arguments but found 1 argument when calling \"[...]\"
   var c C = [1, 2]
              ^
@@ -1029,6 +1044,9 @@ def main(foo Foo) {
 <stdin>:8:9: error: The function \"[new]\" does not return a value
   foo = []
         ~~
+<stdin>:2:7: note: The function declaration is here
+  def [new](x List<int>)
+      ~~~~~
 ")
 
 test("
@@ -2952,9 +2970,15 @@ def main(x Foo) {
 <stdin>:6:13: error: The function \"++\" does not return a value
   var foo = ++x
             ~~~
+<stdin>:2:7: note: The function declaration is here
+  def ++
+      ~~
 <stdin>:7:13: error: The function \"++\" does not return a value
   var bar = x++
             ~~~
+<stdin>:2:7: note: The function declaration is here
+  def ++
+      ~~
 ")
 
 test("

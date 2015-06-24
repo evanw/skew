@@ -3267,14 +3267,22 @@
     }
   };
 
-  skew.Log.prototype.semanticErrorGetterCalledTwice = function(range, name) {
+  skew.Log.prototype.semanticErrorGetterCalledTwice = function(range, name, $function) {
     var self = this;
     self.error(range, "The function \"" + name + "\" takes no arguments and is already called implicitly");
+
+    if ($function !== null) {
+      self.note($function, "The function declaration is here");
+    }
   };
 
-  skew.Log.prototype.semanticErrorUseOfVoidFunction = function(range, name) {
+  skew.Log.prototype.semanticErrorUseOfVoidFunction = function(range, name, $function) {
     var self = this;
     self.error(range, "The function \"" + name + "\" does not return a value");
+
+    if ($function !== null) {
+      self.note($function, "The function declaration is here");
+    }
   };
 
   skew.Log.prototype.semanticErrorUseOfVoidLambda = function(range) {
@@ -7325,7 +7333,7 @@
     // This error prevents a getter returning a lambda which is then called,
     // but that's really strange and I think this error is more useful.
     if (symbol.isGetter() && skew.resolving.Resolver.isCallValue(node)) {
-      self.log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange(), symbol.name);
+      self.log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange(), symbol.name, symbol.range);
       return false;
     }
 
@@ -7359,7 +7367,7 @@
     // There is no "void" type, so make sure this return value isn't used
     else if (skew.resolving.Resolver.isVoidExpressionUsed(node)) {
       if ($function !== null) {
-        self.log.semanticErrorUseOfVoidFunction(node.range, $function.name);
+        self.log.semanticErrorUseOfVoidFunction(node.range, $function.name, $function.range);
       }
 
       else {

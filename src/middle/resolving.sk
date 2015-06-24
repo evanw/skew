@@ -1209,7 +1209,7 @@ namespace skew.resolving {
       # This error prevents a getter returning a lambda which is then called,
       # but that's really strange and I think this error is more useful.
       if symbol.isGetter && isCallValue(node) {
-        log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange, symbol.name)
+        log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange, symbol.name, symbol.range)
         return false
       }
 
@@ -1242,7 +1242,7 @@ namespace skew.resolving {
       # There is no "void" type, so make sure this return value isn't used
       else if isVoidExpressionUsed(node) {
         if function != null {
-          log.semanticErrorUseOfVoidFunction(node.range, function.name)
+          log.semanticErrorUseOfVoidFunction(node.range, function.name, function.range)
         } else {
           log.semanticErrorUseOfVoidLambda(node.range)
         }
