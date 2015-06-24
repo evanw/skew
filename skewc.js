@@ -306,33 +306,41 @@
     }
   };
 
-  skew.compile = function(log, sources, cache) {
-    var global = new skew.ObjectSymbol(skew.SymbolKind.OBJECT_GLOBAL, "<global>");
+  skew.compile = function(log, options, sources) {
+    var result = new skew.CompilerResult();
     in_List.prepend1(sources, new skew.Source("<native>", NATIVE_LIBRARY));
 
     for (var i = 0, list = sources, count = in_List.count(list); i < count; ++i) {
       var source = list[i];
       var tokens = skew.tokenize(log, source);
       skew.prepareTokens(tokens);
-      skew.parsing.parseFile(log, tokens, global);
+      skew.parsing.parseFile(log, tokens, result.global);
     }
 
+    // Merging pass, errors stop compilation
     if (!log.hasErrors()) {
-      skew.mergingPass(log, global);
+      skew.mergingPass(log, result.global);
 
+      // Resolving pass, errors stop compilation
       if (!log.hasErrors()) {
-        skew.resolvingPass(log, global, cache);
+        skew.resolvingPass(log, result.global, result.cache);
 
+        // Prepare for emission, code is error-free at this point
         if (!log.hasErrors()) {
-          var graph = new skew.CallGraph(global);
-          skew.globalizingPass(global, graph);
-          skew.motionPass(global, graph);
-          skew.renamingPass(global);
+          var graph = new skew.CallGraph(result.global);
+          skew.globalizingPass(result.global, graph);
+          skew.motionPass(result.global, graph);
+          skew.renamingPass(result.global);
+
+          // Emit in the target language
+          var emitter = new skew.JsEmitter(result.cache, options);
+          emitter.visit(result.global);
+          result.outputs = emitter.sources();
         }
       }
     }
 
-    return global;
+    return result;
   };
 
   skew.globalizingPass = function(global, graph) {
@@ -418,35 +426,202 @@
     }
   };
 
-  skew.main = function(args) {
-    var files = process.argv.slice(2);
-    var sources = [];
-    var fs = require("fs");
-
-    for (var i = 0, list = files, count = in_List.count(list); i < count; ++i) {
-      var file = list[i];
-      in_List.append1(sources, new skew.Source(file, fs.readFileSync(file, "utf8")));
-    }
-
+  skew.main = function($arguments) {
+    // Translate frontend flags to compiler options
     var log = new skew.Log();
-    var cache = new skew.TypeCache();
-    var global = skew.compile(log, sources, cache);
+    var parser = new skew.options.Parser();
+    var options = skew.parseOptions(log, parser, $arguments);
+    var inputs = skew.readSources(log, parser.normalArguments);
 
-    if (log.hasErrors()) {
-      console.log(log.toString());
-    }
+    // Run the compilation
+    if (!log.hasErrors() && options !== null) {
+      var result = skew.compile(log, options, inputs);
 
-    else {
-      var emitter = new skew.JsEmitter(cache);
-      emitter.visit(global);
+      // Write all outputs
+      if (!log.hasErrors()) {
+        for (var i = 0, list = result.outputs, count = in_List.count(list); i < count; ++i) {
+          var output = list[i];
 
-      for (var i1 = 0, list1 = emitter.sources(), count1 = in_List.count(list1); i1 < count1; ++i1) {
-        var source = list1[i1];
-        process.stdout.write(source.contents);
+          if (!io.writeFile(output.name, output.contents)) {
+            var outputFile = parser.stringRangeForOption(skew.Option.OUTPUT_FILE);
+            var outputDirectory = parser.stringRangeForOption(skew.Option.OUTPUT_DIRECTORY);
+            log.commandLineErrorUnwritableFile(outputFile !== null ? outputFile : outputDirectory, output.name);
+            break;
+          }
+        }
       }
     }
 
-    return 0;
+    // Print any errors and warnings
+    skew.printLogWithColor(log, parser.intForOption(skew.Option.ERROR_LIMIT, skew.DEFAULT_ERROR_LIMIT));
+    return log.hasErrors() ? 1 : 0;
+  };
+
+  skew.printWithColor = function(color, text) {
+    terminal.setColor(color);
+    terminal.write(text);
+    terminal.setColor(terminal.Color.DEFAULT);
+  };
+
+  skew.printError = function(text) {
+    skew.printWithColor(terminal.Color.RED, "error: ");
+    skew.printWithColor(terminal.Color.BOLD, text + "\n");
+  };
+
+  skew.printNote = function(text) {
+    skew.printWithColor(terminal.Color.GRAY, "note: ");
+    skew.printWithColor(terminal.Color.BOLD, text + "\n");
+  };
+
+  skew.printWarning = function(text) {
+    skew.printWithColor(terminal.Color.MAGENTA, "warning: ");
+    skew.printWithColor(terminal.Color.BOLD, text + "\n");
+  };
+
+  skew.printUsage = function(parser) {
+    skew.printWithColor(terminal.Color.GREEN, "\nusage: ");
+    skew.printWithColor(terminal.Color.BOLD, "skewc [flags] [inputs]\n");
+    terminal.write(parser.usageText(Math.min(terminal.width(), 80)));
+  };
+
+  skew.printLogWithColor = function(log, errorLimit) {
+    var terminalWidth = terminal.width();
+    var errorCount = 0;
+
+    for (var i = 0, list = log.diagnostics, count = in_List.count(list); i < count; ++i) {
+      var diagnostic = list[i];
+
+      if (diagnostic.kind === skew.DiagnosticKind.ERROR && errorLimit > 0 && errorCount === errorLimit) {
+        break;
+      }
+
+      if (diagnostic.range !== null) {
+        skew.printWithColor(terminal.Color.BOLD, diagnostic.range.locationString() + ": ");
+      }
+
+      switch (diagnostic.kind) {
+        case skew.DiagnosticKind.WARNING: {
+          skew.printWarning(diagnostic.text);
+          break;
+        }
+
+        case skew.DiagnosticKind.ERROR: {
+          skew.printError(diagnostic.text);
+          ++errorCount;
+          break;
+        }
+      }
+
+      if (diagnostic.range !== null) {
+        var formatted = diagnostic.range.format(terminalWidth);
+        terminal.print(formatted.line);
+        skew.printWithColor(terminal.Color.GREEN, formatted.range + "\n");
+      }
+
+      if (diagnostic.noteRange !== null) {
+        skew.printWithColor(terminal.Color.BOLD, diagnostic.noteRange.locationString() + ": ");
+        skew.printNote(diagnostic.noteText);
+        var formatted = diagnostic.noteRange.format(terminalWidth);
+        terminal.print(formatted.line);
+        skew.printWithColor(terminal.Color.GREEN, formatted.range + "\n");
+      }
+    }
+
+    // Print the summary
+    var hasErrors = log.hasErrors();
+    var hasWarnings = log.hasWarnings();
+    var summary = "";
+
+    if (hasWarnings) {
+      summary += log.warningCount.toString() + " warning" + prettyPrint.plural(log.warningCount);
+
+      if (hasErrors) {
+        summary += " and ";
+      }
+    }
+
+    if (hasErrors) {
+      summary += log.errorCount.toString() + " error" + prettyPrint.plural(log.errorCount);
+    }
+
+    if (hasWarnings || hasErrors) {
+      terminal.write(summary + " generated");
+      skew.printWithColor(terminal.Color.GRAY, errorCount < log.errorCount ? " (only showing " + errorLimit.toString() + " error" + prettyPrint.plural(errorLimit) + ", use \"--error-limit=0\" to see all)\n" : "\n");
+    }
+  };
+
+  skew.readSources = function(log, files) {
+    var result = [];
+
+    for (var i = 0, list = files, count = in_List.count(list); i < count; ++i) {
+      var file = list[i];
+      var path = file.toString();
+      var contents = io.readFile(path);
+
+      if (contents === null) {
+        log.commandLineErrorUnreadableFile(file, path);
+      }
+
+      else {
+        in_List.append1(result, new skew.Source(path, contents.value));
+      }
+    }
+
+    return result;
+  };
+
+  skew.parseOptions = function(log, parser, $arguments) {
+    // Configure the parser
+    parser.define(skew.options.Type.BOOL, skew.Option.HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
+    parser.define(skew.options.Type.STRING, skew.Option.OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
+    parser.define(skew.options.Type.STRING, skew.Option.OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
+    parser.define(skew.options.Type.INT, skew.Option.ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is 20.");
+
+    // Parse the command line arguments
+    parser.parse(log, $arguments);
+
+    if (log.hasErrors()) {
+      return null;
+    }
+
+    // Early-out when printing the usage text
+    if (parser.boolForOption(skew.Option.HELP, in_List.isEmpty($arguments))) {
+      skew.printUsage(parser);
+      return null;
+    }
+
+    // Set up the options for the compiler
+    var options = new skew.CompilerOptions();
+
+    // There must be at least one source file
+    var end = in_string.count(parser.source.contents);
+    var trailingSpace = new skew.Range(parser.source, end - 1, end);
+
+    if (in_List.isEmpty(parser.normalArguments)) {
+      log.commandLineErrorNoInputFiles(trailingSpace);
+    }
+
+    // Parse the output location
+    var outputFile = parser.stringRangeForOption(skew.Option.OUTPUT_FILE);
+    var outputDirectory = parser.stringRangeForOption(skew.Option.OUTPUT_DIRECTORY);
+
+    if (outputFile === null && outputDirectory === null) {
+      log.commandLineErrorMissingOutput(trailingSpace, "--output-file", "--output-dir");
+    }
+
+    else if (outputFile !== null && outputDirectory !== null) {
+      log.commandLineErrorDuplicateOutput(outputFile.start > outputDirectory.start ? outputFile : outputDirectory, "--output-file", "--output-dir");
+    }
+
+    else if (outputFile !== null) {
+      options.outputFile = outputFile.toString();
+    }
+
+    else {
+      options.outputDirectory = outputDirectory.toString();
+    }
+
+    return options;
   };
 
   skew.Emitter = function(cache) {
@@ -589,9 +764,10 @@
     return ((self) | 0) + (((associativity === skew.Associativity.RIGHT)) | 0);
   };
 
-  skew.JsEmitter = function(cache) {
+  skew.JsEmitter = function(cache, options) {
     var self = this;
     skew.Emitter.call(self, cache);
+    self.options = options;
     self.previousSymbol = null;
     self.previousNode = null;
     self.prefix = "";
@@ -649,7 +825,7 @@
     // End the closure wrapping everything
     self.decreaseIndent();
     self.emit(self.indent + "}());\n");
-    self.createSource("out.js");
+    self.createSource(self.options.outputDirectory !== "" ? self.options.outputDirectory + "/compiled.js" : self.options.outputFile);
   };
 
   skew.JsEmitter.prototype.emitNewlineBeforeSymbol = function(symbol) {
@@ -3348,7 +3524,91 @@
     self.error(range, "Entry point \"" + name + "\" must return either nothing or a value of type \"int\"");
   };
 
+  skew.Log.prototype.commandLineErrorMissingOutput = function(range, first, second) {
+    var self = this;
+    self.error(range, "Specify the output location using either \"" + first + "\" or \"" + second + "\"");
+  };
+
+  skew.Log.prototype.commandLineErrorDuplicateOutput = function(range, first, second) {
+    var self = this;
+    self.error(range, "Cannot specify both \"" + first + "\" and \"" + second + "\"");
+  };
+
+  skew.Log.prototype.commandLineErrorUnreadableFile = function(range, name) {
+    var self = this;
+    self.error(range, "Could not read from \"" + name + "\"");
+  };
+
+  skew.Log.prototype.commandLineErrorUnwritableFile = function(range, name) {
+    var self = this;
+    self.error(range, "Could not write to \"" + name + "\"");
+  };
+
+  skew.Log.prototype.commandLineErrorNoInputFiles = function(range) {
+    var self = this;
+    self.error(range, "Missing input files");
+  };
+
+  skew.Log.prototype.commandLineWarningDuplicateFlagValue = function(range, name, previous) {
+    var self = this;
+    self.warning(range, "Multiple values are specified for \"" + name + "\", using the later value");
+
+    if (previous !== null) {
+      self.note(previous, "Ignoring the value from the previous use");
+    }
+  };
+
+  skew.Log.prototype.commandLineErrorBadFlag = function(range, name) {
+    var self = this;
+    self.error(range, "Unknown command line flag \"" + name + "\"");
+  };
+
+  skew.Log.prototype.commandLineErrorMissingValue = function(range, text) {
+    var self = this;
+    self.error(range, "Use \"" + text + "\" to provide a value");
+  };
+
+  skew.Log.prototype.commandLineErrorExpectedToken = function(range, expected, found, text) {
+    var self = this;
+    self.error(range, "Expected \"" + expected + "\" but found \"" + found + "\" in \"" + text + "\"");
+  };
+
+  skew.Log.prototype.commandLineErrorNonBooleanValue = function(range, value, text) {
+    var self = this;
+    self.error(range, "Expected \"true\" or \"false\" but found \"" + value + "\" in \"" + text + "\"");
+  };
+
+  skew.Log.prototype.commandLineErrorNonIntegerValue = function(range, value, text) {
+    var self = this;
+    self.error(range, "Expected integer constant but found \"" + value + "\" in \"" + text + "\"");
+  };
+
   skew.parsing = {};
+
+  skew.parsing.parseIntLiteral = function(text, base) {
+    var value = 0;
+
+    switch (base) {
+      case 2:
+      case 8:
+      case 10: {
+        for (var i = base === 10 ? 0 : 2, count = in_string.count(text); i < count; i += 1) {
+          value = value * base + in_string.get1(text, i) - 48;
+        }
+        break;
+      }
+
+      case 16: {
+        for (var i = 2, count1 = in_string.count(text); i < count1; i += 1) {
+          var c = in_string.get1(text, i);
+          value = value * 16 + c - (c <= 57 ? 48 : c <= 70 ? 65 - 10 : 97 - 10);
+        }
+        break;
+      }
+    }
+
+    return value;
+  };
 
   skew.parsing.parseDoubleLiteral = function(text) {
     return +text;
@@ -5278,6 +5538,19 @@
 
       in_List.append1(info.callSites, node);
     }
+  };
+
+  skew.CompilerOptions = function() {
+    var self = this;
+    self.outputFile = "";
+    self.outputDirectory = "";
+  };
+
+  skew.CompilerResult = function() {
+    var self = this;
+    self.cache = new skew.TypeCache();
+    self.global = new skew.ObjectSymbol(skew.SymbolKind.OBJECT_GLOBAL, "<global>");
+    self.outputs = null;
   };
 
   skew.merging = {};
@@ -9044,6 +9317,290 @@
     return null;
   };
 
+  skew.Option = {
+    HELP: 0, 0: "HELP",
+    OUTPUT_FILE: 1, 1: "OUTPUT_FILE",
+    OUTPUT_DIRECTORY: 2, 2: "OUTPUT_DIRECTORY",
+    ERROR_LIMIT: 3, 3: "ERROR_LIMIT"
+  };
+
+  skew.options = {};
+
+  skew.options.Type = {
+    BOOL: 0, 0: "BOOL",
+    INT: 1, 1: "INT",
+    STRING: 2, 2: "STRING",
+    STRING_LIST: 3, 3: "STRING_LIST"
+  };
+
+  skew.options.Data = function(parser, type, option, name, description) {
+    var self = this;
+    self.parser = parser;
+    self.type = type;
+    self.option = option;
+    self.name = name;
+    self.description = description;
+  };
+
+  skew.options.Data.prototype.nameText = function() {
+    var self = this;
+    return self.name + (self.type === skew.options.Type.BOOL ? "" : self.type === skew.options.Type.STRING_LIST ? ":___" : "=___");
+  };
+
+  skew.options.Data.prototype.aliases = function(names) {
+    var self = this;
+    for (var i = 0, list = names, count = in_List.count(list); i < count; ++i) {
+      var name = list[i];
+      self.parser.map[name] = self;
+    }
+
+    return self;
+  };
+
+  skew.options.Parser = function() {
+    var self = this;
+    self.options = [];
+    self.map = in_StringMap.$new();
+    self.optionalArguments = in_IntMap.$new();
+    self.normalArguments = [];
+    self.source = null;
+  };
+
+  skew.options.Parser.prototype.define = function(type, option, name, description) {
+    var self = this;
+    var data = new skew.options.Data(self, type, option, name, description);
+    self.map[name] = data;
+    in_List.append1(self.options, data);
+    return data;
+  };
+
+  skew.options.Parser.prototype.nodeForOption = function(option) {
+    var self = this;
+    return in_IntMap.get(self.optionalArguments, ((option) | 0), null);
+  };
+
+  skew.options.Parser.prototype.boolForOption = function(option, defaultValue) {
+    var self = this;
+    var node = self.nodeForOption(option);
+    return node !== null ? node.content.asBool() : defaultValue;
+  };
+
+  skew.options.Parser.prototype.intForOption = function(option, defaultValue) {
+    var self = this;
+    var node = self.nodeForOption(option);
+    return node !== null ? node.content.asInt() : defaultValue;
+  };
+
+  skew.options.Parser.prototype.stringRangeForOption = function(option) {
+    var self = this;
+    var node = self.nodeForOption(option);
+    return node !== null ? node.range : null;
+  };
+
+  skew.options.Parser.prototype.stringRangeListForOption = function(option) {
+    var self = this;
+    var node = self.nodeForOption(option);
+    var ranges = [];
+
+    if (node !== null) {
+      for (var i = 0, list = node.children, count = in_List.count(list); i < count; ++i) {
+        var child = list[i];
+        in_List.append1(ranges, child.range);
+      }
+    }
+
+    return ranges;
+  };
+
+  skew.options.Parser.prototype.parse = function(log, $arguments) {
+    var self = this;
+    self.source = new skew.Source("<arguments>", "");
+    var ranges = [];
+
+    // Create a source for the arguments to work with the log system. The
+    // trailing space is needed to be able to point to the character after
+    // the last argument without wrapping onto the next line.
+    for (var i1 = 0, list = $arguments, count = in_List.count(list); i1 < count; ++i1) {
+      var argument = list[i1];
+      var needsQuotes = in_string.contains(argument, " ");
+      var start = in_string.count(self.source.contents) + ((needsQuotes) | 0);
+      in_List.append1(ranges, new skew.Range(self.source, start, start + in_string.count(argument)));
+      self.source.contents += needsQuotes ? "'" + argument + "' " : argument + " ";
+    }
+
+    // Parse each argument
+    for (var i = 0, count1 = in_List.count($arguments); i < count1; i += 1) {
+      var argument = $arguments[i];
+      var range = ranges[i];
+
+      // Track all normal arguments separately
+      if (argument === "" || in_string.get1(argument, 0) !== 45 && !(argument in self.map)) {
+        in_List.append1(self.normalArguments, range);
+        continue;
+      }
+
+      // Parse a flag
+      var equals = argument.indexOf("=");
+      var colon = argument.indexOf(":");
+      var separator = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon;
+      var name = separator >= 0 ? argument.slice(0, separator) : argument;
+      var data = in_StringMap.get(self.map, name, null);
+
+      // Check that the flag exists
+      if (data === null) {
+        log.commandLineErrorBadFlag(range.fromStart(in_string.count(name)), name);
+        continue;
+      }
+
+      // Validate the flag data
+      var text = argument.slice(separator + 1, in_string.count(argument));
+      var separatorRange = separator < 0 ? null : range.slice(separator, separator + 1);
+      var textRange = range.fromEnd(in_string.count(text));
+
+      switch (data.type) {
+        case skew.options.Type.BOOL: {
+          if (separator < 0) {
+            text = "true";
+          }
+
+          else if (in_string.get1(argument, separator) !== 61) {
+            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument, separator), argument);
+            continue;
+          }
+
+          else if (text !== "true" && text !== "false") {
+            log.commandLineErrorNonBooleanValue(textRange, text, argument);
+            continue;
+          }
+
+          if (((data.option) | 0) in self.optionalArguments) {
+            log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[((data.option) | 0)].range);
+          }
+
+          self.optionalArguments[((data.option) | 0)] = skew.Node.createBool(text === "true").withRange(textRange);
+          break;
+        }
+
+        case skew.options.Type.INT: {
+          if (separator < 0) {
+            log.commandLineErrorMissingValue(textRange, data.nameText());
+          }
+
+          else if (in_string.get1(argument, separator) !== 61) {
+            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument, separator), argument);
+          }
+
+          else if (!skew.options.Parser.isInteger(text)) {
+            log.commandLineErrorNonIntegerValue(textRange, text, argument);
+          }
+
+          else {
+            if (((data.option) | 0) in self.optionalArguments) {
+              log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[((data.option) | 0)].range);
+            }
+
+            self.optionalArguments[((data.option) | 0)] = skew.Node.createInt(skew.parsing.parseIntLiteral(text, 10)).withRange(textRange);
+          }
+          break;
+        }
+
+        case skew.options.Type.STRING: {
+          if (separator < 0) {
+            log.commandLineErrorMissingValue(textRange, data.nameText());
+          }
+
+          else if (in_string.get1(argument, separator) !== 61) {
+            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument, separator), argument);
+          }
+
+          else {
+            if (((data.option) | 0) in self.optionalArguments) {
+              log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[((data.option) | 0)].range);
+            }
+
+            self.optionalArguments[((data.option) | 0)] = skew.Node.createString(text).withRange(textRange);
+          }
+          break;
+        }
+
+        case skew.options.Type.STRING_LIST: {
+          if (separator < 0) {
+            log.commandLineErrorMissingValue(textRange, data.nameText());
+          }
+
+          else if (in_string.get1(argument, separator) !== 58) {
+            log.commandLineErrorExpectedToken(separatorRange, ":", in_string.get(argument, separator), argument);
+          }
+
+          else {
+
+            if (((data.option) | 0) in self.optionalArguments) {
+              node = self.optionalArguments[((data.option) | 0)];
+            }
+
+            else {
+              node = skew.Node.createInitializer(skew.NodeKind.INITIALIZER_LIST, []);
+              self.optionalArguments[((data.option) | 0)] = node;
+            }
+
+            node.appendChild(skew.Node.createString(text).withRange(textRange));
+          }
+          break;
+        }
+      }
+    }
+  };
+
+  skew.options.Parser.prototype.usageText = function(wrapWidth) {
+    var self = this;
+    var text = "";
+    var columnWidth = 0;
+
+    // Figure out the column width
+    for (var i = 0, list = self.options, count = in_List.count(list); i < count; ++i) {
+      var option = list[i];
+      var width = in_string.count(option.nameText()) + 4;
+
+      if (columnWidth < width) {
+        columnWidth = width;
+      }
+    }
+
+    // Format the options
+    var columnText = in_string.repeat(" ", columnWidth);
+
+    for (var i2 = 0, list2 = self.options, count2 = in_List.count(list2); i2 < count2; ++i2) {
+      var option = list2[i2];
+      var nameText = option.nameText();
+      var isFirst = true;
+      text += "\n  " + nameText + in_string.repeat(" ", columnWidth - in_string.count(nameText) - 2);
+
+      for (var i1 = 0, list1 = prettyPrint.wrapWords(option.description, wrapWidth - columnWidth), count1 = in_List.count(list1); i1 < count1; ++i1) {
+        var line = list1[i1];
+        text += (isFirst ? "" : columnText) + line + "\n";
+        isFirst = false;
+      }
+    }
+
+    return text + "\n";
+  };
+
+  skew.options.Parser.isInteger = function(text) {
+    var found = false;
+
+    for (var i = text.startsWith("-") ? 1 : 0, count = in_string.count(text); i < count; i += 1) {
+      var c = in_string.get1(text, i);
+
+      if (c < 48 || c > 57) {
+        return false;
+      }
+
+      found = true;
+    }
+
+    return found;
+  };
+
   var prettyPrint = {};
 
   prettyPrint.plural = function(value) {
@@ -9250,7 +9807,7 @@
   io.readFile = function(path) {
     try {
       var contents = require("fs").readFileSync(path, "utf8");
-      return new Box(contents.replaceAll("\r\n", "\n"));
+      return new Box(in_string.replaceAll(contents, "\r\n", "\n"));
     }
 
     catch ($e) {
@@ -9316,6 +9873,18 @@
 
   var in_string = {};
 
+  in_string.replaceAll = function(self, before, after) {
+    return in_string.join(after, self.split(before));
+  };
+
+  in_string.join = function(self, parts) {
+    return parts.join(self);
+  };
+
+  in_string.contains = function(self, value) {
+    return self.indexOf(value) >= 0;
+  };
+
   in_string.count = function(self) {
     return self.length;
   };
@@ -9336,10 +9905,6 @@
     }
 
     return result;
-  };
-
-  in_string.join = function(self, parts) {
-    return parts.join(self);
   };
 
   in_string.fromCodeUnit = function(x) {
@@ -9600,6 +10165,7 @@
   skew.REMOVE_NEWLINE_BEFORE = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.TokenKind.COLON) | 0), 0), ((skew.TokenKind.COMMA) | 0), 0), ((skew.TokenKind.QUESTION_MARK) | 0), 0), ((skew.TokenKind.RIGHT_BRACKET) | 0), 0), ((skew.TokenKind.RIGHT_PARENTHESIS) | 0), 0);
   skew.KEEP_NEWLINE_BEFORE = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.TokenKind.ANNOTATION) | 0), 0), ((skew.TokenKind.CLASS) | 0), 0), ((skew.TokenKind.COMMENT) | 0), 0), ((skew.TokenKind.DEF) | 0), 0), ((skew.TokenKind.INTERFACE) | 0), 0), ((skew.TokenKind.NAMESPACE) | 0), 0), ((skew.TokenKind.VAR) | 0), 0);
   skew.REMOVE_NEWLINE_AFTER = in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap._(in_IntMap.$new(), ((skew.TokenKind.COLON) | 0), 0), ((skew.TokenKind.COMMA) | 0), 0), ((skew.TokenKind.NEWLINE) | 0), 0), ((skew.TokenKind.QUESTION_MARK) | 0), 0), ((skew.TokenKind.LEFT_BRACE) | 0), 0), ((skew.TokenKind.LEFT_BRACKET) | 0), 0), ((skew.TokenKind.LEFT_PARENTHESIS) | 0), 0), ((skew.TokenKind.BITWISE_AND) | 0), 0), ((skew.TokenKind.BITWISE_OR) | 0), 0), ((skew.TokenKind.BITWISE_XOR) | 0), 0), ((skew.TokenKind.DIVIDE) | 0), 0), ((skew.TokenKind.EQUAL) | 0), 0), ((skew.TokenKind.GREATER_THAN) | 0), 0), ((skew.TokenKind.GREATER_THAN_OR_EQUAL) | 0), 0), ((skew.TokenKind.LESS_THAN) | 0), 0), ((skew.TokenKind.LESS_THAN_OR_EQUAL) | 0), 0), ((skew.TokenKind.LOGICAL_AND) | 0), 0), ((skew.TokenKind.LOGICAL_OR) | 0), 0), ((skew.TokenKind.MINUS) | 0), 0), ((skew.TokenKind.MULTIPLY) | 0), 0), ((skew.TokenKind.NOT_EQUAL) | 0), 0), ((skew.TokenKind.PLUS) | 0), 0), ((skew.TokenKind.REMAINDER) | 0), 0), ((skew.TokenKind.SHIFT_LEFT) | 0), 0), ((skew.TokenKind.SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.ASSIGN) | 0), 0), ((skew.TokenKind.ASSIGN_PLUS) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_AND) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_OR) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_XOR) | 0), 0), ((skew.TokenKind.ASSIGN_DIVIDE) | 0), 0), ((skew.TokenKind.ASSIGN_MULTIPLY) | 0), 0), ((skew.TokenKind.ASSIGN_REMAINDER) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_LEFT) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.ASSIGN_MINUS) | 0), 0);
+  skew.DEFAULT_ERROR_LIMIT = 10;
   skew.JsEmitter.isKeyword = in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap._(in_StringMap.$new(), "apply", 0), "arguments", 0), "Boolean", 0), "break", 0), "call", 0), "case", 0), "catch", 0), "class", 0), "const", 0), "constructor", 0), "continue", 0), "Date", 0), "debugger", 0), "default", 0), "delete", 0), "do", 0), "double", 0), "else", 0), "export", 0), "extends", 0), "false", 0), "finally", 0), "float", 0), "for", 0), "Function", 0), "function", 0), "if", 0), "import", 0), "in", 0), "instanceof", 0), "int", 0), "let", 0), "new", 0), "null", 0), "Number", 0), "Object", 0), "return", 0), "String", 0), "super", 0), "this", 0), "throw", 0), "true", 0), "try", 0), "var", 0);
   skew.Node.IS_IMPLICIT_RETURN = 1 << 0;
   skew.Node.IS_INSIDE_PARENTHESES = 1 << 1;
@@ -9637,29 +10203,7 @@
   };
   skew.parsing.intLiteral = function(base) {
     return function(context, token) {
-      var text = token.range.toString();
-      var value = 0;
-
-      switch (base) {
-        case 2:
-        case 8:
-        case 10: {
-          for (var i = base === 10 ? 0 : 2, count = in_string.count(text); i < count; i += 1) {
-            value = value * base + in_string.get1(text, i) - 48;
-          }
-          break;
-        }
-
-        case 16: {
-          for (var i = 2, count1 = in_string.count(text); i < count1; i += 1) {
-            var c = in_string.get1(text, i);
-            value = value * 16 + c - (c <= 57 ? 48 : c <= 70 ? 65 - 10 : 97 - 10);
-          }
-          break;
-        }
-      }
-
-      return skew.Node.createInt(value).withRange(token.range);
+      return skew.Node.createInt(skew.parsing.parseIntLiteral(token.range.toString(), base)).withRange(token.range);
     };
   };
   skew.parsing.dotInfixParselet = function(context, left) {

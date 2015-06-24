@@ -1,5 +1,7 @@
 namespace skew {
   class JsEmitter : Emitter {
+    const options CompilerOptions
+
     over visit(global ObjectSymbol) {
       var objects = sortedObjects(global)
 
@@ -44,7 +46,7 @@ namespace skew {
       decreaseIndent
       emit(indent + "}());\n")
 
-      createSource("out.js")
+      createSource(options.outputDirectory != "" ? options.outputDirectory + "/compiled.js" : options.outputFile)
     }
 
     @private {

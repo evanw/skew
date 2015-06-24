@@ -1,28 +1,48 @@
 namespace skew {
-  def compile(log Log, sources List<Source>, cache TypeCache) ObjectSymbol {
-    var global = ObjectSymbol.new(.OBJECT_GLOBAL, "<global>")
+  class CompilerOptions {
+    var outputFile = ""
+    var outputDirectory = ""
+  }
 
+  class CompilerResult {
+    var cache = TypeCache.new
+    var global = ObjectSymbol.new(.OBJECT_GLOBAL, "<global>")
+    var outputs List<Source> = null
+  }
+
+  def compile(log Log, options CompilerOptions, sources List<Source>) CompilerResult {
+    var result = CompilerResult.new
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
 
     for source in sources {
       var tokens = tokenize(log, source)
       prepareTokens(tokens)
-      parsing.parseFile(log, tokens, global)
+      parsing.parseFile(log, tokens, result.global)
     }
 
+    # Merging pass, errors stop compilation
     if !log.hasErrors {
-      mergingPass(log, global)
+      mergingPass(log, result.global)
+
+      # Resolving pass, errors stop compilation
       if !log.hasErrors {
-        resolvingPass(log, global, cache)
+        resolvingPass(log, result.global, result.cache)
+
+        # Prepare for emission, code is error-free at this point
         if !log.hasErrors {
-          var graph = CallGraph.new(global)
-          globalizingPass(global, graph)
-          motionPass(global, graph)
-          renamingPass(global)
+          var graph = CallGraph.new(result.global)
+          globalizingPass(result.global, graph)
+          motionPass(result.global, graph)
+          renamingPass(result.global)
+
+          # Emit in the target language
+          var emitter = JsEmitter.new(result.cache, options)
+          emitter.visit(result.global)
+          result.outputs = emitter.sources
         }
       }
     }
 
-    return global
+    return result
   }
 }

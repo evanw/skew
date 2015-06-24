@@ -144,6 +144,14 @@ class IntMap {
 }
 
 class string {
+  def replaceAll(before string, after string) string {
+    return after.join(self.split(before))
+  }
+
+  def in(value string) bool {
+    return indexOf(value) >= 0
+  }
+
   def count int {
     return (self as dynamic).length
   }

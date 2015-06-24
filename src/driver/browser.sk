@@ -2,24 +2,12 @@ namespace skew {
   var input = dynamic.document.getElementById("input")
   var output = dynamic.document.getElementById("output")
 
-  def runEmitter(emitter Emitter, global ObjectSymbol) string {
-    emitter.visit(global)
-    var text = ""
-    for source in emitter.sources {
-      if text != "" {
-        text += "\n"
-      }
-      text += "[" + source.name + "]\n" + source.contents
-    }
-    return text
-  }
-
   def update {
     var log = Log.new
     var source = Source.new("<stdin>", input.value)
     var cache = TypeCache.new
-    var global = compile(log, [source], cache)
-    output.value = log.hasErrors ? log.toString : runEmitter(JsEmitter.new(cache), global)
+    var result = compile(log, CompilerOptions.new, [source])
+    output.value = log.hasErrors ? log.toString : result.outputs.first.contents
   }
 
   @entry

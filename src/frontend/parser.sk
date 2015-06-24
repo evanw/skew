@@ -1,4 +1,22 @@
 namespace skew.parsing {
+  def parseIntLiteral(text string, base int) int {
+    var value = 0
+    switch base {
+      case 2, 8, 10 {
+        for i in (base == 10 ? 0 : 2)..text.count {
+          value = value * base + text[i] - '0'
+        }
+      }
+      case 16 {
+        for i in 2..text.count {
+          var c = text[i]
+          value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10)
+        }
+      }
+    }
+    return value
+  }
+
   def parseDoubleLiteral(text string) double {
     return +(text as dynamic)
   }
@@ -927,24 +945,7 @@ namespace skew.parsing {
 
   var tokenLiteral = (kind NodeKind) => (context ParserContext, token Token) => Node.new(kind).withRange(token.range)
   var boolLiteral = (value bool) => (context ParserContext, token Token) => Node.createBool(value).withRange(token.range)
-  var intLiteral = (base int) => (context ParserContext, token Token) Node => {
-    var text = token.range.toString
-    var value = 0
-    switch base {
-      case 2, 8, 10 {
-        for i in (base == 10 ? 0 : 2)..text.count {
-          value = value * base + text[i] - '0'
-        }
-      }
-      case 16 {
-        for i in 2..text.count {
-          var c = text[i]
-          value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10)
-        }
-      }
-    }
-    return Node.createInt(value).withRange(token.range)
-  }
+  var intLiteral = (base int) => (context ParserContext, token Token) Node => Node.createInt(parseIntLiteral(token.range.toString, base)).withRange(token.range)
 
   def unaryPrefix(kind NodeKind) fn(ParserContext, Token, Node) Node {
     return (context, token, value) => Node.createUnary(kind, value).withRange(Range.span(token.range, value.range)).withInternalRange(token.range)

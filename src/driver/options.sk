@@ -1,0 +1,256 @@
+namespace skew {
+  class Log {
+    def commandLineWarningDuplicateFlagValue(range Range, name string, previous Range) {
+      warning(range, "Multiple values are specified for \"" + name + "\", using the later value")
+      if previous != null {
+        note(previous, "Ignoring the value from the previous use")
+      }
+    }
+
+    def commandLineErrorBadFlag(range Range, name string) {
+      error(range, "Unknown command line flag \"" + name + "\"")
+    }
+
+    def commandLineErrorMissingValue(range Range, text string) {
+      error(range, "Use \"" + text + "\" to provide a value")
+    }
+
+    def commandLineErrorExpectedToken(range Range, expected string, found string, text string) {
+      error(range, "Expected \"" + expected + "\" but found \"" + found + "\" in \"" + text + "\"")
+    }
+
+    def commandLineErrorNonBooleanValue(range Range, value string, text string) {
+      error(range, "Expected \"true\" or \"false\" but found \"" + value + "\" in \"" + text + "\"")
+    }
+
+    def commandLineErrorNonIntegerValue(range Range, value string, text string) {
+      error(range, "Expected integer constant but found \"" + value + "\" in \"" + text + "\"")
+    }
+  }
+}
+
+namespace skew.options {
+  enum Type {
+    BOOL
+    INT
+    STRING
+    STRING_LIST
+  }
+
+  class Data {
+    var parser Parser
+    var type Type
+    var option Option
+    var name string
+    var description string
+
+    def nameText string {
+      return name + (type == .BOOL ? "" : type == .STRING_LIST ? ":___" : "=___")
+    }
+
+    def aliases(names List<string>) Data {
+      for name in names {
+        parser.map[name] = self
+      }
+      return self
+    }
+  }
+
+  class Parser {
+    var options List<Data> = []
+    var map StringMap<Data> = {}
+    var optionalArguments IntMap<Node> = {}
+    var normalArguments List<Range> = []
+    var source Source = null
+
+    def define(type Type, option Option, name string, description string) Data {
+      var data = Data.new(self, type, option, name, description)
+      map[name] = data
+      options.append(data)
+      return data
+    }
+
+    def nodeForOption(option Option) Node {
+      return optionalArguments.get(option, null)
+    }
+
+    def boolForOption(option Option, defaultValue bool) bool {
+      var node = nodeForOption(option)
+      return node != null ? node.content.asBool : defaultValue
+    }
+
+    def intForOption(option Option, defaultValue int) int {
+      var node = nodeForOption(option)
+      return node != null ? node.content.asInt : defaultValue
+    }
+
+    def stringRangeForOption(option Option) Range {
+      var node = nodeForOption(option)
+      return node != null ? node.range : null
+    }
+
+    def stringRangeListForOption(option Option) List<Range> {
+      var node = nodeForOption(option)
+      var ranges List<Range> = []
+      if node != null {
+        for child in node.children {
+          ranges.append(child.range)
+        }
+      }
+      return ranges
+    }
+
+    def parse(log Log, arguments List<string>) {
+      source = Source.new("<arguments>", "")
+      var ranges List<Range> = []
+
+      # Create a source for the arguments to work with the log system. The
+      # trailing space is needed to be able to point to the character after
+      # the last argument without wrapping onto the next line.
+      for argument in arguments {
+        var needsQuotes = " " in argument
+        var start = source.contents.count + (needsQuotes as int)
+        ranges.append(Range.new(source, start, start + argument.count))
+        source.contents += needsQuotes ? "'" + argument + "' " : argument + " "
+      }
+
+      # Parse each argument
+      for i in 0..arguments.count {
+        var argument = arguments[i]
+        var range = ranges[i]
+
+        # Track all normal arguments separately
+        if argument == "" || argument[0] != '-' && !(argument in map) {
+          normalArguments.append(range)
+          continue
+        }
+
+        # Parse a flag
+        var equals = argument.indexOf("=")
+        var colon = argument.indexOf(":")
+        var separator = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon
+        var name = separator >= 0 ? argument.slice(0, separator) : argument
+        var data = map.get(name, null)
+
+        # Check that the flag exists
+        if data == null {
+          log.commandLineErrorBadFlag(range.fromStart(name.count), name)
+          continue
+        }
+
+        # Validate the flag data
+        var text = argument.slice(separator + 1, argument.count)
+        var separatorRange = separator < 0 ? null : range.slice(separator, separator + 1)
+        var textRange = range.fromEnd(text.count)
+        switch data.type {
+
+          # Parse a single boolean value
+          case .BOOL {
+            if separator < 0 {
+              text = "true"
+            } else if argument[separator] != '=' {
+              log.commandLineErrorExpectedToken(separatorRange, "=", argument.get(separator), argument)
+              continue
+            } else if text != "true" && text != "false" {
+              log.commandLineErrorNonBooleanValue(textRange, text, argument)
+              continue
+            }
+            if data.option in optionalArguments {
+              log.commandLineWarningDuplicateFlagValue(textRange, name, optionalArguments[data.option].range)
+            }
+            optionalArguments[data.option] = Node.createBool(text == "true").withRange(textRange)
+          }
+
+          # Parse a single int value
+          case .INT {
+            if separator < 0 {
+              log.commandLineErrorMissingValue(textRange, data.nameText)
+            } else if argument[separator] != '=' {
+              log.commandLineErrorExpectedToken(separatorRange, "=", argument.get(separator), argument)
+            } else if !isInteger(text) {
+              log.commandLineErrorNonIntegerValue(textRange, text, argument)
+            } else {
+              if data.option in optionalArguments {
+                log.commandLineWarningDuplicateFlagValue(textRange, name, optionalArguments[data.option].range)
+              }
+              optionalArguments[data.option] = Node.createInt(parsing.parseIntLiteral(text, 10)).withRange(textRange)
+            }
+          }
+
+          # Parse a single string value
+          case .STRING {
+            if separator < 0 {
+              log.commandLineErrorMissingValue(textRange, data.nameText)
+            } else if argument[separator] != '=' {
+              log.commandLineErrorExpectedToken(separatorRange, "=", argument.get(separator), argument)
+            } else {
+              if data.option in optionalArguments {
+                log.commandLineWarningDuplicateFlagValue(textRange, name, optionalArguments[data.option].range)
+              }
+              optionalArguments[data.option] = Node.createString(text).withRange(textRange)
+            }
+          }
+
+          # Parse an item in a list of string values
+          case .STRING_LIST {
+            if separator < 0 {
+              log.commandLineErrorMissingValue(textRange, data.nameText)
+            } else if argument[separator] != ':' {
+              log.commandLineErrorExpectedToken(separatorRange, ":", argument.get(separator), argument)
+            } else {
+              var node Node
+              if data.option in optionalArguments {
+                node = optionalArguments[data.option]
+              } else {
+                node = Node.createInitializer(.INITIALIZER_LIST, [])
+                optionalArguments[data.option] = node
+              }
+              node.appendChild(Node.createString(text).withRange(textRange))
+            }
+          }
+        }
+      }
+    }
+
+    def usageText(wrapWidth int) string {
+      var text = ""
+      var columnWidth = 0
+
+      # Figure out the column width
+      for option in options {
+        var width = option.nameText.count + 4
+        if columnWidth < width {
+          columnWidth = width
+        }
+      }
+
+      # Format the options
+      var columnText = " ".repeat(columnWidth)
+      for option in options {
+        var nameText = option.nameText
+        var isFirst = true
+        text += "\n  " + nameText + " ".repeat(columnWidth - nameText.count - 2)
+        for line in prettyPrint.wrapWords(option.description, wrapWidth - columnWidth) {
+          text += (isFirst ? "" : columnText) + line + "\n"
+          isFirst = false
+        }
+      }
+
+      return text + "\n"
+    }
+  }
+
+  namespace Parser {
+    def isInteger(text string) bool {
+      var found = false
+      for i in (text.startsWith("-") ? 1 : 0)..text.count {
+        var c = text[i]
+        if c < '0' || c > '9' {
+          return false
+        }
+        found = true
+      }
+      return found
+    }
+  }
+}

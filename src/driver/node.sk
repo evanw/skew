@@ -1,31 +1,201 @@
 namespace skew {
+  enum Option {
+    HELP
+    OUTPUT_FILE
+    OUTPUT_DIRECTORY
+    ERROR_LIMIT
+  }
+
+  const DEFAULT_ERROR_LIMIT = 10
+
   @entry
-  def main(args List<string>) int {
-    var files List<string> = dynamic.process.argv.slice(2)
-    var sources List<Source> = []
-    var fs = dynamic.require("fs")
-
-    for file in files {
-      sources.append(Source.new(file, fs.readFileSync(file, "utf8")))
-    }
-
+  def main(arguments List<string>) int {
+    # Translate frontend flags to compiler options
     var log = Log.new
-    var cache = TypeCache.new
-    var global = compile(log, sources, cache)
+    var parser = options.Parser.new
+    var options = parseOptions(log, parser, arguments)
+    var inputs = readSources(log, parser.normalArguments)
 
-    if log.hasErrors {
-      dynamic.console.log(log.toString)
-    }
+    # Run the compilation
+    if !log.hasErrors && options != null {
+      var result = compile(log, options, inputs)
 
-    else {
-      var emitter = JsEmitter.new(cache)
-      emitter.visit(global)
-
-      for source in emitter.sources {
-        dynamic.process.stdout.write(source.contents)
+      # Write all outputs
+      if !log.hasErrors {
+        for output in result.outputs {
+          if !io.writeFile(output.name, output.contents) {
+            var outputFile = parser.stringRangeForOption(.OUTPUT_FILE)
+            var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY)
+            log.commandLineErrorUnwritableFile(outputFile != null ? outputFile : outputDirectory, output.name)
+            break
+          }
+        }
       }
     }
 
-    return 0
+    # Print any errors and warnings
+    printLogWithColor(log, parser.intForOption(.ERROR_LIMIT, DEFAULT_ERROR_LIMIT))
+    return log.hasErrors ? 1 : 0
+  }
+
+  def printWithColor(color terminal.Color, text string) {
+    terminal.setColor(color)
+    terminal.write(text)
+    terminal.setColor(.DEFAULT)
+  }
+
+  def printError(text string) {
+    printWithColor(.RED, "error: ")
+    printWithColor(.BOLD, text "\n")
+  }
+
+  def printNote(text string) {
+    printWithColor(.GRAY, "note: ")
+    printWithColor(.BOLD, text "\n")
+  }
+
+  def printWarning(text string) {
+    printWithColor(.MAGENTA, "warning: ")
+    printWithColor(.BOLD, text "\n")
+  }
+
+  def printUsage(parser options.Parser) {
+    printWithColor(.GREEN, "\nusage: ")
+    printWithColor(.BOLD, "skewc [flags] [inputs]\n")
+    terminal.write(parser.usageText(Math.min(terminal.width, 80)))
+  }
+
+  def printLogWithColor(log Log, errorLimit int) {
+    var terminalWidth = terminal.width
+    var errorCount = 0
+
+    for diagnostic in log.diagnostics {
+      if diagnostic.kind == .ERROR && errorLimit > 0 && errorCount == errorLimit {
+        break
+      }
+      if diagnostic.range != null {
+        printWithColor(.BOLD, diagnostic.range.locationString ": ")
+      }
+      switch diagnostic.kind {
+        case .WARNING {
+          printWarning(diagnostic.text)
+        }
+        case .ERROR {
+          printError(diagnostic.text)
+          errorCount++
+        }
+      }
+      if diagnostic.range != null {
+        var formatted = diagnostic.range.format(terminalWidth)
+        terminal.print(formatted.line)
+        printWithColor(.GREEN, formatted.range "\n")
+      }
+      if diagnostic.noteRange != null {
+        printWithColor(.BOLD, diagnostic.noteRange.locationString ": ")
+        printNote(diagnostic.noteText)
+        var formatted = diagnostic.noteRange.format(terminalWidth)
+        terminal.print(formatted.line)
+        printWithColor(.GREEN, formatted.range "\n")
+      }
+    }
+
+    # Print the summary
+    var hasErrors = log.hasErrors
+    var hasWarnings = log.hasWarnings
+    var summary = ""
+    if hasWarnings {
+      summary += log.warningCount " warning" prettyPrint.plural(log.warningCount)
+      if hasErrors {
+        summary += " and "
+      }
+    }
+    if hasErrors {
+      summary += log.errorCount " error" prettyPrint.plural(log.errorCount)
+    }
+    if hasWarnings || hasErrors {
+      terminal.write(summary " generated")
+      printWithColor(.GRAY, errorCount < log.errorCount ? " (only showing " errorLimit " error" prettyPrint.plural(errorLimit) ", use \"--error-limit=0\" to see all)\n" : "\n")
+    }
+  }
+
+  def readSources(log Log, files List<Range>) List<Source> {
+    var result List<Source>  = []
+    for file in files {
+      var path = file.toString
+      var contents = io.readFile(path)
+      if contents == null {
+        log.commandLineErrorUnreadableFile(file, path)
+      } else {
+        result.append(Source.new(path, contents.value))
+      }
+    }
+    return result
+  }
+
+  def parseOptions(log Log, parser options.Parser, arguments List<string>) CompilerOptions {
+    # Configure the parser
+    parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
+    parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
+    parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
+    parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is 20.")
+
+    # Parse the command line arguments
+    parser.parse(log, arguments)
+    if log.hasErrors {
+      return null
+    }
+
+    # Early-out when printing the usage text
+    if parser.boolForOption(.HELP, arguments.isEmpty) {
+      printUsage(parser)
+      return null
+    }
+
+    # Set up the options for the compiler
+    var options = CompilerOptions.new
+
+    # There must be at least one source file
+    var end = parser.source.contents.count
+    var trailingSpace = Range.new(parser.source, end - 1, end)
+    if parser.normalArguments.isEmpty {
+      log.commandLineErrorNoInputFiles(trailingSpace)
+    }
+
+    # Parse the output location
+    var outputFile = parser.stringRangeForOption(.OUTPUT_FILE)
+    var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY)
+    if outputFile == null && outputDirectory == null {
+      log.commandLineErrorMissingOutput(trailingSpace, "--output-file", "--output-dir")
+    } else if outputFile != null && outputDirectory != null {
+      log.commandLineErrorDuplicateOutput(outputFile.start > outputDirectory.start ? outputFile : outputDirectory, "--output-file", "--output-dir")
+    } else if outputFile != null {
+      options.outputFile = outputFile.toString
+    } else {
+      options.outputDirectory = outputDirectory.toString
+    }
+
+    return options
+  }
+
+  class Log {
+    def commandLineErrorMissingOutput(range Range, first string, second string) {
+      error(range, "Specify the output location using either \"" + first + "\" or \"" + second + "\"")
+    }
+
+    def commandLineErrorDuplicateOutput(range Range, first string, second string) {
+      error(range, "Cannot specify both \"" + first + "\" and \"" + second + "\"")
+    }
+
+    def commandLineErrorUnreadableFile(range Range, name string) {
+      error(range, "Could not read from \"" + name + "\"")
+    }
+
+    def commandLineErrorUnwritableFile(range Range, name string) {
+      error(range, "Could not write to \"" + name + "\"")
+    }
+
+    def commandLineErrorNoInputFiles(range Range) {
+      error(range, "Missing input files")
+    }
   }
 }

@@ -1,10 +1,9 @@
-namespace tests {
+namespace skew.tests {
   class CompilerTest : unit.Test {
     over run {
       rename(compactWhitespace(input))
-      var log = skew.Log.new
-      var cache = skew.TypeCache.new
-      var global = skew.compile(log, [skew.Source.new("<stdin>", input)], cache)
+      var log = Log.new
+      var global = compile(log, CompilerOptions.new, [Source.new("<stdin>", input)])
       var output = log.toString
       expectString(trim(expected), trim(output))
     }
@@ -50,13 +49,13 @@ namespace tests {
   def test(input string, expected string) CompilerTest {
     return CompilerTest.new(trim(input), expected)
   }
-}
 
-@entry
-def main int {
-  tests.testSimple
+  @entry
+  def main int {
+    testSimple
 
-  var report = unit.TerminalReport.new
-  unit.Test.runAll(report)
-  return report.failedCount
+    var report = unit.TerminalReport.new
+    unit.Test.runAll(report)
+    return report.failedCount
+  }
 }
