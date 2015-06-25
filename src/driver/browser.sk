@@ -6,7 +6,8 @@ namespace skew {
     var log = Log.new
     var source = Source.new("<stdin>", input.value)
     var cache = TypeCache.new
-    var result = compile(log, CompilerOptions.new, [source])
+    var options = CompilerOptions.new
+    var result = compile(log, options, [source])
     output.value = log.hasErrors ? log.toString : result.outputs.first.contents
   }
 

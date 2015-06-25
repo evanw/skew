@@ -17,19 +17,19 @@ namespace skew.renaming {
         var count = function.arguments.count
 
         if (count == 0 || count == 1 && function.kind == .FUNCTION_GLOBAL) && function.name in unaryPrefixes {
-          function.name = scope.generateSymbolName(unaryPrefixes[function.name])
+          function.name = scope.generateName(unaryPrefixes[function.name])
         }
 
         else if function.name in prefixes {
-          function.name = scope.generateSymbolName(prefixes[function.name])
+          function.name = scope.generateName(prefixes[function.name])
         }
 
         else if isInvalidIdentifier(function) {
-          function.name = scope.generateSymbolName("_")
+          function.name = scope.generateName("_")
         }
 
         else if function.overloaded != null && function.overloaded.symbols.count > 1 {
-          function.name = scope.generateSymbolName(function.name)
+          function.name = scope.generateName(function.name)
         }
       }
     }

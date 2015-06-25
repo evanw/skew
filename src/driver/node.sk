@@ -1,9 +1,11 @@
 namespace skew {
   enum Option {
-    HELP
-    OUTPUT_FILE
-    OUTPUT_DIRECTORY
     ERROR_LIMIT
+    FOLD_CONSTANTS
+    HELP
+    OUTPUT_DIRECTORY
+    OUTPUT_FILE
+    RELEASE
   }
 
   const DEFAULT_ERROR_LIMIT = 10
@@ -137,7 +139,9 @@ namespace skew {
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
+    parser.define(.BOOL, .RELEASE, "--release", "Implies --fold-constants.")
     parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is " + DEFAULT_ERROR_LIMIT.toString + ".")
+    parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.")
 
     # Parse the command line arguments
     parser.parse(log, arguments)
@@ -153,6 +157,8 @@ namespace skew {
 
     # Set up the options for the compiler
     var options = CompilerOptions.new
+    var releaseFlag = parser.boolForOption(.RELEASE, false)
+    options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag)
 
     # There must be at least one source file
     var end = parser.source.contents.count

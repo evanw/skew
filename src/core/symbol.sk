@@ -88,17 +88,18 @@ namespace skew {
     const IS_OVER = 1 << 4
     const IS_SETTER = 1 << 5
     const IS_VALUE_TYPE = 1 << 6
+    const CHECKED_FOR_CONSTANT = 1 << 7
 
     # Modifiers
-    const IS_EXPORTED = 1 << 7
-    const IS_IMPORTED = 1 << 8
-    const IS_PREFERRED = 1 << 9
-    const IS_PRIVATE = 1 << 10
-    const IS_PROTECTED = 1 << 11
-    const IS_RENAMED = 1 << 12
-    const IS_SKIPPED = 1 << 13
-    const IS_ENTRY_POINT = 1 << 14
-    const IS_DEPRECATED = 1 << 15
+    const IS_EXPORTED = 1 << 8
+    const IS_IMPORTED = 1 << 9
+    const IS_PREFERRED = 1 << 10
+    const IS_PRIVATE = 1 << 11
+    const IS_PROTECTED = 1 << 12
+    const IS_RENAMED = 1 << 13
+    const IS_SKIPPED = 1 << 14
+    const IS_ENTRY_POINT = 1 << 15
+    const IS_DEPRECATED = 1 << 16
   }
 
   class Symbol {
@@ -122,6 +123,7 @@ namespace skew {
     def isOver bool                   { return (flags & IS_OVER) != 0 }
     def isSetter bool                 { return (flags & IS_SETTER) != 0 }
     def isValueType bool              { return (flags & IS_VALUE_TYPE) != 0 }
+    def checkedForConstant bool       { return (flags & CHECKED_FOR_CONSTANT) != 0 }
 
     # Modifiers
     def isExported bool   { return (flags & IS_EXPORTED) != 0 }
@@ -226,7 +228,30 @@ namespace skew {
   class VariableSymbol : Symbol {
     var type Node = null
     var value Node = null
-    var enumValue = 0
+    var constant Content = null
+
+    def cachedConstantValue Content {
+      if !checkedForConstant {
+        flags |= Symbol.CHECKED_FOR_CONSTANT
+
+        if isConst && value != null {
+          switch value.kind {
+            case .CONSTANT {
+              constant = value.content
+            }
+
+            case .NAME {
+              var symbol = value.symbol
+              if symbol != null && symbol.kind.isVariable {
+                constant = symbol.asVariableSymbol.cachedConstantValue
+              }
+            }
+          }
+        }
+      }
+
+      return constant
+    }
   }
 
   class OverloadedFunctionSymbol : Symbol {

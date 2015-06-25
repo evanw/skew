@@ -66,12 +66,12 @@ namespace skew {
       return null
     }
 
-    def generateSymbolName(prefix string) string {
+    def generateName(prefix string) string {
       var count = 0
       var name = prefix
       while true {
         if find(name) == null && (used == null || !(name in used)) {
-          reserveSymbolName(name)
+          reserveName(name)
           return name
         }
         count++
@@ -80,7 +80,11 @@ namespace skew {
       return prefix
     }
 
-    def reserveSymbolName(name string) {
+    def isNameReserved(name string) bool {
+      return used != null && name in used
+    }
+
+    def reserveName(name string) {
       if used == null {
         used = {}
       }
@@ -173,10 +177,15 @@ namespace skew {
         scope = scope.parent
       }
 
-      # Make sure no duplicate names are accidentally generated in other local scopes
-      scope.reserveSymbolName(symbol.name)
-
+      # Store the original name in the map before renaming
       locals[symbol.name] = symbol
+
+      # Make sure local variables have unique names within a function
+      if scope.isNameReserved(symbol.name) {
+        symbol.name = scope.generateName(symbol.name)
+      } else {
+        scope.reserveName(symbol.name)
+      }
     }
   }
 }

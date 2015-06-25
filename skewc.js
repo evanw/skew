@@ -4,14 +4,14 @@
     derived.prototype.constructor = derived;
   }
 
-  function assert(truth) {
-    if (!truth) {
-      throw "Assertion failed";
-    }
-  }
-
   function hashCombine(left, right) {
     return left ^ right - 1640531527 + (left << 6) + (left >> 2);
+  }
+
+  function assert(truth) {
+    if (!truth) {
+      throw Error("Assertion failed");
+    }
   }
 
   function Box(value) {
@@ -243,11 +243,11 @@
       else if (tokenKind === skew.TokenKind.RIGHT_PARENTHESIS || tokenKind === skew.TokenKind.RIGHT_BRACE || tokenKind === skew.TokenKind.RIGHT_BRACKET || tokenStartsWithGreaterThan) {
         // Search for a matching opposite token
         while (!in_List.isEmpty(stack)) {
-          var top = in_List.last(stack);
-          var topKind = top.kind;
+          var top1 = in_List.last(stack);
+          var topKind1 = top1.kind;
 
           // Don't match closing angle brackets that don't work since they are just operators
-          if (tokenStartsWithGreaterThan && topKind !== skew.TokenKind.LESS_THAN) {
+          if (tokenStartsWithGreaterThan && topKind1 !== skew.TokenKind.LESS_THAN) {
             break;
           }
 
@@ -255,7 +255,7 @@
           in_List.removeLast(stack);
 
           // Special-case angle brackets matches
-          if (topKind === skew.TokenKind.LESS_THAN) {
+          if (topKind1 === skew.TokenKind.LESS_THAN) {
             // Remove tentative matches that didn't work out
             if (!tokenStartsWithGreaterThan) {
               continue;
@@ -273,7 +273,7 @@
             }
 
             // Convert < and > into bounds for type parameter lists
-            top.kind = skew.TokenKind.START_PARAMETER_LIST;
+            top1.kind = skew.TokenKind.START_PARAMETER_LIST;
             token.kind = skew.TokenKind.END_PARAMETER_LIST;
             tokenKind = skew.TokenKind.END_PARAMETER_LIST;
           }
@@ -307,6 +307,7 @@
   };
 
   skew.compile = function(log, options, sources) {
+    var debug = false;
     var result = new skew.CompilerResult();
     in_List.prepend1(sources, new skew.Source("<native>", NATIVE_LIBRARY));
 
@@ -325,12 +326,43 @@
       if (!log.hasErrors()) {
         skew.resolvingPass(log, result.global, result.cache);
 
+        if (debug) {
+          skew.verifyHierarchy1(result.global);
+        }
+
         // Prepare for emission, code is error-free at this point
         if (!log.hasErrors()) {
           var graph = new skew.CallGraph(result.global);
+
+          // Make certain functions global
           skew.globalizingPass(result.global, graph);
+
+          if (debug) {
+            skew.verifyHierarchy1(result.global);
+          }
+
+          // Move symbols around
           skew.motionPass(result.global, graph);
+
+          if (debug) {
+            skew.verifyHierarchy1(result.global);
+          }
+
+          // Give overloaded functions unique names, rename operator overloads
           skew.renamingPass(result.global);
+
+          if (debug) {
+            skew.verifyHierarchy1(result.global);
+          }
+
+          // Compile-time partial evaluation
+          if (options.foldAllConstants) {
+            skew.foldingPass(result.global, result.cache);
+
+            if (debug) {
+              skew.verifyHierarchy1(result.global);
+            }
+          }
 
           // Emit in the target language
           var emitter = new skew.JsEmitter(result.cache, options);
@@ -341,6 +373,48 @@
     }
 
     return result;
+  };
+
+  skew.verifyHierarchy1 = function(symbol) {
+    for (var i = 0, list = symbol.objects, count = in_List.count(list); i < count; ++i) {
+      var object = list[i];
+      skew.verifyHierarchy1(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.functions, count1 = in_List.count(list1); i1 < count1; ++i1) {
+      var $function = list1[i1];
+      skew.verifyHierarchy2($function.block, null);
+    }
+
+    for (var i2 = 0, list2 = symbol.variables, count2 = in_List.count(list2); i2 < count2; ++i2) {
+      var variable = list2[i2];
+      skew.verifyHierarchy2(variable.value, null);
+    }
+  };
+
+  skew.verifyHierarchy2 = function(node, parent) {
+    if (node !== null) {
+      assert(node.parent === parent);
+
+      if (node.children !== null) {
+        for (var i = 0, list = node.children, count = in_List.count(list); i < count; ++i) {
+          var child = list[i];
+          skew.verifyHierarchy2(child, node);
+        }
+      }
+
+      if (node.kind === skew.NodeKind.VAR) {
+        skew.verifyHierarchy2(node.symbol.asVariableSymbol().value, null);
+      }
+
+      if (node.kind === skew.NodeKind.LAMBDA) {
+        skew.verifyHierarchy2(node.symbol.asFunctionSymbol().block, null);
+      }
+    }
+  };
+
+  skew.foldingPass = function(global, cache) {
+    new skew.folding.ConstantFolder(cache).visitObject(global);
   };
 
   skew.globalizingPass = function(global, graph) {
@@ -371,7 +445,7 @@
             value.dotTarget().swapWith(value);
           }
 
-          in_List.prepend1(callSite.children, skew.Node.createName($function.name).withSymbol($function));
+          callSite.insertChild(0, skew.Node.createName($function.name).withSymbol($function));
         }
       }
     }
@@ -521,9 +595,9 @@
       if (diagnostic.noteRange !== null) {
         skew.printWithColor(terminal.Color.BOLD, diagnostic.noteRange.locationString() + ": ");
         skew.printNote(diagnostic.noteText);
-        var formatted = diagnostic.noteRange.format(terminalWidth);
-        terminal.print(formatted.line);
-        skew.printWithColor(terminal.Color.GREEN, formatted.range + "\n");
+        var formatted1 = diagnostic.noteRange.format(terminalWidth);
+        terminal.print(formatted1.line);
+        skew.printWithColor(terminal.Color.GREEN, formatted1.range + "\n");
       }
     }
 
@@ -575,7 +649,9 @@
     parser.define(skew.options.Type.BOOL, skew.Option.HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
     parser.define(skew.options.Type.STRING, skew.Option.OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
     parser.define(skew.options.Type.STRING, skew.Option.OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
+    parser.define(skew.options.Type.BOOL, skew.Option.RELEASE, "--release", "Implies --fold-constants.");
     parser.define(skew.options.Type.INT, skew.Option.ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is " + skew.DEFAULT_ERROR_LIMIT.toString() + ".");
+    parser.define(skew.options.Type.BOOL, skew.Option.FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
 
     // Parse the command line arguments
     parser.parse(log, $arguments);
@@ -592,6 +668,8 @@
 
     // Set up the options for the compiler
     var options = new skew.CompilerOptions();
+    var releaseFlag = parser.boolForOption(skew.Option.RELEASE, false);
+    options.foldAllConstants = parser.boolForOption(skew.Option.FOLD_CONSTANTS, releaseFlag);
 
     // There must be at least one source file
     var end = in_string.count(parser.source.contents);
@@ -798,8 +876,8 @@
 
     // Emit variables
     for (var i2 = 0, list2 = objects, count2 = in_List.count(list2); i2 < count2; ++i2) {
-      var object = list2[i2];
-      var o = object;
+      var object1 = list2[i2];
+      var o = object1;
       self.prefix = "";
 
       while (o.kind !== skew.SymbolKind.OBJECT_GLOBAL) {
@@ -807,7 +885,7 @@
         o = o.parent.asObjectSymbol();
       }
 
-      for (var i1 = 0, list1 = object.variables, count1 = in_List.count(list1); i1 < count1; ++i1) {
+      for (var i1 = 0, list1 = object1.variables, count1 = in_List.count(list1); i1 < count1; ++i1) {
         var variable = list1[i1];
         self.emitVariable(variable);
       }
@@ -911,7 +989,11 @@
             self.emit("\n");
             self.emitNewlineBeforeSymbol(variable);
             self.emitComments(variable.comments);
-            self.emit(self.indent + skew.JsEmitter.mangleName(variable) + ": " + variable.enumValue.toString() + ", " + variable.enumValue.toString() + ": " + skew.quoteString(variable.name, 34));
+            self.emit(self.indent + skew.JsEmitter.mangleName(variable) + ": ");
+            self.emitContent(variable.constant);
+            self.emit(", ");
+            self.emitContent(variable.constant);
+            self.emit(": " + skew.quoteString(variable.name, 34));
             self.emitNewlineAfterSymbol(variable);
           }
         }
@@ -952,10 +1034,10 @@
     }
 
     for (var i2 = 0, list2 = symbol.functions, count2 = in_List.count(list2); i2 < count2; ++i2) {
-      var $function = list2[i2];
+      var function1 = list2[i2];
 
-      if ($function.kind !== skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
-        self.emitFunction($function);
+      if (function1.kind !== skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+        self.emitFunction(function1);
       }
     }
   };
@@ -1167,11 +1249,11 @@
         self.emit(") {\n");
         self.increaseIndent();
 
-        for (var i = 1, count3 = in_List.count(cases); i < count3; i += 1) {
-          var child = cases[i];
-          var values = child.children;
+        for (var i1 = 1, count3 = in_List.count(cases); i1 < count3; i1 += 1) {
+          var child1 = cases[i1];
+          var values = child1.children;
 
-          if (i !== 1) {
+          if (i1 !== 1) {
             self.emit("\n");
           }
 
@@ -1193,7 +1275,7 @@
 
           self.emit(" {\n");
           self.increaseIndent();
-          self.emitStatements(child.caseBlock().children);
+          self.emitStatements(child1.caseBlock().children);
           self.emit(self.indent + "break;\n");
           self.decreaseIndent();
           self.emit(self.indent + "}\n");
@@ -1205,18 +1287,18 @@
       }
 
       case skew.NodeKind.TRY: {
-        var children = node.children;
+        var children1 = node.children;
         var finallyBlock = node.finallyBlock();
         self.emit(self.indent + "try");
         self.emitBlock(node.tryBlock());
         self.emit("\n");
 
-        for (var i = 1, count4 = in_List.count(children) - 1; i < count4; i += 1) {
-          var child = children[i];
+        for (var i2 = 1, count4 = in_List.count(children1) - 1; i2 < count4; i2 += 1) {
+          var child2 = children1[i2];
           self.emit("\n");
-          self.emitComments(child.comments);
-          self.emit(self.indent + "catch (" + (child.symbol !== null ? skew.JsEmitter.mangleName(child.symbol) : "$e") + ")");
-          self.emitBlock(child.catchBlock());
+          self.emitComments(child2.comments);
+          self.emit(self.indent + "catch (" + (child2.symbol !== null ? skew.JsEmitter.mangleName(child2.symbol) : "$e") + ")");
+          self.emitBlock(child2.catchBlock());
           self.emit("\n");
         }
 
@@ -1276,6 +1358,31 @@
     }
   };
 
+  skew.JsEmitter.prototype.emitContent = function(content) {
+    var self = this;
+    switch (content.kind()) {
+      case skew.ContentKind.BOOL: {
+        self.emit(content.asBool().toString());
+        break;
+      }
+
+      case skew.ContentKind.INT: {
+        self.emit(content.asInt().toString());
+        break;
+      }
+
+      case skew.ContentKind.DOUBLE: {
+        self.emit(content.asDouble().toString());
+        break;
+      }
+
+      case skew.ContentKind.STRING: {
+        self.emit(skew.quoteString(content.asString(), 34));
+        break;
+      }
+    }
+  };
+
   skew.JsEmitter.prototype.emitExpression = function(node, precedence) {
     var self = this;
     switch (node.kind) {
@@ -1301,29 +1408,7 @@
       }
 
       case skew.NodeKind.CONSTANT: {
-        var value = node.content;
-
-        switch (value.kind()) {
-          case skew.ContentKind.BOOL: {
-            self.emit(value.asBool().toString());
-            break;
-          }
-
-          case skew.ContentKind.INT: {
-            self.emit(value.asInt().toString());
-            break;
-          }
-
-          case skew.ContentKind.DOUBLE: {
-            self.emit(value.asDouble().toString());
-            break;
-          }
-
-          case skew.ContentKind.STRING: {
-            self.emit(skew.quoteString(value.asString(), 34));
-            break;
-          }
-        }
+        self.emitContent(node.content);
         break;
       }
 
@@ -1376,12 +1461,12 @@
         var useBraces = node.kind === skew.NodeKind.INITIALIZER_MAP || node.kind === skew.NodeKind.INITIALIZER_SET && in_List.isEmpty(node.children);
         self.emit(useBraces ? "{" : "[");
 
-        for (var i = 0, count1 = in_List.count(node.children); i < count1; i += 1) {
-          if (i !== 0) {
+        for (var i1 = 0, count1 = in_List.count(node.children); i1 < count1; i1 += 1) {
+          if (i1 !== 0) {
             self.emit(", ");
           }
 
-          self.emitExpression(node.children[i], skew.Precedence.LOWEST);
+          self.emitExpression(node.children[i1], skew.Precedence.LOWEST);
         }
 
         self.emit(useBraces ? "}" : "]");
@@ -1399,12 +1484,12 @@
         self.emitExpression(node.children[0], skew.Precedence.UNARY_POSTFIX);
         self.emit("[");
 
-        for (var i = 1, count2 = in_List.count(node.children); i < count2; i += 1) {
-          if (i > 1) {
+        for (var i2 = 1, count2 = in_List.count(node.children); i2 < count2; i2 += 1) {
+          if (i2 > 1) {
             self.emit(", ");
           }
 
-          self.emitExpression(node.children[i], skew.Precedence.LOWEST);
+          self.emitExpression(node.children[i2], skew.Precedence.LOWEST);
         }
 
         self.emit("]");
@@ -1419,12 +1504,12 @@
         self.emitExpression(in_List.first(node.children), skew.Precedence.UNARY_POSTFIX);
         self.emit("[");
 
-        for (var i = 1, count3 = in_List.count(node.children) - 1; i < count3; i += 1) {
-          if (i > 1) {
+        for (var i3 = 1, count3 = in_List.count(node.children) - 1; i3 < count3; i3 += 1) {
+          if (i3 > 1) {
             self.emit(", ");
           }
 
-          self.emitExpression(node.children[i], skew.Precedence.LOWEST);
+          self.emitExpression(node.children[i3], skew.Precedence.LOWEST);
         }
 
         self.emit("] = ");
@@ -1437,31 +1522,31 @@
       }
 
       case skew.NodeKind.CAST: {
-        var value = node.castValue();
-        var from = value.resolvedType;
+        var value1 = node.castValue();
+        var from = value1.resolvedType;
         var to = node.resolvedType;
 
         if (from.isEnum() && to === self.cache.stringType) {
           self.emit(skew.JsEmitter.fullName(from.symbol) + "[");
-          self.emitExpression(value, precedence);
+          self.emitExpression(value1, precedence);
           self.emit("]");
         }
 
         else if (from === self.cache.stringType && to.isEnum()) {
           self.emit(skew.JsEmitter.fullName(to.symbol) + "[");
-          self.emitExpression(value, precedence);
+          self.emitExpression(value1, precedence);
           self.emit("]");
         }
 
         // TODO: Do this better
         else if (to === self.cache.intType) {
           self.emit("((");
-          self.emitExpression(value, precedence);
+          self.emitExpression(value1, precedence);
           self.emit(") | 0)");
         }
 
         else {
-          self.emitExpression(value, precedence);
+          self.emitExpression(value1, precedence);
         }
         break;
       }
@@ -1504,7 +1589,7 @@
 
       default: {
         if (skew.NodeKind.isUnary(node.kind)) {
-          var value = node.unaryValue();
+          var value2 = node.unaryValue();
           var info = skew.operatorInfo[((node.kind) | 0)];
 
           if (((info.precedence) | 0) < ((precedence) | 0)) {
@@ -1512,7 +1597,7 @@
           }
 
           self.emit(info.text);
-          self.emitExpression(value, info.precedence);
+          self.emitExpression(value2, info.precedence);
 
           if (((info.precedence) | 0) < ((precedence) | 0)) {
             self.emit(")");
@@ -1529,17 +1614,17 @@
         }
 
         else if (skew.NodeKind.isBinary(node.kind)) {
-          var info = skew.operatorInfo[((node.kind) | 0)];
+          var info1 = skew.operatorInfo[((node.kind) | 0)];
 
-          if (((info.precedence) | 0) < ((precedence) | 0)) {
+          if (((info1.precedence) | 0) < ((precedence) | 0)) {
             self.emit("(");
           }
 
-          self.emitExpression(node.binaryLeft(), skew.Precedence.incrementIfRightAssociative(info.precedence, info.associativity));
-          self.emit(node.kind === skew.NodeKind.EQUAL ? " === " : node.kind === skew.NodeKind.NOT_EQUAL ? " !== " : " " + info.text + " ");
-          self.emitExpression(node.binaryRight(), skew.Precedence.incrementIfLeftAssociative(info.precedence, info.associativity));
+          self.emitExpression(node.binaryLeft(), skew.Precedence.incrementIfRightAssociative(info1.precedence, info1.associativity));
+          self.emit(node.kind === skew.NodeKind.EQUAL ? " === " : node.kind === skew.NodeKind.NOT_EQUAL ? " !== " : " " + info1.text + " ");
+          self.emitExpression(node.binaryRight(), skew.Precedence.incrementIfLeftAssociative(info1.precedence, info1.associativity));
 
-          if (((info.precedence) | 0) < ((precedence) | 0)) {
+          if (((info1.precedence) | 0) < ((precedence) | 0)) {
             self.emit(")");
           }
         }
@@ -1882,6 +1967,11 @@
     return (self.flags & skew.Node.IS_INSIDE_PARENTHESES) !== 0;
   };
 
+  skew.Node.prototype.hasChildren = function() {
+    var self = this;
+    return self.children !== null && !in_List.isEmpty(self.children);
+  };
+
   skew.Node.prototype.withFlags = function(value) {
     var self = this;
     self.flags = value;
@@ -1989,6 +2079,18 @@
     return result;
   };
 
+  skew.Node.prototype.replaceWithNodes = function(nodes) {
+    var self = this;
+    var index = self.indexInParent();
+
+    for (var i = 0, count = in_List.count(nodes); i < count; i += 1) {
+      self.parent.insertChild(index + i + 1, nodes[i]);
+    }
+
+    self.parent.removeChildAtIndex(index);
+    return self;
+  };
+
   skew.Node.prototype.replaceChild = function(index, node) {
     var self = this;
     assert(index >= 0 && index < in_List.count(self.children));
@@ -2080,6 +2182,136 @@
     }
 
     return false;
+  };
+
+  skew.Node.prototype.hasNoSideEffects = function() {
+    var self = this;
+    assert(skew.NodeKind.isExpression(self.kind));
+
+    switch (self.kind) {
+      case skew.NodeKind.NAME:
+      case skew.NodeKind.CONSTANT:
+      case skew.NodeKind.NULL: {
+        return true;
+        break;
+      }
+
+      case skew.NodeKind.CAST: {
+        return self.castValue().hasNoSideEffects();
+        break;
+      }
+
+      case skew.NodeKind.HOOK: {
+        return self.hookTest().hasNoSideEffects() && self.hookTrue().hasNoSideEffects() && self.hookFalse().hasNoSideEffects();
+        break;
+      }
+
+      case skew.NodeKind.DOT: {
+        return self.dotTarget().hasNoSideEffects();
+        break;
+      }
+
+      default: {
+        if (skew.NodeKind.isBinary(self.kind)) {
+          return !skew.NodeKind.isBinaryAssign(self.kind) && self.binaryLeft().hasNoSideEffects() && self.binaryRight().hasNoSideEffects();
+        }
+
+        if (skew.NodeKind.isUnary(self.kind)) {
+          return !skew.NodeKind.isUnaryAssign(self.kind) && self.unaryValue().hasNoSideEffects();
+        }
+        break;
+      }
+    }
+
+    return false;
+  };
+
+  skew.Node.prototype.invertBooleanCondition = function(cache) {
+    var self = this;
+    assert(skew.NodeKind.isExpression(self.kind));
+
+    switch (self.kind) {
+      case skew.NodeKind.CONSTANT: {
+        if (self.content.kind() === skew.ContentKind.BOOL) {
+          self.content = new skew.BoolContent(!self.content.asBool());
+        }
+
+        return;
+        break;
+      }
+
+      case skew.NodeKind.NOT: {
+        self.become(self.unaryValue().remove());
+        return;
+        break;
+      }
+
+      case skew.NodeKind.EQUAL: {
+        self.kind = skew.NodeKind.NOT_EQUAL;
+        return;
+        break;
+      }
+
+      case skew.NodeKind.NOT_EQUAL: {
+        self.kind = skew.NodeKind.EQUAL;
+        return;
+        break;
+      }
+
+      case skew.NodeKind.LOGICAL_OR: {
+        self.kind = skew.NodeKind.LOGICAL_AND;
+        self.binaryLeft().invertBooleanCondition(cache);
+        self.binaryRight().invertBooleanCondition(cache);
+        return;
+        break;
+      }
+
+      case skew.NodeKind.LOGICAL_AND: {
+        self.kind = skew.NodeKind.LOGICAL_OR;
+        self.binaryLeft().invertBooleanCondition(cache);
+        self.binaryRight().invertBooleanCondition(cache);
+        return;
+        break;
+      }
+
+      case skew.NodeKind.LESS_THAN:
+      case skew.NodeKind.GREATER_THAN:
+      case skew.NodeKind.LESS_THAN_OR_EQUAL:
+      case skew.NodeKind.GREATER_THAN_OR_EQUAL: {
+        var commonType = cache.commonImplicitType(self.binaryLeft().resolvedType, self.binaryRight().resolvedType);
+
+        if (commonType !== null && commonType !== cache.doubleType) {
+          switch (self.kind) {
+            case skew.NodeKind.LESS_THAN: {
+              self.kind = skew.NodeKind.GREATER_THAN_OR_EQUAL;
+              break;
+            }
+
+            case skew.NodeKind.GREATER_THAN: {
+              self.kind = skew.NodeKind.LESS_THAN_OR_EQUAL;
+              break;
+            }
+
+            case skew.NodeKind.LESS_THAN_OR_EQUAL: {
+              self.kind = skew.NodeKind.GREATER_THAN;
+              break;
+            }
+
+            case skew.NodeKind.GREATER_THAN_OR_EQUAL: {
+              self.kind = skew.NodeKind.LESS_THAN;
+              break;
+            }
+          }
+
+          return;
+        }
+        break;
+      }
+    }
+
+    // Remove children before clone() so they are moved instead of copied
+    var children = self.removeChildren();
+    self.become(skew.Node.createUnary(skew.NodeKind.NOT, self.clone().withChildren(children)).withType(cache.boolType));
   };
 
   skew.Node.createAnnotation = function(value, test) {
@@ -2293,9 +2525,47 @@
     return new skew.Node(skew.NodeKind.LAMBDA_TYPE).withChildren(argTypes);
   };
 
+  skew.Node.prototype.isInt = function() {
+    var self = this;
+    return self.kind === skew.NodeKind.CONSTANT && self.content.kind() === skew.ContentKind.INT;
+  };
+
+  skew.Node.prototype.isBool = function() {
+    var self = this;
+    return self.kind === skew.NodeKind.CONSTANT && self.content.kind() === skew.ContentKind.BOOL;
+  };
+
+  skew.Node.prototype.isDouble = function() {
+    var self = this;
+    return self.kind === skew.NodeKind.CONSTANT && self.content.kind() === skew.ContentKind.DOUBLE;
+  };
+
+  skew.Node.prototype.isString = function() {
+    var self = this;
+    return self.kind === skew.NodeKind.CONSTANT && self.content.kind() === skew.ContentKind.STRING;
+  };
+
+  skew.Node.prototype.asInt = function() {
+    var self = this;
+    assert(self.kind === skew.NodeKind.CONSTANT);
+    return self.content.asInt();
+  };
+
+  skew.Node.prototype.asBool = function() {
+    var self = this;
+    assert(self.kind === skew.NodeKind.CONSTANT);
+    return self.content.asBool();
+  };
+
+  skew.Node.prototype.asDouble = function() {
+    var self = this;
+    assert(self.kind === skew.NodeKind.CONSTANT);
+    return self.content.asDouble();
+  };
+
   skew.Node.prototype.asString = function() {
     var self = this;
-    assert(self.kind === skew.NodeKind.NAME || self.kind === skew.NodeKind.DOT);
+    assert(self.kind === skew.NodeKind.NAME || self.kind === skew.NodeKind.DOT || self.kind === skew.NodeKind.CONSTANT);
     return self.content.asString();
   };
 
@@ -2719,6 +2989,11 @@
     return (self.flags & skew.Symbol.IS_VALUE_TYPE) !== 0;
   };
 
+  skew.Symbol.prototype.checkedForConstant = function() {
+    var self = this;
+    return (self.flags & skew.Symbol.CHECKED_FOR_CONSTANT) !== 0;
+  };
+
   // Modifiers
   skew.Symbol.prototype.isExported = function() {
     var self = this;
@@ -2885,10 +3160,37 @@
     skew.Symbol.call(self, kind, name);
     self.type = null;
     self.value = null;
-    self.enumValue = 0;
+    self.constant = null;
   };
 
   $extends(skew.VariableSymbol, skew.Symbol);
+
+  skew.VariableSymbol.prototype.cachedConstantValue = function() {
+    var self = this;
+    if (!self.checkedForConstant()) {
+      self.flags |= skew.Symbol.CHECKED_FOR_CONSTANT;
+
+      if (self.isConst() && self.value !== null) {
+        switch (self.value.kind) {
+          case skew.NodeKind.CONSTANT: {
+            self.constant = self.value.content;
+            break;
+          }
+
+          case skew.NodeKind.NAME: {
+            var symbol = self.value.symbol;
+
+            if (symbol !== null && skew.SymbolKind.isVariable(symbol.kind)) {
+              self.constant = symbol.asVariableSymbol().cachedConstantValue();
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    return self.constant;
+  };
 
   skew.OverloadedFunctionSymbol = function(kind, name, symbols) {
     var self = this;
@@ -3586,8 +3888,8 @@
       }
 
       case 16: {
-        for (var i = 2, count1 = in_string.count(text); i < count1; i += 1) {
-          var c = in_string.get1(text, i);
+        for (var i1 = 2, count1 = in_string.count(text); i1 < count1; i1 += 1) {
+          var c = in_string.get1(text, i1);
           value = value * 16 + c - (c <= 57 ? 48 : c <= 70 ? 65 - 10 : 97 - 10);
         }
         break;
@@ -3599,6 +3901,12 @@
 
   skew.parsing.parseDoubleLiteral = function(text) {
     return +text;
+  };
+
+  skew.parsing.checkExtraParentheses = function(context, node) {
+    if (node.isInsideParentheses()) {
+      context.log.semanticWarningExtraParentheses(node.range);
+    }
   };
 
   skew.parsing.parseLeadingComments = function(context) {
@@ -3752,6 +4060,8 @@
       if (value === null) {
         return null;
       }
+
+      skew.parsing.checkExtraParentheses(context, value);
     }
 
     return skew.Node.createReturn(value).withRange(context.spanSince(token.range));
@@ -3764,6 +4074,8 @@
     if (value === null) {
       return null;
     }
+
+    skew.parsing.checkExtraParentheses(context, value);
 
     if (!context.expect(skew.TokenKind.LEFT_BRACE)) {
       return null;
@@ -3792,6 +4104,7 @@
             return null;
           }
 
+          skew.parsing.checkExtraParentheses(context, constant);
           in_List.append1(values, constant);
 
           if (!context.eat(skew.TokenKind.COMMA)) {
@@ -3864,6 +4177,7 @@
       value = skew.Node.createPair(value, second).withRange(skew.Range.span(value.range, second.range));
     }
 
+    skew.parsing.checkExtraParentheses(context, value);
     var block = skew.parsing.parseBlock(context);
 
     if (block === null) {
@@ -3881,6 +4195,7 @@
       return null;
     }
 
+    skew.parsing.checkExtraParentheses(context, test);
     var trueBlock = skew.parsing.parseBlock(context);
 
     if (trueBlock === null) {
@@ -3898,6 +4213,7 @@
       return null;
     }
 
+    skew.parsing.checkExtraParentheses(context, value);
     return skew.Node.createThrow(value);
   };
 
@@ -3920,6 +4236,7 @@
       return null;
     }
 
+    skew.parsing.checkExtraParentheses(context, test);
     var block = skew.parsing.parseBlock(context);
 
     if (block === null) {
@@ -3987,6 +4304,7 @@
       return null;
     }
 
+    skew.parsing.checkExtraParentheses(context, value);
     return skew.Node.createExpression(value).withRange(value.range);
   };
 
@@ -4023,15 +4341,15 @@
 
         // Match "else"
         else {
-          var falseBlock = skew.parsing.parseBlock(context);
+          var falseBlock1 = skew.parsing.parseBlock(context);
 
-          if (falseBlock === null) {
+          if (falseBlock1 === null) {
             return null;
           }
 
-          falseBlock.comments = comments;
-          previous.replaceChild(2, falseBlock);
-          previous = falseBlock;
+          falseBlock1.comments = comments;
+          previous.replaceChild(2, falseBlock1);
+          previous = falseBlock1;
         }
       }
 
@@ -4079,15 +4397,15 @@
 
       // Parse a new statement
       else {
-        var statement = skew.parsing.parseStatement(context);
+        var statement1 = skew.parsing.parseStatement(context);
 
-        if (statement === null) {
+        if (statement1 === null) {
           break;
         }
 
-        previous = statement;
-        statement.comments = comments;
-        in_List.append1(statements, statement);
+        previous = statement1;
+        statement1.comments = comments;
+        in_List.append1(statements, statement1);
       }
 
       // Parse trailing comments and/or newline
@@ -4386,23 +4704,29 @@
       switch (kind) {
         case skew.SymbolKind.VARIABLE_GLOBAL:
         case skew.SymbolKind.VARIABLE_INSTANCE: {
-          var variable = new skew.VariableSymbol(kind, name);
-          variable.range = range;
+          var variable1 = new skew.VariableSymbol(kind, name);
+          variable1.range = range;
 
           if (token.kind === skew.TokenKind.CONST) {
-            variable.flags |= skew.Symbol.IS_CONST;
+            variable1.flags |= skew.Symbol.IS_CONST;
           }
 
           if (skew.parsing.peekType(context)) {
-            variable.type = skew.parsing.parseType(context);
+            variable1.type = skew.parsing.parseType(context);
           }
 
           if (context.eat(skew.TokenKind.ASSIGN)) {
-            variable.value = skew.parsing.pratt.parse(context, skew.Precedence.LOWEST);
+            variable1.value = skew.parsing.pratt.parse(context, skew.Precedence.LOWEST);
+
+            if (variable1.value === null) {
+              return false;
+            }
+
+            skew.parsing.checkExtraParentheses(context, variable1.value);
           }
 
-          in_List.append1(parent.variables, variable);
-          symbol = variable;
+          in_List.append1(parent.variables, variable1);
+          symbol = variable1;
           break;
         }
 
@@ -5236,10 +5560,10 @@
 
       // Center aligned
       else {
-        var offset = a - centeredStart;
-        line = "..." + in_string.fromCodePoints(codePoints.slice(offset + 3, offset + maxLength - 3)) + "...";
-        a -= offset;
-        b -= offset;
+        var offset1 = a - centeredStart;
+        line = "..." + in_string.fromCodePoints(codePoints.slice(offset1 + 3, offset1 + maxLength - 3)) + "...";
+        a -= offset1;
+        b -= offset1;
 
         if (b > maxLength - 3) {
           b = maxLength - 3;
@@ -5493,6 +5817,7 @@
     var self = this;
     self.outputFile = "";
     self.outputDirectory = "";
+    self.foldAllConstants = false;
   };
 
   skew.CompilerResult = function() {
@@ -5500,6 +5825,973 @@
     self.cache = new skew.TypeCache();
     self.global = new skew.ObjectSymbol(skew.SymbolKind.OBJECT_GLOBAL, "<global>");
     self.outputs = null;
+  };
+
+  skew.folding = {};
+
+  skew.folding.ConstantFolder = function(cache) {
+    var self = this;
+    self.cache = cache;
+  };
+
+  skew.folding.ConstantFolder.prototype.visitObject = function(symbol) {
+    var self = this;
+    for (var i = 0, list = symbol.objects, count = in_List.count(list); i < count; ++i) {
+      var object = list[i];
+      self.visitObject(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.functions, count1 = in_List.count(list1); i1 < count1; ++i1) {
+      var $function = list1[i1];
+
+      if ($function.block !== null) {
+        self.foldConstants($function.block);
+      }
+    }
+
+    for (var i2 = 0, list2 = symbol.variables, count2 = in_List.count(list2); i2 < count2; ++i2) {
+      var variable = list2[i2];
+
+      if (variable.value !== null) {
+        self.foldConstants(variable.value);
+      }
+    }
+  };
+
+  // Use this instead of node.become(Node.createConstant(content)) to avoid more GC
+  skew.folding.ConstantFolder.prototype.flatten = function(node, content) {
+    var self = this;
+    node.removeChildren();
+    node.kind = skew.NodeKind.CONSTANT;
+    node.content = content;
+  };
+
+  // Use this instead of node.become(Node.createBool(value)) to avoid more GC
+  skew.folding.ConstantFolder.prototype.flattenBool = function(node, value) {
+    var self = this;
+    assert(node.resolvedType === self.cache.boolType || node.resolvedType === skew.Type.DYNAMIC);
+    self.flatten(node, new skew.BoolContent(value));
+  };
+
+  // Use this instead of node.become(Node.createInt(value)) to avoid more GC
+  skew.folding.ConstantFolder.prototype.flattenInt = function(node, value) {
+    var self = this;
+    assert(node.resolvedType === self.cache.intType || node.resolvedType === skew.Type.DYNAMIC);
+    self.flatten(node, new skew.IntContent(value));
+  };
+
+  // Use this instead of node.become(Node.createDouble(value)) to avoid more GC
+  skew.folding.ConstantFolder.prototype.flattenDouble = function(node, value) {
+    var self = this;
+    assert(node.resolvedType === self.cache.doubleType || node.resolvedType === skew.Type.DYNAMIC);
+    self.flatten(node, new skew.DoubleContent(value));
+  };
+
+  // Use this instead of node.become(Node.createString(value)) to avoid more GC
+  skew.folding.ConstantFolder.prototype.flattenString = function(node, value) {
+    var self = this;
+    assert(node.resolvedType === self.cache.stringType || node.resolvedType === skew.Type.DYNAMIC);
+    self.flatten(node, new skew.StringContent(value));
+  };
+
+  skew.folding.ConstantFolder.prototype.foldConstants = function(node) {
+    var self = this;
+    var kind = node.kind;
+
+    // Transform "a + (b + c)" => "(a + b) + c" before operands are folded
+    if (kind === skew.NodeKind.ADD && node.resolvedType === self.cache.stringType) {
+      self.rotateStringConcatenation(node);
+    }
+
+    // Fold operands before folding this node
+    var children = node.children;
+
+    if (children !== null) {
+      var n = in_List.count(children);
+
+      for (var i = 0, count = n; i < count; i += 1) {
+        var child = children[n - i - 1];
+
+        if (child !== null) {
+          self.foldConstants(child);
+        }
+      }
+    }
+
+    // Separating the case bodies into separate functions makes the JavaScript JIT go faster
+    switch (kind) {
+      case skew.NodeKind.VAR: {
+        self.foldVar(node);
+        break;
+      }
+
+      case skew.NodeKind.BLOCK: {
+        self.foldBlock(node);
+        break;
+      }
+
+      case skew.NodeKind.CALL: {
+        self.foldCall(node);
+        break;
+      }
+
+      case skew.NodeKind.CAST: {
+        self.foldCast(node);
+        break;
+      }
+
+      case skew.NodeKind.HOOK: {
+        self.foldHook(node);
+        break;
+      }
+
+      case skew.NodeKind.NAME: {
+        self.foldName(node);
+        break;
+      }
+
+      default: {
+        if (skew.NodeKind.isUnary(kind)) {
+          self.foldUnary(node);
+        }
+
+        else if (skew.NodeKind.isBinary(kind)) {
+          self.foldBinary(node);
+        }
+        break;
+      }
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.rotateStringConcatenation = function(node) {
+    var self = this;
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+    assert(node.kind === skew.NodeKind.ADD);
+    assert(left.resolvedType === self.cache.stringType || left.resolvedType === skew.Type.DYNAMIC);
+    assert(right.resolvedType === self.cache.stringType || right.resolvedType === skew.Type.DYNAMIC);
+
+    if (right.kind === skew.NodeKind.ADD) {
+      var rightLeft = right.binaryLeft();
+      var rightRight = right.binaryRight();
+      assert(rightLeft.resolvedType === self.cache.stringType || rightLeft.resolvedType === skew.Type.DYNAMIC);
+      assert(rightRight.resolvedType === self.cache.stringType || rightRight.resolvedType === skew.Type.DYNAMIC);
+      left.swapWith(right);
+      left.swapWith(rightRight);
+      left.swapWith(rightLeft);
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldStringConcatenation = function(node) {
+    var self = this;
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+    assert(left.resolvedType === self.cache.stringType || left.resolvedType === skew.Type.DYNAMIC);
+    assert(right.resolvedType === self.cache.stringType || right.resolvedType === skew.Type.DYNAMIC);
+
+    if (right.isString()) {
+      // "a" + "b" => "ab"
+      if (left.isString()) {
+        self.flattenString(node, left.asString() + right.asString());
+      }
+
+      else if (left.kind === skew.NodeKind.ADD) {
+        var leftLeft = left.binaryLeft();
+        var leftRight = left.binaryRight();
+        assert(leftLeft.resolvedType === self.cache.stringType || leftLeft.resolvedType === skew.Type.DYNAMIC);
+        assert(leftRight.resolvedType === self.cache.stringType || leftRight.resolvedType === skew.Type.DYNAMIC);
+
+        // (a + "b") + "c" => a + "bc"
+        if (leftRight.isString()) {
+          self.flattenString(leftRight, leftRight.asString() + right.asString());
+          node.become(left.remove());
+        }
+      }
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldTry = function(node) {
+    var self = this;
+    var tryBlock = node.tryBlock();
+    var finallyBlock = node.finallyBlock();
+
+    // A try block without any statements cannot possibly throw
+    if (!tryBlock.hasChildren()) {
+      node.remove();
+      return -1;
+    }
+
+    // No need to keep an empty finally block around
+    if (finallyBlock !== null && !finallyBlock.hasChildren()) {
+      finallyBlock.replaceWithNull();
+      finallyBlock = null;
+    }
+
+    // Inline the contents of the try block into the parent if possible
+    if (in_List.count(node.children) === 2 && finallyBlock === null) {
+      var replacements = tryBlock.removeChildren();
+      node.replaceWithNodes(replacements);
+      return in_List.count(replacements) - 1;
+    }
+
+    return 0;
+  };
+
+  skew.folding.ConstantFolder.prototype.foldIf = function(node) {
+    var self = this;
+    var test = node.ifTest();
+    var trueBlock = node.ifTrue();
+    var falseBlock = node.ifFalse();
+
+    // No reason to keep an empty "else" block
+    if (falseBlock !== null && !falseBlock.hasChildren()) {
+      falseBlock.replaceWithNull();
+      falseBlock = null;
+    }
+
+    // Always true if statement
+    if (test.isTrue()) {
+      // Inline the contents of the true block
+      var replacements = trueBlock.removeChildren();
+      node.replaceWithNodes(replacements);
+      return in_List.count(replacements) - 1;
+    }
+
+    // Always false if statement
+    else if (test.isFalse()) {
+      // Remove entirely
+      if (falseBlock === null) {
+        node.remove();
+        return -1;
+      }
+
+      // Inline the contents of the false block
+      var replacements1 = falseBlock.removeChildren();
+      node.replaceWithNodes(replacements1);
+      return in_List.count(replacements1) - 1;
+    }
+
+    // Remove if statements with empty true blocks
+    else if (!trueBlock.hasChildren()) {
+      // "if (a) {} else b;" => "if (!a) b;"
+      if (falseBlock !== null && falseBlock.hasChildren()) {
+        test.invertBooleanCondition(self.cache);
+        trueBlock.swapWith(falseBlock);
+        trueBlock.replaceWithNull();
+      }
+
+      // "if (a) {}" => ""
+      else if (test.hasNoSideEffects()) {
+        node.remove();
+        return -1;
+      }
+
+      // "if (a) {}" => "a;"
+      else {
+        node.become(skew.Node.createExpression(test.remove()));
+      }
+    }
+
+    return 0;
+  };
+
+  skew.folding.ConstantFolder.prototype.foldSwitch = function(node) {
+    var self = this;
+    var children = node.children;
+    var defaultCase = null;
+
+    // Check for a default case
+    for (var i = 1, count = in_List.count(children); i < count; i += 1) {
+      var child = children[i];
+
+      if (in_List.count(child.children) === 1) {
+        defaultCase = child;
+        break;
+      }
+    }
+
+    // Remove the default case if it's empty
+    if (defaultCase !== null && !defaultCase.caseBlock().hasChildren()) {
+      defaultCase.remove();
+      defaultCase = null;
+    }
+
+    // If the default case is missing, all other empty cases can be removed too
+    if (defaultCase === null) {
+      var n = in_List.count(children);
+
+      for (var i1 = 1, count1 = n; i1 < count1; i1 += 1) {
+        var child1 = children[n - i1];
+
+        if (!child1.caseBlock().hasChildren()) {
+          child1.remove();
+        }
+      }
+    }
+
+    // Replace "switch (foo) {}" with "foo;"
+    if (in_List.count(node.children) === 1) {
+      var value = node.switchValue();
+      node.replaceWith(skew.Node.createExpression(value.remove()).withRange(node.range));
+      return -1;
+    }
+
+    return 0;
+  };
+
+  skew.folding.ConstantFolder.prototype.foldVar = function(node) {
+    var self = this;
+    var value = node.symbol.asVariableSymbol().value;
+
+    if (value !== null) {
+      self.foldConstants(value);
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldBlock = function(node) {
+    var self = this;
+    var children = node.children;
+    var i = 0;
+
+    while (i < in_List.count(children)) {
+      var child = children[i];
+      var kind = child.kind;
+
+      // Remove everything after a jump
+      if (skew.NodeKind.isJump(kind)) {
+        var j = in_List.count(children) - 1;
+
+        while (j > i) {
+          node.removeChildAtIndex(j);
+          --j;
+        }
+
+        break;
+      }
+
+      // Remove constants and "while false { ... }" entirely
+      if (kind === skew.NodeKind.EXPRESSION && child.expressionValue().hasNoSideEffects() || kind === skew.NodeKind.WHILE && child.whileTest().isFalse()) {
+        node.removeChildAtIndex(i);
+        --i;
+      }
+
+      // Remove unused try statements since they can cause deoptimizations
+      else if (kind === skew.NodeKind.TRY) {
+        i += self.foldTry(child);
+      }
+
+      // Statically evaluate if statements where possible
+      else if (kind === skew.NodeKind.IF) {
+        i += self.foldIf(child);
+      }
+
+      // Fold switch statements
+      else if (kind === skew.NodeKind.SWITCH) {
+        i += self.foldSwitch(child);
+      }
+
+      ++i;
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldName = function(node) {
+    var self = this;
+    var symbol = node.symbol;
+
+    if (symbol !== null && symbol.isConst()) {
+      var content = symbol.asVariableSymbol().cachedConstantValue();
+
+      if (content !== null) {
+        self.flatten(node, content);
+      }
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldCall = function(node) {
+    var self = this;
+    if (node.kind === skew.NodeKind.CALL) {
+      var value = node.callValue();
+
+      if (value.kind === skew.NodeKind.DOT) {
+        var target = value.dotTarget();
+
+        if (target !== null && target.kind === skew.NodeKind.CONSTANT && value.asString() === "toString") {
+          var content = target.content;
+
+          switch (content.kind()) {
+            case skew.ContentKind.BOOL: {
+              self.flattenString(node, content.asBool().toString());
+              break;
+            }
+
+            case skew.ContentKind.INT: {
+              self.flattenString(node, content.asInt().toString());
+              break;
+            }
+
+            case skew.ContentKind.STRING: {
+              self.flattenString(node, content.asString());
+              break;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldCast = function(node) {
+    var self = this;
+    var type = node.castType().resolvedType;
+    var value = node.castValue();
+
+    if (value.kind === skew.NodeKind.CONSTANT) {
+      var content = value.content;
+      var kind = content.kind();
+
+      // Cast "bool" values
+      if (kind === skew.ContentKind.BOOL) {
+        if (type === self.cache.intType) {
+          self.flattenInt(node, ((value.asBool()) | 0));
+        }
+
+        else if (type === self.cache.doubleType) {
+          self.flattenDouble(node, value.asBool());
+        }
+      }
+
+      // Cast "int" values
+      else if (kind === skew.ContentKind.INT) {
+        if (type === self.cache.boolType) {
+          self.flattenBool(node, value.asInt());
+        }
+
+        else if (type === self.cache.doubleType) {
+          self.flattenDouble(node, value.asInt());
+        }
+      }
+
+      // Cast "double" values
+      else if (kind === skew.ContentKind.DOUBLE) {
+        if (type === self.cache.boolType) {
+          self.flattenBool(node, value.asDouble());
+        }
+
+        else if (type === self.cache.intType) {
+          self.flattenInt(node, ((value.asDouble()) | 0));
+        }
+      }
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldUnary = function(node) {
+    var self = this;
+    var value = node.unaryValue();
+    var kind = node.kind;
+
+    if (value.kind === skew.NodeKind.CONSTANT) {
+      var content = value.content;
+      var contentKind = content.kind();
+
+      // Fold "bool" values
+      if (contentKind === skew.ContentKind.BOOL) {
+        if (kind === skew.NodeKind.NOT) {
+          self.flattenBool(node, !value.asBool());
+        }
+      }
+
+      // Fold "int" values
+      else if (contentKind === skew.ContentKind.INT) {
+        if (kind === skew.NodeKind.POSITIVE) {
+          self.flattenInt(node, +value.asInt());
+        }
+
+        else if (kind === skew.NodeKind.NEGATIVE) {
+          self.flattenInt(node, -value.asInt());
+        }
+
+        else if (kind === skew.NodeKind.COMPLEMENT) {
+          self.flattenInt(node, ~value.asInt());
+        }
+      }
+
+      // Fold "float" or "double" values
+      else if (contentKind === skew.ContentKind.DOUBLE) {
+        if (kind === skew.NodeKind.POSITIVE) {
+          self.flattenDouble(node, +value.asDouble());
+        }
+
+        else if (kind === skew.NodeKind.NEGATIVE) {
+          self.flattenDouble(node, -value.asDouble());
+        }
+      }
+    }
+
+    // Partial evaluation ("!!x" isn't necessarily "x" if we don't know the type)
+    else if (kind === skew.NodeKind.NOT && value.resolvedType !== skew.Type.DYNAMIC) {
+      switch (value.kind) {
+        case skew.NodeKind.NOT:
+        case skew.NodeKind.EQUAL:
+        case skew.NodeKind.NOT_EQUAL:
+        case skew.NodeKind.LOGICAL_OR:
+        case skew.NodeKind.LOGICAL_AND:
+        case skew.NodeKind.LESS_THAN:
+        case skew.NodeKind.GREATER_THAN:
+        case skew.NodeKind.LESS_THAN_OR_EQUAL:
+        case skew.NodeKind.GREATER_THAN_OR_EQUAL: {
+          value.invertBooleanCondition(self.cache);
+          node.become(value);
+          break;
+        }
+      }
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldConstantAddOrSubtract = function(node, variable, constant, delta) {
+    var self = this;
+    var isAdd = node.kind === skew.NodeKind.ADD;
+    var needsContentUpdate = delta !== 0;
+    var isRightConstant = constant === node.binaryRight();
+    var shouldNegateConstant = !isAdd && isRightConstant;
+    var value = constant.asInt();
+
+    // Make this an add for simplicity
+    if (shouldNegateConstant) {
+      value = -value;
+    }
+
+    // Include the delta from the parent node if present
+    value += delta;
+
+    // Apply addition identities
+    if (value === 0) {
+      node.become(variable.remove());
+      return;
+    }
+
+    // Check for nested addition or subtraction
+    if (variable.kind === skew.NodeKind.ADD || variable.kind === skew.NodeKind.SUBTRACT) {
+      var left = variable.binaryLeft();
+      var right = variable.binaryRight();
+      assert(left.resolvedType === self.cache.intType || left.resolvedType === skew.Type.DYNAMIC);
+      assert(right.resolvedType === self.cache.intType || right.resolvedType === skew.Type.DYNAMIC);
+
+      // (a + 1) + 2 => a + 3
+      var isLeftConstant = left.isInt();
+
+      if (isLeftConstant || right.isInt()) {
+        self.foldConstantAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value);
+        node.become(variable);
+        return;
+      }
+    }
+
+    // Adjust the value so it has the correct sign
+    if (shouldNegateConstant) {
+      value = -value;
+    }
+
+    // The negative sign can often be removed by code transformation
+    if (value < 0) {
+      // a + -1 => a - 1
+      // a - -1 => a + 1
+      if (isRightConstant) {
+        node.kind = isAdd ? skew.NodeKind.SUBTRACT : skew.NodeKind.ADD;
+        value = -value;
+        needsContentUpdate = true;
+      }
+
+      // -1 + a => a - 1
+      else if (isAdd) {
+        node.kind = skew.NodeKind.SUBTRACT;
+        value = -value;
+        variable.swapWith(constant);
+        needsContentUpdate = true;
+      }
+    }
+
+    // Avoid extra allocations
+    if (needsContentUpdate) {
+      constant.content = new skew.IntContent(value);
+    }
+
+    // Also handle unary negation on "variable"
+    self.foldAddOrSubtract(node);
+  };
+
+  skew.folding.ConstantFolder.prototype.foldAddOrSubtract = function(node) {
+    var self = this;
+    var isAdd = node.kind === skew.NodeKind.ADD;
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+
+    // -a + b => b - a
+    if (left.kind === skew.NodeKind.NEGATIVE && isAdd) {
+      left.become(left.unaryValue().replaceWithNull());
+      left.swapWith(right);
+      node.kind = skew.NodeKind.SUBTRACT;
+    }
+
+    // a + -b => a - b
+    // a - -b => a + b
+    else if (right.kind === skew.NodeKind.NEGATIVE) {
+      right.become(right.unaryValue().replaceWithNull());
+      node.kind = isAdd ? skew.NodeKind.SUBTRACT : skew.NodeKind.ADD;
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldConstantMultiply = function(node, variable, constant) {
+    var self = this;
+    assert(constant.isInt());
+
+    // Canonicalize multiplication order
+    if (node.binaryLeft() === constant) {
+      variable.swapWith(constant);
+    }
+
+    // Apply identities
+    var value = constant.asInt();
+
+    if (value === 0) {
+      if (variable.hasNoSideEffects()) {
+        node.become(constant.remove());
+      }
+
+      return;
+    }
+
+    if (value === 1) {
+      node.become(variable.remove());
+      return;
+    }
+
+    // Multiply by a power of 2 should be a left-shift operation, which is
+    // more concise and always faster (or at least never slower) than the
+    // alternative. Division can't be replaced by a right-shift operation
+    // because that would lead to incorrect results for negative numbers.
+    var shift = self.logBase2(value);
+
+    if (shift !== -1) {
+      constant.content = new skew.IntContent(shift);
+      node.kind = skew.NodeKind.SHIFT_LEFT;
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldBinaryWithConstant = function(node, left, right) {
+    var self = this;
+    // There are lots of other folding opportunities for most binary operators
+    // here but those usually have a negligible performance and/or size impact
+    // on the generated code and instead slow the compiler down. Only certain
+    // ones are implemented below.
+    switch (node.kind) {
+      case skew.NodeKind.LOGICAL_AND: {
+        if (left.isFalse() || right.isTrue()) {
+          node.become(left.remove());
+        }
+
+        else if (left.isTrue()) {
+          node.become(right.remove());
+        }
+        break;
+      }
+
+      case skew.NodeKind.LOGICAL_OR: {
+        if (left.isTrue() || right.isFalse()) {
+          node.become(left.remove());
+        }
+
+        else if (left.isFalse()) {
+          node.become(right.remove());
+        }
+        break;
+      }
+
+      case skew.NodeKind.ADD:
+      case skew.NodeKind.SUBTRACT: {
+        if (left.isInt()) {
+          self.foldConstantAddOrSubtract(node, right, left, 0);
+        }
+
+        else if (right.isInt()) {
+          self.foldConstantAddOrSubtract(node, left, right, 0);
+        }
+
+        else {
+          self.foldAddOrSubtract(node);
+        }
+        break;
+      }
+
+      case skew.NodeKind.MULTIPLY: {
+        if (left.isInt()) {
+          self.foldConstantMultiply(node, right, left);
+        }
+
+        else if (right.isInt()) {
+          self.foldConstantMultiply(node, left, right);
+        }
+        break;
+      }
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldBinary = function(node) {
+    var self = this;
+    var kind = node.kind;
+
+    if (kind === skew.NodeKind.ADD && node.resolvedType === self.cache.stringType) {
+      self.foldStringConcatenation(node);
+      return;
+    }
+
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+
+    if (left.kind === skew.NodeKind.CONSTANT && right.kind === skew.NodeKind.CONSTANT) {
+      var leftContent = left.content;
+      var rightContent = right.content;
+      var leftKind = leftContent.kind();
+      var rightKind = rightContent.kind();
+
+      // Fold equality operators
+      if (leftKind === skew.ContentKind.STRING && rightKind === skew.ContentKind.STRING) {
+        switch (kind) {
+          case skew.NodeKind.EQUAL: {
+            self.flattenBool(node, leftContent.asString() === rightContent.asString());
+            break;
+          }
+
+          case skew.NodeKind.NOT_EQUAL: {
+            self.flattenBool(node, leftContent.asString() !== rightContent.asString());
+            break;
+          }
+
+          case skew.NodeKind.LESS_THAN: {
+            self.flattenBool(node, leftContent.asString() < rightContent.asString());
+            break;
+          }
+
+          case skew.NodeKind.GREATER_THAN: {
+            self.flattenBool(node, leftContent.asString() > rightContent.asString());
+            break;
+          }
+
+          case skew.NodeKind.LESS_THAN_OR_EQUAL: {
+            self.flattenBool(node, leftContent.asString() <= rightContent.asString());
+            break;
+          }
+
+          case skew.NodeKind.GREATER_THAN_OR_EQUAL: {
+            self.flattenBool(node, leftContent.asString() >= rightContent.asString());
+            break;
+          }
+        }
+
+        return;
+      }
+
+      // Fold "bool" values
+      else if (leftKind === skew.ContentKind.BOOL && rightKind === skew.ContentKind.BOOL) {
+        switch (kind) {
+          case skew.NodeKind.LOGICAL_AND: {
+            self.flattenBool(node, leftContent.asBool() && rightContent.asBool());
+            break;
+          }
+
+          case skew.NodeKind.LOGICAL_OR: {
+            self.flattenBool(node, leftContent.asBool() || rightContent.asBool());
+            break;
+          }
+
+          case skew.NodeKind.EQUAL: {
+            self.flattenBool(node, leftContent.asBool() === rightContent.asBool());
+            break;
+          }
+
+          case skew.NodeKind.NOT_EQUAL: {
+            self.flattenBool(node, leftContent.asBool() !== rightContent.asBool());
+            break;
+          }
+        }
+
+        return;
+      }
+
+      // Fold "int" values
+      else if (leftKind === skew.ContentKind.INT && rightKind === skew.ContentKind.INT) {
+        switch (kind) {
+          case skew.NodeKind.ADD: {
+            self.flattenInt(node, leftContent.asInt() + rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.SUBTRACT: {
+            self.flattenInt(node, leftContent.asInt() - rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.MULTIPLY: {
+            self.flattenInt(node, leftContent.asInt() * rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.DIVIDE: {
+            self.flattenInt(node, ((leftContent.asInt()) / (rightContent.asInt()) | 0));
+            break;
+          }
+
+          case skew.NodeKind.REMAINDER: {
+            self.flattenInt(node, leftContent.asInt() % rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.SHIFT_LEFT: {
+            self.flattenInt(node, leftContent.asInt() << rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.SHIFT_RIGHT: {
+            self.flattenInt(node, leftContent.asInt() >> rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.BITWISE_AND: {
+            self.flattenInt(node, leftContent.asInt() & rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.BITWISE_OR: {
+            self.flattenInt(node, leftContent.asInt() | rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.BITWISE_XOR: {
+            self.flattenInt(node, leftContent.asInt() ^ rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.EQUAL: {
+            self.flattenBool(node, leftContent.asInt() === rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.NOT_EQUAL: {
+            self.flattenBool(node, leftContent.asInt() !== rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.LESS_THAN: {
+            self.flattenBool(node, leftContent.asInt() < rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.GREATER_THAN: {
+            self.flattenBool(node, leftContent.asInt() > rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.LESS_THAN_OR_EQUAL: {
+            self.flattenBool(node, leftContent.asInt() <= rightContent.asInt());
+            break;
+          }
+
+          case skew.NodeKind.GREATER_THAN_OR_EQUAL: {
+            self.flattenBool(node, leftContent.asInt() >= rightContent.asInt());
+            break;
+          }
+        }
+
+        return;
+      }
+
+      // Fold "double" values
+      else if (leftKind === skew.ContentKind.DOUBLE && rightKind === skew.ContentKind.DOUBLE) {
+        switch (kind) {
+          case skew.NodeKind.ADD: {
+            self.flattenDouble(node, leftContent.asDouble() + rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.SUBTRACT: {
+            self.flattenDouble(node, leftContent.asDouble() - rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.MULTIPLY: {
+            self.flattenDouble(node, leftContent.asDouble() * rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.DIVIDE: {
+            self.flattenDouble(node, leftContent.asDouble() / rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.EQUAL: {
+            self.flattenBool(node, leftContent.asDouble() === rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.NOT_EQUAL: {
+            self.flattenBool(node, leftContent.asDouble() !== rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.LESS_THAN: {
+            self.flattenBool(node, leftContent.asDouble() < rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.GREATER_THAN: {
+            self.flattenBool(node, leftContent.asDouble() > rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.LESS_THAN_OR_EQUAL: {
+            self.flattenBool(node, leftContent.asDouble() <= rightContent.asDouble());
+            break;
+          }
+
+          case skew.NodeKind.GREATER_THAN_OR_EQUAL: {
+            self.flattenBool(node, leftContent.asDouble() >= rightContent.asDouble());
+            break;
+          }
+        }
+
+        return;
+      }
+    }
+
+    self.foldBinaryWithConstant(node, left, right);
+  };
+
+  skew.folding.ConstantFolder.prototype.foldHook = function(node) {
+    var self = this;
+    var test = node.hookTest();
+
+    if (test.isTrue()) {
+      node.become(node.hookTrue().remove());
+    }
+
+    else if (test.isFalse()) {
+      node.become(node.hookFalse().remove());
+    }
+  };
+
+  // Returns the log2(value) or -1 if log2(value) is not an integer
+  skew.folding.ConstantFolder.prototype.logBase2 = function(value) {
+    var self = this;
+    if (value < 1 || (value & value - 1) !== 0) {
+      return -1;
+    }
+
+    var result = 0;
+
+    while (value > 1) {
+      value >>= 1;
+      ++result;
+    }
+
+    return result;
   };
 
   skew.merging = {};
@@ -5699,19 +6991,19 @@
         var count = in_List.count($function.$arguments);
 
         if ((count === 0 || count === 1 && $function.kind === skew.SymbolKind.FUNCTION_GLOBAL) && $function.name in skew.renaming.unaryPrefixes) {
-          $function.name = scope.generateSymbolName(skew.renaming.unaryPrefixes[$function.name]);
+          $function.name = scope.generateName(skew.renaming.unaryPrefixes[$function.name]);
         }
 
         else if ($function.name in skew.renaming.prefixes) {
-          $function.name = scope.generateSymbolName(skew.renaming.prefixes[$function.name]);
+          $function.name = scope.generateName(skew.renaming.prefixes[$function.name]);
         }
 
         else if (skew.renaming.isInvalidIdentifier($function)) {
-          $function.name = scope.generateSymbolName("_");
+          $function.name = scope.generateName("_");
         }
 
         else if ($function.overloaded !== null && in_List.count($function.overloaded.symbols) > 1) {
-          $function.name = scope.generateSymbolName($function.name);
+          $function.name = scope.generateName($function.name);
         }
       }
     }
@@ -5956,7 +7248,7 @@
         var variable = list[i];
 
         if (variable.kind === skew.SymbolKind.VARIABLE_ENUM) {
-          variable.enumValue = nextEnumValue;
+          variable.constant = new skew.IntContent(nextEnumValue);
           ++nextEnumValue;
         }
       }
@@ -6015,7 +7307,7 @@
   // been defined.
   skew.resolving.Resolver.prototype.convertForeachLoops = function() {
     var self = this;
-    for (var i = 0, list1 = self.foreachLoops, count1 = in_List.count(list1); i < count1; ++i) {
+    for (var i = 0, list1 = self.foreachLoops, count2 = in_List.count(list1); i < count2; ++i) {
       var node = list1[i];
       var symbol = node.symbol.asVariableSymbol();
 
@@ -6039,7 +7331,7 @@
 
         // Otherwise, save the iteration limit in case it changes during iteration
         else {
-          var count = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, scope.generateSymbolName("count"));
+          var count = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, scope.generateName("count"));
           count.resolvedType = self.cache.intType;
           count.value = second;
           count.state = skew.SymbolState.INITIALIZED;
@@ -6050,7 +7342,7 @@
         // Use a C-style for loop to implement this foreach loop
         symbol.flags &= ~skew.Symbol.IS_CONST;
         symbol.value = first;
-        node.replaceWith(skew.Node.createFor(setup, test, update, block.replaceWithNull()).withComments(node.comments));
+        node.become(skew.Node.createFor(setup, test, update, block.replaceWithNull()).withComments(node.comments));
 
         // Make sure the new expressions are resolved
         self.resolveNode(test, symbol.scope, null);
@@ -6059,41 +7351,41 @@
 
       else if (self.cache.isList(value.resolvedType)) {
         // Create the index variable
-        var index = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, scope.generateSymbolName("i"));
+        var index = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, scope.generateName("i"));
         index.resolvedType = self.cache.intType;
         index.value = skew.Node.createInt(0).withType(self.cache.intType);
         index.state = skew.SymbolState.INITIALIZED;
         var indexName = skew.Node.createName(index.name).withSymbol(index).withType(index.resolvedType);
 
         // Create the list variable
-        var list = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, scope.generateSymbolName("list"));
+        var list = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, scope.generateName("list"));
         list.resolvedType = value.resolvedType;
         list.value = value.replaceWithNull();
         list.state = skew.SymbolState.INITIALIZED;
         var listName = skew.Node.createName(list.name).withSymbol(list).withType(list.resolvedType);
 
         // Create the count variable
-        var count = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, scope.generateSymbolName("count"));
-        count.resolvedType = self.cache.intType;
-        count.value = skew.Node.createDot(listName, "count");
-        count.state = skew.SymbolState.INITIALIZED;
-        var countName = skew.Node.createName(count.name).withSymbol(count).withType(count.resolvedType);
+        var count1 = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, scope.generateName("count"));
+        count1.resolvedType = self.cache.intType;
+        count1.value = skew.Node.createDot(listName, "count");
+        count1.state = skew.SymbolState.INITIALIZED;
+        var countName = skew.Node.createName(count1.name).withSymbol(count1).withType(count1.resolvedType);
 
         // Move the loop variable into the loop body
         symbol.value = skew.Node.createIndex(listName.clone(), [indexName]);
-        in_List.prepend1(block.children, skew.Node.createVar(symbol));
+        block.insertChild(0, skew.Node.createVar(symbol));
 
         // Use a C-style for loop to implement this foreach loop
-        var setup = [skew.Node.createVar(index), skew.Node.createVar(list), skew.Node.createVar(count)];
-        var test = skew.Node.createBinary(skew.NodeKind.LESS_THAN, indexName.clone(), countName);
-        var update = skew.Node.createUnary(skew.NodeKind.INCREMENT, indexName.clone());
-        node.replaceWith(skew.Node.createFor(setup, test, update, block.replaceWithNull()).withComments(node.comments));
+        var setup1 = [skew.Node.createVar(index), skew.Node.createVar(list), skew.Node.createVar(count1)];
+        var test1 = skew.Node.createBinary(skew.NodeKind.LESS_THAN, indexName.clone(), countName);
+        var update1 = skew.Node.createUnary(skew.NodeKind.INCREMENT, indexName.clone());
+        node.become(skew.Node.createFor(setup1, test1, update1, block.replaceWithNull()).withComments(node.comments));
 
         // Make sure the new expressions are resolved
         self.resolveNode(symbol.value, symbol.scope, null);
-        self.resolveNode(count.value, symbol.scope, null);
-        self.resolveNode(test, symbol.scope, null);
-        self.resolveNode(update, symbol.scope, null);
+        self.resolveNode(count1.value, symbol.scope, null);
+        self.resolveNode(test1, symbol.scope, null);
+        self.resolveNode(update1, symbol.scope, null);
       }
     }
   };
@@ -6250,10 +7542,10 @@
 
         case skew.ArgumentCount.ONE_OR_MORE:
         case skew.ArgumentCount.TWO_OR_MORE: {
-          var expected = argumentCount === skew.ArgumentCount.ONE_OR_MORE ? 1 : 2;
+          var expected1 = argumentCount === skew.ArgumentCount.ONE_OR_MORE ? 1 : 2;
 
-          if (count < expected) {
-            self.log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, expected, -1);
+          if (count < expected1) {
+            self.log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, expected1, -1);
             hasArgumentCountError = true;
           }
           break;
@@ -6265,10 +7557,10 @@
       // for initializer expressions
       if (!hasArgumentCountError && (symbol.name === "{new}" || symbol.name === "[new]")) {
         for (var i1 = 0, list1 = symbol.$arguments, count2 = in_List.count(list1); i1 < count2; ++i1) {
-          var argument = list1[i1];
+          var argument1 = list1[i1];
 
-          if (argument.resolvedType !== skew.Type.DYNAMIC && !self.cache.isList(argument.resolvedType)) {
-            self.log.semanticErrorExpectedList(argument.range, argument.name, argument.resolvedType);
+          if (argument1.resolvedType !== skew.Type.DYNAMIC && !self.cache.isList(argument1.resolvedType)) {
+            self.log.semanticErrorExpectedList(argument1.range, argument1.name, argument1.resolvedType);
           }
         }
       }
@@ -6341,22 +7633,22 @@
     self.initializeSymbol(parent);
 
     for (var i1 = 0, list1 = parent.variables, count1 = in_List.count(list1); i1 < count1; ++i1) {
-      var variable = list1[i1];
+      var variable1 = list1[i1];
 
-      if (variable.kind === skew.SymbolKind.VARIABLE_INSTANCE) {
-        self.initializeSymbol(variable);
+      if (variable1.kind === skew.SymbolKind.VARIABLE_INSTANCE) {
+        self.initializeSymbol(variable1);
 
-        if (variable.value === null) {
-          var argument = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, variable.name);
-          argument.resolvedType = variable.resolvedType;
-          argument.state = skew.SymbolState.INITIALIZED;
-          in_List.append1(symbol.$arguments, argument);
-          in_List.append1(statements, skew.Node.createExpression(skew.Node.createBinary(skew.NodeKind.ASSIGN, skew.resolving.Resolver.createMemberReference(skew.resolving.Resolver.createSymbolReference(symbol.self), variable), skew.resolving.Resolver.createSymbolReference(argument))));
+        if (variable1.value === null) {
+          var argument1 = new skew.VariableSymbol(skew.SymbolKind.VARIABLE_LOCAL, variable1.name);
+          argument1.resolvedType = variable1.resolvedType;
+          argument1.state = skew.SymbolState.INITIALIZED;
+          in_List.append1(symbol.$arguments, argument1);
+          in_List.append1(statements, skew.Node.createExpression(skew.Node.createBinary(skew.NodeKind.ASSIGN, skew.resolving.Resolver.createMemberReference(skew.resolving.Resolver.createSymbolReference(symbol.self), variable1), skew.resolving.Resolver.createSymbolReference(argument1))));
         }
 
         else {
-          in_List.append1(statements, skew.Node.createExpression(skew.Node.createBinary(skew.NodeKind.ASSIGN, skew.resolving.Resolver.createMemberReference(skew.resolving.Resolver.createSymbolReference(symbol.self), variable), variable.value)));
-          variable.value = null;
+          in_List.append1(statements, skew.Node.createExpression(skew.Node.createBinary(skew.NodeKind.ASSIGN, skew.resolving.Resolver.createMemberReference(skew.resolving.Resolver.createSymbolReference(symbol.self), variable1), variable1.value)));
+          variable1.value = null;
         }
       }
     }
@@ -6482,7 +7774,6 @@
 
     if (symbol.value !== null) {
       self.resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType);
-      self.checkExtraParentheses(symbol.value);
     }
   };
 
@@ -6539,16 +7830,16 @@
       symbol.overridden = overridden.asOverloadedFunctionSymbol();
 
       for (var i1 = 0, list = symbol.overridden.symbols, count = in_List.count(list); i1 < count; ++i1) {
-        var $function = list[i1];
+        var function1 = list[i1];
 
         // Constructors are not inherited
-        if ($function.kind !== skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
-          self.initializeSymbol($function);
-          var index = types.indexOf($function.argumentOnlyType);
+        if (function1.kind !== skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+          self.initializeSymbol(function1);
+          var index1 = types.indexOf(function1.argumentOnlyType);
 
-          if (index === -1) {
-            in_List.append1(symbols, $function);
-            in_List.append1(types, $function.argumentOnlyType);
+          if (index1 === -1) {
+            in_List.append1(symbols, function1);
+            in_List.append1(types, function1.argumentOnlyType);
           }
         }
       }
@@ -6756,13 +8047,6 @@
     for (var i = 0, list = node.children, count = in_List.count(list); i < count; ++i) {
       var child = list[i];
       self.resolveAsParameterizedExpression(child, scope);
-    }
-  };
-
-  skew.resolving.Resolver.prototype.checkExtraParentheses = function(node) {
-    var self = this;
-    if (node.isInsideParentheses()) {
-      self.log.semanticWarningExtraParentheses(node.range);
     }
   };
 
@@ -7041,7 +8325,6 @@
     var self = this;
     var value = node.expressionValue();
     self.resolveAsParameterizedExpression(value, scope);
-    self.checkExtraParentheses(value);
     self.checkUnusedExpression(value);
   };
 
@@ -7051,7 +8334,6 @@
     scope = new skew.LocalScope(scope, skew.LocalType.LOOP);
     var value = node.foreachValue();
     self.resolveAsParameterizedExpression(value, scope);
-    self.checkExtraParentheses(value);
 
     // Support "for i in 0..10"
     if (value.kind === skew.NodeKind.PAIR) {
@@ -7094,7 +8376,6 @@
     var test = node.ifTest();
     var ifFalse = node.ifFalse();
     self.resolveAsParameterizedExpressionWithConversion(test, scope, self.cache.boolType);
-    self.checkExtraParentheses(test);
     self.resolveBlock(node.ifTrue(), new skew.LocalScope(scope, skew.LocalType.NORMAL));
 
     if (ifFalse !== null) {
@@ -7125,7 +8406,6 @@
 
     // If there's no return type, still check for other errors
     self.resolveAsParameterizedExpression(value, scope);
-    self.checkExtraParentheses(value);
 
     // Lambdas without a return type or an explicit "return" statement get special treatment
     if (!node.isImplicitReturn()) {
@@ -7158,7 +8438,6 @@
     var value = node.switchValue();
     var cases = node.children;
     self.resolveAsParameterizedExpression(value, scope);
-    self.checkExtraParentheses(value);
 
     for (var i = 1, count1 = in_List.count(cases); i < count1; i += 1) {
       var child = cases[i];
@@ -7167,7 +8446,6 @@
       for (var j = 1, count = in_List.count(values); j < count; j += 1) {
         var caseValue = values[j];
         self.resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType);
-        self.checkExtraParentheses(caseValue);
       }
 
       self.resolveBlock(child.caseBlock(), new skew.LocalScope(scope, skew.LocalType.NORMAL));
@@ -7178,7 +8456,6 @@
     var self = this;
     var value = node.throwValue();
     self.resolveAsParameterizedExpression(value, scope);
-    self.checkExtraParentheses(value);
   };
 
   skew.resolving.Resolver.prototype.resolveVar = function(node, scope) {
@@ -7221,7 +8498,6 @@
     var self = this;
     var test = node.whileTest();
     self.resolveAsParameterizedExpressionWithConversion(test, scope, self.cache.boolType);
-    self.checkExtraParentheses(test);
     self.resolveBlock(node.whileBlock(), new skew.LocalScope(scope, skew.LocalType.LOOP));
   };
 
@@ -7339,8 +8615,8 @@
     var candidates = [];
 
     // Filter by argument length and substitute using the current type environment
-    for (var i1 = 0, list = overloaded.symbols, count1 = in_List.count(list); i1 < count1; ++i1) {
-      var symbol = list[i1];
+    for (var i5 = 0, list = overloaded.symbols, count1 = in_List.count(list); i5 < count1; ++i5) {
+      var symbol = list[i5];
 
       if (in_List.count(symbol.$arguments) === count || in_List.count(overloaded.symbols) === 1) {
         in_List.append1(candidates, self.cache.substitute(symbol.resolvedType, symbolType.environment));
@@ -7387,18 +8663,18 @@
     }
 
     // If that still didn't work, resolve the arguments without type context
-    for (var i = 0, count3 = count; i < count3; i += 1) {
-      self.resolveAsParameterizedExpression(children[i + 1], scope);
+    for (var i1 = 0, count3 = count; i1 < count3; i1 += 1) {
+      self.resolveAsParameterizedExpression(children[i1 + 1], scope);
     }
 
     // Try again, this time discarding all implicit conversion failures
     index = 0;
 
     while (index < in_List.count(candidates)) {
-      var argumentTypes = candidates[index].argumentTypes;
+      var argumentTypes1 = candidates[index].argumentTypes;
 
-      for (var i = 0, count4 = count; i < count4; i += 1) {
-        if (!self.cache.canImplicitlyConvert(children[i + 1].resolvedType, argumentTypes[i])) {
+      for (var i2 = 0, count4 = count; i2 < count4; i2 += 1) {
+        if (!self.cache.canImplicitlyConvert(children[i2 + 1].resolvedType, argumentTypes1[i2])) {
           in_List.removeAt(candidates, index);
           --index;
           break;
@@ -7416,8 +8692,8 @@
     // Extract argument types for an error if there is one
     var childTypes = [];
 
-    for (var i = 0, count5 = count; i < count5; i += 1) {
-      in_List.append1(childTypes, children[i + 1].resolvedType);
+    for (var i3 = 0, count5 = count; i3 < count5; i3 += 1) {
+      in_List.append1(childTypes, children[i3 + 1].resolvedType);
     }
 
     // Give up without a match
@@ -7427,19 +8703,19 @@
     }
 
     // If that still didn't work, try type equality
-    for (var i2 = 0, list1 = candidates, count7 = in_List.count(list1); i2 < count7; ++i2) {
-      var type = list1[i2];
+    for (var i6 = 0, list1 = candidates, count7 = in_List.count(list1); i6 < count7; ++i6) {
+      var type1 = list1[i6];
       var isMatch = true;
 
-      for (var i = 0, count6 = count; i < count6; i += 1) {
-        if (children[i + 1].resolvedType !== type.argumentTypes[i]) {
+      for (var i4 = 0, count6 = count; i4 < count6; i4 += 1) {
+        if (children[i4 + 1].resolvedType !== type1.argumentTypes[i4]) {
           isMatch = false;
           break;
         }
       }
 
       if (isMatch) {
-        return type;
+        return type1;
       }
     }
 
@@ -7447,12 +8723,12 @@
     var firstPreferred = null;
     var secondPreferred = null;
 
-    for (var i3 = 0, list2 = candidates, count8 = in_List.count(list2); i3 < count8; ++i3) {
-      var type = list2[i3];
+    for (var i7 = 0, list2 = candidates, count8 = in_List.count(list2); i7 < count8; ++i7) {
+      var type2 = list2[i7];
 
-      if (type.symbol.isPreferred()) {
+      if (type2.symbol.isPreferred()) {
         secondPreferred = firstPreferred;
-        firstPreferred = type;
+        firstPreferred = type2;
       }
     }
 
@@ -7724,9 +9000,9 @@
 
           // Resolve all children for this pass
           for (var i1 = 0, list1 = node.children, count2 = in_List.count(list1); i1 < count2; ++i1) {
-            var child = list1[i1];
-            var key = child.firstValue();
-            var value = child.secondValue();
+            var child1 = list1[i1];
+            var key = child1.firstValue();
+            var value = child1.secondValue();
 
             if (pass !== 0 || !skew.resolving.Resolver.needsTypeContext(key)) {
               self.resolveAsParameterizedExpression(key, scope);
@@ -7812,10 +9088,10 @@
       var chain = skew.Node.createDot(skew.Node.createType(context).withRange(node.range), create !== null ? create.name : "new").withRange(node.range);
 
       for (var i1 = 0, list1 = node.children, count1 = in_List.count(list1); i1 < count1; ++i1) {
-        var child = list1[i1];
-        var dot = skew.Node.createDot(chain, add.name).withRange(child.range);
-        var $arguments = child.kind === skew.NodeKind.PAIR ? [child.firstValue().replaceWithNull(), child.secondValue().replaceWithNull()] : [child.replaceWithNull()];
-        chain = skew.Node.createCall(dot, $arguments).withRange(child.range);
+        var child1 = list1[i1];
+        var dot = skew.Node.createDot(chain, add.name).withRange(child1.range);
+        var $arguments = child1.kind === skew.NodeKind.PAIR ? [child1.firstValue().replaceWithNull(), child1.secondValue().replaceWithNull()] : [child1.replaceWithNull()];
+        chain = skew.Node.createCall(dot, $arguments).withRange(child1.range);
       }
 
       node.become(chain);
@@ -7829,11 +9105,11 @@
       return false;
     }
 
-    var dot = skew.Node.createDot(skew.Node.createType(context).withRange(node.range), create.name).withRange(node.range);
+    var dot1 = skew.Node.createDot(skew.Node.createType(context).withRange(node.range), create.name).withRange(node.range);
 
     // The literal "{}" is ambiguous and may be a map or a set
     if (in_List.isEmpty(node.children) && !isList && self.shouldUseMapConstructor(create)) {
-      node.become(skew.Node.createCall(dot, [skew.Node.createList([]).withRange(node.range), skew.Node.createList([]).withRange(node.range)]).withRange(node.range));
+      node.become(skew.Node.createCall(dot1, [skew.Node.createList([]).withRange(node.range), skew.Node.createList([]).withRange(node.range)]).withRange(node.range));
       self.resolveAsParameterizedExpressionWithConversion(node, scope, context);
       return true;
     }
@@ -7844,16 +9120,16 @@
       var secondValues = [];
 
       for (var i2 = 0, list2 = node.children, count2 = in_List.count(list2); i2 < count2; ++i2) {
-        var child = list2[i2];
-        in_List.append1(firstValues, child.firstValue().replaceWithNull());
-        in_List.append1(secondValues, child.secondValue().replaceWithNull());
+        var child2 = list2[i2];
+        in_List.append1(firstValues, child2.firstValue().replaceWithNull());
+        in_List.append1(secondValues, child2.secondValue().replaceWithNull());
       }
 
-      node.become(skew.Node.createCall(dot, [skew.Node.createList(firstValues).withRange(node.range), skew.Node.createList(secondValues).withRange(node.range)]).withRange(node.range));
+      node.become(skew.Node.createCall(dot1, [skew.Node.createList(firstValues).withRange(node.range), skew.Node.createList(secondValues).withRange(node.range)]).withRange(node.range));
     }
 
     else {
-      node.become(skew.Node.createCall(dot, [skew.Node.createList(node.removeChildren()).withRange(node.range)]).withRange(node.range));
+      node.become(skew.Node.createCall(dot1, [skew.Node.createList(node.removeChildren()).withRange(node.range)]).withRange(node.range));
     }
 
     self.resolveAsParameterizedExpressionWithConversion(node, scope, context);
@@ -7912,8 +9188,8 @@
     var returnType = symbol.returnType;
 
     for (var i1 = 0, list = symbol.$arguments, count1 = in_List.count(list); i1 < count1; ++i1) {
-      var argument = list[i1];
-      in_List.append1(argumentTypes, argument.resolvedType);
+      var argument1 = list[i1];
+      in_List.append1(argumentTypes, argument1.resolvedType);
     }
 
     node.resolvedType = self.cache.createLambdaType(argumentTypes, returnType !== null ? returnType.resolvedType : null);
@@ -8007,8 +9283,8 @@
           }
 
           case skew.ScopeKind.VARIABLE: {
-            var variable = parent.asVariableScope().symbol;
-            isValid = variable.kind === skew.SymbolKind.VARIABLE_INSTANCE && variable.parent === symbol.parent;
+            var variable1 = parent.asVariableScope().symbol;
+            isValid = variable1.kind === skew.SymbolKind.VARIABLE_INSTANCE && variable1.parent === symbol.parent;
             stop = true;
             break;
           }
@@ -8222,11 +9498,12 @@
 
     // Avoid infinite expansion
     var isComparison = skew.NodeKind.isBinaryComparison(kind);
+    var isString = type === self.cache.stringType;
 
-    if (isComparison && self.cache.isNumeric(type)) {
+    if (isComparison && (isString || self.cache.isNumeric(type))) {
       self.resolveAsParameterizedExpression(other, scope);
 
-      if (self.cache.isNumeric(other.resolvedType)) {
+      if (isString ? other.resolvedType === self.cache.stringType : self.cache.isNumeric(other.resolvedType)) {
         self.resolveChildrenAsParameterizedExpressions(node, scope);
         node.resolvedType = self.cache.boolType;
         return;
@@ -8493,14 +9770,14 @@
     return null;
   };
 
-  skew.Scope.prototype.generateSymbolName = function(prefix) {
+  skew.Scope.prototype.generateName = function(prefix) {
     var self = this;
     var count = 0;
     var name = prefix;
 
     while (true) {
       if (self.find(name) === null && (self.used === null || !(name in self.used))) {
-        self.reserveSymbolName(name);
+        self.reserveName(name);
         return name;
       }
 
@@ -8511,7 +9788,12 @@
     return prefix;
   };
 
-  skew.Scope.prototype.reserveSymbolName = function(name) {
+  skew.Scope.prototype.isNameReserved = function(name) {
+    var self = this;
+    return self.used !== null && name in self.used;
+  };
+
+  skew.Scope.prototype.reserveName = function(name) {
     var self = this;
     if (self.used === null) {
       self.used = in_StringMap.$new();
@@ -8639,9 +9921,17 @@
       scope = scope.parent;
     }
 
-    // Make sure no duplicate names are accidentally generated in other local scopes
-    scope.reserveSymbolName(symbol.name);
+    // Store the original name in the map before renaming
     self.locals[symbol.name] = symbol;
+
+    // Make sure local variables have unique names within a function
+    if (scope.isNameReserved(symbol.name)) {
+      symbol.name = scope.generateName(symbol.name);
+    }
+
+    else {
+      scope.reserveName(symbol.name);
+    }
   };
 
   skew.TypeKind = {
@@ -8712,12 +10002,12 @@
     if (self.kind === skew.TypeKind.LAMBDA) {
       var result = "fn(";
 
-      for (var i = 0, count1 = in_List.count(self.argumentTypes); i < count1; i += 1) {
-        if (i !== 0) {
+      for (var i1 = 0, count1 = in_List.count(self.argumentTypes); i1 < count1; i1 += 1) {
+        if (i1 !== 0) {
           result += ", ";
         }
 
-        result += self.argumentTypes[i].toString();
+        result += self.argumentTypes[i1].toString();
       }
 
       return result + (self.returnType !== null ? ") " + self.returnType.toString() : ")");
@@ -9129,8 +10419,8 @@
             substituted.substitutions = [];
 
             for (var i2 = 0, list2 = parameters, count2 = in_List.count(list2); i2 < count2; ++i2) {
-              var parameter = list2[i2];
-              in_List.append1(substituted.substitutions, self.substitute(parameter.resolvedType, environment));
+              var parameter1 = list2[i2];
+              in_List.append1(substituted.substitutions, self.substitute(parameter1.resolvedType, environment));
             }
           }
         }
@@ -9140,8 +10430,8 @@
           substituted.argumentTypes = [];
 
           for (var i3 = 0, list3 = type.argumentTypes, count3 = in_List.count(list3); i3 < count3; ++i3) {
-            var argumentType = list3[i3];
-            in_List.append1(substituted.argumentTypes, self.substitute(argumentType, environment));
+            var argumentType1 = list3[i3];
+            in_List.append1(substituted.argumentTypes, self.substitute(argumentType1, environment));
           }
         }
 
@@ -9212,10 +10502,12 @@
   };
 
   skew.Option = {
-    HELP: 0, 0: "HELP",
-    OUTPUT_FILE: 1, 1: "OUTPUT_FILE",
-    OUTPUT_DIRECTORY: 2, 2: "OUTPUT_DIRECTORY",
-    ERROR_LIMIT: 3, 3: "ERROR_LIMIT"
+    ERROR_LIMIT: 0, 0: "ERROR_LIMIT",
+    FOLD_CONSTANTS: 1, 1: "FOLD_CONSTANTS",
+    HELP: 2, 2: "HELP",
+    OUTPUT_DIRECTORY: 3, 3: "OUTPUT_DIRECTORY",
+    OUTPUT_FILE: 4, 4: "OUTPUT_FILE",
+    RELEASE: 5, 5: "RELEASE"
   };
 
   skew.options = {};
@@ -9324,20 +10616,20 @@
 
     // Parse each argument
     for (var i = 0, count1 = in_List.count($arguments); i < count1; i += 1) {
-      var argument = $arguments[i];
+      var argument1 = $arguments[i];
       var range = ranges[i];
 
       // Track all normal arguments separately
-      if (argument === "" || in_string.get1(argument, 0) !== 45 && !(argument in self.map)) {
+      if (argument1 === "" || in_string.get1(argument1, 0) !== 45 && !(argument1 in self.map)) {
         in_List.append1(self.normalArguments, range);
         continue;
       }
 
       // Parse a flag
-      var equals = argument.indexOf("=");
-      var colon = argument.indexOf(":");
+      var equals = argument1.indexOf("=");
+      var colon = argument1.indexOf(":");
       var separator = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon;
-      var name = separator >= 0 ? argument.slice(0, separator) : argument;
+      var name = separator >= 0 ? argument1.slice(0, separator) : argument1;
       var data = in_StringMap.get(self.map, name, null);
 
       // Check that the flag exists
@@ -9347,7 +10639,7 @@
       }
 
       // Validate the flag data
-      var text = argument.slice(separator + 1, in_string.count(argument));
+      var text = argument1.slice(separator + 1, in_string.count(argument1));
       var separatorRange = separator < 0 ? null : range.slice(separator, separator + 1);
       var textRange = range.fromEnd(in_string.count(text));
 
@@ -9357,13 +10649,13 @@
             text = "true";
           }
 
-          else if (in_string.get1(argument, separator) !== 61) {
-            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument, separator), argument);
+          else if (in_string.get1(argument1, separator) !== 61) {
+            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument1, separator), argument1);
             continue;
           }
 
           else if (text !== "true" && text !== "false") {
-            log.commandLineErrorNonBooleanValue(textRange, text, argument);
+            log.commandLineErrorNonBooleanValue(textRange, text, argument1);
             continue;
           }
 
@@ -9380,12 +10672,12 @@
             log.commandLineErrorMissingValue(textRange, data.nameText());
           }
 
-          else if (in_string.get1(argument, separator) !== 61) {
-            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument, separator), argument);
+          else if (in_string.get1(argument1, separator) !== 61) {
+            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument1, separator), argument1);
           }
 
           else if (!skew.options.Parser.isInteger(text)) {
-            log.commandLineErrorNonIntegerValue(textRange, text, argument);
+            log.commandLineErrorNonIntegerValue(textRange, text, argument1);
           }
 
           else {
@@ -9403,8 +10695,8 @@
             log.commandLineErrorMissingValue(textRange, data.nameText());
           }
 
-          else if (in_string.get1(argument, separator) !== 61) {
-            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument, separator), argument);
+          else if (in_string.get1(argument1, separator) !== 61) {
+            log.commandLineErrorExpectedToken(separatorRange, "=", in_string.get(argument1, separator), argument1);
           }
 
           else {
@@ -9422,8 +10714,8 @@
             log.commandLineErrorMissingValue(textRange, data.nameText());
           }
 
-          else if (in_string.get1(argument, separator) !== 58) {
-            log.commandLineErrorExpectedToken(separatorRange, ":", in_string.get(argument, separator), argument);
+          else if (in_string.get1(argument1, separator) !== 58) {
+            log.commandLineErrorExpectedToken(separatorRange, ":", in_string.get(argument1, separator), argument1);
           }
 
           else {
@@ -9464,12 +10756,12 @@
     var columnText = in_string.repeat(" ", columnWidth);
 
     for (var i2 = 0, list2 = self.options, count2 = in_List.count(list2); i2 < count2; ++i2) {
-      var option = list2[i2];
-      var nameText = option.nameText();
+      var option1 = list2[i2];
+      var nameText = option1.nameText();
       var isFirst = true;
       text += "\n  " + nameText + in_string.repeat(" ", columnWidth - in_string.count(nameText) - 2);
 
-      for (var i1 = 0, list1 = prettyPrint.wrapWords(option.description, wrapWidth - columnWidth), count1 = in_List.count(list1); i1 < count1; ++i1) {
+      for (var i1 = 0, list1 = prettyPrint.wrapWords(option1.description, wrapWidth - columnWidth), count1 = in_List.count(list1); i1 < count1; ++i1) {
         var line = list1[i1];
         text += (isFirst ? "" : columnText) + line + "\n";
         isFirst = false;
@@ -9669,20 +10961,20 @@
         return -1;
       }
 
-      var a = in_string.get1(self.value, self.index);
+      var a1 = in_string.get1(self.value, self.index);
       ++self.index;
 
-      if (a < 55296) {
-        return a;
+      if (a1 < 55296) {
+        return a1;
       }
 
       if (self.index >= self.stop) {
         return -1;
       }
 
-      var b = in_string.get1(self.value, self.index);
+      var b1 = in_string.get1(self.value, self.index);
       ++self.index;
-      return (a << 10) + b + (65536 - (55296 << 10) - 56320);
+      return (a1 << 10) + b1 + (65536 - (55296 << 10) - 56320);
     }
 
     else {
@@ -9690,9 +10982,9 @@
         return -1;
       }
 
-      var c = in_string.get1(self.value, self.index);
+      var c1 = in_string.get1(self.value, self.index);
       ++self.index;
-      return c;
+      return c1;
     }
   };
 
@@ -9864,23 +11156,23 @@
     }
 
     else if (unicode.STRING_ENCODING === unicode.Encoding.UTF16) {
-      var builder = in_StringBuilder.$new();
+      var builder1 = in_StringBuilder.$new();
 
       for (var i1 = 0, list1 = codePoints, count2 = in_List.count(list1); i1 < count2; ++i1) {
-        var codePoint = list1[i1];
+        var codePoint1 = list1[i1];
 
-        if (codePoint < 65536) {
-          in_StringBuilder.append(builder, in_string.fromCodeUnit(codePoint));
+        if (codePoint1 < 65536) {
+          in_StringBuilder.append(builder1, in_string.fromCodeUnit(codePoint1));
         }
 
         else {
-          var adjusted = codePoint - 65536;
-          in_StringBuilder.append(builder, in_string.fromCodeUnit((adjusted >> 10) + 55296));
-          in_StringBuilder.append(builder, in_string.fromCodeUnit((adjusted & (1 << 10) - 1) + 56320));
+          var adjusted = codePoint1 - 65536;
+          in_StringBuilder.append(builder1, in_string.fromCodeUnit((adjusted >> 10) + 55296));
+          in_StringBuilder.append(builder1, in_string.fromCodeUnit((adjusted & (1 << 10) - 1) + 56320));
         }
       }
 
-      return in_StringBuilder.toString(builder);
+      return in_StringBuilder.toString(builder1);
     }
 
     else {
@@ -10072,17 +11364,18 @@
   skew.Symbol.IS_OVER = 1 << 4;
   skew.Symbol.IS_SETTER = 1 << 5;
   skew.Symbol.IS_VALUE_TYPE = 1 << 6;
+  skew.Symbol.CHECKED_FOR_CONSTANT = 1 << 7;
 
   // Modifiers
-  skew.Symbol.IS_EXPORTED = 1 << 7;
-  skew.Symbol.IS_IMPORTED = 1 << 8;
-  skew.Symbol.IS_PREFERRED = 1 << 9;
-  skew.Symbol.IS_PRIVATE = 1 << 10;
-  skew.Symbol.IS_PROTECTED = 1 << 11;
-  skew.Symbol.IS_RENAMED = 1 << 12;
-  skew.Symbol.IS_SKIPPED = 1 << 13;
-  skew.Symbol.IS_ENTRY_POINT = 1 << 14;
-  skew.Symbol.IS_DEPRECATED = 1 << 15;
+  skew.Symbol.IS_EXPORTED = 1 << 8;
+  skew.Symbol.IS_IMPORTED = 1 << 9;
+  skew.Symbol.IS_PREFERRED = 1 << 10;
+  skew.Symbol.IS_PRIVATE = 1 << 11;
+  skew.Symbol.IS_PROTECTED = 1 << 12;
+  skew.Symbol.IS_RENAMED = 1 << 13;
+  skew.Symbol.IS_SKIPPED = 1 << 14;
+  skew.Symbol.IS_ENTRY_POINT = 1 << 15;
+  skew.Symbol.IS_DEPRECATED = 1 << 16;
   skew.Symbol.nextID = 0;
   skew.parsing.operatorOverloadTokenKinds = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), ((skew.TokenKind.ASSIGN_BITWISE_AND) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_OR) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_XOR) | 0), 0), ((skew.TokenKind.ASSIGN_DIVIDE) | 0), 0), ((skew.TokenKind.ASSIGN_INDEX) | 0), 0), ((skew.TokenKind.ASSIGN_MINUS) | 0), 0), ((skew.TokenKind.ASSIGN_MULTIPLY) | 0), 0), ((skew.TokenKind.ASSIGN_PLUS) | 0), 0), ((skew.TokenKind.ASSIGN_POWER) | 0), 0), ((skew.TokenKind.ASSIGN_REMAINDER) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_LEFT) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.BITWISE_AND) | 0), 0), ((skew.TokenKind.BITWISE_OR) | 0), 0), ((skew.TokenKind.BITWISE_XOR) | 0), 0), ((skew.TokenKind.COMPARE) | 0), 0), ((skew.TokenKind.DECREMENT) | 0), 0), ((skew.TokenKind.DIVIDE) | 0), 0), ((skew.TokenKind.IN) | 0), 0), ((skew.TokenKind.INCREMENT) | 0), 0), ((skew.TokenKind.INDEX) | 0), 0), ((skew.TokenKind.LIST) | 0), 0), ((skew.TokenKind.MINUS) | 0), 0), ((skew.TokenKind.MULTIPLY) | 0), 0), ((skew.TokenKind.NOT) | 0), 0), ((skew.TokenKind.PLUS) | 0), 0), ((skew.TokenKind.POWER) | 0), 0), ((skew.TokenKind.REMAINDER) | 0), 0), ((skew.TokenKind.SET) | 0), 0), ((skew.TokenKind.SHIFT_LEFT) | 0), 0), ((skew.TokenKind.SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.TILDE) | 0), 0);
   skew.parsing.boolLiteral = function(value) {

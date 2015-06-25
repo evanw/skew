@@ -187,6 +187,10 @@ namespace skew {
       return (flags & IS_INSIDE_PARENTHESES) != 0
     }
 
+    def hasChildren bool {
+      return children != null && !children.isEmpty
+    }
+
     def withFlags(value int) Node {
       flags = value
       return self
@@ -273,6 +277,15 @@ namespace skew {
       return result
     }
 
+    def replaceWithNodes(nodes List<Node>) Node {
+      var index = indexInParent
+      for i in 0..nodes.count {
+        parent.insertChild(index + i + 1, nodes[i])
+      }
+      parent.removeChildAtIndex(index)
+      return self
+    }
+
     def replaceChild(index int, node Node) Node {
       assert(index >= 0 && index < children.count)
       updateParent(node, self)
@@ -357,6 +370,99 @@ namespace skew {
       }
 
       return false
+    }
+
+    def hasNoSideEffects bool {
+      assert(kind.isExpression)
+      switch kind {
+        case .NAME, .CONSTANT, .NULL { return true }
+        case .CAST { return castValue.hasNoSideEffects }
+        case .HOOK { return hookTest.hasNoSideEffects && hookTrue.hasNoSideEffects && hookFalse.hasNoSideEffects }
+        case .DOT { return dotTarget.hasNoSideEffects }
+        default {
+          if kind.isBinary { return !kind.isBinaryAssign && binaryLeft.hasNoSideEffects && binaryRight.hasNoSideEffects }
+          if kind.isUnary { return !kind.isUnaryAssign && unaryValue.hasNoSideEffects }
+        }
+      }
+      return false
+    }
+
+    def invertBooleanCondition(cache TypeCache) {
+      assert(kind.isExpression)
+      switch kind {
+        case .CONSTANT {
+          if content.kind == .BOOL {
+            content = BoolContent.new(!content.asBool)
+          }
+          return
+        }
+
+        case .NOT {
+          become(unaryValue.remove)
+          return
+        }
+
+        case .EQUAL {
+          kind = .NOT_EQUAL
+          return
+        }
+
+        case .NOT_EQUAL {
+          kind = .EQUAL
+          return
+        }
+
+        case .LOGICAL_OR {
+          kind = .LOGICAL_AND
+          binaryLeft.invertBooleanCondition(cache)
+          binaryRight.invertBooleanCondition(cache)
+          return
+        }
+
+        case .LOGICAL_AND {
+          kind = .LOGICAL_OR
+          binaryLeft.invertBooleanCondition(cache)
+          binaryRight.invertBooleanCondition(cache)
+          return
+        }
+
+        # Non-equality comparison operators involving floating-point numbers
+        # can't be inverted because one or both of those values may be NAN.
+        # Equality comparisons still work fine because inverting the test
+        # inverts the result as expected:
+        #
+        #   Test        |  Result
+        # --------------+----------
+        #   0 == NAN    |  false
+        #   0 != NAN    |  true
+        #   0 < NAN     |  false
+        #   0 > NAN     |  false
+        #   0 <= NAN    |  false
+        #   0 >= NAN    |  false
+        #   NAN == NAN  |  false
+        #   NAN != NAN  |  true
+        #   NAN < NAN   |  false
+        #   NAN > NAN   |  false
+        #   NAN <= NAN  |  false
+        #   NAN >= NAN  |  false
+        #
+        case .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
+          var commonType = cache.commonImplicitType(binaryLeft.resolvedType, binaryRight.resolvedType)
+          if commonType != null && commonType != cache.doubleType {
+            switch kind {
+              case .LESS_THAN { kind = .GREATER_THAN_OR_EQUAL }
+              case .GREATER_THAN { kind = .LESS_THAN_OR_EQUAL }
+              case .LESS_THAN_OR_EQUAL { kind = .GREATER_THAN }
+              case .GREATER_THAN_OR_EQUAL { kind = .LESS_THAN }
+            }
+            return
+          }
+        }
+      }
+
+      # Remove children before clone() so they are moved instead of copied
+      var children = removeChildren
+      become(Node.createUnary(.NOT, clone.withChildren(children)).withType(cache.boolType))
     }
   }
 
@@ -576,8 +682,39 @@ namespace skew {
 
   # Getters
   class Node {
+    def isInt bool {
+      return kind == .CONSTANT && content.kind == .INT
+    }
+
+    def isBool bool {
+      return kind == .CONSTANT && content.kind == .BOOL
+    }
+
+    def isDouble bool {
+      return kind == .CONSTANT && content.kind == .DOUBLE
+    }
+
+    def isString bool {
+      return kind == .CONSTANT && content.kind == .STRING
+    }
+
+    def asInt int {
+      assert(kind == .CONSTANT)
+      return content.asInt
+    }
+
+    def asBool bool {
+      assert(kind == .CONSTANT)
+      return content.asBool
+    }
+
+    def asDouble double {
+      assert(kind == .CONSTANT)
+      return content.asDouble
+    }
+
     def asString string {
-      assert(kind == .NAME || kind == .DOT)
+      assert(kind == .NAME || kind == .DOT || kind == .CONSTANT)
       return content.asString
     }
 

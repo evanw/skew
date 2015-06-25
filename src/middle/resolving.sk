@@ -164,7 +164,7 @@ namespace skew.resolving {
         var nextEnumValue = 0
         for variable in symbol.variables {
           if variable.kind == .VARIABLE_ENUM {
-            variable.enumValue = nextEnumValue
+            variable.constant = IntContent.new(nextEnumValue)
             nextEnumValue++
           }
         }
@@ -237,7 +237,7 @@ namespace skew.resolving {
 
           # Otherwise, save the iteration limit in case it changes during iteration
           else {
-            var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateSymbolName("count"))
+            var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("count"))
             count.resolvedType = cache.intType
             count.value = second
             count.state = .INITIALIZED
@@ -248,7 +248,7 @@ namespace skew.resolving {
           # Use a C-style for loop to implement this foreach loop
           symbol.flags &= ~Symbol.IS_CONST
           symbol.value = first
-          node.replaceWith(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
+          node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
 
           # Make sure the new expressions are resolved
           resolveNode(test, symbol.scope, null)
@@ -257,21 +257,21 @@ namespace skew.resolving {
 
         else if cache.isList(value.resolvedType) {
           # Create the index variable
-          var index = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateSymbolName("i"))
+          var index = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("i"))
           index.resolvedType = cache.intType
           index.value = Node.createInt(0).withType(cache.intType)
           index.state = .INITIALIZED
           var indexName = Node.createName(index.name).withSymbol(index).withType(index.resolvedType)
 
           # Create the list variable
-          var list = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateSymbolName("list"))
+          var list = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("list"))
           list.resolvedType = value.resolvedType
           list.value = value.replaceWithNull
           list.state = .INITIALIZED
           var listName = Node.createName(list.name).withSymbol(list).withType(list.resolvedType)
 
           # Create the count variable
-          var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateSymbolName("count"))
+          var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("count"))
           count.resolvedType = cache.intType
           count.value = Node.createDot(listName, "count")
           count.state = .INITIALIZED
@@ -279,13 +279,13 @@ namespace skew.resolving {
 
           # Move the loop variable into the loop body
           symbol.value = Node.createIndex(listName.clone, [indexName])
-          block.children.prepend(Node.createVar(symbol))
+          block.insertChild(0, Node.createVar(symbol))
 
           # Use a C-style for loop to implement this foreach loop
           var setup = [Node.createVar(index), Node.createVar(list), Node.createVar(count)]
           var test = Node.createBinary(.LESS_THAN, indexName.clone, countName)
           var update = Node.createUnary(.INCREMENT, indexName.clone)
-          node.replaceWith(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
+          node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
 
           # Make sure the new expressions are resolved
           resolveNode(symbol.value, symbol.scope, null)
@@ -632,7 +632,6 @@ namespace skew.resolving {
 
       if symbol.value != null {
         resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
-        checkExtraParentheses(symbol.value)
       }
     }
 
@@ -773,12 +772,6 @@ namespace skew.resolving {
     def resolveChildrenAsParameterizedExpressions(node Node, scope Scope) {
       for child in node.children {
         resolveAsParameterizedExpression(child, scope)
-      }
-    }
-
-    def checkExtraParentheses(node Node) {
-      if node.isInsideParentheses {
-        log.semanticWarningExtraParentheses(node.range)
       }
     }
 
@@ -993,7 +986,6 @@ namespace skew.resolving {
     def resolveExpression(node Node, scope Scope) {
       var value = node.expressionValue
       resolveAsParameterizedExpression(value, scope)
-      checkExtraParentheses(value)
       checkUnusedExpression(value)
     }
 
@@ -1003,7 +995,6 @@ namespace skew.resolving {
 
       var value = node.foreachValue
       resolveAsParameterizedExpression(value, scope)
-      checkExtraParentheses(value)
 
       # Support "for i in 0..10"
       if value.kind == .PAIR {
@@ -1048,7 +1039,6 @@ namespace skew.resolving {
       var test = node.ifTest
       var ifFalse = node.ifFalse
       resolveAsParameterizedExpressionWithConversion(test, scope, cache.boolType)
-      checkExtraParentheses(test)
       resolveBlock(node.ifTrue, LocalScope.new(scope, .NORMAL))
       if ifFalse != null {
         resolveBlock(ifFalse, LocalScope.new(scope, .NORMAL))
@@ -1076,7 +1066,6 @@ namespace skew.resolving {
 
       # If there's no return type, still check for other errors
       resolveAsParameterizedExpression(value, scope)
-      checkExtraParentheses(value)
 
       # Lambdas without a return type or an explicit "return" statement get special treatment
       if !node.isImplicitReturn {
@@ -1107,7 +1096,6 @@ namespace skew.resolving {
       var value = node.switchValue
       var cases = node.children
       resolveAsParameterizedExpression(value, scope)
-      checkExtraParentheses(value)
 
       for i in 1..cases.count {
         var child = cases[i]
@@ -1115,7 +1103,6 @@ namespace skew.resolving {
         for j in 1..values.count {
           var caseValue = values[j]
           resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType)
-          checkExtraParentheses(caseValue)
         }
         resolveBlock(child.caseBlock, LocalScope.new(scope, .NORMAL))
       }
@@ -1124,7 +1111,6 @@ namespace skew.resolving {
     def resolveThrow(node Node, scope Scope) {
       var value = node.throwValue
       resolveAsParameterizedExpression(value, scope)
-      checkExtraParentheses(value)
     }
 
     def resolveVar(node Node, scope Scope) {
@@ -1162,7 +1148,6 @@ namespace skew.resolving {
     def resolveWhile(node Node, scope Scope) {
       var test = node.whileTest
       resolveAsParameterizedExpressionWithConversion(test, scope, cache.boolType)
-      checkExtraParentheses(test)
       resolveBlock(node.whileBlock, LocalScope.new(scope, .LOOP))
     }
 
@@ -2018,9 +2003,10 @@ namespace skew.resolving {
 
       # Avoid infinite expansion
       var isComparison = kind.isBinaryComparison
-      if isComparison && cache.isNumeric(type) {
+      var isString = type == cache.stringType
+      if isComparison && (isString || cache.isNumeric(type)) {
         resolveAsParameterizedExpression(other, scope)
-        if cache.isNumeric(other.resolvedType) {
+        if isString ? other.resolvedType == cache.stringType : cache.isNumeric(other.resolvedType) {
           resolveChildrenAsParameterizedExpressions(node, scope)
           node.resolvedType = cache.boolType
           return

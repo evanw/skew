@@ -21,6 +21,12 @@ namespace skew.parsing {
     return +(text as dynamic)
   }
 
+  def checkExtraParentheses(context ParserContext, node Node) {
+    if node.isInsideParentheses {
+      context.log.semanticWarningExtraParentheses(node.range)
+    }
+  }
+
   def parseLeadingComments(context ParserContext) List<string> {
     var comments List<string> = null
     while context.peek(.COMMENT) {
@@ -105,7 +111,6 @@ namespace skew.parsing {
     return annotations
   }
 
-
   def parseVarOrConst(context ParserContext) Node {
     var token = context.next
     var range = context.current.range
@@ -151,6 +156,7 @@ namespace skew.parsing {
       if value == null {
         return null
       }
+      checkExtraParentheses(context, value)
     }
     return Node.createReturn(value).withRange(context.spanSince(token.range))
   }
@@ -161,6 +167,7 @@ namespace skew.parsing {
     if value == null {
       return null
     }
+    checkExtraParentheses(context, value)
 
     if !context.expect(.LEFT_BRACE) {
       return null
@@ -185,6 +192,7 @@ namespace skew.parsing {
           if constant == null {
             return null
           }
+          checkExtraParentheses(context, constant)
           values.append(constant)
           if !context.eat(.COMMA) {
             break
@@ -249,6 +257,7 @@ namespace skew.parsing {
       }
       value = Node.createPair(value, second).withRange(Range.span(value.range, second.range))
     }
+    checkExtraParentheses(context, value)
 
     var block = parseBlock(context)
     if block == null {
@@ -264,6 +273,7 @@ namespace skew.parsing {
     if test == null {
       return null
     }
+    checkExtraParentheses(context, test)
 
     var trueBlock = parseBlock(context)
     if trueBlock == null {
@@ -279,6 +289,7 @@ namespace skew.parsing {
     if value == null {
       return null
     }
+    checkExtraParentheses(context, value)
     return Node.createThrow(value)
   }
 
@@ -297,6 +308,7 @@ namespace skew.parsing {
     if test == null {
       return null
     }
+    checkExtraParentheses(context, test)
 
     var block = parseBlock(context)
     if block == null {
@@ -325,6 +337,7 @@ namespace skew.parsing {
     if value == null {
       return null
     }
+    checkExtraParentheses(context, value)
     return Node.createExpression(value).withRange(value.range)
   }
 
@@ -694,6 +707,10 @@ namespace skew.parsing {
 
           if context.eat(.ASSIGN) {
             variable.value = pratt.parse(context, .LOWEST)
+            if variable.value == null {
+              return false
+            }
+            checkExtraParentheses(context, variable.value)
           }
 
           parent.variables.append(variable)

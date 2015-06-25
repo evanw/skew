@@ -2,6 +2,7 @@ namespace skew {
   class CompilerOptions {
     var outputFile = ""
     var outputDirectory = ""
+    var foldAllConstants = false
   }
 
   class CompilerResult {
@@ -11,6 +12,7 @@ namespace skew {
   }
 
   def compile(log Log, options CompilerOptions, sources List<Source>) CompilerResult {
+    var debug = false
     var result = CompilerResult.new
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
 
@@ -27,13 +29,39 @@ namespace skew {
       # Resolving pass, errors stop compilation
       if !log.hasErrors {
         resolvingPass(log, result.global, result.cache)
+        if debug {
+          verifyHierarchy(result.global)
+        }
 
         # Prepare for emission, code is error-free at this point
         if !log.hasErrors {
           var graph = CallGraph.new(result.global)
+
+          # Make certain functions global
           globalizingPass(result.global, graph)
+          if debug {
+            verifyHierarchy(result.global)
+          }
+
+          # Move symbols around
           motionPass(result.global, graph)
+          if debug {
+            verifyHierarchy(result.global)
+          }
+
+          # Give overloaded functions unique names, rename operator overloads
           renamingPass(result.global)
+          if debug {
+            verifyHierarchy(result.global)
+          }
+
+          # Compile-time partial evaluation
+          if options.foldAllConstants {
+            foldingPass(result.global, result.cache)
+            if debug {
+              verifyHierarchy(result.global)
+            }
+          }
 
           # Emit in the target language
           var emitter = JsEmitter.new(result.cache, options)
@@ -44,5 +72,38 @@ namespace skew {
     }
 
     return result
+  }
+
+  def verifyHierarchy(symbol ObjectSymbol) {
+    for object in symbol.objects {
+      verifyHierarchy(object)
+    }
+
+    for function in symbol.functions {
+      verifyHierarchy(function.block, null)
+    }
+
+    for variable in symbol.variables {
+      verifyHierarchy(variable.value, null)
+    }
+  }
+
+  def verifyHierarchy(node Node, parent Node) {
+    if node != null {
+      assert(node.parent == parent)
+      if node.children != null {
+        for child in node.children {
+          verifyHierarchy(child, node)
+        }
+      }
+
+      if node.kind == .VAR {
+        verifyHierarchy(node.symbol.asVariableSymbol.value, null)
+      }
+
+      if node.kind == .LAMBDA {
+        verifyHierarchy(node.symbol.asFunctionSymbol.block, null)
+      }
+    }
   }
 }

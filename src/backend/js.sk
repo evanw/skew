@@ -118,7 +118,11 @@ namespace skew {
                 emit("\n")
                 emitNewlineBeforeSymbol(variable)
                 emitComments(variable.comments)
-                emit(indent + mangleName(variable) + ": " + variable.enumValue.toString + ", " + variable.enumValue.toString + ": " + quoteString(variable.name, '"'))
+                emit(indent + mangleName(variable) + ": ")
+                emitContent(variable.constant)
+                emit(", ")
+                emitContent(variable.constant)
+                emit(": " + quoteString(variable.name, '"'))
                 emitNewlineAfterSymbol(variable)
               }
             }
@@ -417,6 +421,15 @@ namespace skew {
         }
       }
 
+      def emitContent(content Content) {
+        switch content.kind {
+          case .BOOL { emit(content.asBool.toString) }
+          case .INT { emit(content.asInt.toString) }
+          case .DOUBLE { emit(content.asDouble.toString) }
+          case .STRING { emit(quoteString(content.asString, '"')) }
+        }
+      }
+
       def emitExpression(node Node, precedence Precedence) {
         switch node.kind {
           case .TYPE {
@@ -437,13 +450,7 @@ namespace skew {
           }
 
           case .CONSTANT {
-            var value = node.content
-            switch value.kind {
-              case .BOOL { emit(value.asBool.toString) }
-              case .INT { emit(value.asInt.toString) }
-              case .DOUBLE { emit(value.asDouble.toString) }
-              case .STRING { emit(quoteString(value.asString, '"')) }
-            }
+            emitContent(node.content)
           }
 
           case .CALL {
