@@ -118,7 +118,7 @@ namespace skew {
                 emit("\n")
                 emitNewlineBeforeSymbol(variable)
                 emitComments(variable.comments)
-                emit(indent + mangleName(variable) ": " variable.enumValue ", " variable.enumValue ": " quoteString(variable.name, '"'))
+                emit(indent + mangleName(variable) + ": " + variable.enumValue.toString + ", " + variable.enumValue.toString + ": " + quoteString(variable.name, '"'))
                 emitNewlineAfterSymbol(variable)
               }
             }
@@ -136,7 +136,7 @@ namespace skew {
                 }
                 emitFunction(function)
                 if symbol.baseClass != null {
-                  emit("\n" indent "$extends(" fullName(symbol) ", " fullName(symbol.baseClass) ");\n")
+                  emit("\n" + indent + "$extends(" + fullName(symbol) + ", " + fullName(symbol.baseClass) + ");\n")
                 }
               }
             }
@@ -276,7 +276,7 @@ namespace skew {
             var update = node.forUpdate
             var children = node.children
             var count = children.count
-            emit(indent "for (")
+            emit(indent + "for (")
             if count > 3 {
               for i in 3..count {
                 var child = children[i]
@@ -288,7 +288,7 @@ namespace skew {
                   if i == 3 {
                     emit("var ")
                   }
-                  emit(mangleName(symbol) " = ")
+                  emit(mangleName(symbol) + " = ")
                   emitExpression(symbol.value, .LOWEST)
                 } else {
                   emitExpression(child, .LOWEST)
@@ -309,7 +309,7 @@ namespace skew {
           }
 
           case .FOREACH {
-            emit(indent "for (var " mangleName(node.symbol) " in ")
+            emit(indent + "for (var " + mangleName(node.symbol) + " in ")
             emitExpression(node.foreachValue, .LOWEST)
             emit(")")
             emitBlock(node.foreachBlock)
@@ -657,7 +657,7 @@ namespace skew {
           if symbol.kind == .FUNCTION_INSTANCE {
             enclosingName += ".prototype"
           }
-          return enclosingName "." mangleName(symbol)
+          return enclosingName + "." + mangleName(symbol)
         }
         return mangleName(symbol)
       }
@@ -667,7 +667,7 @@ namespace skew {
           symbol = symbol.parent
         }
         if !symbol.isImportedOrExported && symbol.name in isKeyword {
-          return "$" symbol.name
+          return "$" + symbol.name
         }
         return symbol.name
       }

@@ -64,7 +64,7 @@ namespace skew {
           }
           result += argumentTypes[i].toString
         }
-        return result + (returnType != null ? ") " returnType : ")")
+        return result + (returnType != null ? ") " + returnType.toString : ")")
       }
 
       return self == DYNAMIC ? "dynamic" : "null"
@@ -122,7 +122,7 @@ namespace skew {
         if i != 0 {
           text += ", "
         }
-        text += parameters[i].name " => " substitutions[i]
+        text += parameters[i].name + " => " + substitutions[i].toString
       }
       return text + ")"
     }

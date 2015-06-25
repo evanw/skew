@@ -15,10 +15,10 @@ namespace skew {
   namespace Diagnostic {
     def format(kind string, range Range, text string) string {
       if range == null {
-        return kind ": " text "\n"
+        return kind + ": " + text + "\n"
       }
       var formatted = range.format(0)
-      return range.locationString ": " kind ": " text "\n" formatted.line "\n" formatted.range "\n"
+      return range.locationString + ": " + kind + ": " + text + "\n" + formatted.line + "\n" + formatted.range + "\n"
     }
   }
 
@@ -82,15 +82,15 @@ namespace skew {
     }
 
     def syntaxErrorExtraData(range Range, text string) {
-      error(range, "Syntax error \"" text "\"")
+      error(range, "Syntax error \"" + text + "\"")
     }
 
     def syntaxErrorUnexpectedToken(token Token) {
-      error(token.range, "Unexpected " token.kind)
+      error(token.range, "Unexpected " + token.kind)
     }
 
     def syntaxErrorExpectedToken(range Range, found TokenKind, expected TokenKind) {
-      error(range, "Expected " expected " but found " found)
+      error(range, "Expected " + expected + " but found " + found)
     }
 
     def syntaxErrorEmptyFunctionParentheses(range Range) {
@@ -109,7 +109,7 @@ namespace skew {
   namespace Log {
     @private {
       def expectedCountText(singular string, expected int, found int) string {
-        return "Expected " expected " " singular + prettyPrint.plural(expected) " but found " found " " singular + prettyPrint.plural(found)
+        return "Expected " + expected.toString + " " + singular + prettyPrint.plural(expected) + " but found " + found.toString + " " + singular + prettyPrint.plural(found)
       }
 
       def formatArgumentTypes(types List<Type>) string {
@@ -120,7 +120,7 @@ namespace skew {
         for type in types {
           names.append(type.toString)
         }
-        return " of type" prettyPrint.plural(types.count) " " prettyPrint.join(names, "and")
+        return " of type" + prettyPrint.plural(types.count) + " " + prettyPrint.join(names, "and")
       }
     }
   }
@@ -135,63 +135,63 @@ namespace skew {
     }
 
     def semanticErrorDuplicateSymbol(range Range, name string, previous Range) {
-      error(range, "\"" name "\" is already declared")
+      error(range, "\"" + name + "\" is already declared")
       if previous != null {
         note(previous, "The previous declaration is here")
       }
     }
 
     def semanticErrorShadowedSymbol(range Range, name string, previous Range) {
-      error(range, "\"" name "\" shadows a previous declaration")
+      error(range, "\"" + name + "\" shadows a previous declaration")
       if previous != null {
         note(previous, "The previous declaration is here")
       }
     }
 
     def semanticErrorDuplicateTypeParameters(range Range, name string, previous Range) {
-      error(range, "\"" name "\" already has type parameters")
+      error(range, "\"" + name + "\" already has type parameters")
       if previous != null {
         note(previous, "Type parameters were previously declared here")
       }
     }
 
     def semanticErrorDuplicateBaseType(range Range, name string, previous Range) {
-      error(range, "\"" name "\" already has a base type")
+      error(range, "\"" + name + "\" already has a base type")
       if previous != null {
         note(previous, "The previous base type is here")
       }
     }
 
     def semanticErrorCyclicDeclaration(range Range, name string) {
-      error(range, "Cyclic declaration of \"" name "\"")
+      error(range, "Cyclic declaration of \"" + name + "\"")
     }
 
     def semanticErrorUndeclaredSymbol(range Range, name string) {
-      error(range, "\"" name "\" is not declared")
+      error(range, "\"" + name + "\" is not declared")
     }
 
     def semanticErrorUnknownMemberSymbol(range Range, name string, type Type) {
-      error(range, "\"" name "\" is not declared on type \"" type "\"")
+      error(range, "\"" + name + "\" is not declared on type \"" + type.toString + "\"")
     }
 
     def semanticErrorVarMissingType(range Range, name string) {
-      error(range, "Unable to determine the type of \"" name "\"")
+      error(range, "Unable to determine the type of \"" + name + "\"")
     }
 
     def semanticErrorVarMissingValue(range Range, name string) {
-      error(range, "The implicitly typed variable \"" name "\" must be initialized")
+      error(range, "The implicitly typed variable \"" + name + "\" must be initialized")
     }
 
     def semanticErrorConstMissingValue(range Range, name string) {
-      error(range, "The constant \"" name "\" must be initialized")
+      error(range, "The constant \"" + name + "\" must be initialized")
     }
 
     def semanticErrorInvalidCall(range Range, type Type) {
-      error(range, "Cannot call value of type \"" type "\"")
+      error(range, "Cannot call value of type \"" + type.toString + "\"")
     }
 
     def semanticErrorCannotParameterize(range Range, type Type) {
-      error(range, "Cannot parameterize \"" type + (
+      error(range, "Cannot parameterize \"" + type.toString + (
         type.isParameterized ? "\" because it is already parameterized" : "\" because it has no type parameters"))
     }
 
@@ -200,21 +200,21 @@ namespace skew {
     }
 
     def semanticErrorArgumentCount(range Range, expected int, found int, name string, function Range) {
-      error(range, expectedCountText("argument", expected, found) + (name != "" ? " when calling \"" name "\"" : ""))
+      error(range, expectedCountText("argument", expected, found) + (name != "" ? " when calling \"" + name + "\"" : ""))
       if function != null {
         note(function, "The function declaration is here")
       }
     }
 
     def semanticErrorGetterCalledTwice(range Range, name string, function Range) {
-      error(range, "The function \"" name "\" takes no arguments and is already called implicitly")
+      error(range, "The function \"" + name + "\" takes no arguments and is already called implicitly")
       if function != null {
         note(function, "The function declaration is here")
       }
     }
 
     def semanticErrorUseOfVoidFunction(range Range, name string, function Range) {
-      error(range, "The function \"" name "\" does not return a value")
+      error(range, "The function \"" + name + "\" does not return a value")
       if function != null {
         note(function, "The function declaration is here")
       }
@@ -225,19 +225,19 @@ namespace skew {
     }
 
     def semanticErrorBadVariableType(range Range, type Type) {
-      error(range, "Implicitly typed variables cannot be of type \"" type "\"")
+      error(range, "Implicitly typed variables cannot be of type \"" + type.toString + "\"")
     }
 
     def semanticErrorMemberUnexpectedGlobal(range Range, name string) {
-      error(range, "Cannot access global member \"" name "\" from an instance context")
+      error(range, "Cannot access global member \"" + name + "\" from an instance context")
     }
 
     def semanticErrorMemberUnexpectedInstance(range Range, name string) {
-      error(range, "Cannot access instance member \"" name "\" from a global context")
+      error(range, "Cannot access instance member \"" + name + "\" from a global context")
     }
 
     def semanticErrorMemberUnexpectedTypeParameter(range Range, name string) {
-      error(range, "Cannot access type parameter \"" name "\" here")
+      error(range, "Cannot access type parameter \"" + name + "\" here")
     }
 
     def semanticErrorConstructorReturnType(range Range) {
@@ -245,45 +245,45 @@ namespace skew {
     }
 
     def semanticErrorNoMatchingOverload(range Range, name string, count int, types List<Type>) {
-      error(range, "No overload of \"" name "\" was found that takes " count " argument" prettyPrint.plural(count) + formatArgumentTypes(types))
+      error(range, "No overload of \"" + name + "\" was found that takes " + count.toString + " argument" + prettyPrint.plural(count) + formatArgumentTypes(types))
     }
 
     def semanticErrorAmbiguousOverload(range Range, name string, count int, types List<Type>) {
-      error(range, "Multiple matching overloads of \"" name "\" were found that can take " count " argument" prettyPrint.plural(count) + formatArgumentTypes(types))
+      error(range, "Multiple matching overloads of \"" + name + "\" were found that can take " + count.toString + " argument" + prettyPrint.plural(count) + formatArgumentTypes(types))
     }
 
     def semanticErrorUnexpectedExpression(range Range, type Type) {
-      error(range, "Unexpected expression of type \"" type "\"")
+      error(range, "Unexpected expression of type \"" + type.toString + "\"")
     }
 
     def semanticErrorUnexpectedType(range Range, type Type) {
-      error(range, "Unexpected type \"" type "\"")
+      error(range, "Unexpected type \"" + type.toString + "\"")
     }
 
     def semanticErrorIncompatibleTypes(range Range, from Type, to Type, isCastAllowed bool) {
-      error(range, "Cannot convert from type \"" from "\" to type \"" to "\"" (isCastAllowed ? " without a cast" : ""))
+      error(range, "Cannot convert from type \"" + from.toString + "\" to type \"" + to.toString + "\"" + (isCastAllowed ? " without a cast" : ""))
     }
 
     def semanticWarningExtraCast(range Range, from Type, to Type) {
-      warning(range, "Unnecessary cast from type \"" from "\" to type \"" to "\"")
+      warning(range, "Unnecessary cast from type \"" + from.toString + "\" to type \"" + to.toString + "\"")
     }
 
     def semanticErrorWrongArgumentCount(range Range, name string, count int) {
-      error(range, "Expected \"" name "\" to take " count " argument" prettyPrint.plural(count))
+      error(range, "Expected \"" + name + "\" to take " + count.toString + " argument" + prettyPrint.plural(count))
     }
 
     def semanticErrorWrongArgumentCountRange(range Range, name string, lower int, upper int) {
       if lower == 0 {
-        error(range, "Expected \"" name "\" to take at most " upper " argument" prettyPrint.plural(upper))
+        error(range, "Expected \"" + name + "\" to take at most " + upper.toString + " argument" + prettyPrint.plural(upper))
       } else if upper == -1 {
-        error(range, "Expected \"" name "\" to take at least " lower " argument" prettyPrint.plural(lower))
+        error(range, "Expected \"" + name + "\" to take at least " + lower.toString + " argument" + prettyPrint.plural(lower))
       } else {
-        error(range, "Expected \"" name "\" to take between " lower " and " upper " arguments")
+        error(range, "Expected \"" + name + "\" to take between " + lower.toString + " and " + upper.toString + " arguments")
       }
     }
 
     def semanticErrorExpectedList(range Range, name string, type Type) {
-      error(range, "Expected argument \"" name "\" to be of type \"List<T>\" instead of type \"" type "\"")
+      error(range, "Expected argument \"" + name + "\" to be of type \"List<T>\" instead of type \"" + type.toString + "\"")
     }
 
     def semanticErrorUnexpectedReturnValue(range Range) {
@@ -291,15 +291,15 @@ namespace skew {
     }
 
     def semanticErrorBadReturnType(range Range, type Type) {
-      error(range, "Cannot create a function with a return type of \"" type "\"")
+      error(range, "Cannot create a function with a return type of \"" + type.toString + "\"")
     }
 
     def semanticErrorExpectedReturnValue(range Range, type Type) {
-      error(range, "Must return a value of type \"" type "\"")
+      error(range, "Must return a value of type \"" + type.toString + "\"")
     }
 
     def semanticErrorMissingReturn(range Range, name string, type Type) {
-      error(range, "All control paths for \"" name "\" must return a value of type \"" type "\"")
+      error(range, "All control paths for \"" + name + "\" must return a value of type \"" + type.toString + "\"")
     }
 
     def semanticErrorBadStorage(range Range) {
@@ -307,39 +307,39 @@ namespace skew {
     }
 
     def semanticErrorStorageToConstSymbol(range Range, name string) {
-      error(range, "Cannot store to constant symbol \"" name "\"")
+      error(range, "Cannot store to constant symbol \"" + name + "\"")
     }
 
     def semanticErrorAccessViolation(range Range, level string, name string) {
-      error(range, "Cannot access \"" level "\" symbol \"" name "\" here")
+      error(range, "Cannot access \"" + level + "\" symbol \"" + name + "\" here")
     }
 
     def semanticWarningDeprecatedUsage(range Range, name string) {
-      warning(range, "Use of deprecated symbol \"" name "\"")
+      warning(range, "Use of deprecated symbol \"" + name + "\"")
     }
 
     def semanticErrorUnparameterizedType(range Range, type Type) {
-      error(range, "Cannot use unparameterized type \"" type "\" here")
+      error(range, "Cannot use unparameterized type \"" + type.toString + "\" here")
     }
 
     def semanticErrorParameterizedType(range Range, type Type) {
-      error(range, "Cannot use parameterized type \"" type "\" here")
+      error(range, "Cannot use parameterized type \"" + type.toString + "\" here")
     }
 
     def semanticErrorNoCommonType(range Range, left Type, right Type) {
-      error(range, "No common type for \"" left "\" and \"" right "\"")
+      error(range, "No common type for \"" + left.toString + "\" and \"" + right.toString + "\"")
     }
 
     def semanticErrorInvalidAnnotation(range Range, annotation string, name string) {
-      error(range, "Cannot use the annotation \"" annotation "\" on \"" name "\"")
+      error(range, "Cannot use the annotation \"" + annotation + "\" on \"" + name + "\"")
     }
 
     def semanticErrorDuplicateAnnotation(range Range, annotation string, name string) {
-      error(range, "Duplicate annotation \"" annotation "\" on \"" name "\"")
+      error(range, "Duplicate annotation \"" + annotation + "\" on \"" + name + "\"")
     }
 
     def semanticErrorBadForValue(range Range, type Type) {
-      error(range, "Cannot iterate over type \"" type "\"")
+      error(range, "Cannot iterate over type \"" + type.toString + "\"")
     }
 
     def semanticWarningEmptyRange(range Range) {
@@ -347,7 +347,7 @@ namespace skew {
     }
 
     def semanticErrorMissingDotContext(range Range, name string) {
-      error(range, "Cannot access \"" name "\" without type context")
+      error(range, "Cannot access \"" + name + "\" without type context")
     }
 
     def semanticErrorInitializerTypeInferenceFailed(range Range) {
@@ -355,39 +355,39 @@ namespace skew {
     }
 
     def semanticErrorDuplicateOverload(range Range, name string, previous Range) {
-      error(range, "Duplicate overloaded function \"" name "\"")
+      error(range, "Duplicate overloaded function \"" + name + "\"")
       if previous != null {
         note(previous, "The previous declaration is here")
       }
     }
 
     def semanticErrorInvalidBaseType(range Range, type Type) {
-      error(range, "Cannot derive from type \"" type "\"")
+      error(range, "Cannot derive from type \"" + type.toString + "\"")
     }
 
     def semanticErrorBadOverride(range Range, name string, base Type, overridden Range) {
-      error(range, "\"" name "\" overrides another declaration with the same name in base type \"" base "\"")
+      error(range, "\"" + name + "\" overrides another declaration with the same name in base type \"" + base.toString + "\"")
       if overridden != null {
         note(overridden, "The overridden declaration is here")
       }
     }
 
     def semanticErrorBadOverrideReturnType(range Range, name string, base Type, overridden Range) {
-      error(range, "\"" name "\" overrides another function with the same name and argument types but a different return type in base type \"" base "\"")
+      error(range, "\"" + name + "\" overrides another function with the same name and argument types but a different return type in base type \"" + base.toString + "\"")
       if overridden != null {
         note(overridden, "The overridden function is here")
       }
     }
 
     def semanticErrorModifierMissingOverride(range Range, name string, overridden Range) {
-      error(range, "\"" name "\" overrides another symbol with the same name but is declared using \"def\" instead of \"over\"")
+      error(range, "\"" + name + "\" overrides another symbol with the same name but is declared using \"def\" instead of \"over\"")
       if overridden != null {
         note(overridden, "The overridden declaration is here")
       }
     }
 
     def semanticErrorModifierUnusedOverride(range Range, name string) {
-      error(range, "\"" name "\" is declared using \"over\" instead of \"def\" but does not override anything")
+      error(range, "\"" + name + "\" is declared using \"over\" instead of \"def\" but does not override anything")
     }
 
     def semanticErrorBadSuper(range Range) {
@@ -395,11 +395,11 @@ namespace skew {
     }
 
     def semanticErrorBadJump(range Range, name string) {
-      error(range, "Cannot use \"" name "\" outside a loop")
+      error(range, "Cannot use \"" + name + "\" outside a loop")
     }
 
     def semanticErrorMustCallFunction(range Range, name string) {
-      error(range, "The function \"" name "\" must be called")
+      error(range, "The function \"" + name + "\" must be called")
     }
 
     def semanticErrorDuplicateEntryPoint(range Range, previous Range) {
@@ -408,11 +408,11 @@ namespace skew {
     }
 
     def semanticErrorInvalidEntryPointArguments(range Range, name string) {
-      error(range, "Entry point \"" name "\" must take either no arguments or one argument of type \"List<string>\"")
+      error(range, "Entry point \"" + name + "\" must take either no arguments or one argument of type \"List<string>\"")
     }
 
     def semanticErrorInvalidEntryPointReturnType(range Range, name string) {
-      error(range, "Entry point \"" name "\" must return either nothing or a value of type \"int\"")
+      error(range, "Entry point \"" + name + "\" must return either nothing or a value of type \"int\"")
     }
   }
 }

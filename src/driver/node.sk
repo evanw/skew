@@ -46,17 +46,17 @@ namespace skew {
 
   def printError(text string) {
     printWithColor(.RED, "error: ")
-    printWithColor(.BOLD, text "\n")
+    printWithColor(.BOLD, text + "\n")
   }
 
   def printNote(text string) {
     printWithColor(.GRAY, "note: ")
-    printWithColor(.BOLD, text "\n")
+    printWithColor(.BOLD, text + "\n")
   }
 
   def printWarning(text string) {
     printWithColor(.MAGENTA, "warning: ")
-    printWithColor(.BOLD, text "\n")
+    printWithColor(.BOLD, text + "\n")
   }
 
   def printUsage(parser options.Parser) {
@@ -74,7 +74,7 @@ namespace skew {
         break
       }
       if diagnostic.range != null {
-        printWithColor(.BOLD, diagnostic.range.locationString ": ")
+        printWithColor(.BOLD, diagnostic.range.locationString + ": ")
       }
       switch diagnostic.kind {
         case .WARNING {
@@ -88,14 +88,14 @@ namespace skew {
       if diagnostic.range != null {
         var formatted = diagnostic.range.format(terminalWidth)
         terminal.print(formatted.line)
-        printWithColor(.GREEN, formatted.range "\n")
+        printWithColor(.GREEN, formatted.range + "\n")
       }
       if diagnostic.noteRange != null {
-        printWithColor(.BOLD, diagnostic.noteRange.locationString ": ")
+        printWithColor(.BOLD, diagnostic.noteRange.locationString + ": ")
         printNote(diagnostic.noteText)
         var formatted = diagnostic.noteRange.format(terminalWidth)
         terminal.print(formatted.line)
-        printWithColor(.GREEN, formatted.range "\n")
+        printWithColor(.GREEN, formatted.range + "\n")
       }
     }
 
@@ -104,17 +104,17 @@ namespace skew {
     var hasWarnings = log.hasWarnings
     var summary = ""
     if hasWarnings {
-      summary += log.warningCount " warning" prettyPrint.plural(log.warningCount)
+      summary += log.warningCount.toString + " warning" + prettyPrint.plural(log.warningCount)
       if hasErrors {
         summary += " and "
       }
     }
     if hasErrors {
-      summary += log.errorCount " error" prettyPrint.plural(log.errorCount)
+      summary += log.errorCount.toString + " error" + prettyPrint.plural(log.errorCount)
     }
     if hasWarnings || hasErrors {
-      terminal.write(summary " generated")
-      printWithColor(.GRAY, errorCount < log.errorCount ? " (only showing " errorLimit " error" prettyPrint.plural(errorLimit) ", use \"--error-limit=0\" to see all)\n" : "\n")
+      terminal.write(summary + " generated")
+      printWithColor(.GRAY, errorCount < log.errorCount ? " (only showing " + errorLimit.toString + " error" + prettyPrint.plural(errorLimit) + ", use \"--error-limit=0\" to see all)\n" : "\n")
     }
   }
 
@@ -137,7 +137,7 @@ namespace skew {
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
-    parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is 20.")
+    parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is " + DEFAULT_ERROR_LIMIT.toString + ".")
 
     # Parse the command line arguments
     parser.parse(log, arguments)

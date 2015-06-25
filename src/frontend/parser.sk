@@ -851,12 +851,11 @@ namespace skew.parsing {
     return -1
   }
 
-  def parseStringLiteral(log Log, range Range) StringContent {
+  def parseStringLiteral(log Log, range Range) string {
     var text = range.toString
     assert(text.count >= 2)
     assert(text[0] == '"' || text[0] == '\'')
     assert(text[text.count - 1] == text[0])
-    var isValidString = true
     var builder = StringBuilder.new
     var start = 1 # Append long runs of unescaped characters using a single slice for speed
     var i = 1
@@ -910,42 +909,17 @@ namespace skew.parsing {
         }
         if start < i {
           log.syntaxErrorInvalidEscapeSequence(Range.new(range.source, range.start + escape, range.start + i))
-          isValidString = false
         }
       }
     }
     builder.append(text.slice(start, i))
-    return isValidString ? StringContent.new(builder.toString) : null
+    return builder.toString
   }
 
-  def parseInterpolate(context ParserContext, left Node) Node {
-    var token = context.next
-    var result = parseStringLiteral(context.log, token.range)
-    if result == null {
-      return null
-    }
-
-    # Concatentate the previous value with the string
-    var middle = Node.createString(result.value).withRange(token.range)
-    if left != null {
-      middle = Node.createInterpolate(left, middle).withRange(context.spanSince(left.range))
-    }
-
-    # Concatentate further values with the result
-    if context.peek(.IDENTIFIER) || context.peek(.LEFT_PARENTHESIS) {
-      var right = pratt.parse(context, .UNARY_PREFIX)
-      if right == null {
-        return null
-      }
-      return Node.createInterpolate(middle, right).withRange(context.spanSince(middle.range))
-    }
-
-    return middle
-  }
-
-  var tokenLiteral = (kind NodeKind) => (context ParserContext, token Token) => Node.new(kind).withRange(token.range)
   var boolLiteral = (value bool) => (context ParserContext, token Token) => Node.createBool(value).withRange(token.range)
   var intLiteral = (base int) => (context ParserContext, token Token) Node => Node.createInt(parseIntLiteral(token.range.toString, base)).withRange(token.range)
+  var stringLiteral = (context ParserContext, token Token) Node => Node.createString(parseStringLiteral(context.log, token.range)).withRange(token.range)
+  var tokenLiteral = (kind NodeKind) => (context ParserContext, token Token) => Node.new(kind).withRange(token.range)
 
   def unaryPrefix(kind NodeKind) fn(ParserContext, Token, Node) Node {
     return (context, token, value) => Node.createUnary(kind, value).withRange(Range.span(token.range, value.range)).withInternalRange(token.range)
@@ -1049,6 +1023,7 @@ namespace skew.parsing {
     pratt.literal(.INT_HEX, intLiteral(16))
     pratt.literal(.INT_OCTAL, intLiteral(8))
     pratt.literal(.NULL, tokenLiteral(.NULL))
+    pratt.literal(.STRING, stringLiteral)
     pratt.literal(.SUPER, tokenLiteral(.SUPER))
     pratt.literal(.TRUE, boolLiteral(true))
 
@@ -1057,12 +1032,10 @@ namespace skew.parsing {
       var codePoint = 0
 
       # There must be exactly one unicode code point
-      if result != null {
-        var iterator = unicode.StringIterator.INSTANCE.reset(result.value, 0)
-        codePoint = iterator.nextCodePoint
-        if codePoint == -1 || iterator.nextCodePoint != -1 {
-          context.log.syntaxErrorInvalidCharacter(token.range)
-        }
+      var iterator = unicode.StringIterator.INSTANCE.reset(result, 0)
+      codePoint = iterator.nextCodePoint
+      if codePoint == -1 || iterator.nextCodePoint != -1 {
+        context.log.syntaxErrorInvalidCharacter(token.range)
       }
 
       # Don't return null when there's an error because that
@@ -1133,8 +1106,6 @@ namespace skew.parsing {
     pratt.parselet(.LIST_NEW, .LOWEST).prefix = initializerParselet
     pratt.parselet(.SET_NEW, .LOWEST).prefix = initializerParselet
     pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = parameterizedParselet
-    pratt.parselet(.STRING, .UNARY_PREFIX).infix = (context, left) => parseInterpolate(context, left)
-    pratt.parselet(.STRING, .LOWEST).prefix = (context) => parseInterpolate(context, null)
 
     # Lambda expressions like "=> x"
     pratt.parselet(.ARROW, .LOWEST).prefix = (context) => {

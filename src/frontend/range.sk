@@ -26,7 +26,7 @@ namespace skew {
 
     def locationString string {
       var location = source.indexToLineColumn(start)
-      return source.name ":" (location.line + 1) ":" (location.column + 1)
+      return source.name + ":" + (location.line + 1).toString + ":" + (location.column + 1).toString
     }
 
     def format(maxLength int) FormattedRange {
