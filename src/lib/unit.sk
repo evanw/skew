@@ -108,12 +108,12 @@ namespace unit {
       # Print the summary
       var totalTime = Math.floor((timestamp.now - _startTime) / 100) as int
       terminal.setColor(.GREEN)
-      terminal.write("  " (_count - _failed.count) " passing")
+      terminal.write("  " + (_count - _failed.count).toString + " passing")
       terminal.setColor(.GRAY)
-      terminal.print("  (" (totalTime / 10) "." (totalTime % 10) "s)")
+      terminal.print("  (" + (totalTime / 10).toString + "." + (totalTime % 10).toString + "s)")
       if _failed.count != 0 {
         terminal.setColor(.RED)
-        terminal.print("  " _failed.count " failing")
+        terminal.print("  " + _failed.count.toString + " failing")
       }
       terminal.setColor(.DEFAULT)
       terminal.print("")
@@ -122,7 +122,7 @@ namespace unit {
       var indent = " ".repeat(_failed.count.toString.count + 5)
       for i in 0.._failed.count {
         var test = _failed[i]
-        var text = "  " (i + 1) ")"
+        var text = "  " + (i + 1).toString + ")"
         var failure = test.failure
         terminal.setColor(.BOLD)
         terminal.print(text + " ".repeat(indent.count - text.count) + test.name + "\n")
@@ -173,21 +173,21 @@ namespace unit {
 
           # Common
           if i >= 0 && j >= 0 && expected[i] == observed[j] {
-            reversed.append(" " expected[i])
+            reversed.append(" " + expected[i])
             i--
             j--
           }
 
           # Removal
           else if j >= 0 && (i < 0 || (j > 0 ? matrix[ij - 1] : 0) > (i > 0 ? matrix[ij - n] : 0)) {
-            reversed.append("-" observed[j])
+            reversed.append("-" + observed[j])
             j--
           }
 
           # Insertion
           else {
             assert(i >= 0 && (j < 0 || (j > 0 ? matrix[ij - 1] : 0) <= (i > 0 ? matrix[ij - n] : 0)))
-            reversed.append("+" expected[i])
+            reversed.append("+" + expected[i])
             i--
           }
         }

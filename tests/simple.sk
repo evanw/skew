@@ -2338,39 +2338,6 @@ def main {
 ")
 
 test("
-enum A { FOO }
-class B { def toString string }
-class C { def toString }
-class D { def toString(x int) string }
-class E {}
-
-def main {
-  A.FOO \" \"
-  \" \" B.new
-  C.new \" \" D.new \" \" \" \" E.new
-}
-", "
-<stdin>:8:3: warning: Unused expression
-  A.FOO \" \"
-  ~~~~~~~~~
-<stdin>:9:3: warning: Unused expression
-  \" \" B.new
-  ~~~~~~~~~
-<stdin>:10:3: error: Cannot convert from type \"C\" to type \"string\"
-  C.new \" \" D.new \" \" \" \" E.new
-  ~~~~~
-<stdin>:10:13: error: Cannot convert from type \"D\" to type \"string\"
-  C.new \" \" D.new \" \" \" \" E.new
-            ~~~~~
-<stdin>:10:27: error: Cannot convert from type \"E\" to type \"string\"
-  C.new \" \" D.new \" \" \" \" E.new
-                          ~~~~~
-<stdin>:10:3: warning: Unused expression
-  C.new \" \" D.new \" \" \" \" E.new
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-")
-
-test("
 def foo
 def foo
 ", "
