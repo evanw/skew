@@ -1,18 +1,63 @@
+<title>Skew Compiler</title>
 <style>
-  body {
-    margin: 20px;
-    font: 12px sans-serif;
-  }
-  textarea {
-    width: 600px;
-    height: 300px;
-    font: 12px monospace;
-  }
+
+body {
+  font: 12px/15px 'Lucida Grande', sans-serif;
+  margin: 20px;
+}
+
+textarea {
+  font: 12px Monaco, monospace;
+}
+
+div {
+  display: inline-block;
+  vertical-align: top;
+  margin: 20px;
+}
+
+select {
+  width: 100px;
+}
+
+#compileTime {
+  float: right;
+}
+
+label {
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: -moz-none;
+  margin-right: 10px;
+}
+
+#optionArea {
+  display: block;
+  height: 30px;
+  margin-top: 10px;
+  margin-bottom: -40px;
+}
+
 </style>
-<body>
-  <h1>Input</h1>
-  <textarea id="input" autofocus></textarea>
-  <h1>Output</h1>
-  <textarea id="output" readonly></textarea>
-</body>
+<div>
+  <h2>Input</h2>
+  <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
+  <p>
+    <span id="compileTime">Loading...</span>
+    Target: <span id="targetArea"></span>
+    <span id="optionArea"></span>
+  </p>
+</div>
+<div>
+  <h2>Log</h2>
+  <textarea id="outputLog" rows="10" cols="80" spellcheck="false" readonly></textarea>
+</div>
+<div>
+  <h2>Tree</h2>
+  <textarea id="outputTree" rows="20" cols="80" spellcheck="false" readonly></textarea>
+</div>
+<div>
+  <h2>Code</h2>
+  <textarea id="outputCode" rows="20" cols="80" spellcheck="false" readonly></textarea>
+</div>
 <script src="build/browser.js"></script>

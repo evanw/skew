@@ -139,7 +139,7 @@ namespace skew.options {
         }
 
         # Validate the flag data
-        var text = argument.slice(separator + 1, argument.count)
+        var text = argument.slice(separator + 1)
         var separatorRange = separator < 0 ? null : range.slice(separator, separator + 1)
         var textRange = range.fromEnd(text.count)
         switch data.type {

@@ -1,7 +1,5 @@
 namespace skew {
   class Emitter {
-    var cache TypeCache
-
     def sources List<Source> {
       return _sources
     }

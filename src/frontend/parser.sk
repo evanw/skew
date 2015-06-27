@@ -70,7 +70,7 @@ namespace skew.parsing {
       # Change "@foo.bar.baz" into "foo.bar.@baz"
       if context.peek(.DOT) {
         var root = value.asString
-        value.content = StringContent.new(root.slice(1, root.count))
+        value.content = StringContent.new(root.slice(1))
         while context.eat(.DOT) {
           var name = context.current.range
           if !context.expect(.IDENTIFIER) {

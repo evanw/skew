@@ -1,0 +1,122 @@
+namespace skew {
+  class LispTreeEmitter : Emitter {
+    const options CompilerOptions
+
+    over visit(global ObjectSymbol) {
+      visitObject(global)
+      emit("\n")
+      createSource(options.outputDirectory != "" ? options.outputDirectory + "/compiled.lisp" : options.outputFile)
+    }
+
+    @private {
+      def visitObject(symbol ObjectSymbol) {
+        emit("(" + mangleKind(symbol.kind) + " " + quoteString(symbol.name, '"'))
+        increaseIndent
+
+        for object in symbol.objects {
+          emit("\n" + indent)
+          visitObject(object)
+        }
+
+        for function in symbol.functions {
+          emit("\n" + indent)
+          visitFunction(function)
+        }
+
+        for variable in symbol.variables {
+          emit("\n" + indent)
+          visitVariable(variable)
+        }
+
+        decreaseIndent
+        emit(")")
+      }
+
+      def visitFunction(symbol FunctionSymbol) {
+        emit("(" + mangleKind(symbol.kind) + " " + quoteString(symbol.name, '"'))
+        increaseIndent
+
+        for argument in symbol.arguments {
+          emit("\n" + indent)
+          visitVariable(argument)
+        }
+
+        emit("\n" + indent)
+        visitNode(symbol.returnType)
+        emit("\n" + indent)
+        visitNode(symbol.block)
+        decreaseIndent
+        emit(")")
+      }
+
+      def visitVariable(symbol VariableSymbol) {
+        emit("(" + mangleKind(symbol.kind) + " " + quoteString(symbol.name, '"') + " ")
+        visitNode(symbol.type)
+        emit(" ")
+        visitNode(symbol.value)
+        emit(")")
+      }
+
+      def visitNode(node Node) {
+        if node == null {
+          emit("nil")
+          return
+        }
+
+        emit("(" + mangleKind(node.kind))
+
+        var content = node.content
+        if content != null {
+          switch content.kind {
+            case .INT { emit(" " + content.asInt.toString) }
+            case .BOOL { emit(" " + content.asBool.toString) }
+            case .DOUBLE { emit(" " + content.asDouble.toString) }
+            case .STRING { emit(" " + quoteString(content.asString, '"')) }
+          }
+        }
+
+        if node.kind == .VAR {
+          emit(" ")
+          visitVariable(node.symbol.asVariableSymbol)
+        }
+
+        if node.kind == .LAMBDA {
+          emit(" ")
+          visitFunction(node.symbol.asFunctionSymbol)
+        }
+
+        if node.children != null {
+          increaseIndent
+          for child in node.children {
+            emit("\n" + indent)
+            visitNode(child)
+          }
+          decreaseIndent
+        }
+
+        emit(")")
+      }
+
+      def mangleKind(kind string) string {
+        return kind.toLowerCase.replaceAll("_", "-")
+      }
+    }
+  }
+
+  # These dump() functions are helpful for debugging syntax trees
+  namespace LispTreeEmitter {
+    def dump(global ObjectSymbol) string {
+      var emitter = LispTreeEmitter.new(CompilerOptions.new)
+      emitter.visit(global)
+      emitter.createSource("")
+      return emitter.sources.first.contents
+    }
+
+    def dump(node Node) string {
+      var emitter = LispTreeEmitter.new(CompilerOptions.new)
+      emitter.visitNode(node)
+      emitter.createSource("")
+      return emitter.sources.first.contents
+    }
+  }
+}

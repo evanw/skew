@@ -1,5 +1,16 @@
 namespace skew {
+  enum CompilerTarget {
+    NONE
+    JAVASCRIPT
+    LISP_TREE
+
+    def isTree bool {
+      return self == LISP_TREE
+    }
+  }
+
   class CompilerOptions {
+    var target CompilerTarget = .NONE
     var outputFile = ""
     var outputDirectory = ""
     var foldAllConstants = false
@@ -9,9 +20,11 @@ namespace skew {
     var cache = TypeCache.new
     var global = ObjectSymbol.new(.OBJECT_GLOBAL, "<global>")
     var outputs List<Source> = null
+    var totalTime = 0.0
   }
 
   def compile(log Log, options CompilerOptions, sources List<Source>) CompilerResult {
+    var start = timestampInSeconds
     var debug = false
     var result = CompilerResult.new
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
@@ -34,43 +47,52 @@ namespace skew {
         }
 
         # Prepare for emission, code is error-free at this point
-        if !log.hasErrors {
-          var graph = CallGraph.new(result.global)
+        if !log.hasErrors && options.target != .NONE {
+          if !options.target.isTree {
+            var graph = CallGraph.new(result.global)
 
-          # Make certain functions global
-          globalizingPass(result.global, graph)
-          if debug {
-            verifyHierarchy(result.global)
-          }
-
-          # Move symbols around
-          motionPass(result.global, graph)
-          if debug {
-            verifyHierarchy(result.global)
-          }
-
-          # Give overloaded functions unique names, rename operator overloads
-          renamingPass(result.global)
-          if debug {
-            verifyHierarchy(result.global)
-          }
-
-          # Compile-time partial evaluation
-          if options.foldAllConstants {
-            foldingPass(result.global, result.cache)
+            # Make certain functions global
+            globalizingPass(result.global, graph)
             if debug {
               verifyHierarchy(result.global)
+            }
+
+            # Move symbols around
+            motionPass(result.global, graph)
+            if debug {
+              verifyHierarchy(result.global)
+            }
+
+            # Give overloaded functions unique names, rename operator overloads
+            renamingPass(result.global)
+            if debug {
+              verifyHierarchy(result.global)
+            }
+
+            # Compile-time partial evaluation
+            if options.foldAllConstants {
+              foldingPass(result.global, result.cache)
+              if debug {
+                verifyHierarchy(result.global)
+              }
             }
           }
 
           # Emit in the target language
-          var emitter = JsEmitter.new(result.cache, options)
-          emitter.visit(result.global)
-          result.outputs = emitter.sources
+          var emitter Emitter = null
+          switch options.target {
+            case .JAVASCRIPT { emitter = JsEmitter.new(options, result.cache) }
+            case .LISP_TREE { emitter = LispTreeEmitter.new(options) }
+          }
+          if emitter != null {
+            emitter.visit(result.global)
+            result.outputs = emitter.sources
+          }
         }
       }
     }
 
+    result.totalTime = timestampInSeconds - start
     return result
   }
 

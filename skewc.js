@@ -8,6 +8,10 @@
     return left ^ right - 1640531527 + (left << 6) + (left >> 2);
   }
 
+  function timestampInSeconds() {
+    return (typeof(performance) !== "undefined" && performance.now ? performance.now() : Date.now()) / 1000;
+  }
+
   function assert(truth) {
     if (!truth) {
       throw Error("Assertion failed");
@@ -307,6 +311,7 @@
   };
 
   skew.compile = function(log, options, sources) {
+    var start = timestampInSeconds();
     var debug = false;
     var result = new skew.CompilerResult();
     in_List.prepend1(sources, new skew.Source("<native>", NATIVE_LIBRARY));
@@ -331,47 +336,65 @@
         }
 
         // Prepare for emission, code is error-free at this point
-        if (!log.hasErrors()) {
-          var graph = new skew.CallGraph(result.global);
+        if (!log.hasErrors() && options.target !== skew.CompilerTarget.NONE) {
+          if (!skew.CompilerTarget.isTree(options.target)) {
+            var graph = new skew.CallGraph(result.global);
 
-          // Make certain functions global
-          skew.globalizingPass(result.global, graph);
-
-          if (debug) {
-            skew.verifyHierarchy1(result.global);
-          }
-
-          // Move symbols around
-          skew.motionPass(result.global, graph);
-
-          if (debug) {
-            skew.verifyHierarchy1(result.global);
-          }
-
-          // Give overloaded functions unique names, rename operator overloads
-          skew.renamingPass(result.global);
-
-          if (debug) {
-            skew.verifyHierarchy1(result.global);
-          }
-
-          // Compile-time partial evaluation
-          if (options.foldAllConstants) {
-            skew.foldingPass(result.global, result.cache);
+            // Make certain functions global
+            skew.globalizingPass(result.global, graph);
 
             if (debug) {
               skew.verifyHierarchy1(result.global);
             }
+
+            // Move symbols around
+            skew.motionPass(result.global, graph);
+
+            if (debug) {
+              skew.verifyHierarchy1(result.global);
+            }
+
+            // Give overloaded functions unique names, rename operator overloads
+            skew.renamingPass(result.global);
+
+            if (debug) {
+              skew.verifyHierarchy1(result.global);
+            }
+
+            // Compile-time partial evaluation
+            if (options.foldAllConstants) {
+              skew.foldingPass(result.global, result.cache);
+
+              if (debug) {
+                skew.verifyHierarchy1(result.global);
+              }
+            }
           }
 
           // Emit in the target language
-          var emitter = new skew.JsEmitter(result.cache, options);
-          emitter.visit(result.global);
-          result.outputs = emitter.sources();
+          var emitter = null;
+
+          switch (options.target) {
+            case skew.CompilerTarget.JAVASCRIPT: {
+              emitter = new skew.JsEmitter(options, result.cache);
+              break;
+            }
+
+            case skew.CompilerTarget.LISP_TREE: {
+              emitter = new skew.LispTreeEmitter(options);
+              break;
+            }
+          }
+
+          if (emitter !== null) {
+            emitter.visit(result.global);
+            result.outputs = emitter.sources();
+          }
         }
       }
     }
 
+    result.totalTime = timestampInSeconds() - start;
     return result;
   };
 
@@ -509,6 +532,7 @@
 
     // Run the compilation
     if (!log.hasErrors() && options !== null) {
+      options.target = skew.CompilerTarget.JAVASCRIPT;
       var result = skew.compile(log, options, inputs);
 
       // Write all outputs
@@ -702,9 +726,8 @@
     return options;
   };
 
-  skew.Emitter = function(cache) {
+  skew.Emitter = function() {
     var self = this;
-    self.cache = cache;
     self.indent = "";
     self._sources = [];
     self._code = "";
@@ -842,10 +865,11 @@
     return ((self) | 0) + (((associativity === skew.Associativity.RIGHT)) | 0);
   };
 
-  skew.JsEmitter = function(cache, options) {
+  skew.JsEmitter = function(options, cache) {
     var self = this;
-    skew.Emitter.call(self, cache);
+    skew.Emitter.call(self);
     self.options = options;
+    self.cache = cache;
     self.previousSymbol = null;
     self.previousNode = null;
     self.prefix = "";
@@ -1684,6 +1708,155 @@
   skew.JsEmitter.computePrefix = function(symbol) {
     assert(skew.SymbolKind.isObject(symbol.kind));
     return symbol.kind === skew.SymbolKind.OBJECT_GLOBAL ? "" : skew.JsEmitter.computePrefix(symbol.parent.asObjectSymbol()) + skew.JsEmitter.mangleName(symbol) + ".";
+  };
+
+  // These dump() functions are helpful for debugging syntax trees
+  skew.LispTreeEmitter = function(options) {
+    var self = this;
+    skew.Emitter.call(self);
+    self.options = options;
+  };
+
+  $extends(skew.LispTreeEmitter, skew.Emitter);
+
+  skew.LispTreeEmitter.prototype.visit = function(global) {
+    var self = this;
+    self.visitObject(global);
+    self.emit("\n");
+    self.createSource(self.options.outputDirectory !== "" ? self.options.outputDirectory + "/compiled.lisp" : self.options.outputFile);
+  };
+
+  skew.LispTreeEmitter.prototype.visitObject = function(symbol) {
+    var self = this;
+    self.emit("(" + self.mangleKind(skew.SymbolKind[symbol.kind]) + " " + skew.quoteString(symbol.name, 34));
+    self.increaseIndent();
+
+    for (var i = 0, list = symbol.objects, count = in_List.count(list); i < count; ++i) {
+      var object = list[i];
+      self.emit("\n" + self.indent);
+      self.visitObject(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.functions, count1 = in_List.count(list1); i1 < count1; ++i1) {
+      var $function = list1[i1];
+      self.emit("\n" + self.indent);
+      self.visitFunction($function);
+    }
+
+    for (var i2 = 0, list2 = symbol.variables, count2 = in_List.count(list2); i2 < count2; ++i2) {
+      var variable = list2[i2];
+      self.emit("\n" + self.indent);
+      self.visitVariable(variable);
+    }
+
+    self.decreaseIndent();
+    self.emit(")");
+  };
+
+  skew.LispTreeEmitter.prototype.visitFunction = function(symbol) {
+    var self = this;
+    self.emit("(" + self.mangleKind(skew.SymbolKind[symbol.kind]) + " " + skew.quoteString(symbol.name, 34));
+    self.increaseIndent();
+
+    for (var i = 0, list = symbol.$arguments, count = in_List.count(list); i < count; ++i) {
+      var argument = list[i];
+      self.emit("\n" + self.indent);
+      self.visitVariable(argument);
+    }
+
+    self.emit("\n" + self.indent);
+    self.visitNode(symbol.returnType);
+    self.emit("\n" + self.indent);
+    self.visitNode(symbol.block);
+    self.decreaseIndent();
+    self.emit(")");
+  };
+
+  skew.LispTreeEmitter.prototype.visitVariable = function(symbol) {
+    var self = this;
+    self.emit("(" + self.mangleKind(skew.SymbolKind[symbol.kind]) + " " + skew.quoteString(symbol.name, 34) + " ");
+    self.visitNode(symbol.type);
+    self.emit(" ");
+    self.visitNode(symbol.value);
+    self.emit(")");
+  };
+
+  skew.LispTreeEmitter.prototype.visitNode = function(node) {
+    var self = this;
+    if (node === null) {
+      self.emit("nil");
+      return;
+    }
+
+    self.emit("(" + self.mangleKind(skew.NodeKind[node.kind]));
+    var content = node.content;
+
+    if (content !== null) {
+      switch (content.kind()) {
+        case skew.ContentKind.INT: {
+          self.emit(" " + content.asInt().toString());
+          break;
+        }
+
+        case skew.ContentKind.BOOL: {
+          self.emit(" " + content.asBool().toString());
+          break;
+        }
+
+        case skew.ContentKind.DOUBLE: {
+          self.emit(" " + content.asDouble().toString());
+          break;
+        }
+
+        case skew.ContentKind.STRING: {
+          self.emit(" " + skew.quoteString(content.asString(), 34));
+          break;
+        }
+      }
+    }
+
+    if (node.kind === skew.NodeKind.VAR) {
+      self.emit(" ");
+      self.visitVariable(node.symbol.asVariableSymbol());
+    }
+
+    if (node.kind === skew.NodeKind.LAMBDA) {
+      self.emit(" ");
+      self.visitFunction(node.symbol.asFunctionSymbol());
+    }
+
+    if (node.children !== null) {
+      self.increaseIndent();
+
+      for (var i = 0, list = node.children, count = in_List.count(list); i < count; ++i) {
+        var child = list[i];
+        self.emit("\n" + self.indent);
+        self.visitNode(child);
+      }
+
+      self.decreaseIndent();
+    }
+
+    self.emit(")");
+  };
+
+  skew.LispTreeEmitter.prototype.mangleKind = function(kind) {
+    var self = this;
+    return in_string.replaceAll(kind.toLowerCase(), "_", "-");
+  };
+
+  skew.LispTreeEmitter.dump1 = function(global) {
+    var emitter = new skew.LispTreeEmitter(new skew.CompilerOptions());
+    emitter.visit(global);
+    emitter.createSource("");
+    return in_List.first(emitter.sources()).contents;
+  };
+
+  skew.LispTreeEmitter.dump2 = function(node) {
+    var emitter = new skew.LispTreeEmitter(new skew.CompilerOptions());
+    emitter.visitNode(node);
+    emitter.createSource("");
+    return in_List.first(emitter.sources()).contents;
   };
 
   skew.ContentKind = {
@@ -3976,7 +4149,7 @@
       // Change "@foo.bar.baz" into "foo.bar.@baz"
       if (context.peek(skew.TokenKind.DOT)) {
         var root = value.asString();
-        value.content = new skew.StringContent(root.slice(1, in_string.count(root)));
+        value.content = new skew.StringContent(root.slice(1));
 
         while (context.eat(skew.TokenKind.DOT)) {
           var name = context.current().range;
@@ -5828,8 +6001,19 @@
     }
   };
 
+  skew.CompilerTarget = {
+    NONE: 0, 0: "NONE",
+    JAVASCRIPT: 1, 1: "JAVASCRIPT",
+    LISP_TREE: 2, 2: "LISP_TREE"
+  };
+
+  skew.CompilerTarget.isTree = function(self) {
+    return self === skew.CompilerTarget.LISP_TREE;
+  };
+
   skew.CompilerOptions = function() {
     var self = this;
+    self.target = skew.CompilerTarget.NONE;
     self.outputFile = "";
     self.outputDirectory = "";
     self.foldAllConstants = false;
@@ -5840,6 +6024,7 @@
     self.cache = new skew.TypeCache();
     self.global = new skew.ObjectSymbol(skew.SymbolKind.OBJECT_GLOBAL, "<global>");
     self.outputs = null;
+    self.totalTime = 0;
   };
 
   skew.folding = {};
@@ -7031,7 +7216,11 @@
           $function.name = scope.generateName(skew.renaming.prefixes[$function.name]);
         }
 
-        else if (skew.renaming.isInvalidIdentifier($function)) {
+        else if ($function.name !== "" && in_string.get1($function.name, 0) === 64) {
+          $function.name = scope.generateName($function.name.slice(1));
+        }
+
+        else if (skew.renaming.isInvalidIdentifier($function.name)) {
           $function.name = scope.generateName("_");
         }
 
@@ -7071,9 +7260,9 @@
     return c >= 48 && c <= 57;
   };
 
-  skew.renaming.isInvalidIdentifier = function(symbol) {
-    for (var i = 0, count = in_string.count(symbol.name); i < count; i += 1) {
-      var c = in_string.get1(symbol.name, i);
+  skew.renaming.isInvalidIdentifier = function(name) {
+    for (var i = 0, count = in_string.count(name); i < count; i += 1) {
+      var c = in_string.get1(name, i);
 
       if (!skew.renaming.isAlpha(c) && (i === 0 || !skew.renaming.isNumber(c))) {
         return true;
@@ -10727,7 +10916,7 @@
       }
 
       // Validate the flag data
-      var text = argument1.slice(separator + 1, in_string.count(argument1));
+      var text = argument1.slice(separator + 1);
       var separatorRange = separator < 0 ? null : range.slice(separator, separator + 1);
       var textRange = range.fromEnd(in_string.count(text));
 
@@ -11425,7 +11614,7 @@
     return values;
   };
 
-  var NATIVE_LIBRARY = "\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def get(x int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  def endsWith(x string) bool\n  def in(x string) bool\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  def startsWith(x string) bool\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import\nclass StringBuilder {\n  def append(x string)\n  def new\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  def first T\n  def in(x T) bool\n  def indexOf(x T) int\n  def insert(x int, value T)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  def last T\n  def lastIndexOf(x T) int\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  def reverse\n  def shuffle\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def +(x T) List<T>\n  def +(x List<T>) List<T>\n\n  @prefer\n  def +=(x T)\n  def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\nclass Box<T> {\n  var value T\n}\n";
+  var NATIVE_LIBRARY = "\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  def endsWith(x string) bool\n  def get(x int) string\n  def in(x string) bool\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  def startsWith(x string) bool\n  def toLowerCase string\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import\nclass StringBuilder {\n  def append(x string)\n  def new\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  def first T\n  def in(x T) bool\n  def indexOf(x T) int\n  def insert(x int, value T)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  def last T\n  def lastIndexOf(x T) int\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def +(x T) List<T>\n  def +(x List<T>) List<T>\n\n  @prefer\n  def +=(x T)\n  def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\nclass Box<T> {\n  var value T\n}\n";
   skew.HEX = "0123456789ABCDEF";
   skew.operatorInfo = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), ((skew.NodeKind.COMPLEMENT) | 0), new skew.OperatorInfo("~", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.DECREMENT) | 0), new skew.OperatorInfo("--", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.INCREMENT) | 0), new skew.OperatorInfo("++", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.NEGATIVE) | 0), new skew.OperatorInfo("-", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.NOT) | 0), new skew.OperatorInfo("!", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.POSITIVE) | 0), new skew.OperatorInfo("+", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.ADD) | 0), new skew.OperatorInfo("+", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.BITWISE_AND) | 0), new skew.OperatorInfo("&", skew.Precedence.BITWISE_AND, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.BITWISE_OR) | 0), new skew.OperatorInfo("|", skew.Precedence.BITWISE_OR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.BITWISE_XOR) | 0), new skew.OperatorInfo("^", skew.Precedence.BITWISE_XOR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.COMPARE) | 0), new skew.OperatorInfo("<=>", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.DIVIDE) | 0), new skew.OperatorInfo("/", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.EQUAL) | 0), new skew.OperatorInfo("==", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.GREATER_THAN) | 0), new skew.OperatorInfo(">", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.GREATER_THAN_OR_EQUAL) | 0), new skew.OperatorInfo(">=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.IN) | 0), new skew.OperatorInfo("in", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LESS_THAN) | 0), new skew.OperatorInfo("<", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LESS_THAN_OR_EQUAL) | 0), new skew.OperatorInfo("<=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LOGICAL_AND) | 0), new skew.OperatorInfo("&&", skew.Precedence.LOGICAL_AND, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.LOGICAL_OR) | 0), new skew.OperatorInfo("||", skew.Precedence.LOGICAL_OR, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.MULTIPLY) | 0), new skew.OperatorInfo("*", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.NOT_EQUAL) | 0), new skew.OperatorInfo("!=", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.POWER) | 0), new skew.OperatorInfo("**", skew.Precedence.UNARY_PREFIX, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.REMAINDER) | 0), new skew.OperatorInfo("%", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SHIFT_LEFT) | 0), new skew.OperatorInfo("<<", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SHIFT_RIGHT) | 0), new skew.OperatorInfo(">>", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SUBTRACT) | 0), new skew.OperatorInfo("-", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.ASSIGN) | 0), new skew.OperatorInfo("=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_ADD) | 0), new skew.OperatorInfo("+=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_AND) | 0), new skew.OperatorInfo("&=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_OR) | 0), new skew.OperatorInfo("|=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_XOR) | 0), new skew.OperatorInfo("^=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_DIVIDE) | 0), new skew.OperatorInfo("/=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_MULTIPLY) | 0), new skew.OperatorInfo("*=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_POWER) | 0), new skew.OperatorInfo("**=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_REMAINDER) | 0), new skew.OperatorInfo("%=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SHIFT_LEFT) | 0), new skew.OperatorInfo("<<=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SHIFT_RIGHT) | 0), new skew.OperatorInfo(">>=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SUBTRACT) | 0), new skew.OperatorInfo("-=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_INDEX) | 0), new skew.OperatorInfo("[]=", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.TWO_OR_MORE)), ((skew.NodeKind.INDEX) | 0), new skew.OperatorInfo("[]", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE_OR_MORE));
   skew.argumentCounts = null;

@@ -109,20 +109,23 @@ class string {
   def +=(x string)
   def <=>(x string) int
   def [](x int) int
-  def get(x int) string
   def codePoints List<int>
   def codeUnits List<int>
   def count int
   def endsWith(x string) bool
+  def get(x int) string
   def in(x string) bool
   def indexOf(x string) int
   def join(x List<string>) string
   def lastIndexOf(x string) int
   def repeat(x int) string
   def replaceAll(before string, after string) string
+  def slice(start int) string
   def slice(start int, end int) string
   def split(x string) List<string>
   def startsWith(x string) bool
+  def toLowerCase string
+  def toUpperCase string
 }
 
 namespace string {
@@ -171,6 +174,7 @@ class List<T> {
   def resize(size int, defaultValue T)
   def reverse
   def shuffle
+  def slice(start int) List<T>
   def slice(start int, end int) List<T>
   def sort(x fn(T, T) int)
   def swap(x int, y int)

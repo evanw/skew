@@ -1,6 +1,7 @@
 namespace skew {
   class JsEmitter : Emitter {
     const options CompilerOptions
+    const cache TypeCache
 
     over visit(global ObjectSymbol) {
       var objects = sortedObjects(global)
