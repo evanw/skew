@@ -212,7 +212,7 @@ namespace skew {
           return
         }
 
-        if symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "") {
+        if symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "" || symbol.kind == .VARIABLE_LOCAL) {
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol.comments)
           emit(indent + (prefix == "" && !symbol.isExported || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + mangleName(symbol))
@@ -693,8 +693,6 @@ namespace skew {
         switch kind {
           case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinaryArithmetic(node) }
           case .CAST { patchCast(node) }
-          case .LAMBDA { patchTree(node.symbol.asFunctionSymbol.block) }
-          case .VAR { patchTree(node.symbol.asVariableSymbol.value) }
         }
       }
 

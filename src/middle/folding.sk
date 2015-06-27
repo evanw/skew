@@ -83,7 +83,6 @@ namespace skew.folding {
         case .CALL { foldCall(node) }
         case .CAST { foldCast(node) }
         case .HOOK { foldHook(node) }
-        case .LAMBDA { foldLambda(node) }
         case .NAME { foldName(node) }
         default {
           if kind.isUnary { foldUnary(node) }
@@ -260,22 +259,15 @@ namespace skew.folding {
       return 0
     }
 
-    def foldLambda(node Node) {
-      foldConstants(node.symbol.asFunctionSymbol.block)
-    }
-
     def foldVar(node Node) int {
       var symbol = node.symbol.asVariableSymbol
-      var value = symbol.value
-      if value != null {
-        foldConstants(value)
 
-        # Remove this symbol entirely if it's being inlined everywhere
-        if symbol.isConst && symbol.cachedConstantValue != null {
-          node.remove
-          return -1
-        }
+      # Remove this symbol entirely if it's being inlined everywhere
+      if symbol.isConst && symbol.cachedConstantValue != null {
+        node.remove
+        return -1
       }
+
       return 0
     }
 
@@ -328,7 +320,9 @@ namespace skew.folding {
 
     def foldName(node Node) {
       var symbol = node.symbol
-      if symbol != null && symbol.isConst {
+
+      # Don't fold loop variables since they aren't actually constant across loop iterations
+      if symbol != null && symbol.isConst && !symbol.isLoopVariable {
         var content = symbol.asVariableSymbol.cachedConstantValue
         if content != null {
           flatten(node, content)

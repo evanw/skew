@@ -20,6 +20,7 @@ namespace skew {
     var outputFile = ""
     var outputDirectory = ""
     var foldAllConstants = false
+    var inlineAllFunctions = false
     var enumFormat EnumFormat = .INT
   }
 
@@ -32,7 +33,7 @@ namespace skew {
 
   def compile(log Log, options CompilerOptions, sources List<Source>) CompilerResult {
     var start = timestampInSeconds
-    var debug = false
+    var debug = true
     var result = CompilerResult.new
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
 
@@ -76,11 +77,27 @@ namespace skew {
               verifyHierarchy(result.global)
             }
 
-            # Compile-time partial evaluation
+            # Partial evaluation before inlining to make more functions inlineable by removing dead code
             if options.foldAllConstants {
               foldingPass(result.global, result.cache)
               if debug {
                 verifyHierarchy(result.global)
+              }
+            }
+
+            # Function inlining
+            if options.inlineAllFunctions {
+              inliningPass(graph)
+              if debug {
+                verifyHierarchy(result.global)
+              }
+
+              # Partial evaluation after inlining will simplify inlined expressions
+              if options.foldAllConstants {
+                foldingPass(result.global, result.cache)
+                if debug {
+                  verifyHierarchy(result.global)
+                }
               }
             }
           }
@@ -124,14 +141,6 @@ namespace skew {
         for child in node.children {
           verifyHierarchy(child, node)
         }
-      }
-
-      if node.kind == .VAR {
-        verifyHierarchy(node.symbol.asVariableSymbol.value, null)
-      }
-
-      if node.kind == .LAMBDA {
-        verifyHierarchy(node.symbol.asFunctionSymbol.block, null)
       }
     }
   }

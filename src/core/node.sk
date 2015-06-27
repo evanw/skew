@@ -167,6 +167,7 @@ namespace skew {
     }
 
     def clone Node {
+      assert(kind != .LAMBDA) # Lambda symbols reference their block, which will not get cloned
       var clone = new(kind)
       clone.flags = flags
       clone.range = range
@@ -175,7 +176,13 @@ namespace skew {
       clone.content = content
       clone.resolvedType = resolvedType
       clone.comments = comments != null ? comments.clone : null
-      clone.children = children != null ? children.map<Node>(child => child.clone) : null
+      if children != null {
+        var clones List<Node> = []
+        for child in children {
+          clones.append(child.clone)
+        }
+        clone.withChildren(clones)
+      }
       return clone
     }
 
@@ -551,8 +558,9 @@ namespace skew {
       return Node.new(.TRY).withChildren(catches)
     }
 
+    # This adds the initializer expression to the tree for ease of traversal
     def createVar(symbol VariableSymbol) Node {
-      return Node.new(.VAR).withSymbol(symbol)
+      return Node.new(.VAR).withChildren([symbol.value]).withSymbol(symbol)
     }
 
     def createWhile(test Node, block Node) Node {
@@ -625,8 +633,9 @@ namespace skew {
       return Node.new(kind).withChildren(values)
     }
 
+    # This adds the block to the tree for ease of traversal
     def createLambda(symbol FunctionSymbol) Node {
-      return Node.new(.LAMBDA).withSymbol(symbol)
+      return Node.new(.LAMBDA).withChildren([symbol.block]).withSymbol(symbol)
     }
 
     def createName(text string) Node {

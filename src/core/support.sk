@@ -241,8 +241,16 @@ class List {
     }
   }
 
+  def removeFirst {
+    (self as dynamic).shift()
+  }
+
   def removeLast {
     (self as dynamic).pop()
+  }
+
+  def takeFirst T {
+    return (self as dynamic).shift()
   }
 
   def takeLast T {

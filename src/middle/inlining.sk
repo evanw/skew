@@ -1,0 +1,304 @@
+namespace skew {
+  def inliningPass(callGraph CallGraph) {
+    var graph = inlining.InliningGraph.new(callGraph)
+    for info in graph.inliningInfo {
+      inlining.inlineSymbol(graph, info)
+    }
+  }
+}
+
+namespace skew.inlining {
+  def inlineSymbol(graph InliningGraph, info InliningInfo) {
+    if !info.shouldInline {
+      return
+    }
+
+    # Inlining nested functions first is more efficient because it results in
+    # fewer inlining operations. This won't enter an infinite loop because
+    # inlining for all such functions has already been disabled.
+    for bodyCall in info.bodyCalls {
+      inlineSymbol(graph, bodyCall)
+    }
+
+    for i in 0..info.callSites.count {
+      var callSite = info.callSites[i]
+      if callSite != null {
+        var node = callSite.callNode
+        assert(node.children.count == info.symbol.arguments.count + 1)
+
+        # Make sure each call site is inlined once by setting the call site to
+        # null. The call site isn't removed from the list since we don't want
+        # to mess up the indices of another call to inlineSymbol further up
+        # the call stack.
+        info.callSites[i] = null
+
+        # If there are unused arguments, drop those expressions entirely if
+        # they don't have side effects:
+        #
+        #   def bar(a int, b int) int {
+        #     return a
+        #   }
+        #
+        #   def test int {
+        #     return bar(0, foo(0)) + bar(1, 2)
+        #   }
+        #
+        # This should compile to:
+        #
+        #   def test int {
+        #     return bar(0, foo(0)) + 2
+        #   }
+        #
+        if !info.unusedArguments.isEmpty {
+          var hasSideEffects = false
+          for index in info.unusedArguments {
+            if !node.children[index + 1].hasNoSideEffects {
+              hasSideEffects = true
+              break
+            }
+          }
+          if hasSideEffects {
+            continue
+          }
+        }
+
+        var clone = info.inlineValue.clone.withType(node.resolvedType)
+        var values = node.removeChildren
+        var value = values.takeFirst
+        assert(value.kind == .NAME && value.symbol == info.symbol)
+        node.become(clone)
+        recursivelySubstituteArguments(node, info.symbol.arguments, values)
+
+        # Remove the inlined result entirely if appropriate
+        var parent = node.parent
+        if parent != null && parent.kind == .EXPRESSION && node.hasNoSideEffects {
+          parent.remove
+        }
+      }
+    }
+  }
+
+  def recursivelyInlineFunctionCalls(graph InliningGraph, node Node) {
+    # Recursively inline child nodes first
+    var children = node.children
+    if children != null {
+      for child in children {
+        if child != null {
+          recursivelyInlineFunctionCalls(graph, child)
+        }
+      }
+    }
+
+    # Inline calls after all children have been processed
+    if node.kind == .CALL {
+      var symbol = node.callValue.symbol
+      if symbol != null {
+        var index = graph.symbolToInfoIndex.get(symbol.id, -1)
+        if index != -1 {
+          inlineSymbol(graph, graph.inliningInfo[index])
+        }
+      }
+    }
+  }
+
+  def recursivelySubstituteArguments(node Node, arguments List<VariableSymbol>, values List<Node>) {
+    # Substitute the argument if this is an argument name
+    var symbol = node.symbol
+    if symbol != null && symbol.kind.isVariable {
+      var index = arguments.indexOf(symbol.asVariableSymbol)
+      if index != -1 {
+        node.replaceWith(values[index])
+        return
+      }
+    }
+
+    # Otherwise, recursively search for substitutions in all child nodes
+    var children = node.children
+    if children != null {
+      for child in children {
+        if child != null {
+          recursivelySubstituteArguments(child, arguments, values)
+        }
+      }
+    }
+  }
+
+  class InliningInfo {
+    var symbol FunctionSymbol
+    var inlineValue Node
+    var callSites List<CallSite>
+    var unusedArguments List<int>
+    var shouldInline = true
+    var bodyCalls List<InliningInfo> = []
+  }
+
+  # Each node in the inlining graph is a symbol of an inlineable function and
+  # each directional edge is from a first function to a second function that is
+  # called directly within the body of the first function. Indirect function
+  # calls that may become direct calls through inlining can be discovered by
+  # traversing edges of this graph.
+  class InliningGraph {
+    var inliningInfo List<InliningInfo> = []
+    var symbolToInfoIndex IntMap<int> = {}
+
+    def new(graph CallGraph) {
+      # Create the nodes in the graph
+      for callInfo in graph.callInfo {
+        var info = createInliningInfo(callInfo)
+        if info != null {
+          symbolToInfoIndex[info.symbol.id] = inliningInfo.count
+          inliningInfo.append(info)
+        }
+      }
+
+      # Create the edges in the graph
+      for info in inliningInfo {
+        for callSite in graph.callInfo[graph.symbolToInfoIndex[info.symbol.id]].callSites {
+          var function = callSite.enclosingFunction
+          if function != null && function.kind == .FUNCTION_GLOBAL {
+            var index = symbolToInfoIndex.get(function.id, -1)
+            if index != -1 {
+              inliningInfo[index].bodyCalls.append(info)
+            }
+          }
+        }
+      }
+
+      # Detect and disable infinitely expanding inline operations
+      for info in inliningInfo {
+        info.shouldInline = !containsInfiniteExpansion(info, [])
+      }
+    }
+  }
+
+  namespace InliningGraph {
+    @private {
+      def containsInfiniteExpansion(info InliningInfo, symbols List<Symbol>) bool {
+        # This shouldn't get very long in normal programs so O(n) here is fine
+        if info.symbol in symbols {
+          return true
+        }
+
+        # Do a depth-first search on the graph and check for cycles
+        symbols.append(info.symbol)
+        for bodyCall in info.bodyCalls {
+          if containsInfiniteExpansion(bodyCall, symbols) {
+            return true
+          }
+        }
+        symbols.removeLast
+        return false
+      }
+
+      def createInliningInfo(info CallInfo) InliningInfo {
+        var symbol = info.symbol
+
+        # Inline functions consisting of a single return statement
+        if symbol.kind == .FUNCTION_GLOBAL {
+          var block = symbol.block
+          if block == null {
+            return null
+          }
+
+          # Replace functions with empty bodies with null
+          if !block.hasChildren {
+            var unusedArguments List<int> = []
+            for i in 0..symbol.arguments.count {
+              unusedArguments.append(i)
+            }
+            return InliningInfo.new(symbol, Node.createNull, info.callSites, unusedArguments)
+          }
+
+          var first = block.children.first
+          var inlineValue Node = null
+
+          # If the first value in the function is a return statement, then the
+          # function body doesn't need to only have one statement. Subsequent
+          # statements are just dead code and will never be executed anyway.
+          if first.kind == .RETURN {
+            inlineValue = first.returnValue
+          }
+
+          # Otherwise, this statement must be a lone expression statement
+          else if first.kind == .EXPRESSION && block.children.count == 1 {
+            inlineValue = first.expressionValue
+          }
+
+          if inlineValue != null {
+            # Count the number of times each symbol is observed. Argument
+            # variables that are used more than once may need a let statement
+            # to avoid changing the semantics of the call site. For now, just
+            # only inline functions where each argument is used exactly once.
+            var argumentCounts IntMap<int> = {}
+            for argument in symbol.arguments {
+              argumentCounts[argument.id] = 0
+            }
+            if recursivelyCountArgumentUses(inlineValue, argumentCounts) {
+              var unusedArguments List<int> = []
+              var isSimpleSubstitution = true
+              for i in 0..symbol.arguments.count {
+                var count = argumentCounts[symbol.arguments[i].id]
+                if count == 0 {
+                  unusedArguments.append(i)
+                } else if count != 1 {
+                  isSimpleSubstitution = false
+                  break
+                }
+              }
+              if isSimpleSubstitution {
+                return InliningInfo.new(symbol, inlineValue, info.callSites, unusedArguments)
+              }
+            }
+          }
+        }
+
+        return null
+      }
+
+      # This returns false if inlining is impossible
+      def recursivelyCountArgumentUses(node Node, argumentCounts IntMap<int>) bool {
+        # Prevent inlining of lambda expressions. They have their own function
+        # symbols that reference the original block and won't work with cloning.
+        # Plus inlining lambdas leads to code bloat.
+        if node.kind == .LAMBDA {
+          return false
+        }
+
+        # Inlining is impossible at this node if it's impossible for any child node
+        var children = node.children
+        if children != null {
+          for child in children {
+            if child != null && !recursivelyCountArgumentUses(child, argumentCounts) {
+              return false
+            }
+          }
+        }
+
+        var symbol = node.symbol
+        if symbol != null {
+          var count = argumentCounts.get(symbol.id, -1)
+          if count != -1 {
+            argumentCounts[symbol.id] = count + 1
+
+            # Prevent inlining of functions that modify their arguments locally. For
+            # example, inlining this would lead to incorrect code:
+            #
+            #   def foo(x int, y int) {
+            #     x += y
+            #   }
+            #
+            #   def test {
+            #     foo(1, 2)
+            #   }
+            #
+            if node.isAssignTarget {
+              return false
+            }
+          }
+        }
+
+        return true
+      }
+    }
+  }
+}

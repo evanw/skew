@@ -1,8 +1,12 @@
 namespace skew {
+  class CallSite {
+    const callNode Node
+    const enclosingFunction FunctionSymbol
+  }
+
   class CallInfo {
-    const symbol Symbol
-    const callSites List<Node> = []
-    var callContexts List<VariableSymbol> = null # If "callSites[i]" is a super call, "self" will be in "callContexts[i]"
+    const symbol FunctionSymbol
+    const callSites List<CallSite> = []
   }
 
   class CallGraph {
@@ -21,7 +25,7 @@ namespace skew {
 
         for function in symbol.functions {
           recordCallSite(function, null, null)
-          visitNode(function.block, function.self)
+          visitNode(function.block, function)
         }
 
         for variable in symbol.variables {
@@ -29,7 +33,7 @@ namespace skew {
         }
       }
 
-      def visitNode(node Node, context VariableSymbol) {
+      def visitNode(node Node, context FunctionSymbol) {
         if node != null {
           if node.children != null {
             for child in node.children {
@@ -39,20 +43,12 @@ namespace skew {
 
           if node.kind == .CALL && node.symbol != null {
             assert(node.symbol.kind.isFunction)
-            recordCallSite(node.symbol, node, context)
-          }
-
-          else if node.kind == .VAR {
-            visitNode(node.symbol.asVariableSymbol.value, context)
-          }
-
-          else if node.kind == .LAMBDA {
-            visitNode(node.symbol.asFunctionSymbol.block, context)
+            recordCallSite(node.symbol.asFunctionSymbol, node, context)
           }
         }
       }
 
-      def recordCallSite(symbol Symbol, node Node, context VariableSymbol) {
+      def recordCallSite(symbol FunctionSymbol, node Node, context FunctionSymbol) {
         var index = symbolToInfoIndex.get(symbol.id, -1)
         var info = index < 0 ? CallInfo.new(symbol) : callInfo[index]
         if index < 0 {
@@ -60,16 +56,7 @@ namespace skew {
           callInfo.append(info)
         }
         if node != null {
-          if context != null {
-            if info.callContexts == null {
-              info.callContexts = [] # Lazily allocate info.callContexts to avoid unnecessary allocations
-            }
-            while info.callContexts.count < info.callSites.count {
-              info.callContexts.append(null)
-            }
-            info.callContexts.append(context)
-          }
-          info.callSites.append(node)
+          info.callSites.append(CallSite.new(node, context))
         }
       }
     }

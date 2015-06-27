@@ -19,16 +19,18 @@ SOURCES_TEST += src/lib/timestamp.sk
 SOURCES_TEST += src/lib/unit.sk
 SOURCES_TEST += tests/simple.sk
 
+FLAGS += --inline-functions
+
 default: compile
 
 compile: | build
-	node skewc.js $(SOURCES_NODE) --output-file=build/node.js
-	node skewc.js $(SOURCES_BROWSER) --output-file=build/browser.js
+	node skewc.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node.js
+	node skewc.js $(SOURCES_BROWSER) $(FLAGS) --output-file=build/browser.js
 
 replace: | build
-	node skewc.js $(SOURCES_NODE) --output-file=build/node.js
-	node build/node.js $(SOURCES_NODE) --output-file=build/node2.js
-	node build/node2.js $(SOURCES_NODE) --output-file=build/node3.js
+	node skewc.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node.js
+	node build/node.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node2.js
+	node build/node2.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node3.js
 	cmp -s build/node2.js build/node3.js
 	mv build/node3.js skewc.js
 	rm build/node2.js

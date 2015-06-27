@@ -80,12 +80,12 @@ namespace skew {
           visitVariable(node.symbol.asVariableSymbol)
         }
 
-        if node.kind == .LAMBDA {
+        else if node.kind == .LAMBDA {
           emit(" ")
           visitFunction(node.symbol.asFunctionSymbol)
         }
 
-        if node.children != null {
+        else if node.children != null {
           increaseIndent
           for child in node.children {
             emit("\n" + indent)

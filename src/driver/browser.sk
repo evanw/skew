@@ -6,8 +6,9 @@ namespace skew {
   var outputLog = document.getElementById("outputLog")
   var outputTree = document.getElementById("outputTree")
   var targetArea = document.getElementById("targetArea")
-  var showSyntaxTree = false
   var constantFolding = false
+  var functionInlining = false
+  var showSyntaxTree = false
   var stringEnums = false
 
   def update {
@@ -17,6 +18,7 @@ namespace skew {
     targetArea.textContent = "JavaScript"
     options.target = .JAVASCRIPT
     if constantFolding { options.foldAllConstants = true }
+    if functionInlining { options.inlineAllFunctions = true }
     if stringEnums { options.enumFormat = .STRING }
     var result = compile(log, options, [source])
     outputLog.value = log.toString
@@ -44,6 +46,7 @@ namespace skew {
   def main {
     optionArea.appendChild(createCheckbox("Show syntax tree", false, value => showSyntaxTree = value))
     optionArea.appendChild(createCheckbox("Constant folding", false, value => constantFolding = value))
+    optionArea.appendChild(createCheckbox("Function inlining", false, value => functionInlining = value))
     optionArea.appendChild(createCheckbox("String enums", false, value => stringEnums = value))
     input.oninput = => update
     update
