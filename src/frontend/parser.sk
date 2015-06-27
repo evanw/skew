@@ -290,7 +290,7 @@ namespace skew.parsing {
       return null
     }
     checkExtraParentheses(context, value)
-    return Node.createThrow(value)
+    return Node.createThrow(value).withRange(context.spanSince(token.range))
   }
 
   def parseTry(context ParserContext) Node {

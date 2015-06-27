@@ -414,5 +414,9 @@ namespace skew {
     def semanticErrorInvalidEntryPointReturnType(range Range, name string) {
       error(range, "Entry point \"" + name + "\" must return either nothing or a value of type \"int\"")
     }
+
+    def semanticWarningUnusedLocalVariable(range Range, name string) {
+      warning(range, "Unused local variable \"" + name + "\"")
+    }
   }
 }

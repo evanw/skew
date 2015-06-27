@@ -341,6 +341,10 @@ namespace skew {
       return kind == .TYPE || kind == .LAMBDA_TYPE || (kind == .NAME || kind == .DOT || kind == .PARAMETERIZE) && symbol != null && symbol.kind.isType
     }
 
+    def isAssignTarget bool {
+      return parent != null && (parent.kind.isUnaryAssign || parent.kind.isBinaryAssign && self == parent.binaryLeft)
+    }
+
     def blockAlwaysEndsWithReturn bool {
       assert(kind == .BLOCK)
 

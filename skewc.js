@@ -2147,6 +2147,11 @@
     return self.kind === skew.NodeKind.TYPE || self.kind === skew.NodeKind.LAMBDA_TYPE || (self.kind === skew.NodeKind.NAME || self.kind === skew.NodeKind.DOT || self.kind === skew.NodeKind.PARAMETERIZE) && self.symbol !== null && skew.SymbolKind.isType(self.symbol.kind);
   };
 
+  skew.Node.prototype.isAssignTarget = function() {
+    var self = this;
+    return self.parent !== null && (skew.NodeKind.isUnaryAssign(self.parent.kind) || skew.NodeKind.isBinaryAssign(self.parent.kind) && self === self.parent.binaryLeft());
+  };
+
   skew.Node.prototype.blockAlwaysEndsWithReturn = function() {
     var self = this;
     assert(self.kind === skew.NodeKind.BLOCK);
@@ -3813,6 +3818,11 @@
     self.error(range, "Entry point \"" + name + "\" must return either nothing or a value of type \"int\"");
   };
 
+  skew.Log.prototype.semanticWarningUnusedLocalVariable = function(range, name) {
+    var self = this;
+    self.warning(range, "Unused local variable \"" + name + "\"");
+  };
+
   skew.Log.prototype.commandLineErrorMissingOutput = function(range, first, second) {
     var self = this;
     self.error(range, "Specify the output location using either \"" + first + "\" or \"" + second + "\"");
@@ -4214,7 +4224,7 @@
     }
 
     skew.parsing.checkExtraParentheses(context, value);
-    return skew.Node.createThrow(value);
+    return skew.Node.createThrow(value).withRange(context.spanSince(token.range));
   };
 
   skew.parsing.parseTry = function(context) {
@@ -7057,11 +7067,24 @@
     EXPLICIT: 1, 1: "EXPLICIT"
   };
 
+  skew.resolving.SymbolStatistic = {
+    READ: 0, 0: "READ",
+    WRITE: 1, 1: "WRITE"
+  };
+
+  skew.resolving.LocalVariableStatistics = function(symbol) {
+    var self = this;
+    self.symbol = symbol;
+    self.readCount = 0;
+    self.writeCount = 0;
+  };
+
   skew.resolving.Resolver = function(cache, log) {
     var self = this;
     self.cache = cache;
     self.log = log;
     self.foreachLoops = [];
+    self.localVariableStatistics = in_IntMap.$new();
   };
 
   skew.resolving.Resolver.prototype.initializeSymbol = function(symbol) {
@@ -7299,6 +7322,7 @@
     var self = this;
     self.resolveObject(global);
     self.convertForeachLoops();
+    self.scanLocalVariables();
   };
 
   // Foreach loops are converted to for loops after everything is resolved
@@ -7386,6 +7410,24 @@
         self.resolveNode(count1.value, symbol.scope, null);
         self.resolveNode(test1, symbol.scope, null);
         self.resolveNode(update1, symbol.scope, null);
+      }
+    }
+  };
+
+  skew.resolving.Resolver.prototype.scanLocalVariables = function() {
+    var self = this;
+    for (var i = 0, list = in_IntMap.values(self.localVariableStatistics), count = in_List.count(list); i < count; ++i) {
+      var info = list[i];
+      var symbol = info.symbol;
+
+      // Variables that are never re-assigned can safely be considered constants for constant folding
+      if (symbol.value !== null && info.writeCount === 0) {
+        symbol.flags |= skew.Symbol.IS_CONST;
+      }
+
+      // Unused local variables can safely be removed
+      if (info.readCount === 0) {
+        self.log.semanticWarningUnusedLocalVariable(symbol.range, symbol.name);
       }
     }
   };
@@ -7710,6 +7752,27 @@
 
         if (returnType !== null && returnType !== skew.Type.DYNAMIC && !block.blockAlwaysEndsWithReturn()) {
           self.log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType);
+        }
+      }
+    }
+  };
+
+  skew.resolving.Resolver.prototype.recordStatistic = function(symbol, statistic) {
+    var self = this;
+    if (symbol !== null && symbol.kind === skew.SymbolKind.VARIABLE_LOCAL) {
+      var info = in_IntMap.get(self.localVariableStatistics, symbol.id, null);
+
+      if (info !== null) {
+        switch (statistic) {
+          case skew.resolving.SymbolStatistic.READ: {
+            ++info.readCount;
+            break;
+          }
+
+          case skew.resolving.SymbolStatistic.WRITE: {
+            ++info.writeCount;
+            break;
+          }
         }
       }
     }
@@ -8462,6 +8525,7 @@
     var self = this;
     var symbol = node.symbol.asVariableSymbol();
     scope.asLocalScope().define(symbol, self.log);
+    self.localVariableStatistics[symbol.id] = new skew.resolving.LocalVariableStatistics(symbol);
     self.resolveVariable(symbol);
   };
 
@@ -8959,8 +9023,6 @@
 
   skew.resolving.Resolver.prototype.resolveInitializer = function(node, scope, context) {
     var self = this;
-    var count = in_List.count(node.children);
-
     // Make sure to resolve the children even if the initializer is invalid
     if (context !== null) {
       if (context === skew.Type.DYNAMIC || !self.resolveInitializerWithContext(node, scope, context)) {
@@ -8977,7 +9039,7 @@
           var type = null;
 
           // Resolve all children for this pass
-          for (var i = 0, list = node.children, count1 = in_List.count(list); i < count1; ++i) {
+          for (var i = 0, list = node.children, count = in_List.count(list); i < count; ++i) {
             var child = list[i];
 
             if (pass !== 0 || !skew.resolving.Resolver.needsTypeContext(child)) {
@@ -8999,7 +9061,7 @@
           var valueType = null;
 
           // Resolve all children for this pass
-          for (var i1 = 0, list1 = node.children, count2 = in_List.count(list1); i1 < count2; ++i1) {
+          for (var i1 = 0, list1 = node.children, count1 = in_List.count(list1); i1 < count1; ++i1) {
             var child1 = list1[i1];
             var key = child1.firstValue();
             var value = child1.secondValue();
@@ -9238,6 +9300,9 @@
     }
 
     self.initializeSymbol(symbol);
+
+    // Track reads and writes of local variables for later use
+    self.recordStatistic(symbol, node.isAssignTarget() ? skew.resolving.SymbolStatistic.WRITE : skew.resolving.SymbolStatistic.READ);
 
     // Forbid referencing a base class global or constructor function from a derived class
     if (enclosingFunction !== null && skew.resolving.Resolver.isBaseGlobalReference(enclosingFunction.symbol.parent, symbol)) {

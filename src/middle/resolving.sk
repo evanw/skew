@@ -13,10 +13,22 @@ namespace skew.resolving {
     EXPLICIT
   }
 
+  enum SymbolStatistic {
+    READ
+    WRITE
+  }
+
+  class LocalVariableStatistics {
+    var symbol VariableSymbol
+    var readCount = 0
+    var writeCount = 0
+  }
+
   class Resolver {
     const cache TypeCache
     const log Log
     const foreachLoops List<Node> = []
+    const localVariableStatistics IntMap<LocalVariableStatistics> = {}
 
     def initializeSymbol(symbol Symbol) {
       # The scope should have been set by the merging pass (or by this pass for local variables)
@@ -208,6 +220,7 @@ namespace skew.resolving {
     def resolveGlobal(global ObjectSymbol) {
       resolveObject(global)
       convertForeachLoops
+      scanLocalVariables
     }
 
     # Foreach loops are converted to for loops after everything is resolved
@@ -292,6 +305,22 @@ namespace skew.resolving {
           resolveNode(count.value, symbol.scope, null)
           resolveNode(test, symbol.scope, null)
           resolveNode(update, symbol.scope, null)
+        }
+      }
+    }
+
+    def scanLocalVariables {
+      for info in localVariableStatistics.values {
+        var symbol = info.symbol
+
+        # Variables that are never re-assigned can safely be considered constants for constant folding
+        if symbol.value != null && info.writeCount == 0 {
+          symbol.flags |= Symbol.IS_CONST
+        }
+
+        # Unused local variables can safely be removed
+        if info.readCount == 0 {
+          log.semanticWarningUnusedLocalVariable(symbol.range, symbol.name)
         }
       }
     }
@@ -570,6 +599,18 @@ namespace skew.resolving {
           var returnType = symbol.resolvedType.returnType
           if returnType != null && returnType != .DYNAMIC && !block.blockAlwaysEndsWithReturn {
             log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
+          }
+        }
+      }
+    }
+
+    def recordStatistic(symbol Symbol, statistic SymbolStatistic) {
+      if symbol != null && symbol.kind == .VARIABLE_LOCAL {
+        var info = localVariableStatistics.get(symbol.id, null)
+        if info != null {
+          switch statistic {
+            case .READ { info.readCount++ }
+            case .WRITE { info.writeCount++ }
           }
         }
       }
@@ -1116,6 +1157,7 @@ namespace skew.resolving {
     def resolveVar(node Node, scope Scope) {
       var symbol = node.symbol.asVariableSymbol
       scope.asLocalScope.define(symbol, log)
+      localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
       resolveVariable(symbol)
     }
 
@@ -1535,8 +1577,6 @@ namespace skew.resolving {
     }
 
     def resolveInitializer(node Node, scope Scope, context Type) {
-      var count = node.children.count
-
       # Make sure to resolve the children even if the initializer is invalid
       if context != null {
         if context == .DYNAMIC || !resolveInitializerWithContext(node, scope, context) {
@@ -1770,6 +1810,9 @@ namespace skew.resolving {
       }
 
       initializeSymbol(symbol)
+
+      # Track reads and writes of local variables for later use
+      recordStatistic(symbol, node.isAssignTarget ? .WRITE : .READ)
 
       # Forbid referencing a base class global or constructor function from a derived class
       if enclosingFunction != null && isBaseGlobalReference(enclosingFunction.symbol.parent, symbol) {
