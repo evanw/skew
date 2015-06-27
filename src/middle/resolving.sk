@@ -318,9 +318,18 @@ namespace skew.resolving {
           symbol.flags |= Symbol.IS_CONST
         }
 
-        # Unused local variables can safely be removed
-        if info.readCount == 0 {
-          log.semanticWarningUnusedLocalVariable(symbol.range, symbol.name)
+        # Unused local variables can safely be removed, but don't warn about "for i in 0..10 {}"
+        if info.readCount == 0 && !symbol.isLoopVariable {
+          log.semanticWarningUnreadLocalVariable(symbol.range, symbol.name)
+        }
+
+        # Rename local variables that conflict
+        var scope = symbol.scope
+        while scope.kind == .LOCAL {
+          scope = scope.parent
+        }
+        if scope.used != null && scope.used.get(symbol.name, null) != symbol {
+          symbol.name = scope.generateName(symbol.name)
         }
       }
     }
@@ -1066,8 +1075,9 @@ namespace skew.resolving {
       # Special-case symbol initialization with the type
       var symbol = node.symbol.asVariableSymbol
       scope.asLocalScope.define(symbol, log)
+      localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
       symbol.resolvedType = type
-      symbol.flags |= Symbol.IS_CONST
+      symbol.flags |= Symbol.IS_CONST | Symbol.IS_LOOP_VARIABLE
       symbol.state = .INITIALIZED
 
       resolveBlock(node.foreachBlock, scope)

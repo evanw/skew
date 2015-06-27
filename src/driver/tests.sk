@@ -3,7 +3,7 @@ namespace skew.tests {
     over run {
       rename(compactWhitespace(input))
       var log = Log.new
-      var global = compile(log, CompilerOptions.new, [Source.new("<stdin>", input)])
+      compile(log, CompilerOptions.new, [Source.new("<stdin>", input)])
       var output = log.toString
       expectString(trim(expected), trim(output))
     }

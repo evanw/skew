@@ -30,6 +30,18 @@ def main {
 <stdin>:14:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   var d bool = x.foo.bar.foo
                ~~~~~~~~~~~~~
+<stdin>:11:7: warning: Local variable \"a\" is never read
+  var a bool = x
+      ^
+<stdin>:12:7: warning: Local variable \"b\" is never read
+  var b bool = x.foo
+      ^
+<stdin>:13:7: warning: Local variable \"c\" is never read
+  var c bool = x.foo.bar
+      ^
+<stdin>:14:7: warning: Local variable \"d\" is never read
+  var d bool = x.foo.bar.foo
+      ^
 ")
 
 test("
@@ -91,6 +103,9 @@ def main {
 <stdin>:19:15: error: Cannot convert from type \"Foo<string>\" to type \"int\"
   var y int = x.map<string>(1.0)
               ~~~~~~~~~~~~~~~~~~
+<stdin>:19:7: warning: Local variable \"y\" is never read
+  var y int = x.map<string>(1.0)
+      ^
 ")
 
 test("
@@ -137,6 +152,15 @@ def main {
 <stdin>:10:15: error: Cannot convert from type \"fn()\" to type \"int\"
   var z int = => Foo.new.bar
               ~~~~~~~~~~~~~~
+<stdin>:8:7: warning: Local variable \"x\" is never read
+  var x int = => Foo.new
+      ^
+<stdin>:9:7: warning: Local variable \"y\" is never read
+  var y int = => Foo.new.foo
+      ^
+<stdin>:10:7: warning: Local variable \"z\" is never read
+  var z int = => Foo.new.bar
+      ^
 ")
 
 test("
@@ -201,6 +225,12 @@ def main {
 <stdin>:3:14: error: Cannot create a function with a return type of \"null\"
   var y = => null
              ~~~~
+<stdin>:2:7: warning: Local variable \"x\" is never read
+  var x = null
+      ^
+<stdin>:3:7: warning: Local variable \"y\" is never read
+  var y = => null
+      ^
 ")
 
 test("
@@ -224,6 +254,48 @@ def main {
 <stdin>:8:24: warning: Unused expression
   var g fn(int) = x => 0
                        ^
+<stdin>:2:7: warning: Local variable \"a\" is never read
+  var a = => 0
+      ^
+<stdin>:3:7: warning: Local variable \"b\" is never read
+  var b = => {}
+      ^
+<stdin>:4:7: warning: Local variable \"c\" is never read
+  var c = () => 0
+      ^
+<stdin>:5:7: warning: Local variable \"d\" is never read
+  var d = () => {}
+      ^
+<stdin>:6:7: warning: Local variable \"e\" is never read
+  var e = () int => 0
+      ^
+<stdin>:7:7: warning: Local variable \"f\" is never read
+  var f = () int => { return 0 }
+      ^
+<stdin>:8:7: warning: Local variable \"g\" is never read
+  var g fn(int) = x => 0
+      ^
+<stdin>:9:7: warning: Local variable \"h\" is never read
+  var h fn(int) = x => {}
+      ^
+<stdin>:10:7: warning: Local variable \"i\" is never read
+  var i fn(int) int = (x) => 0
+      ^
+<stdin>:11:7: warning: Local variable \"j\" is never read
+  var j fn(int) int = (x) => { return 0 }
+      ^
+<stdin>:12:7: warning: Local variable \"k\" is never read
+  var k = (x int) => 0
+      ^
+<stdin>:13:7: warning: Local variable \"l\" is never read
+  var l = (x int) => {}
+      ^
+<stdin>:14:7: warning: Local variable \"m\" is never read
+  var m = (x int) int => 0
+      ^
+<stdin>:15:7: warning: Local variable \"n\" is never read
+  var n = (x int) int => { return 0 }
+      ^
 ")
 
 test("
@@ -239,6 +311,12 @@ def main {
 <stdin>:7:23: error: Cannot convert from type \"Foo<int>\" to type \"Foo<bool>\"
   var bar Foo<bool> = Foo<int>.new
                       ~~~~~~~~~~~~
+<stdin>:6:7: warning: Local variable \"foo\" is never read
+  var foo Foo<int> = Foo<int>.new
+      ~~~
+<stdin>:7:7: warning: Local variable \"bar\" is never read
+  var bar Foo<bool> = Foo<int>.new
+      ~~~
 ")
 
 test("
@@ -357,6 +435,12 @@ class Foo {
   def bar(self int) {
           ~~~~
 <stdin>:11:11: error: \"self\" shadows a previous declaration
+      var self int
+          ~~~~
+<stdin>:3:9: warning: Local variable \"self\" is never read
+    var self int
+        ~~~~
+<stdin>:11:11: warning: Local variable \"self\" is never read
       var self int
           ~~~~
 ")
@@ -531,6 +615,9 @@ def main(foo Foo) {
 <stdin>:13:3: error: Cannot store to constant symbol \"y\"
   y = 0
   ^
+<stdin>:9:9: warning: Local variable \"y\" is never read
+  const y = 0
+        ^
 ")
 
 test("
@@ -582,7 +669,18 @@ def main(foo Foo) {
 <stdin>:25:13: error: Cannot access \"@private\" symbol \"Bar\" here
   var z Foo.Bar
             ~~~
-
+<stdin>:10:9: warning: Local variable \"y\" is never read
+    var y = => x
+        ^
+<stdin>:23:7: warning: Local variable \"x\" is never read
+  var x = => foo.x
+      ^
+<stdin>:24:7: warning: Local variable \"y\" is never read
+  var y = => foo.foo
+      ^
+<stdin>:25:7: warning: Local variable \"z\" is never read
+  var z Foo.Bar
+      ^
 ")
 
 test("
@@ -716,6 +814,9 @@ def main(x List<double>) {
 <stdin>:2:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
   var y bool = x[false]
                ~~~~~~~~
+<stdin>:2:7: warning: Local variable \"y\" is never read
+  var y bool = x[false]
+      ^
 ")
 
 test("
@@ -789,6 +890,12 @@ def main {
 <stdin>:3:29: error: Cannot convert from type \"double\" to type \"bool\" without a cast
   var bar bool = true ? 0 : 0.5
                             ~~~
+<stdin>:2:7: warning: Local variable \"foo\" is never read
+  var foo = true ? false : 0
+      ~~~
+<stdin>:3:7: warning: Local variable \"bar\" is never read
+  var bar bool = true ? 0 : 0.5
+      ~~~
 ")
 
 test("
@@ -873,6 +980,24 @@ def foo(x int) {
 <stdin>:16:3: warning: Unused expression
   [foo]
   ~~~~~
+<stdin>:2:7: warning: Local variable \"a\" is never read
+  var a int = [false]
+      ^
+<stdin>:3:7: warning: Local variable \"b\" is never read
+  var b List<int> = [false]
+      ^
+<stdin>:4:7: warning: Local variable \"c\" is never read
+  var c List<List<int>> = [[false]]
+      ^
+<stdin>:5:7: warning: Local variable \"d\" is never read
+  var d int = {1: 2}
+      ^
+<stdin>:6:7: warning: Local variable \"e\" is never read
+  var e IntMap<bool> = {\"a\": \"b\"}
+      ^
+<stdin>:7:7: warning: Local variable \"f\" is never read
+  var f StringMap<bool> = {1: 2}
+      ^
 ")
 
 test("
@@ -938,6 +1063,18 @@ def main {
 <stdin>:21:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   var d D = [1, 2]
                 ^
+<stdin>:18:7: warning: Local variable \"a\" is never read
+  var a A = [1, 2]
+      ^
+<stdin>:19:7: warning: Local variable \"b\" is never read
+  var b B = [1, 2]
+      ^
+<stdin>:20:7: warning: Local variable \"c\" is never read
+  var c C = [1, 2]
+      ^
+<stdin>:21:7: warning: Local variable \"d\" is never read
+  var d D = [1, 2]
+      ^
 ")
 
 test("
@@ -1028,6 +1165,18 @@ def main {
 <stdin>:9:16: error: Cannot convert from type \"List<int>\" to type \"bool\"
   var z bool = bar([])
                ~~~~~~~
+<stdin>:6:7: warning: Local variable \"w\" is never read
+  var w bool = bar(null)
+      ^
+<stdin>:7:7: warning: Local variable \"x\" is never read
+  var x bool = bar(0)
+      ^
+<stdin>:8:7: warning: Local variable \"y\" is never read
+  var y bool = bar(0.5)
+      ^
+<stdin>:9:7: warning: Local variable \"z\" is never read
+  var z bool = bar([])
+      ^
 ")
 
 test("
@@ -1173,6 +1322,24 @@ def main {
 <stdin>:11:15: error: Cannot convert from type \"Baz\" to type \"Bar\"
   var f Bar = Baz.new
               ~~~~~~~
+<stdin>:6:7: warning: Local variable \"a\" is never read
+  var a Foo = Foo.new
+      ^
+<stdin>:7:7: warning: Local variable \"b\" is never read
+  var b Foo = Bar.new
+      ^
+<stdin>:8:7: warning: Local variable \"c\" is never read
+  var c Foo = Baz.new
+      ^
+<stdin>:9:7: warning: Local variable \"d\" is never read
+  var d Bar = Foo.new
+      ^
+<stdin>:10:7: warning: Local variable \"e\" is never read
+  var e Bar = Bar.new
+      ^
+<stdin>:11:7: warning: Local variable \"f\" is never read
+  var f Bar = Baz.new
+      ^
 ")
 
 test("
@@ -1188,6 +1355,9 @@ def main {
 <stdin>:7:17: error: Cannot convert from type \"Foo<int>\" to type \"int\"
   var bar int = foo
                 ~~~
+<stdin>:7:7: warning: Local variable \"bar\" is never read
+  var bar int = foo
+      ~~~
 ")
 
 test("
@@ -1203,6 +1373,9 @@ def main {
 <stdin>:6:20: error: No common type for \"Bar\" and \"Baz\"
   var foo = true ? Bar.new : Baz.new
                    ~~~~~~~~~~~~~~~~~
+<stdin>:7:7: warning: Local variable \"bar\" is never read
+  var bar int = foo
+      ~~~
 ")
 
 test("
@@ -1377,6 +1550,9 @@ def foo(foo Foo) {
 <stdin>:8:18: error: Cannot convert from type \"double\" to type \"bool\" without a cast
   var bar bool = foo += 0
                  ~~~~~~~~
+<stdin>:8:7: warning: Local variable \"bar\" is never read
+  var bar bool = foo += 0
+      ~~~
 ")
 
 test("
@@ -1408,6 +1584,9 @@ def main(x List<List<int>>) {
 <stdin>:2:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   var foo = [false] in x
              ~~~~~
+<stdin>:2:7: warning: Local variable \"foo\" is never read
+  var foo = [false] in x
+      ~~~
 ")
 
 test("
@@ -1953,6 +2132,15 @@ def main {
 <stdin>:9:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   var baz int = .FOO == .BAR
                 ~~~~~~~~~~~~
+<stdin>:7:7: warning: Local variable \"foo\" is never read
+  var foo int = Foo.FOO == .BAR
+      ~~~
+<stdin>:8:7: warning: Local variable \"bar\" is never read
+  var bar int = .FOO == Foo.BAR
+      ~~~
+<stdin>:9:7: warning: Local variable \"baz\" is never read
+  var baz int = .FOO == .BAR
+      ~~~
 ")
 
 test("
@@ -2015,6 +2203,30 @@ def main {
 <stdin>:11:16: error: Cannot convert from type \"Foo\" to type \"bool\"
   var f bool = 0.0 as Foo
                ~~~~~~~~~~
+<stdin>:6:7: warning: Local variable \"a\" is never read
+  var a bool = Foo.FOO as string
+      ^
+<stdin>:7:7: warning: Local variable \"b\" is never read
+  var b bool = Foo.FOO as int
+      ^
+<stdin>:8:7: warning: Local variable \"c\" is never read
+  var c bool = Foo.FOO as double
+      ^
+<stdin>:9:7: warning: Local variable \"d\" is never read
+  var d bool = \"FOO\" as Foo
+      ^
+<stdin>:10:7: warning: Local variable \"e\" is never read
+  var e bool = 0 as Foo
+      ^
+<stdin>:11:7: warning: Local variable \"f\" is never read
+  var f bool = 0.0 as Foo
+      ^
+<stdin>:12:7: warning: Local variable \"g\" is never read
+  var g string = Foo.FOO
+      ^
+<stdin>:13:7: warning: Local variable \"h\" is never read
+  var h int = Foo.FOO
+      ^
 ")
 
 test("
@@ -2096,6 +2308,9 @@ def main {
 <stdin>:5:7: error: Cannot use \"continue\" outside a loop
       continue
       ~~~~~~~~
+<stdin>:3:9: warning: Local variable \"x\" is never read
+    var x = => {
+        ^
 ")
 
 test("
@@ -2156,6 +2371,24 @@ def main {
 <stdin>:15:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
   var z bool = bar(1, 2 as dynamic)
                ~~~~~~~~~~~~~~~~~~~~
+<stdin>:9:7: warning: Local variable \"a\" is never read
+  var a bool = foo(1, 2)
+      ^
+<stdin>:10:7: warning: Local variable \"b\" is never read
+  var b bool = foo(1, 2.0)
+      ^
+<stdin>:11:7: warning: Local variable \"c\" is never read
+  var c bool = foo(1, 2 as dynamic)
+      ^
+<stdin>:13:7: warning: Local variable \"x\" is never read
+  var x bool = bar(1, 2)
+      ^
+<stdin>:14:7: warning: Local variable \"y\" is never read
+  var y bool = bar(1, 2.0)
+      ^
+<stdin>:15:7: warning: Local variable \"z\" is never read
+  var z bool = bar(1, 2 as dynamic)
+      ^
 ")
 
 test("
@@ -2186,6 +2419,12 @@ def main {
 <stdin>:13:17: error: Cannot convert from type \"Bar\" to type \"int\"
   var bar int = Bar.new(0, 1)
                 ~~~~~~~~~~~~~
+<stdin>:12:7: warning: Local variable \"foo\" is never read
+  var foo int = Foo.new(0)
+      ~~~
+<stdin>:13:7: warning: Local variable \"bar\" is never read
+  var bar int = Bar.new(0, 1)
+      ~~~
 ")
 
 test("
@@ -2335,6 +2574,21 @@ def main {
 <stdin>:10:20: warning: Unnecessary cast from type \"int\" to type \"double\"
   var f double = 0 as double
                    ~~~~~~~~~
+<stdin>:6:7: warning: Local variable \"b\" is never read
+  var b = null as Bar
+      ^
+<stdin>:7:7: warning: Local variable \"c\" is never read
+  var c = a as Foo
+      ^
+<stdin>:8:7: warning: Local variable \"d\" is never read
+  var d = a as Bar
+      ^
+<stdin>:9:7: warning: Local variable \"e\" is never read
+  var e int = 0.5 as int
+      ^
+<stdin>:10:7: warning: Local variable \"f\" is never read
+  var f double = 0 as double
+      ^
 ")
 
 test("
@@ -2466,6 +2720,9 @@ def main {
 <stdin>:11:17: error: The function \"new\" must be called
   var foo = Foo.new
                 ~~~
+<stdin>:11:7: warning: Local variable \"foo\" is never read
+  var foo = Foo.new
+      ~~~
 ")
 
 test("
@@ -2529,6 +2786,15 @@ namespace Foo {
 <stdin>:12:16: error: Cannot access type parameter \"T\" here
     var y = (b T) => {}
                ^
+<stdin>:4:9: warning: Local variable \"x\" is never read
+    var x = (a T) => {
+        ^
+<stdin>:5:11: warning: Local variable \"y\" is never read
+      var y = (b T) => {}
+          ^
+<stdin>:12:9: warning: Local variable \"y\" is never read
+    var y = (b T) => {}
+        ^
 ")
 
 test("
@@ -2546,6 +2812,12 @@ namespace Foo {
   }
 }
 ", "
+<stdin>:6:9: warning: Local variable \"y\" is never read
+    var y Foo<T>
+        ^
+<stdin>:11:9: warning: Local variable \"y\" is never read
+    var y Foo<T>
+        ^
 ")
 
 test("
@@ -2604,6 +2876,12 @@ def main {
 <stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
   def [new](t T)
             ^
+<stdin>:10:7: warning: Local variable \"foo\" is never read
+  var foo Foo<int> = [0]
+      ~~~
+<stdin>:11:7: warning: Local variable \"bar\" is never read
+  var bar Foo<int> = [0]
+      ~~~
 ")
 
 test("
@@ -2623,6 +2901,12 @@ def main {
 <stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
   def {new}(t T)
             ^
+<stdin>:10:7: warning: Local variable \"foo\" is never read
+  var foo Foo<int> = {0}
+      ~~~
+<stdin>:11:7: warning: Local variable \"bar\" is never read
+  var bar Foo<int> = {0}
+      ~~~
 ")
 
 test("
@@ -2645,6 +2929,12 @@ def main {
 <stdin>:6:18: error: Expected argument \"v\" to be of type \"List<T>\" instead of type \"V\"
   def {new}(k K, v V)
                  ^
+<stdin>:10:7: warning: Local variable \"foo\" is never read
+  var foo Foo<int, bool> = {1: false}
+      ~~~
+<stdin>:11:7: warning: Local variable \"bar\" is never read
+  var bar Foo<int, bool> = {1: false}
+      ~~~
 ")
 
 test("
@@ -2672,6 +2962,9 @@ def main {
 <stdin>:16:36: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   var foo Foo<int, bool> = {false: 1}
                                    ^
+<stdin>:16:7: warning: Local variable \"foo\" is never read
+  var foo Foo<int, bool> = {false: 1}
+      ~~~
 ")
 
 test("
@@ -2694,6 +2987,12 @@ def main {
   var bar Bar<int> = {0: 1}
 }
 ", "
+<stdin>:16:7: warning: Local variable \"foo\" is never read
+  var foo Foo<int> = {0: 1}
+      ~~~
+<stdin>:17:7: warning: Local variable \"bar\" is never read
+  var bar Bar<int> = {0: 1}
+      ~~~
 ")
 
 test("
@@ -2759,6 +3058,9 @@ def main {
   var bar = dynamic.foo
 }
 ", "
+<stdin>:2:7: warning: Local variable \"bar\" is never read
+  var bar = dynamic.foo
+      ~~~
 ")
 
 test("
@@ -2808,6 +3110,18 @@ enum Foo {
 <stdin>:2:18: error: Cannot access \"BAR\" without type context
   var a = [.FOO, .BAR]
                  ~~~~
+<stdin>:2:7: warning: Local variable \"a\" is never read
+  var a = [.FOO, .BAR]
+      ^
+<stdin>:3:7: warning: Local variable \"b\" is never read
+  var b = [Foo.FOO, .BAR]
+      ^
+<stdin>:4:7: warning: Local variable \"c\" is never read
+  var c = [.FOO, Foo.BAR]
+      ^
+<stdin>:5:7: warning: Local variable \"d\" is never read
+  var d = [Foo.FOO, Foo.BAR]
+      ^
 ")
 
 test("
@@ -2818,6 +3132,12 @@ def main(x int) {
   }
 }
 ", "
+<stdin>:3:18: warning: Local variable \"foo\" is never read
+    case 0 { var foo = 0 }
+                 ~~~
+<stdin>:4:18: warning: Local variable \"foo\" is never read
+    case 1 { var foo = false }
+                 ~~~
 ")
 
 # This tests a special case in the globalizing pass for super calls
@@ -2946,6 +3266,12 @@ def main(x Foo) {
 <stdin>:2:7: note: The function declaration is here
   def ++
       ~~
+<stdin>:6:7: warning: Local variable \"foo\" is never read
+  var foo = ++x
+      ~~~
+<stdin>:7:7: warning: Local variable \"bar\" is never read
+  var bar = x++
+      ~~~
 ")
 
 test("

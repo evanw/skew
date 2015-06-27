@@ -415,8 +415,8 @@ namespace skew {
       error(range, "Entry point \"" + name + "\" must return either nothing or a value of type \"int\"")
     }
 
-    def semanticWarningUnusedLocalVariable(range Range, name string) {
-      warning(range, "Unused local variable \"" + name + "\"")
+    def semanticWarningUnreadLocalVariable(range Range, name string) {
+      warning(range, "Local variable \"" + name + "\" is never read")
     }
   }
 }

@@ -5,9 +5,7 @@ namespace skew {
   def update {
     var log = Log.new
     var source = Source.new("<stdin>", input.value)
-    var cache = TypeCache.new
     var options = CompilerOptions.new
-    options.foldAllConstants = true
     var result = compile(log, options, [source])
     output.value = log.hasErrors ? log.toString : result.outputs.first.contents
   }

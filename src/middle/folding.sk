@@ -61,7 +61,7 @@ namespace skew.folding {
       var kind = node.kind
 
       # Transform "a + (b + c)" => "(a + b) + c" before operands are folded
-      if kind == .ADD && node.resolvedType == cache.stringType {
+      if kind == .ADD && node.resolvedType == cache.stringType && node.binaryLeft.resolvedType == cache.stringType && node.binaryRight.resolvedType == cache.stringType {
         rotateStringConcatenation(node)
       }
 
@@ -79,11 +79,11 @@ namespace skew.folding {
 
       # Separating the case bodies into separate functions makes the JavaScript JIT go faster
       switch kind {
-        case .VAR { foldVar(node) }
         case .BLOCK { foldBlock(node) }
         case .CALL { foldCall(node) }
         case .CAST { foldCast(node) }
         case .HOOK { foldHook(node) }
+        case .LAMBDA { foldLambda(node) }
         case .NAME { foldName(node) }
         default {
           if kind.isUnary { foldUnary(node) }
@@ -260,11 +260,23 @@ namespace skew.folding {
       return 0
     }
 
-    def foldVar(node Node) {
-      var value = node.symbol.asVariableSymbol.value
+    def foldLambda(node Node) {
+      foldConstants(node.symbol.asFunctionSymbol.block)
+    }
+
+    def foldVar(node Node) int {
+      var symbol = node.symbol.asVariableSymbol
+      var value = symbol.value
       if value != null {
         foldConstants(value)
+
+        # Remove this symbol entirely if it's being inlined everywhere
+        if symbol.isConst && symbol.cachedConstantValue != null {
+          node.remove
+          return -1
+        }
       }
+      return 0
     }
 
     def foldBlock(node Node) {
@@ -289,6 +301,10 @@ namespace skew.folding {
         if kind == .EXPRESSION && child.expressionValue.hasNoSideEffects || kind == .WHILE && child.whileTest.isFalse {
           node.removeChildAtIndex(i)
           i--
+        }
+
+        else if kind == .VAR {
+          i += foldVar(child)
         }
 
         # Remove unused try statements since they can cause deoptimizations
