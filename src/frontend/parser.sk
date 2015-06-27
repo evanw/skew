@@ -187,6 +187,7 @@ namespace skew.parsing {
       var values List<Node> = []
       var start = context.current
       if context.eat(.CASE) {
+        context.eat(.NEWLINE)
         while true {
           var constant = pratt.parse(context, .LOWEST)
           if constant == null {

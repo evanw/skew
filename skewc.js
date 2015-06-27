@@ -4,8 +4,13 @@
     derived.prototype.constructor = derived;
   }
 
+  var $imul = Math.imul || function(a, b) {
+    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+
   function hashCombine(left, right) {
-    return left ^ right - 1640531527 + (left << 6) + (left >> 2);
+    return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
   }
 
   function timestampInSeconds() {
@@ -71,7 +76,7 @@
 
       in_StringBuilder.append(builder, text.slice(start, i));
       in_StringBuilder.append(builder, escaped);
-      start = i + 1;
+      start = i + 1 | 0;
     }
 
     in_StringBuilder.append(builder, text.slice(start, in_string.count(text)));
@@ -136,7 +141,7 @@
           yy_last_accepting_cpos = yy_cp;
         }
 
-        while (skew.yy_chk[skew.yy_base[yy_current_state] + yy_c] !== yy_current_state) {
+        while (skew.yy_chk[skew.yy_base[yy_current_state] + yy_c | 0] !== yy_current_state) {
           yy_current_state = skew.yy_def[yy_current_state];
 
           if (yy_current_state >= 226) {
@@ -144,7 +149,7 @@
           }
         }
 
-        yy_current_state = skew.yy_nxt[skew.yy_base[yy_current_state] + yy_c];
+        yy_current_state = skew.yy_nxt[skew.yy_base[yy_current_state] + yy_c | 0];
         ++yy_cp;
       }
 
@@ -269,11 +274,11 @@
             if (tokenKind !== skew.TokenKind.GREATER_THAN) {
               var range = token.range;
               var start = range.start;
-              assert(i + 1 < in_List.count(tokens));
-              assert(tokens[i + 1] === null);
+              assert((i + 1 | 0) < in_List.count(tokens));
+              assert(tokens[i + 1 | 0] === null);
               assert(tokenKind === skew.TokenKind.SHIFT_RIGHT || tokenKind === skew.TokenKind.GREATER_THAN_OR_EQUAL || tokenKind === skew.TokenKind.ASSIGN_SHIFT_RIGHT);
-              tokens[i + 1] = new skew.Token(new skew.Range(range.source, start + 1, range.end), tokenKind === skew.TokenKind.SHIFT_RIGHT ? skew.TokenKind.GREATER_THAN : tokenKind === skew.TokenKind.GREATER_THAN_OR_EQUAL ? skew.TokenKind.ASSIGN : skew.TokenKind.GREATER_THAN_OR_EQUAL);
-              token.range = new skew.Range(range.source, start, start + 1);
+              tokens[i + 1 | 0] = new skew.Token(new skew.Range(range.source, start + 1 | 0, range.end), tokenKind === skew.TokenKind.SHIFT_RIGHT ? skew.TokenKind.GREATER_THAN : tokenKind === skew.TokenKind.GREATER_THAN_OR_EQUAL ? skew.TokenKind.ASSIGN : skew.TokenKind.GREATER_THAN_OR_EQUAL);
+              token.range = new skew.Range(range.source, start, start + 1 | 0);
             }
 
             // Convert < and > into bounds for type parameter lists
@@ -291,13 +296,13 @@
       // line continuations. Make sure to be conservative. We want to be like
       // Python, not like JavaScript ASI! Anything that is at all ambiguous
       // should be disallowed.
-      if (tokenKind === skew.TokenKind.NEWLINE && ((previousKind) | 0) in skew.REMOVE_NEWLINE_AFTER && !(((tokens[i + 1].kind) | 0) in skew.KEEP_NEWLINE_BEFORE)) {
+      if (tokenKind === skew.TokenKind.NEWLINE && previousKind in skew.REMOVE_NEWLINE_AFTER && !(tokens[i + 1 | 0].kind in skew.KEEP_NEWLINE_BEFORE)) {
         --count;
         continue;
       }
 
-      else if (previousKind === skew.TokenKind.NEWLINE && ((tokenKind) | 0) in skew.REMOVE_NEWLINE_BEFORE) {
-        tokens[count - 2] = token;
+      else if (previousKind === skew.TokenKind.NEWLINE && tokenKind in skew.REMOVE_NEWLINE_BEFORE) {
+        tokens[count - 2 | 0] = token;
         --count;
       }
 
@@ -697,7 +702,7 @@
 
     // There must be at least one source file
     var end = in_string.count(parser.source.contents);
-    var trailingSpace = new skew.Range(parser.source, end - 1, end);
+    var trailingSpace = new skew.Range(parser.source, end - 1 | 0, end);
 
     if (in_List.isEmpty(parser.normalArguments)) {
       log.commandLineErrorNoInputFiles(trailingSpace);
@@ -858,11 +863,11 @@
   };
 
   skew.Precedence.incrementIfLeftAssociative = function(self, associativity) {
-    return ((self) | 0) + (((associativity === skew.Associativity.LEFT)) | 0);
+    return self + (associativity === skew.Associativity.LEFT | 0) | 0;
   };
 
   skew.Precedence.incrementIfRightAssociative = function(self, associativity) {
-    return ((self) | 0) + (((associativity === skew.Associativity.RIGHT)) | 0);
+    return self + (associativity === skew.Associativity.RIGHT | 0) | 0;
   };
 
   skew.JsEmitter = function(options, cache) {
@@ -870,6 +875,7 @@
     skew.Emitter.call(self);
     self.options = options;
     self.cache = cache;
+    self.needsMultiply = false;
     self.previousSymbol = null;
     self.previousNode = null;
     self.prefix = "";
@@ -879,6 +885,7 @@
 
   skew.JsEmitter.prototype.visit = function(global) {
     var self = this;
+    self.patchTree1(global);
     var objects = self.sortedObjects(global);
 
     // The entire body of code is wrapped in a closure for safety
@@ -890,6 +897,13 @@
       self.emit(self.indent + "  derived.prototype = Object.create(base.prototype);\n");
       self.emit(self.indent + "  derived.prototype.constructor = derived;\n");
       self.emit(self.indent + "}\n\n");
+    }
+
+    if (self.needsMultiply) {
+      self.emit(self.indent + "var $imul = Math.imul || function(a, b) {\n");
+      self.emit(self.indent + "  var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;\n");
+      self.emit(self.indent + "  return al * bl + (ah * bl + al * bh << 16) | 0;\n");
+      self.emit(self.indent + "};\n\n");
     }
 
     // Emit objects and functions
@@ -1025,10 +1039,10 @@
         self.decreaseIndent();
 
         if (!isFirst) {
-          self.emit("\n");
+          self.emit("\n" + self.indent);
         }
 
-        self.emit(self.indent + "};\n");
+        self.emit("};\n");
         self.emitNewlineAfterSymbol(symbol);
         break;
       }
@@ -1276,6 +1290,7 @@
         for (var i1 = 1, count3 = in_List.count(cases); i1 < count3; i1 += 1) {
           var child1 = cases[i1];
           var values = child1.children;
+          var block = child1.caseBlock();
 
           if (i1 !== 1) {
             self.emit("\n");
@@ -1299,8 +1314,12 @@
 
           self.emit(" {\n");
           self.increaseIndent();
-          self.emitStatements(child1.caseBlock().children);
-          self.emit(self.indent + "break;\n");
+          self.emitStatements(block.children);
+
+          if (!block.blockAlwaysEndsWithReturn()) {
+            self.emit(self.indent + "break;\n");
+          }
+
           self.decreaseIndent();
           self.emit(self.indent + "}\n");
         }
@@ -1317,7 +1336,7 @@
         self.emitBlock(node.tryBlock());
         self.emit("\n");
 
-        for (var i2 = 1, count4 = in_List.count(children1) - 1; i2 < count4; i2 += 1) {
+        for (var i2 = 1, count4 = in_List.count(children1) - 1 | 0; i2 < count4; i2 += 1) {
           var child2 = children1[i2];
           self.emit("\n");
           self.emitComments(child2.comments);
@@ -1421,7 +1440,8 @@
       }
 
       case skew.NodeKind.NAME: {
-        self.emit(node.symbol !== null ? skew.JsEmitter.fullName(node.symbol) : node.asString());
+        var symbol = node.symbol;
+        self.emit(symbol !== null ? symbol.kind === skew.SymbolKind.VARIABLE_ENUM && self.options.enumFormat === skew.EnumFormat.STRING ? skew.quoteString(symbol.name, 34) : skew.JsEmitter.fullName(symbol) : node.asString());
         break;
       }
 
@@ -1521,14 +1541,14 @@
       }
 
       case skew.NodeKind.ASSIGN_INDEX: {
-        if (((skew.Precedence.ASSIGN) | 0) < ((precedence) | 0)) {
+        if (skew.Precedence.ASSIGN < precedence) {
           self.emit("(");
         }
 
         self.emitExpression(in_List.first(node.children), skew.Precedence.UNARY_POSTFIX);
         self.emit("[");
 
-        for (var i3 = 1, count3 = in_List.count(node.children) - 1; i3 < count3; i3 += 1) {
+        for (var i3 = 1, count3 = in_List.count(node.children) - 1 | 0; i3 < count3; i3 += 1) {
           if (i3 > 1) {
             self.emit(", ");
           }
@@ -1539,39 +1559,14 @@
         self.emit("] = ");
         self.emitExpression(in_List.last(node.children), skew.Precedence.LOWEST);
 
-        if (((skew.Precedence.ASSIGN) | 0) < ((precedence) | 0)) {
+        if (skew.Precedence.ASSIGN < precedence) {
           self.emit(")");
         }
         break;
       }
 
       case skew.NodeKind.CAST: {
-        var value1 = node.castValue();
-        var from = value1.resolvedType;
-        var to = node.resolvedType;
-
-        if (from.isEnum() && to === self.cache.stringType) {
-          self.emit(skew.JsEmitter.fullName(from.symbol) + "[");
-          self.emitExpression(value1, precedence);
-          self.emit("]");
-        }
-
-        else if (from === self.cache.stringType && to.isEnum()) {
-          self.emit(skew.JsEmitter.fullName(to.symbol) + "[");
-          self.emitExpression(value1, precedence);
-          self.emit("]");
-        }
-
-        // TODO: Do this better
-        else if (to === self.cache.intType) {
-          self.emit("((");
-          self.emitExpression(value1, precedence);
-          self.emit(") | 0)");
-        }
-
-        else {
-          self.emitExpression(value1, precedence);
-        }
+        self.emitExpression(node.castValue(), precedence);
         break;
       }
 
@@ -1586,7 +1581,7 @@
       }
 
       case skew.NodeKind.HOOK: {
-        if (((skew.Precedence.ASSIGN) | 0) < ((precedence) | 0)) {
+        if (skew.Precedence.ASSIGN < precedence) {
           self.emit("(");
         }
 
@@ -1596,51 +1591,42 @@
         self.emit(" : ");
         self.emitExpression(node.hookFalse(), skew.Precedence.ASSIGN);
 
-        if (((skew.Precedence.ASSIGN) | 0) < ((precedence) | 0)) {
+        if (skew.Precedence.ASSIGN < precedence) {
           self.emit(")");
         }
         break;
       }
 
       case skew.NodeKind.LAMBDA: {
-        var symbol = node.symbol.asFunctionSymbol();
+        var symbol1 = node.symbol.asFunctionSymbol();
         self.emit("function(");
-        self.emitArgumentList(symbol.$arguments);
+        self.emitArgumentList(symbol1.$arguments);
         self.emit(")");
-        self.emitBlock(symbol.block);
+        self.emitBlock(symbol1.block);
         break;
       }
 
       default: {
         if (skew.NodeKind.isUnary(node.kind)) {
-          var value2 = node.unaryValue();
-          var info = skew.operatorInfo[((node.kind) | 0)];
+          var value1 = node.unaryValue();
+          var info = skew.operatorInfo[node.kind];
 
-          if (((info.precedence) | 0) < ((precedence) | 0)) {
+          if (info.precedence < precedence) {
             self.emit("(");
           }
 
           self.emit(info.text);
-          self.emitExpression(value2, info.precedence);
+          self.emitExpression(value1, info.precedence);
 
-          if (((info.precedence) | 0) < ((precedence) | 0)) {
+          if (info.precedence < precedence) {
             self.emit(")");
           }
         }
 
-        // TODO: Remove hack
-        else if (node.kind === skew.NodeKind.DIVIDE && node.resolvedType === self.cache.intType) {
-          self.emit("((");
-          self.emitExpression(node.binaryLeft(), skew.Precedence.LOWEST);
-          self.emit(") / (");
-          self.emitExpression(node.binaryRight(), skew.Precedence.LOWEST);
-          self.emit(") | 0)");
-        }
-
         else if (skew.NodeKind.isBinary(node.kind)) {
-          var info1 = skew.operatorInfo[((node.kind) | 0)];
+          var info1 = skew.operatorInfo[node.kind];
 
-          if (((info1.precedence) | 0) < ((precedence) | 0)) {
+          if (info1.precedence < precedence) {
             self.emit("(");
           }
 
@@ -1648,7 +1634,7 @@
           self.emit(node.kind === skew.NodeKind.EQUAL ? " === " : node.kind === skew.NodeKind.NOT_EQUAL ? " !== " : " " + info1.text + " ");
           self.emitExpression(node.binaryRight(), skew.Precedence.incrementIfLeftAssociative(info1.precedence, info1.associativity));
 
-          if (((info1.precedence) | 0) < ((precedence) | 0)) {
+          if (info1.precedence < precedence) {
             self.emit(")");
           }
         }
@@ -1657,6 +1643,166 @@
           assert(false);
         }
         break;
+      }
+    }
+  };
+
+  skew.JsEmitter.prototype.patchTree1 = function(symbol) {
+    var self = this;
+    for (var i = 0, list = symbol.objects, count = in_List.count(list); i < count; ++i) {
+      var object = list[i];
+      self.patchTree1(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.functions, count1 = in_List.count(list1); i1 < count1; ++i1) {
+      var $function = list1[i1];
+      self.patchTree2($function.block);
+    }
+
+    for (var i2 = 0, list2 = symbol.variables, count2 = in_List.count(list2); i2 < count2; ++i2) {
+      var variable = list2[i2];
+      self.patchTree2(variable.value);
+    }
+  };
+
+  skew.JsEmitter.prototype.createIntBinary = function(kind, left, right) {
+    var self = this;
+    if (kind === skew.NodeKind.MULTIPLY) {
+      self.needsMultiply = true;
+      return skew.Node.createCall(skew.Node.createName("$imul"), [left, right]).withType(self.cache.intType);
+    }
+
+    return self.wrapWithIntCast(skew.Node.createBinary(kind, left, right).withType(self.cache.intType));
+  };
+
+  skew.JsEmitter.prototype.wrapWithNot = function(node) {
+    var self = this;
+    return skew.Node.createUnary(skew.NodeKind.NOT, node).withType(self.cache.boolType).withRange(node.range);
+  };
+
+  skew.JsEmitter.prototype.wrapWithIntCast = function(node) {
+    var self = this;
+    return skew.Node.createBinary(skew.NodeKind.BITWISE_OR, node, skew.Node.createInt(0).withType(self.cache.intType)).withType(self.cache.intType).withRange(node.range);
+  };
+
+  skew.JsEmitter.prototype.wrapWithTypeIndex = function(node, index, type) {
+    var self = this;
+    return skew.Node.createIndex(skew.Node.createType(index), [node]).withType(type).withRange(node.range);
+  };
+
+  skew.JsEmitter.prototype.patchBinaryArithmetic = function(node) {
+    var self = this;
+    // Make sure arithmetic integer operators don't emit doubles outside the
+    // integer range. Allowing this causes JIT slowdowns due to extra checks
+    // during compilation and potential deoptimizations during execution.
+    if (node.resolvedType === self.cache.intType && !skew.JsEmitter.alwaysConvertsOperandsToInt(node.parent)) {
+      var left = node.binaryLeft();
+      var right = node.binaryRight();
+
+      if (left.resolvedType === self.cache.intType && right.resolvedType === self.cache.intType) {
+        node.become(self.createIntBinary(node.kind, left.replaceWithNull(), right.replaceWithNull()).withRange(node.range));
+      }
+    }
+  };
+
+  skew.JsEmitter.prototype.patchTree2 = function(node) {
+    var self = this;
+    if (node === null) {
+      return;
+    }
+
+    var children = node.children;
+    var kind = node.kind;
+
+    if (children !== null) {
+      for (var i = 0, list = children, count = in_List.count(list); i < count; ++i) {
+        var child = list[i];
+        self.patchTree2(child);
+      }
+    }
+
+    switch (kind) {
+      case skew.NodeKind.ADD:
+      case skew.NodeKind.SUBTRACT:
+      case skew.NodeKind.MULTIPLY:
+      case skew.NodeKind.DIVIDE:
+      case skew.NodeKind.REMAINDER: {
+        self.patchBinaryArithmetic(node);
+        break;
+      }
+
+      case skew.NodeKind.CAST: {
+        self.patchCast(node);
+        break;
+      }
+
+      case skew.NodeKind.LAMBDA: {
+        self.patchTree2(node.symbol.asFunctionSymbol().block);
+        break;
+      }
+
+      case skew.NodeKind.VAR: {
+        self.patchTree2(node.symbol.asVariableSymbol().value);
+        break;
+      }
+    }
+  };
+
+  skew.JsEmitter.prototype.patchCast = function(node) {
+    var self = this;
+    var value = node.castValue();
+    var type = node.resolvedType;
+    var valueType = value.resolvedType;
+
+    // Cast to bool
+    if (type === self.cache.boolType) {
+      if (valueType !== self.cache.boolType) {
+        node.become(self.wrapWithNot(self.wrapWithNot(value.replaceWithNull())));
+      }
+    }
+
+    // Cast to int
+    else if (type === self.cache.intType) {
+      // Cast from enum to int, only needed if the enum is represented as a string
+      if (valueType.isEnum()) {
+        if (self.options.enumFormat === skew.EnumFormat.STRING) {
+          node.become(self.wrapWithTypeIndex(value.replaceWithNull(), valueType, type));
+        }
+      }
+
+      // Non-enum cast to int
+      else if (valueType !== self.cache.intType && !skew.JsEmitter.alwaysConvertsOperandsToInt(node.parent)) {
+        node.become(self.wrapWithIntCast(value.replaceWithNull()));
+      }
+    }
+
+    // Cast to double
+    else if (type === self.cache.doubleType) {
+      if (!self.cache.isNumeric(valueType)) {
+        node.become(skew.Node.createUnary(skew.NodeKind.POSITIVE, value.replaceWithNull()).withRange(node.range).withType(self.cache.doubleType));
+      }
+    }
+
+    // Cast to string
+    else if (type === self.cache.stringType) {
+      // Cast from enum to string, only needed if the enum is represented as an int
+      if (valueType.isEnum()) {
+        if (self.options.enumFormat === skew.EnumFormat.INT) {
+          node.become(self.wrapWithTypeIndex(value.replaceWithNull(), valueType, type));
+        }
+      }
+
+      // Non-enum cast to string
+      else if (valueType !== self.cache.stringType) {
+        node.become(skew.Node.createBinary(skew.NodeKind.ADD, value.replaceWithNull(), skew.Node.createString("").withType(self.cache.stringType)).withType(self.cache.stringType).withRange(node.range));
+      }
+    }
+
+    // Cast to enum
+    else if (type.isEnum()) {
+      // Cast from int or string to enum, only needed if the format is the other one
+      if (valueType === self.cache.intType && self.options.enumFormat === skew.EnumFormat.STRING || valueType === self.cache.stringType && self.options.enumFormat === skew.EnumFormat.INT) {
+        node.become(self.wrapWithTypeIndex(value.replaceWithNull(), type, type));
       }
     }
   };
@@ -1708,6 +1854,28 @@
   skew.JsEmitter.computePrefix = function(symbol) {
     assert(skew.SymbolKind.isObject(symbol.kind));
     return symbol.kind === skew.SymbolKind.OBJECT_GLOBAL ? "" : skew.JsEmitter.computePrefix(symbol.parent.asObjectSymbol()) + skew.JsEmitter.mangleName(symbol) + ".";
+  };
+
+  skew.JsEmitter.alwaysConvertsOperandsToInt = function(node) {
+    if (node !== null) {
+      switch (node.kind) {
+        case skew.NodeKind.ASSIGN_BITWISE_AND:
+        case skew.NodeKind.ASSIGN_BITWISE_OR:
+        case skew.NodeKind.ASSIGN_BITWISE_XOR:
+        case skew.NodeKind.ASSIGN_SHIFT_LEFT:
+        case skew.NodeKind.ASSIGN_SHIFT_RIGHT:
+        case skew.NodeKind.BITWISE_AND:
+        case skew.NodeKind.BITWISE_OR:
+        case skew.NodeKind.BITWISE_XOR:
+        case skew.NodeKind.COMPLEMENT:
+        case skew.NodeKind.SHIFT_LEFT:
+        case skew.NodeKind.SHIFT_RIGHT: {
+          return true;
+        }
+      }
+    }
+
+    return false;
   };
 
   // These dump() functions are helpful for debugging syntax trees
@@ -2038,35 +2206,35 @@
   };
 
   skew.NodeKind.isStatement = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.ASSIGN) | 0) && ((self) | 0) <= ((skew.NodeKind.WHILE) | 0);
+    return self >= skew.NodeKind.ASSIGN && self <= skew.NodeKind.WHILE;
   };
 
   skew.NodeKind.isExpression = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.ASSIGN_INDEX) | 0) && ((self) | 0) <= ((skew.NodeKind.ASSIGN_SUBTRACT) | 0);
+    return self >= skew.NodeKind.ASSIGN_INDEX && self <= skew.NodeKind.ASSIGN_SUBTRACT;
   };
 
   skew.NodeKind.isInitializer = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.INITIALIZER_LIST) | 0) && ((self) | 0) <= ((skew.NodeKind.INITIALIZER_SET) | 0);
+    return self >= skew.NodeKind.INITIALIZER_LIST && self <= skew.NodeKind.INITIALIZER_SET;
   };
 
   skew.NodeKind.isUnary = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.COMPLEMENT) | 0) && ((self) | 0) <= ((skew.NodeKind.POSITIVE) | 0);
+    return self >= skew.NodeKind.COMPLEMENT && self <= skew.NodeKind.POSITIVE;
   };
 
   skew.NodeKind.isUnaryAssign = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.DECREMENT) | 0) && ((self) | 0) <= ((skew.NodeKind.INCREMENT) | 0);
+    return self >= skew.NodeKind.DECREMENT && self <= skew.NodeKind.INCREMENT;
   };
 
   skew.NodeKind.isBinary = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.ADD) | 0) && ((self) | 0) <= ((skew.NodeKind.ASSIGN_SUBTRACT) | 0);
+    return self >= skew.NodeKind.ADD && self <= skew.NodeKind.ASSIGN_SUBTRACT;
   };
 
   skew.NodeKind.isBinaryAssign = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.ASSIGN) | 0) && ((self) | 0) <= ((skew.NodeKind.ASSIGN_SUBTRACT) | 0);
+    return self >= skew.NodeKind.ASSIGN && self <= skew.NodeKind.ASSIGN_SUBTRACT;
   };
 
   skew.NodeKind.isBinaryComparison = function(self) {
-    return ((self) | 0) >= ((skew.NodeKind.GREATER_THAN) | 0) && ((self) | 0) <= ((skew.NodeKind.LESS_THAN_OR_EQUAL) | 0);
+    return self >= skew.NodeKind.GREATER_THAN && self <= skew.NodeKind.LESS_THAN_OR_EQUAL;
   };
 
   skew.NodeKind.isJump = function(self) {
@@ -2257,7 +2425,7 @@
     var index = self.indexInParent();
 
     for (var i = 0, count = in_List.count(nodes); i < count; i += 1) {
-      self.parent.insertChild(index + i + 1, nodes[i]);
+      self.parent.insertChild((index + i | 0) + 1 | 0, nodes[i]);
     }
 
     self.parent.removeChildAtIndex(index);
@@ -2331,12 +2499,11 @@
 
     // This checks children in reverse since return statements are almost always last
     for (var i = 0, count = in_List.count(self.children); i < count; i += 1) {
-      var child = self.children[in_List.count(self.children) - i - 1];
+      var child = self.children[(in_List.count(self.children) - i | 0) - 1 | 0];
 
       switch (child.kind) {
         case skew.NodeKind.RETURN: {
           return true;
-          break;
         }
 
         case skew.NodeKind.IF: {
@@ -2371,22 +2538,18 @@
       case skew.NodeKind.CONSTANT:
       case skew.NodeKind.NULL: {
         return true;
-        break;
       }
 
       case skew.NodeKind.CAST: {
         return self.castValue().hasNoSideEffects();
-        break;
       }
 
       case skew.NodeKind.HOOK: {
         return self.hookTest().hasNoSideEffects() && self.hookTrue().hasNoSideEffects() && self.hookFalse().hasNoSideEffects();
-        break;
       }
 
       case skew.NodeKind.DOT: {
         return self.dotTarget().hasNoSideEffects();
-        break;
       }
 
       default: {
@@ -2415,25 +2578,21 @@
         }
 
         return;
-        break;
       }
 
       case skew.NodeKind.NOT: {
         self.become(self.unaryValue().remove());
         return;
-        break;
       }
 
       case skew.NodeKind.EQUAL: {
         self.kind = skew.NodeKind.NOT_EQUAL;
         return;
-        break;
       }
 
       case skew.NodeKind.NOT_EQUAL: {
         self.kind = skew.NodeKind.EQUAL;
         return;
-        break;
       }
 
       case skew.NodeKind.LOGICAL_OR: {
@@ -2441,7 +2600,6 @@
         self.binaryLeft().invertBooleanCondition(cache);
         self.binaryRight().invertBooleanCondition(cache);
         return;
-        break;
       }
 
       case skew.NodeKind.LOGICAL_AND: {
@@ -2449,7 +2607,6 @@
         self.binaryLeft().invertBooleanCondition(cache);
         self.binaryRight().invertBooleanCondition(cache);
         return;
-        break;
       }
 
       case skew.NodeKind.LESS_THAN:
@@ -3067,35 +3224,35 @@
   };
 
   skew.SymbolKind.isType = function(self) {
-    return ((self) | 0) >= ((skew.SymbolKind.PARAMETER_FUNCTION) | 0) && ((self) | 0) <= ((skew.SymbolKind.OBJECT_NAMESPACE) | 0);
+    return self >= skew.SymbolKind.PARAMETER_FUNCTION && self <= skew.SymbolKind.OBJECT_NAMESPACE;
   };
 
   skew.SymbolKind.isParameter = function(self) {
-    return ((self) | 0) >= ((skew.SymbolKind.PARAMETER_FUNCTION) | 0) && ((self) | 0) <= ((skew.SymbolKind.PARAMETER_OBJECT) | 0);
+    return self >= skew.SymbolKind.PARAMETER_FUNCTION && self <= skew.SymbolKind.PARAMETER_OBJECT;
   };
 
   skew.SymbolKind.isObject = function(self) {
-    return ((self) | 0) >= ((skew.SymbolKind.OBJECT_CLASS) | 0) && ((self) | 0) <= ((skew.SymbolKind.OBJECT_NAMESPACE) | 0);
+    return self >= skew.SymbolKind.OBJECT_CLASS && self <= skew.SymbolKind.OBJECT_NAMESPACE;
   };
 
   skew.SymbolKind.isFunction = function(self) {
-    return ((self) | 0) >= ((skew.SymbolKind.FUNCTION_ANNOTATION) | 0) && ((self) | 0) <= ((skew.SymbolKind.FUNCTION_LOCAL) | 0);
+    return self >= skew.SymbolKind.FUNCTION_ANNOTATION && self <= skew.SymbolKind.FUNCTION_LOCAL;
   };
 
   skew.SymbolKind.isOverloadedFunction = function(self) {
-    return ((self) | 0) >= ((skew.SymbolKind.OVERLOADED_ANNOTATION) | 0) && ((self) | 0) <= ((skew.SymbolKind.OVERLOADED_INSTANCE) | 0);
+    return self >= skew.SymbolKind.OVERLOADED_ANNOTATION && self <= skew.SymbolKind.OVERLOADED_INSTANCE;
   };
 
   skew.SymbolKind.isFunctionOrOverloadedFunction = function(self) {
-    return ((self) | 0) >= ((skew.SymbolKind.FUNCTION_ANNOTATION) | 0) && ((self) | 0) <= ((skew.SymbolKind.OVERLOADED_INSTANCE) | 0);
+    return self >= skew.SymbolKind.FUNCTION_ANNOTATION && self <= skew.SymbolKind.OVERLOADED_INSTANCE;
   };
 
   skew.SymbolKind.isVariable = function(self) {
-    return ((self) | 0) >= ((skew.SymbolKind.VARIABLE_ENUM) | 0) && ((self) | 0) <= ((skew.SymbolKind.VARIABLE_LOCAL) | 0);
+    return self >= skew.SymbolKind.VARIABLE_ENUM && self <= skew.SymbolKind.VARIABLE_LOCAL;
   };
 
   skew.SymbolKind.isOverloadableFunction = function(self) {
-    return ((self) | 0) >= ((skew.SymbolKind.FUNCTION_CONSTRUCTOR) | 0) && ((self) | 0) <= ((skew.SymbolKind.FUNCTION_INSTANCE) | 0);
+    return self >= skew.SymbolKind.FUNCTION_CONSTRUCTOR && self <= skew.SymbolKind.FUNCTION_INSTANCE;
   };
 
   skew.SymbolKind.isGlobalReference = function(self) {
@@ -4070,7 +4227,7 @@
       case 8:
       case 10: {
         for (var i = base === 10 ? 0 : 2, count = in_string.count(text); i < count; i += 1) {
-          value = value * base + in_string.get1(text, i) - 48;
+          value = ($imul(value, base) + in_string.get1(text, i) | 0) - 48 | 0;
         }
         break;
       }
@@ -4078,7 +4235,7 @@
       case 16: {
         for (var i1 = 2, count1 = in_string.count(text); i1 < count1; i1 += 1) {
           var c = in_string.get1(text, i1);
-          value = value * 16 + c - (c <= 57 ? 48 : c <= 70 ? 65 - 10 : 97 - 10);
+          value = ($imul(value, 16) + c | 0) - (c <= 57 ? 48 : c <= 70 ? 65 - 10 | 0 : 97 - 10 | 0) | 0;
         }
         break;
       }
@@ -4107,7 +4264,7 @@
         comments = [];
       }
 
-      in_List.append1(comments, range.source.contents.slice(range.start + 1, range.end));
+      in_List.append1(comments, range.source.contents.slice(range.start + 1 | 0, range.end));
 
       // Ignore blocks of comments with extra lines afterward
       if (context.eat(skew.TokenKind.NEWLINE)) {
@@ -4126,9 +4283,9 @@
         comments = [];
       }
 
-      var text = range.source.contents.slice(range.start + 1, range.end);
+      var text = range.source.contents.slice(range.start + 1 | 0, range.end);
 
-      if (in_string.get1(text, in_string.count(text) - 1) !== 10) {
+      if (in_string.get1(text, in_string.count(text) - 1 | 0) !== 10) {
         text += "\n";
       }
 
@@ -4285,6 +4442,8 @@
       var start = context.current();
 
       if (context.eat(skew.TokenKind.CASE)) {
+        context.eat(skew.TokenKind.NEWLINE);
+
         while (true) {
           var constant = skew.parsing.pratt.parse(context, skew.Precedence.LOWEST);
 
@@ -4441,48 +4600,39 @@
       case skew.TokenKind.BREAK:
       case skew.TokenKind.CONTINUE: {
         return skew.parsing.parseJump(context);
-        break;
       }
 
       case skew.TokenKind.CONST:
       case skew.TokenKind.VAR: {
         return skew.parsing.parseVarOrConst(context);
-        break;
       }
 
       case skew.TokenKind.FOR: {
         return skew.parsing.parseFor(context);
-        break;
       }
 
       case skew.TokenKind.IF: {
         return skew.parsing.parseIf(context);
-        break;
       }
 
       case skew.TokenKind.RETURN: {
         return skew.parsing.parseReturn(context);
-        break;
       }
 
       case skew.TokenKind.SWITCH: {
         return skew.parsing.parseSwitch(context);
-        break;
       }
 
       case skew.TokenKind.THROW: {
         return skew.parsing.parseThrow(context);
-        break;
       }
 
       case skew.TokenKind.TRY: {
         return skew.parsing.parseTry(context);
-        break;
       }
 
       case skew.TokenKind.WHILE: {
         return skew.parsing.parseWhile(context);
-        break;
       }
     }
 
@@ -4567,7 +4717,7 @@
 
         var child = skew.Node.createCatch(symbol, catchBlock).withRange(context.spanSince(catchToken.range));
         child.comments = comments;
-        previous.insertChild(in_List.count(previous.children) - 1, child);
+        previous.insertChild(in_List.count(previous.children) - 1 | 0, child);
       }
 
       // Merge "finally" statements with the previous "try"
@@ -4580,7 +4730,7 @@
         }
 
         finallyBlock.comments = comments;
-        previous.replaceChild(in_List.count(previous.children) - 1, finallyBlock);
+        previous.replaceChild(in_List.count(previous.children) - 1 | 0, finallyBlock);
       }
 
       // Parse a new statement
@@ -4830,7 +4980,6 @@
         default: {
           context.unexpectedToken();
           return false;
-          break;
         }
       }
 
@@ -4840,7 +4989,7 @@
       var nameToken = context.current();
       var range = nameToken.range;
       var name = range.toString();
-      var isOperator = kind === skew.SymbolKind.FUNCTION_INSTANCE && ((nameToken.kind) | 0) in skew.parsing.operatorOverloadTokenKinds;
+      var isOperator = kind === skew.SymbolKind.FUNCTION_INSTANCE && nameToken.kind in skew.parsing.operatorOverloadTokenKinds;
 
       if (isOperator) {
         context.next();
@@ -5085,15 +5234,15 @@
 
   skew.parsing.parseHexCharacter = function(c) {
     if (c >= 48 && c <= 57) {
-      return c - 48;
+      return c - 48 | 0;
     }
 
     if (c >= 65 && c <= 70) {
-      return c - 65 + 10;
+      return (c - 65 | 0) + 10 | 0;
     }
 
     if (c >= 97 && c <= 102) {
-      return c - 97 + 10;
+      return (c - 97 | 0) + 10 | 0;
     }
 
     return -1;
@@ -5103,22 +5252,22 @@
     var text = range.toString();
     assert(in_string.count(text) >= 2);
     assert(in_string.get1(text, 0) === 34 || in_string.get1(text, 0) === 39);
-    assert(in_string.get1(text, in_string.count(text) - 1) === in_string.get1(text, 0));
+    assert(in_string.get1(text, in_string.count(text) - 1 | 0) === in_string.get1(text, 0));
     var builder = in_StringBuilder.$new();
 
     // Append long runs of unescaped characters using a single slice for speed
     var start = 1;
     var i = 1;
 
-    while (i + 1 < in_string.count(text)) {
+    while ((i + 1 | 0) < in_string.count(text)) {
       var c = in_string.get1(text, i);
       ++i;
 
       if (c === 92) {
-        var escape = i - 1;
+        var escape = i - 1 | 0;
         in_StringBuilder.append(builder, text.slice(start, escape));
 
-        if (i + 1 < in_string.count(text)) {
+        if ((i + 1 | 0) < in_string.count(text)) {
           c = in_string.get1(text, i);
           ++i;
 
@@ -5153,11 +5302,11 @@
           }
 
           else if (c === 120) {
-            if (i + 1 < in_string.count(text)) {
+            if ((i + 1 | 0) < in_string.count(text)) {
               var c0 = skew.parsing.parseHexCharacter(in_string.get1(text, i));
               ++i;
 
-              if (i + 1 < in_string.count(text)) {
+              if ((i + 1 | 0) < in_string.count(text)) {
                 var c1 = skew.parsing.parseHexCharacter(in_string.get1(text, i));
                 ++i;
 
@@ -5171,7 +5320,7 @@
         }
 
         if (start < i) {
-          log.syntaxErrorInvalidEscapeSequence(new skew.Range(range.source, range.start + escape, range.start + i));
+          log.syntaxErrorInvalidEscapeSequence(new skew.Range(range.source, range.start + escape | 0, range.start + i | 0));
         }
       }
     }
@@ -5420,13 +5569,13 @@
     // Hook expressions
     pratt.parselet(skew.TokenKind.QUESTION_MARK, skew.Precedence.ASSIGN).infix = function(context, left) {
       context.next();
-      var middle = pratt.parse(context, ((skew.Precedence.ASSIGN) | 0) - 1);
+      var middle = pratt.parse(context, skew.Precedence.ASSIGN - 1 | 0);
 
       if (middle === null || !context.expect(skew.TokenKind.COLON)) {
         return null;
       }
 
-      var right = pratt.parse(context, ((skew.Precedence.ASSIGN) | 0) - 1);
+      var right = pratt.parse(context, skew.Precedence.ASSIGN - 1 | 0);
 
       if (right === null) {
         return null;
@@ -5504,7 +5653,7 @@
     var self = this;
     var token = self.current();
 
-    if (self.index + 1 < in_List.count(self.tokens)) {
+    if ((self.index + 1 | 0) < in_List.count(self.tokens)) {
       ++self.index;
     }
 
@@ -5513,7 +5662,7 @@
 
   skew.ParserContext.prototype.spanSince = function(range) {
     var self = this;
-    var previous = self.tokens[self.index > 0 ? self.index - 1 : 0];
+    var previous = self.tokens[self.index > 0 ? self.index - 1 | 0 : 0];
     return previous.range.end < range.start ? range : skew.Range.span(range, previous.range);
   };
 
@@ -5585,15 +5734,15 @@
 
   skew.Pratt.prototype.parselet = function(kind, precedence) {
     var self = this;
-    var parselet = in_IntMap.get(self.table, ((kind) | 0), null);
+    var parselet = in_IntMap.get(self.table, kind, null);
 
     if (parselet === null) {
       var created = new skew.Parselet(precedence);
       parselet = created;
-      self.table[((kind) | 0)] = created;
+      self.table[kind] = created;
     }
 
-    else if (((precedence) | 0) > ((parselet.precedence) | 0)) {
+    else if (precedence > parselet.precedence) {
       parselet.precedence = precedence;
     }
 
@@ -5603,7 +5752,7 @@
   skew.Pratt.prototype.parse = function(context, precedence) {
     var self = this;
     var token = context.current();
-    var parselet = in_IntMap.get(self.table, ((token.kind) | 0), null);
+    var parselet = in_IntMap.get(self.table, token.kind, null);
 
     if (parselet === null || parselet.prefix === null) {
       context.unexpectedToken();
@@ -5621,9 +5770,9 @@
     var self = this;
     while (left !== null) {
       var kind = context.current().kind;
-      var parselet = in_IntMap.get(self.table, ((kind) | 0), null);
+      var parselet = in_IntMap.get(self.table, kind, null);
 
-      if (parselet === null || parselet.infix === null || ((parselet.precedence) | 0) <= ((precedence) | 0)) {
+      if (parselet === null || parselet.infix === null || parselet.precedence <= precedence) {
         break;
       }
 
@@ -5638,7 +5787,7 @@
 
   skew.Pratt.prototype.hasPrefixParselet = function(context) {
     var self = this;
-    var parselet = in_IntMap.get(self.table, ((context.current().kind) | 0), null);
+    var parselet = in_IntMap.get(self.table, context.current().kind, null);
     return parselet !== null && parselet.prefix !== null;
   };
 
@@ -5680,7 +5829,7 @@
       var token = context.next();
 
       // Subtract 1 for right-associativity
-      var right = self.parse(context, ((precedence) | 0) - 1);
+      var right = self.parse(context, precedence - 1 | 0);
       return right !== null ? callback(context, left, token, right) : null;
     };
   };
@@ -5706,7 +5855,7 @@
   skew.Range.prototype.locationString = function() {
     var self = this;
     var location = self.source.indexToLineColumn(self.start);
-    return self.source.name + ":" + (location.line + 1).toString() + ":" + (location.column + 1).toString();
+    return self.source.name + ":" + (location.line + 1 | 0).toString() + ":" + (location.column + 1 | 0).toString();
   };
 
   skew.Range.prototype.format = function(maxLength) {
@@ -5720,64 +5869,64 @@
     // Use a unicode iterator to count the actual code points so they don't get sliced through the middle
     var iterator = unicode.StringIterator.INSTANCE.reset(line, 0);
     var a = iterator.countCodePointsUntil(start.column);
-    var b = a + iterator.countCodePointsUntil(end.line === start.line ? end.column : length);
-    var count = b + iterator.countCodePointsUntil(length);
+    var b = a + iterator.countCodePointsUntil(end.line === start.line ? end.column : length) | 0;
+    var count = b + iterator.countCodePointsUntil(length) | 0;
 
     // Ensure the line length doesn't exceed maxLength
     if (maxLength > 0 && count > maxLength) {
-      var centeredWidth = Math.min(b - a, ((maxLength) / (2) | 0));
-      var centeredStart = Math.max(((maxLength - centeredWidth) / (2) | 0), 3);
+      var centeredWidth = Math.min(b - a | 0, maxLength / 2 | 0);
+      var centeredStart = Math.max((maxLength - centeredWidth | 0) / 2 | 0, 3);
       var codePoints = in_string.codePoints(line);
 
       // Left aligned
       if (a < centeredStart) {
-        line = in_string.fromCodePoints(codePoints.slice(0, maxLength - 3)) + "...";
+        line = in_string.fromCodePoints(codePoints.slice(0, maxLength - 3 | 0)) + "...";
 
-        if (b > maxLength - 3) {
-          b = maxLength - 3;
+        if (b > (maxLength - 3 | 0)) {
+          b = maxLength - 3 | 0;
         }
       }
 
       // Right aligned
-      else if (count - a < maxLength - centeredStart) {
-        var offset = count - maxLength;
-        line = "..." + in_string.fromCodePoints(codePoints.slice(offset + 3, count));
+      else if ((count - a | 0) < (maxLength - centeredStart | 0)) {
+        var offset = count - maxLength | 0;
+        line = "..." + in_string.fromCodePoints(codePoints.slice(offset + 3 | 0, count));
         a -= offset;
         b -= offset;
       }
 
       // Center aligned
       else {
-        var offset1 = a - centeredStart;
-        line = "..." + in_string.fromCodePoints(codePoints.slice(offset1 + 3, offset1 + maxLength - 3)) + "...";
+        var offset1 = a - centeredStart | 0;
+        line = "..." + in_string.fromCodePoints(codePoints.slice(offset1 + 3 | 0, (offset1 + maxLength | 0) - 3 | 0)) + "...";
         a -= offset1;
         b -= offset1;
 
-        if (b > maxLength - 3) {
-          b = maxLength - 3;
+        if (b > (maxLength - 3 | 0)) {
+          b = maxLength - 3 | 0;
         }
       }
     }
 
-    return new skew.FormattedRange(line, in_string.repeat(" ", a) + (b - a < 2 ? "^" : in_string.repeat("~", b - a)));
+    return new skew.FormattedRange(line, in_string.repeat(" ", a) + ((b - a | 0) < 2 ? "^" : in_string.repeat("~", b - a | 0)));
   };
 
   skew.Range.prototype.fromStart = function(count) {
     var self = this;
-    assert(count >= 0 && count <= self.end - self.start);
-    return new skew.Range(self.source, self.start, self.start + count);
+    assert(count >= 0 && count <= (self.end - self.start | 0));
+    return new skew.Range(self.source, self.start, self.start + count | 0);
   };
 
   skew.Range.prototype.fromEnd = function(count) {
     var self = this;
-    assert(count >= 0 && count <= self.end - self.start);
-    return new skew.Range(self.source, self.end - count, self.end);
+    assert(count >= 0 && count <= (self.end - self.start | 0));
+    return new skew.Range(self.source, self.end - count | 0, self.end);
   };
 
   skew.Range.prototype.slice = function(offsetStart, offsetEnd) {
     var self = this;
-    assert(offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= self.end - self.start);
-    return new skew.Range(self.source, self.start + offsetStart, self.start + offsetEnd);
+    assert(offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= (self.end - self.start | 0));
+    return new skew.Range(self.source, self.start + offsetStart | 0, self.start + offsetEnd | 0);
   };
 
   skew.Range.span = function(start, end) {
@@ -5828,7 +5977,7 @@
     self.computeLineOffsets();
 
     // Ignore the line offset at 0
-    return in_List.count(self.lineOffsets) - 1;
+    return in_List.count(self.lineOffsets) - 1 | 0;
   };
 
   skew.Source.prototype.contentsOfLine = function(line) {
@@ -5840,7 +5989,7 @@
     }
 
     var start = self.lineOffsets[line];
-    var end = line + 1 < in_List.count(self.lineOffsets) ? self.lineOffsets[line + 1] - 1 : in_string.count(self.contents);
+    var end = (line + 1 | 0) < in_List.count(self.lineOffsets) ? self.lineOffsets[line + 1 | 0] - 1 | 0 : in_string.count(self.contents);
     return self.contents.slice(start, end);
   };
 
@@ -5853,12 +6002,12 @@
     var line = 0;
 
     while (count > 0) {
-      var step = ((count) / (2) | 0);
-      var i = line + step;
+      var step = count / 2 | 0;
+      var i = line + step | 0;
 
       if (self.lineOffsets[i] <= index) {
-        line = i + 1;
-        count = count - step - 1;
+        line = i + 1 | 0;
+        count = (count - step | 0) - 1 | 0;
       }
 
       else {
@@ -5867,8 +6016,8 @@
     }
 
     // Use the line to compute the column
-    var column = line > 0 ? index - self.lineOffsets[line - 1] : index;
-    return new skew.LineColumn(line - 1, column);
+    var column = line > 0 ? index - self.lineOffsets[line - 1 | 0] | 0 : index;
+    return new skew.LineColumn(line - 1 | 0, column);
   };
 
   skew.Source.prototype.computeLineOffsets = function() {
@@ -5878,7 +6027,7 @@
 
       for (var i = 0, count = in_string.count(self.contents); i < count; i += 1) {
         if (in_string.get1(self.contents, i) === 10) {
-          in_List.append1(self.lineOffsets, i + 1);
+          in_List.append1(self.lineOffsets, i + 1 | 0);
         }
       }
     }
@@ -5924,51 +6073,36 @@
     for (var i1 = 0, list1 = symbol.functions, count1 = in_List.count(list1); i1 < count1; ++i1) {
       var $function = list1[i1];
       self.recordCallSite($function, null, null);
-
-      if ($function.block !== null) {
-        self.visitNode($function.block, $function.self);
-      }
+      self.visitNode($function.block, $function.self);
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = in_List.count(list2); i2 < count2; ++i2) {
       var variable = list2[i2];
-
-      if (variable.value !== null) {
-        self.visitNode(variable.value, null);
-      }
+      self.visitNode(variable.value, null);
     }
   };
 
   skew.CallGraph.prototype.visitNode = function(node, context) {
     var self = this;
-    if (node.children !== null) {
-      for (var i = 0, list = node.children, count = in_List.count(list); i < count; ++i) {
-        var child = list[i];
-
-        if (child !== null) {
+    if (node !== null) {
+      if (node.children !== null) {
+        for (var i = 0, list = node.children, count = in_List.count(list); i < count; ++i) {
+          var child = list[i];
           self.visitNode(child, context);
         }
       }
-    }
 
-    if (node.kind === skew.NodeKind.CALL && node.symbol !== null) {
-      assert(skew.SymbolKind.isFunction(node.symbol.kind));
-      self.recordCallSite(node.symbol, node, context);
-    }
-
-    else if (node.kind === skew.NodeKind.VAR) {
-      var variable = node.symbol.asVariableSymbol();
-
-      if (variable.value !== null) {
-        self.visitNode(variable.value, context);
+      if (node.kind === skew.NodeKind.CALL && node.symbol !== null) {
+        assert(skew.SymbolKind.isFunction(node.symbol.kind));
+        self.recordCallSite(node.symbol, node, context);
       }
-    }
 
-    else if (node.kind === skew.NodeKind.LAMBDA) {
-      var $function = node.symbol.asFunctionSymbol();
+      else if (node.kind === skew.NodeKind.VAR) {
+        self.visitNode(node.symbol.asVariableSymbol().value, context);
+      }
 
-      if ($function.block !== null) {
-        self.visitNode($function.block, context);
+      else if (node.kind === skew.NodeKind.LAMBDA) {
+        self.visitNode(node.symbol.asFunctionSymbol().block, context);
       }
     }
   };
@@ -6011,12 +6145,19 @@
     return self === skew.CompilerTarget.LISP_TREE;
   };
 
+  // Strings are better for debugging but ints are better for performance
+  skew.EnumFormat = {
+    INT: 0, 0: "INT",
+    STRING: 1, 1: "STRING"
+  };
+
   skew.CompilerOptions = function() {
     var self = this;
     self.target = skew.CompilerTarget.NONE;
     self.outputFile = "";
     self.outputDirectory = "";
     self.foldAllConstants = false;
+    self.enumFormat = skew.EnumFormat.INT;
   };
 
   skew.CompilerResult = function() {
@@ -6110,7 +6251,7 @@
       var n = in_List.count(children);
 
       for (var i = 0, count = n; i < count; i += 1) {
-        var child = children[n - i - 1];
+        var child = children[(n - i | 0) - 1 | 0];
 
         if (child !== null) {
           self.foldConstants(child);
@@ -6231,7 +6372,7 @@
     if (in_List.count(node.children) === 2 && finallyBlock === null) {
       var replacements = tryBlock.removeChildren();
       node.replaceWithNodes(replacements);
-      return in_List.count(replacements) - 1;
+      return in_List.count(replacements) - 1 | 0;
     }
 
     return 0;
@@ -6254,7 +6395,7 @@
       // Inline the contents of the true block
       var replacements = trueBlock.removeChildren();
       node.replaceWithNodes(replacements);
-      return in_List.count(replacements) - 1;
+      return in_List.count(replacements) - 1 | 0;
     }
 
     // Always false if statement
@@ -6268,7 +6409,7 @@
       // Inline the contents of the false block
       var replacements1 = falseBlock.removeChildren();
       node.replaceWithNodes(replacements1);
-      return in_List.count(replacements1) - 1;
+      return in_List.count(replacements1) - 1 | 0;
     }
 
     // Remove if statements with empty true blocks
@@ -6321,7 +6462,7 @@
       var n = in_List.count(children);
 
       for (var i1 = 1, count1 = n; i1 < count1; i1 += 1) {
-        var child1 = children[n - i1];
+        var child1 = children[n - i1 | 0];
 
         if (!child1.caseBlock().hasChildren()) {
           child1.remove();
@@ -6373,7 +6514,7 @@
 
       // Remove everything after a jump
       if (skew.NodeKind.isJump(kind)) {
-        var j = in_List.count(children) - 1;
+        var j = in_List.count(children) - 1 | 0;
 
         while (j > i) {
           node.removeChildAtIndex(j);
@@ -6469,18 +6610,18 @@
       // Cast "bool" values
       if (kind === skew.ContentKind.BOOL) {
         if (type === self.cache.intType) {
-          self.flattenInt(node, ((value.asBool()) | 0));
+          self.flattenInt(node, value.asBool() | 0);
         }
 
         else if (type === self.cache.doubleType) {
-          self.flattenDouble(node, value.asBool());
+          self.flattenDouble(node, +value.asBool());
         }
       }
 
       // Cast "int" values
       else if (kind === skew.ContentKind.INT) {
         if (type === self.cache.boolType) {
-          self.flattenBool(node, value.asInt());
+          self.flattenBool(node, !!value.asInt());
         }
 
         else if (type === self.cache.doubleType) {
@@ -6491,11 +6632,11 @@
       // Cast "double" values
       else if (kind === skew.ContentKind.DOUBLE) {
         if (type === self.cache.boolType) {
-          self.flattenBool(node, value.asDouble());
+          self.flattenBool(node, !!value.asDouble());
         }
 
         else if (type === self.cache.intType) {
-          self.flattenInt(node, ((value.asDouble()) | 0));
+          self.flattenInt(node, value.asDouble() | 0);
         }
       }
     }
@@ -6838,27 +6979,27 @@
       else if (leftKind === skew.ContentKind.INT && rightKind === skew.ContentKind.INT) {
         switch (kind) {
           case skew.NodeKind.ADD: {
-            self.flattenInt(node, leftContent.asInt() + rightContent.asInt());
+            self.flattenInt(node, leftContent.asInt() + rightContent.asInt() | 0);
             break;
           }
 
           case skew.NodeKind.SUBTRACT: {
-            self.flattenInt(node, leftContent.asInt() - rightContent.asInt());
+            self.flattenInt(node, leftContent.asInt() - rightContent.asInt() | 0);
             break;
           }
 
           case skew.NodeKind.MULTIPLY: {
-            self.flattenInt(node, leftContent.asInt() * rightContent.asInt());
+            self.flattenInt(node, $imul(leftContent.asInt(), rightContent.asInt()));
             break;
           }
 
           case skew.NodeKind.DIVIDE: {
-            self.flattenInt(node, ((leftContent.asInt()) / (rightContent.asInt()) | 0));
+            self.flattenInt(node, leftContent.asInt() / rightContent.asInt() | 0);
             break;
           }
 
           case skew.NodeKind.REMAINDER: {
-            self.flattenInt(node, leftContent.asInt() % rightContent.asInt());
+            self.flattenInt(node, leftContent.asInt() % rightContent.asInt() | 0);
             break;
           }
 
@@ -8580,11 +8721,11 @@
       // statement. Luckily, we're better off than JavaScript since we know
       // the type of the function. Parse a single statement in a non-void
       // function but two statements in a void function.
-      if (child.kind === skew.NodeKind.RETURN && i + 1 < n && child.returnValue() === null && children[i + 1].kind === skew.NodeKind.EXPRESSION) {
+      if (child.kind === skew.NodeKind.RETURN && (i + 1 | 0) < n && child.returnValue() === null && children[i + 1 | 0].kind === skew.NodeKind.EXPRESSION) {
         var $function = scope.findEnclosingFunctionOrLambda().symbol;
 
         if ($function.kind !== skew.SymbolKind.FUNCTION_CONSTRUCTOR && $function.resolvedType.returnType !== null) {
-          child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue().replaceWithNull());
+          child.replaceChild(0, node.removeChildAtIndex(i + 1 | 0).expressionValue().replaceWithNull());
           --n;
         }
       }
@@ -8764,7 +8905,7 @@
       node.insertChild(1, skew.Node.createCatch(null, skew.Node.createBlock([])));
     }
 
-    for (var i = 1, count = in_List.count(children) - 1; i < count; i += 1) {
+    for (var i = 1, count = in_List.count(children) - 1 | 0; i < count; i += 1) {
       var child = children[i];
       var childScope = new skew.LocalScope(scope, skew.LocalType.NORMAL);
 
@@ -8856,7 +8997,7 @@
     var self = this;
     var $function = type.symbol !== null ? type.symbol.asFunctionSymbol() : null;
     var expected = in_List.count(type.argumentTypes);
-    var count = in_List.count(node.children) - 1;
+    var count = in_List.count(node.children) - 1 | 0;
     node.symbol = $function;
 
     // Use the return type even if there were errors
@@ -8883,7 +9024,7 @@
 
     // Check argument types
     for (var i = 0, count1 = count; i < count1; i += 1) {
-      self.resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i]);
+      self.resolveAsParameterizedExpressionWithConversion(node.children[i + 1 | 0], scope, type.argumentTypes[i]);
     }
 
     // Replace overloaded symbols with the chosen overload
@@ -8899,7 +9040,7 @@
   skew.resolving.Resolver.prototype.resolveOverloadedFunction = function(range, children, scope, symbolType) {
     var self = this;
     var overloaded = symbolType.symbol.asOverloadedFunctionSymbol();
-    var count = in_List.count(children) - 1;
+    var count = in_List.count(children) - 1 | 0;
     var candidates = [];
 
     // Filter by argument length and substitute using the current type environment
@@ -8932,7 +9073,7 @@
       var argumentTypes = candidates[index].argumentTypes;
 
       for (var i = 0, count2 = count; i < count2; i += 1) {
-        var kind = children[i + 1].kind;
+        var kind = children[i + 1 | 0].kind;
         var type = argumentTypes[i];
 
         if (kind === skew.NodeKind.NULL && !type.isReference() || kind === skew.NodeKind.INITIALIZER_LIST && self.findMember(type, "[new]") === null && self.findMember(type, "[...]") === null || (kind === skew.NodeKind.INITIALIZER_SET || kind === skew.NodeKind.INITIALIZER_MAP) && self.findMember(type, "{new}") === null && self.findMember(type, "{...}") === null) {
@@ -8952,7 +9093,7 @@
 
     // If that still didn't work, resolve the arguments without type context
     for (var i4 = 0, count3 = count; i4 < count3; i4 += 1) {
-      self.resolveAsParameterizedExpression(children[i4 + 1], scope);
+      self.resolveAsParameterizedExpression(children[i4 + 1 | 0], scope);
     }
 
     // Try again, this time discarding all implicit conversion failures
@@ -8962,7 +9103,7 @@
       var argumentTypes1 = candidates[index].argumentTypes;
 
       for (var i5 = 0, count4 = count; i5 < count4; i5 += 1) {
-        if (!self.cache.canImplicitlyConvert(children[i5 + 1].resolvedType, argumentTypes1[i5])) {
+        if (!self.cache.canImplicitlyConvert(children[i5 + 1 | 0].resolvedType, argumentTypes1[i5])) {
           in_List.removeAt(candidates, index);
           --index;
           break;
@@ -8981,7 +9122,7 @@
     var childTypes = [];
 
     for (var i6 = 0, count5 = count; i6 < count5; i6 += 1) {
-      in_List.append1(childTypes, children[i6 + 1].resolvedType);
+      in_List.append1(childTypes, children[i6 + 1 | 0].resolvedType);
     }
 
     // Give up without a match
@@ -8996,7 +9137,7 @@
       var isMatch = true;
 
       for (var i7 = 0, count6 = count; i7 < count6; i7 += 1) {
-        if (children[i7 + 1].resolvedType !== type1.argumentTypes[i7]) {
+        if (children[i7 + 1 | 0].resolvedType !== type1.argumentTypes[i7]) {
           isMatch = false;
           break;
         }
@@ -9604,10 +9745,10 @@
 
     // Resolve parameter types
     var substitutions = [];
-    var count = in_List.count(node.children) - 1;
+    var count = in_List.count(node.children) - 1 | 0;
 
     for (var i = 0, count1 = count; i < count1; i += 1) {
-      var child = node.children[i + 1];
+      var child = node.children[i + 1 | 0];
       self.resolveAsParameterizedType(child, scope);
       in_List.append1(substitutions, child.resolvedType);
     }
@@ -9749,8 +9890,8 @@
     // The order of operands are reversed for the "in" operator
     var kind = node.kind;
     var reverseBinaryOrder = kind === skew.NodeKind.IN;
-    var target = node.children[((reverseBinaryOrder) | 0)];
-    var other = skew.NodeKind.isBinary(kind) ? node.children[1 - ((reverseBinaryOrder) | 0)] : null;
+    var target = node.children[reverseBinaryOrder | 0];
+    var other = skew.NodeKind.isBinary(kind) ? node.children[1 - (reverseBinaryOrder | 0) | 0] : null;
 
     // Allow "foo in [.FOO, .BAR]"
     if (kind === skew.NodeKind.IN && target.kind === skew.NodeKind.INITIALIZER_LIST && !skew.resolving.Resolver.needsTypeContext(other)) {
@@ -9777,7 +9918,7 @@
     }
 
     // Check if the operator can be overridden at all
-    var info = skew.operatorInfo[((kind) | 0)];
+    var info = skew.operatorInfo[kind];
 
     if (info.kind !== skew.OperatorKind.OVERRIDABLE) {
       self.log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), info.text, type);
@@ -10839,7 +10980,7 @@
 
   skew.options.Parser.prototype.nodeForOption = function(option) {
     var self = this;
-    return in_IntMap.get(self.optionalArguments, ((option) | 0), null);
+    return in_IntMap.get(self.optionalArguments, option, null);
   };
 
   skew.options.Parser.prototype.boolForOption = function(option, defaultValue) {
@@ -10886,8 +11027,8 @@
     for (var i1 = 0, list = $arguments, count = in_List.count(list); i1 < count; ++i1) {
       var argument = list[i1];
       var needsQuotes = in_string.contains(argument, " ");
-      var start = in_string.count(self.source.contents) + ((needsQuotes) | 0);
-      in_List.append1(ranges, new skew.Range(self.source, start, start + in_string.count(argument)));
+      var start = in_string.count(self.source.contents) + (needsQuotes | 0) | 0;
+      in_List.append1(ranges, new skew.Range(self.source, start, start + in_string.count(argument) | 0));
       self.source.contents += needsQuotes ? "'" + argument + "' " : argument + " ";
     }
 
@@ -10916,8 +11057,8 @@
       }
 
       // Validate the flag data
-      var text = argument1.slice(separator + 1);
-      var separatorRange = separator < 0 ? null : range.slice(separator, separator + 1);
+      var text = argument1.slice(separator + 1 | 0);
+      var separatorRange = separator < 0 ? null : range.slice(separator, separator + 1 | 0);
       var textRange = range.fromEnd(in_string.count(text));
 
       switch (data.type) {
@@ -10936,11 +11077,11 @@
             continue;
           }
 
-          if (((data.option) | 0) in self.optionalArguments) {
-            log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[((data.option) | 0)].range);
+          if (data.option in self.optionalArguments) {
+            log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[data.option].range);
           }
 
-          self.optionalArguments[((data.option) | 0)] = skew.Node.createBool(text === "true").withRange(textRange);
+          self.optionalArguments[data.option] = skew.Node.createBool(text === "true").withRange(textRange);
           break;
         }
 
@@ -10958,11 +11099,11 @@
           }
 
           else {
-            if (((data.option) | 0) in self.optionalArguments) {
-              log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[((data.option) | 0)].range);
+            if (data.option in self.optionalArguments) {
+              log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[data.option].range);
             }
 
-            self.optionalArguments[((data.option) | 0)] = skew.Node.createInt(skew.parsing.parseIntLiteral(text, 10)).withRange(textRange);
+            self.optionalArguments[data.option] = skew.Node.createInt(skew.parsing.parseIntLiteral(text, 10)).withRange(textRange);
           }
           break;
         }
@@ -10977,11 +11118,11 @@
           }
 
           else {
-            if (((data.option) | 0) in self.optionalArguments) {
-              log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[((data.option) | 0)].range);
+            if (data.option in self.optionalArguments) {
+              log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[data.option].range);
             }
 
-            self.optionalArguments[((data.option) | 0)] = skew.Node.createString(text).withRange(textRange);
+            self.optionalArguments[data.option] = skew.Node.createString(text).withRange(textRange);
           }
           break;
         }
@@ -10997,13 +11138,13 @@
 
           else {
 
-            if (((data.option) | 0) in self.optionalArguments) {
-              node = self.optionalArguments[((data.option) | 0)];
+            if (data.option in self.optionalArguments) {
+              node = self.optionalArguments[data.option];
             }
 
             else {
               node = skew.Node.createInitializer(skew.NodeKind.INITIALIZER_LIST, []);
-              self.optionalArguments[((data.option) | 0)] = node;
+              self.optionalArguments[data.option] = node;
             }
 
             node.appendChild(skew.Node.createString(text).withRange(textRange));
@@ -11022,7 +11163,7 @@
     // Figure out the column width
     for (var i = 0, list = self.options, count = in_List.count(list); i < count; ++i) {
       var option = list[i];
-      var width = in_string.count(option.nameText()) + 4;
+      var width = in_string.count(option.nameText()) + 4 | 0;
 
       if (columnWidth < width) {
         columnWidth = width;
@@ -11036,9 +11177,9 @@
       var option1 = list2[i2];
       var nameText = option1.nameText();
       var isFirst = true;
-      text += "\n  " + nameText + in_string.repeat(" ", columnWidth - in_string.count(nameText) - 2);
+      text += "\n  " + nameText + in_string.repeat(" ", (columnWidth - in_string.count(nameText) | 0) - 2 | 0);
 
-      for (var i1 = 0, list1 = prettyPrint.wrapWords(option1.description, wrapWidth - columnWidth), count1 = in_List.count(list1); i1 < count1; ++i1) {
+      for (var i1 = 0, list1 = prettyPrint.wrapWords(option1.description, wrapWidth - columnWidth | 0), count1 = in_List.count(list1); i1 < count1; ++i1) {
         var line = list1[i1];
         text += (isFirst ? "" : columnText) + line + "\n";
         isFirst = false;
@@ -11081,7 +11222,7 @@
       if (i !== 0) {
         text += ", ";
 
-        if (i + 1 === in_List.count(parts)) {
+        if ((i + 1 | 0) === in_List.count(parts)) {
           text += trailing + " ";
         }
       }
@@ -11109,7 +11250,7 @@
       var word = words[i];
       var lineLength = in_string.count(line);
       var wordLength = in_string.count(word);
-      var estimatedLength = lineLength + 1 + wordLength;
+      var estimatedLength = (lineLength + 1 | 0) + wordLength | 0;
       ++i;
 
       // Collapse adjacent spaces
@@ -11251,7 +11392,7 @@
 
       var b1 = in_string.get1(self.value, self.index);
       ++self.index;
-      return (a1 << 10) + b1 + (65536 - (55296 << 10) - 56320);
+      return ((a1 << 10) + b1 | 0) + ((65536 - (55296 << 10) | 0) - 56320 | 0) | 0;
     }
 
     else {
@@ -11331,7 +11472,7 @@
   };
 
   terminal.Color.toEscapeCode = function(self) {
-    return terminal.colorToEscapeCode[((self) | 0)];
+    return terminal.colorToEscapeCode[self];
   };
 
   var in_string = {};
@@ -11443,9 +11584,9 @@
         }
 
         else {
-          var adjusted = codePoint1 - 65536;
-          in_StringBuilder.append(builder1, in_string.fromCodeUnit((adjusted >> 10) + 55296));
-          in_StringBuilder.append(builder1, in_string.fromCodeUnit((adjusted & (1 << 10) - 1) + 56320));
+          var adjusted = codePoint1 - 65536 | 0;
+          in_StringBuilder.append(builder1, in_string.fromCodeUnit((adjusted >> 10) + 55296 | 0));
+          in_StringBuilder.append(builder1, in_string.fromCodeUnit((adjusted & (1 << 10) - 1) + 56320 | 0));
         }
       }
 
@@ -11494,7 +11635,7 @@
   };
 
   in_List.last = function(self) {
-    return self[in_List.count(self) - 1];
+    return self[in_List.count(self) - 1 | 0];
   };
 
   in_List.prepend1 = function(self, value) {
@@ -11505,7 +11646,7 @@
     var count = in_List.count(values);
 
     for (var i = 0, count1 = count; i < count1; i += 1) {
-      in_List.prepend1(self, values[count - i - 1]);
+      in_List.prepend1(self, values[(count - i | 0) - 1 | 0]);
     }
   };
 
@@ -11616,7 +11757,7 @@
 
   var NATIVE_LIBRARY = "\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  def endsWith(x string) bool\n  def get(x int) string\n  def in(x string) bool\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  def startsWith(x string) bool\n  def toLowerCase string\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import\nclass StringBuilder {\n  def append(x string)\n  def new\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  def first T\n  def in(x T) bool\n  def indexOf(x T) int\n  def insert(x int, value T)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  def last T\n  def lastIndexOf(x T) int\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def +(x T) List<T>\n  def +(x List<T>) List<T>\n\n  @prefer\n  def +=(x T)\n  def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\nclass Box<T> {\n  var value T\n}\n";
   skew.HEX = "0123456789ABCDEF";
-  skew.operatorInfo = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), ((skew.NodeKind.COMPLEMENT) | 0), new skew.OperatorInfo("~", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.DECREMENT) | 0), new skew.OperatorInfo("--", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.INCREMENT) | 0), new skew.OperatorInfo("++", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.NEGATIVE) | 0), new skew.OperatorInfo("-", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.NOT) | 0), new skew.OperatorInfo("!", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), ((skew.NodeKind.POSITIVE) | 0), new skew.OperatorInfo("+", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.ADD) | 0), new skew.OperatorInfo("+", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.BITWISE_AND) | 0), new skew.OperatorInfo("&", skew.Precedence.BITWISE_AND, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.BITWISE_OR) | 0), new skew.OperatorInfo("|", skew.Precedence.BITWISE_OR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.BITWISE_XOR) | 0), new skew.OperatorInfo("^", skew.Precedence.BITWISE_XOR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.COMPARE) | 0), new skew.OperatorInfo("<=>", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.DIVIDE) | 0), new skew.OperatorInfo("/", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.EQUAL) | 0), new skew.OperatorInfo("==", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.GREATER_THAN) | 0), new skew.OperatorInfo(">", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.GREATER_THAN_OR_EQUAL) | 0), new skew.OperatorInfo(">=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.IN) | 0), new skew.OperatorInfo("in", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LESS_THAN) | 0), new skew.OperatorInfo("<", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LESS_THAN_OR_EQUAL) | 0), new skew.OperatorInfo("<=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.LOGICAL_AND) | 0), new skew.OperatorInfo("&&", skew.Precedence.LOGICAL_AND, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.LOGICAL_OR) | 0), new skew.OperatorInfo("||", skew.Precedence.LOGICAL_OR, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.MULTIPLY) | 0), new skew.OperatorInfo("*", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.NOT_EQUAL) | 0), new skew.OperatorInfo("!=", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.POWER) | 0), new skew.OperatorInfo("**", skew.Precedence.UNARY_PREFIX, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.REMAINDER) | 0), new skew.OperatorInfo("%", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SHIFT_LEFT) | 0), new skew.OperatorInfo("<<", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SHIFT_RIGHT) | 0), new skew.OperatorInfo(">>", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.SUBTRACT) | 0), new skew.OperatorInfo("-", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), ((skew.NodeKind.ASSIGN) | 0), new skew.OperatorInfo("=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_ADD) | 0), new skew.OperatorInfo("+=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_AND) | 0), new skew.OperatorInfo("&=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_OR) | 0), new skew.OperatorInfo("|=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_BITWISE_XOR) | 0), new skew.OperatorInfo("^=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_DIVIDE) | 0), new skew.OperatorInfo("/=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_MULTIPLY) | 0), new skew.OperatorInfo("*=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_POWER) | 0), new skew.OperatorInfo("**=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_REMAINDER) | 0), new skew.OperatorInfo("%=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SHIFT_LEFT) | 0), new skew.OperatorInfo("<<=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SHIFT_RIGHT) | 0), new skew.OperatorInfo(">>=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_SUBTRACT) | 0), new skew.OperatorInfo("-=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), ((skew.NodeKind.ASSIGN_INDEX) | 0), new skew.OperatorInfo("[]=", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.TWO_OR_MORE)), ((skew.NodeKind.INDEX) | 0), new skew.OperatorInfo("[]", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE_OR_MORE));
+  skew.operatorInfo = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), skew.NodeKind.COMPLEMENT, new skew.OperatorInfo("~", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), skew.NodeKind.DECREMENT, new skew.OperatorInfo("--", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), skew.NodeKind.INCREMENT, new skew.OperatorInfo("++", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), skew.NodeKind.NEGATIVE, new skew.OperatorInfo("-", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), skew.NodeKind.NOT, new skew.OperatorInfo("!", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), skew.NodeKind.POSITIVE, new skew.OperatorInfo("+", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), skew.NodeKind.ADD, new skew.OperatorInfo("+", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), skew.NodeKind.BITWISE_AND, new skew.OperatorInfo("&", skew.Precedence.BITWISE_AND, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.BITWISE_OR, new skew.OperatorInfo("|", skew.Precedence.BITWISE_OR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.BITWISE_XOR, new skew.OperatorInfo("^", skew.Precedence.BITWISE_XOR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.COMPARE, new skew.OperatorInfo("<=>", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.DIVIDE, new skew.OperatorInfo("/", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.EQUAL, new skew.OperatorInfo("==", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.GREATER_THAN, new skew.OperatorInfo(">", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.GREATER_THAN_OR_EQUAL, new skew.OperatorInfo(">=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.IN, new skew.OperatorInfo("in", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.LESS_THAN, new skew.OperatorInfo("<", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.LESS_THAN_OR_EQUAL, new skew.OperatorInfo("<=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.LOGICAL_AND, new skew.OperatorInfo("&&", skew.Precedence.LOGICAL_AND, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.LOGICAL_OR, new skew.OperatorInfo("||", skew.Precedence.LOGICAL_OR, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.MULTIPLY, new skew.OperatorInfo("*", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.NOT_EQUAL, new skew.OperatorInfo("!=", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.POWER, new skew.OperatorInfo("**", skew.Precedence.UNARY_PREFIX, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.REMAINDER, new skew.OperatorInfo("%", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.SHIFT_LEFT, new skew.OperatorInfo("<<", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.SHIFT_RIGHT, new skew.OperatorInfo(">>", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.SUBTRACT, new skew.OperatorInfo("-", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), skew.NodeKind.ASSIGN, new skew.OperatorInfo("=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_ADD, new skew.OperatorInfo("+=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_BITWISE_AND, new skew.OperatorInfo("&=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_BITWISE_OR, new skew.OperatorInfo("|=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_BITWISE_XOR, new skew.OperatorInfo("^=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_DIVIDE, new skew.OperatorInfo("/=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_MULTIPLY, new skew.OperatorInfo("*=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_POWER, new skew.OperatorInfo("**=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_REMAINDER, new skew.OperatorInfo("%=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_SHIFT_LEFT, new skew.OperatorInfo("<<=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_SHIFT_RIGHT, new skew.OperatorInfo(">>=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_SUBTRACT, new skew.OperatorInfo("-=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_INDEX, new skew.OperatorInfo("[]=", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.TWO_OR_MORE)), skew.NodeKind.INDEX, new skew.OperatorInfo("[]", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE_OR_MORE));
   skew.argumentCounts = null;
   skew.yy_accept = [skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.END_OF_FILE, skew.TokenKind.ERROR, skew.TokenKind.WHITESPACE, skew.TokenKind.NEWLINE, skew.TokenKind.NOT, skew.TokenKind.ERROR, skew.TokenKind.COMMENT, skew.TokenKind.REMAINDER, skew.TokenKind.BITWISE_AND, skew.TokenKind.ERROR, skew.TokenKind.LEFT_PARENTHESIS, skew.TokenKind.RIGHT_PARENTHESIS, skew.TokenKind.MULTIPLY, skew.TokenKind.PLUS, skew.TokenKind.COMMA, skew.TokenKind.MINUS, skew.TokenKind.DOT, skew.TokenKind.DIVIDE, skew.TokenKind.INT, skew.TokenKind.INT, skew.TokenKind.COLON, skew.TokenKind.LESS_THAN, skew.TokenKind.ASSIGN, skew.TokenKind.GREATER_THAN, skew.TokenKind.QUESTION_MARK, skew.TokenKind.ERROR, skew.TokenKind.IDENTIFIER, skew.TokenKind.LEFT_BRACKET, skew.TokenKind.RIGHT_BRACKET, skew.TokenKind.BITWISE_XOR, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.LEFT_BRACE, skew.TokenKind.BITWISE_OR, skew.TokenKind.RIGHT_BRACE, skew.TokenKind.TILDE, skew.TokenKind.WHITESPACE, skew.TokenKind.NEWLINE, skew.TokenKind.NOT_EQUAL, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.STRING, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.COMMENT, skew.TokenKind.COMMENT, skew.TokenKind.ASSIGN_REMAINDER, skew.TokenKind.LOGICAL_AND, skew.TokenKind.ASSIGN_BITWISE_AND, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.CHARACTER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.POWER, skew.TokenKind.ASSIGN_MULTIPLY, skew.TokenKind.INCREMENT, skew.TokenKind.ASSIGN_PLUS, skew.TokenKind.DECREMENT, skew.TokenKind.ASSIGN_MINUS, skew.TokenKind.DOT_DOT, skew.TokenKind.ASSIGN_DIVIDE, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.INT, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.SHIFT_LEFT, skew.TokenKind.LESS_THAN_OR_EQUAL, skew.TokenKind.EQUAL, skew.TokenKind.ARROW, skew.TokenKind.GREATER_THAN_OR_EQUAL, skew.TokenKind.SHIFT_RIGHT, skew.TokenKind.ANNOTATION, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.INDEX, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_BITWISE_XOR, skew.TokenKind.AS, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IF, skew.TokenKind.IN, skew.TokenKind.IS, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_BITWISE_OR, skew.TokenKind.LOGICAL_OR, skew.TokenKind.ASSIGN_POWER, skew.TokenKind.DOUBLE, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.DOUBLE, skew.TokenKind.INT_BINARY, skew.TokenKind.INT_OCTAL, skew.TokenKind.INT_HEX, skew.TokenKind.ASSIGN_SHIFT_LEFT, skew.TokenKind.COMPARE, skew.TokenKind.ASSIGN_SHIFT_RIGHT, skew.TokenKind.ANNOTATION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.ASSIGN_INDEX, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.DEF, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.FOR, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.TRY, skew.TokenKind.VAR, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.IDENTIFIER, skew.TokenKind.CASE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.ELSE, skew.TokenKind.ENUM, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.NULL, skew.TokenKind.OVER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.TRUE, skew.TokenKind.IDENTIFIER, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.YY_INVALID_ACTION, skew.TokenKind.LIST, skew.TokenKind.LIST_NEW, skew.TokenKind.BREAK, skew.TokenKind.CATCH, skew.TokenKind.CLASS, skew.TokenKind.CONST, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.FALSE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.SUPER, skew.TokenKind.IDENTIFIER, skew.TokenKind.THROW, skew.TokenKind.WHILE, skew.TokenKind.SET, skew.TokenKind.SET_NEW, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.RETURN, skew.TokenKind.SWITCH, skew.TokenKind.IDENTIFIER, skew.TokenKind.DEFAULT, skew.TokenKind.DYNAMIC, skew.TokenKind.FINALLY, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.CONTINUE, skew.TokenKind.IDENTIFIER, skew.TokenKind.IDENTIFIER, skew.TokenKind.INTERFACE, skew.TokenKind.NAMESPACE, skew.TokenKind.YY_INVALID_ACTION];
   skew.yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 6, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 21, 21, 22, 1, 23, 24, 25, 26, 27, 28, 28, 28, 28, 29, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 31, 32, 33, 34, 30, 1, 35, 36, 37, 38, 39, 40, 30, 41, 42, 30, 43, 44, 45, 46, 47, 48, 30, 49, 50, 51, 52, 53, 54, 55, 56, 30, 57, 58, 59, 60, 1];
@@ -11625,9 +11766,9 @@
   skew.yy_def = [0, 225, 1, 225, 225, 225, 225, 225, 226, 227, 225, 225, 228, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 229, 230, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 225, 225, 225, 225, 226, 225, 226, 227, 225, 225, 225, 225, 228, 225, 228, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 231, 225, 225, 225, 225, 225, 225, 232, 230, 225, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 231, 225, 225, 225, 232, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 0, 225, 225, 225, 225, 225, 225, 225];
   skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 30, 4, 31, 32, 33, 34, 35, 36, 37, 38, 29, 39, 29, 29, 29, 40, 41, 29, 42, 43, 44, 29, 45, 46, 29, 29, 47, 48, 49, 50, 52, 52, 55, 60, 63, 65, 69, 67, 73, 87, 74, 74, 74, 74, 98, 70, 99, 66, 68, 61, 224, 75, 79, 80, 81, 82, 88, 64, 96, 56, 73, 75, 74, 74, 74, 74, 83, 84, 106, 89, 93, 116, 118, 75, 100, 97, 52, 52, 103, 94, 76, 101, 95, 75, 104, 107, 102, 110, 105, 111, 112, 77, 55, 63, 121, 121, 121, 121, 113, 78, 73, 117, 74, 74, 74, 74, 119, 124, 124, 125, 125, 125, 223, 75, 135, 136, 64, 154, 222, 56, 122, 155, 122, 75, 221, 123, 123, 123, 123, 121, 121, 121, 121, 123, 123, 123, 123, 123, 123, 123, 123, 124, 124, 125, 125, 125, 166, 167, 54, 54, 54, 54, 57, 57, 57, 57, 62, 62, 62, 62, 85, 85, 86, 86, 86, 126, 126, 130, 130, 130, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 168, 165, 164, 163, 162, 161, 160, 159, 158, 157, 156, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 143, 142, 141, 140, 139, 138, 137, 134, 133, 132, 131, 129, 128, 127, 120, 225, 58, 225, 51, 115, 114, 109, 108, 92, 91, 90, 72, 71, 59, 58, 53, 51, 225, 3, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225];
   skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 11, 12, 15, 18, 16, 22, 30, 22, 22, 22, 22, 37, 18, 37, 15, 16, 11, 222, 22, 24, 24, 25, 25, 30, 12, 36, 8, 21, 22, 21, 21, 21, 21, 26, 26, 40, 30, 35, 47, 48, 21, 38, 36, 52, 52, 39, 35, 21, 38, 35, 21, 39, 40, 38, 43, 39, 43, 44, 21, 54, 62, 73, 73, 73, 73, 44, 21, 74, 47, 74, 74, 74, 74, 48, 76, 76, 77, 77, 77, 221, 74, 93, 93, 62, 113, 219, 54, 75, 113, 75, 74, 218, 75, 75, 75, 75, 121, 121, 121, 121, 122, 122, 122, 122, 123, 123, 123, 123, 124, 124, 125, 125, 125, 138, 138, 226, 226, 226, 226, 227, 227, 227, 227, 228, 228, 228, 228, 229, 229, 230, 230, 230, 231, 231, 232, 232, 232, 214, 211, 210, 209, 208, 207, 206, 201, 199, 198, 197, 196, 194, 193, 192, 185, 184, 183, 181, 180, 179, 178, 175, 174, 173, 172, 169, 168, 167, 166, 165, 164, 162, 161, 160, 159, 158, 157, 154, 153, 152, 151, 150, 149, 148, 147, 146, 144, 143, 142, 141, 140, 139, 137, 136, 135, 134, 133, 131, 117, 116, 115, 114, 112, 111, 110, 109, 108, 107, 106, 104, 102, 101, 100, 99, 98, 97, 96, 95, 94, 92, 89, 88, 87, 84, 80, 79, 65, 64, 57, 56, 51, 46, 45, 42, 41, 34, 33, 32, 20, 19, 10, 9, 7, 5, 3, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225];
-  skew.REMOVE_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), ((skew.TokenKind.COLON) | 0), 0), ((skew.TokenKind.COMMA) | 0), 0), ((skew.TokenKind.QUESTION_MARK) | 0), 0), ((skew.TokenKind.RIGHT_BRACKET) | 0), 0), ((skew.TokenKind.RIGHT_PARENTHESIS) | 0), 0);
-  skew.KEEP_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), ((skew.TokenKind.ANNOTATION) | 0), 0), ((skew.TokenKind.CLASS) | 0), 0), ((skew.TokenKind.COMMENT) | 0), 0), ((skew.TokenKind.DEF) | 0), 0), ((skew.TokenKind.INTERFACE) | 0), 0), ((skew.TokenKind.NAMESPACE) | 0), 0), ((skew.TokenKind.VAR) | 0), 0);
-  skew.REMOVE_NEWLINE_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), ((skew.TokenKind.COLON) | 0), 0), ((skew.TokenKind.COMMA) | 0), 0), ((skew.TokenKind.NEWLINE) | 0), 0), ((skew.TokenKind.QUESTION_MARK) | 0), 0), ((skew.TokenKind.LEFT_BRACE) | 0), 0), ((skew.TokenKind.LEFT_BRACKET) | 0), 0), ((skew.TokenKind.LEFT_PARENTHESIS) | 0), 0), ((skew.TokenKind.BITWISE_AND) | 0), 0), ((skew.TokenKind.BITWISE_OR) | 0), 0), ((skew.TokenKind.BITWISE_XOR) | 0), 0), ((skew.TokenKind.DIVIDE) | 0), 0), ((skew.TokenKind.EQUAL) | 0), 0), ((skew.TokenKind.GREATER_THAN) | 0), 0), ((skew.TokenKind.GREATER_THAN_OR_EQUAL) | 0), 0), ((skew.TokenKind.LESS_THAN) | 0), 0), ((skew.TokenKind.LESS_THAN_OR_EQUAL) | 0), 0), ((skew.TokenKind.LOGICAL_AND) | 0), 0), ((skew.TokenKind.LOGICAL_OR) | 0), 0), ((skew.TokenKind.MINUS) | 0), 0), ((skew.TokenKind.MULTIPLY) | 0), 0), ((skew.TokenKind.NOT_EQUAL) | 0), 0), ((skew.TokenKind.PLUS) | 0), 0), ((skew.TokenKind.REMAINDER) | 0), 0), ((skew.TokenKind.SHIFT_LEFT) | 0), 0), ((skew.TokenKind.SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.ASSIGN) | 0), 0), ((skew.TokenKind.ASSIGN_PLUS) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_AND) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_OR) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_XOR) | 0), 0), ((skew.TokenKind.ASSIGN_DIVIDE) | 0), 0), ((skew.TokenKind.ASSIGN_MULTIPLY) | 0), 0), ((skew.TokenKind.ASSIGN_REMAINDER) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_LEFT) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.ASSIGN_MINUS) | 0), 0);
+  skew.REMOVE_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), skew.TokenKind.COLON, 0), skew.TokenKind.COMMA, 0), skew.TokenKind.QUESTION_MARK, 0), skew.TokenKind.RIGHT_BRACKET, 0), skew.TokenKind.RIGHT_PARENTHESIS, 0);
+  skew.KEEP_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), skew.TokenKind.ANNOTATION, 0), skew.TokenKind.CLASS, 0), skew.TokenKind.COMMENT, 0), skew.TokenKind.DEF, 0), skew.TokenKind.INTERFACE, 0), skew.TokenKind.NAMESPACE, 0), skew.TokenKind.VAR, 0);
+  skew.REMOVE_NEWLINE_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), skew.TokenKind.COLON, 0), skew.TokenKind.COMMA, 0), skew.TokenKind.NEWLINE, 0), skew.TokenKind.QUESTION_MARK, 0), skew.TokenKind.LEFT_BRACE, 0), skew.TokenKind.LEFT_BRACKET, 0), skew.TokenKind.LEFT_PARENTHESIS, 0), skew.TokenKind.BITWISE_AND, 0), skew.TokenKind.BITWISE_OR, 0), skew.TokenKind.BITWISE_XOR, 0), skew.TokenKind.DIVIDE, 0), skew.TokenKind.EQUAL, 0), skew.TokenKind.GREATER_THAN, 0), skew.TokenKind.GREATER_THAN_OR_EQUAL, 0), skew.TokenKind.LESS_THAN, 0), skew.TokenKind.LESS_THAN_OR_EQUAL, 0), skew.TokenKind.LOGICAL_AND, 0), skew.TokenKind.LOGICAL_OR, 0), skew.TokenKind.MINUS, 0), skew.TokenKind.MULTIPLY, 0), skew.TokenKind.NOT_EQUAL, 0), skew.TokenKind.PLUS, 0), skew.TokenKind.REMAINDER, 0), skew.TokenKind.SHIFT_LEFT, 0), skew.TokenKind.SHIFT_RIGHT, 0), skew.TokenKind.ASSIGN, 0), skew.TokenKind.ASSIGN_PLUS, 0), skew.TokenKind.ASSIGN_BITWISE_AND, 0), skew.TokenKind.ASSIGN_BITWISE_OR, 0), skew.TokenKind.ASSIGN_BITWISE_XOR, 0), skew.TokenKind.ASSIGN_DIVIDE, 0), skew.TokenKind.ASSIGN_MULTIPLY, 0), skew.TokenKind.ASSIGN_REMAINDER, 0), skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), skew.TokenKind.ASSIGN_MINUS, 0);
   skew.DEFAULT_ERROR_LIMIT = 10;
   skew.JsEmitter.isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.$new(), "apply", 0), "arguments", 0), "Boolean", 0), "break", 0), "call", 0), "case", 0), "catch", 0), "class", 0), "const", 0), "constructor", 0), "continue", 0), "Date", 0), "debugger", 0), "default", 0), "delete", 0), "do", 0), "double", 0), "else", 0), "export", 0), "extends", 0), "false", 0), "finally", 0), "float", 0), "for", 0), "Function", 0), "function", 0), "if", 0), "import", 0), "in", 0), "instanceof", 0), "int", 0), "let", 0), "new", 0), "null", 0), "Number", 0), "Object", 0), "return", 0), "String", 0), "super", 0), "this", 0), "throw", 0), "true", 0), "try", 0), "var", 0);
   skew.Node.IS_IMPLICIT_RETURN = 1 << 0;
@@ -11655,7 +11796,7 @@
   skew.Symbol.IS_RENAMED = 1 << 16;
   skew.Symbol.IS_SKIPPED = 1 << 17;
   skew.Symbol.nextID = 0;
-  skew.parsing.operatorOverloadTokenKinds = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), ((skew.TokenKind.ASSIGN_BITWISE_AND) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_OR) | 0), 0), ((skew.TokenKind.ASSIGN_BITWISE_XOR) | 0), 0), ((skew.TokenKind.ASSIGN_DIVIDE) | 0), 0), ((skew.TokenKind.ASSIGN_INDEX) | 0), 0), ((skew.TokenKind.ASSIGN_MINUS) | 0), 0), ((skew.TokenKind.ASSIGN_MULTIPLY) | 0), 0), ((skew.TokenKind.ASSIGN_PLUS) | 0), 0), ((skew.TokenKind.ASSIGN_POWER) | 0), 0), ((skew.TokenKind.ASSIGN_REMAINDER) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_LEFT) | 0), 0), ((skew.TokenKind.ASSIGN_SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.BITWISE_AND) | 0), 0), ((skew.TokenKind.BITWISE_OR) | 0), 0), ((skew.TokenKind.BITWISE_XOR) | 0), 0), ((skew.TokenKind.COMPARE) | 0), 0), ((skew.TokenKind.DECREMENT) | 0), 0), ((skew.TokenKind.DIVIDE) | 0), 0), ((skew.TokenKind.IN) | 0), 0), ((skew.TokenKind.INCREMENT) | 0), 0), ((skew.TokenKind.INDEX) | 0), 0), ((skew.TokenKind.LIST) | 0), 0), ((skew.TokenKind.MINUS) | 0), 0), ((skew.TokenKind.MULTIPLY) | 0), 0), ((skew.TokenKind.NOT) | 0), 0), ((skew.TokenKind.PLUS) | 0), 0), ((skew.TokenKind.POWER) | 0), 0), ((skew.TokenKind.REMAINDER) | 0), 0), ((skew.TokenKind.SET) | 0), 0), ((skew.TokenKind.SHIFT_LEFT) | 0), 0), ((skew.TokenKind.SHIFT_RIGHT) | 0), 0), ((skew.TokenKind.TILDE) | 0), 0);
+  skew.parsing.operatorOverloadTokenKinds = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), skew.TokenKind.ASSIGN_BITWISE_AND, 0), skew.TokenKind.ASSIGN_BITWISE_OR, 0), skew.TokenKind.ASSIGN_BITWISE_XOR, 0), skew.TokenKind.ASSIGN_DIVIDE, 0), skew.TokenKind.ASSIGN_INDEX, 0), skew.TokenKind.ASSIGN_MINUS, 0), skew.TokenKind.ASSIGN_MULTIPLY, 0), skew.TokenKind.ASSIGN_PLUS, 0), skew.TokenKind.ASSIGN_POWER, 0), skew.TokenKind.ASSIGN_REMAINDER, 0), skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), skew.TokenKind.BITWISE_AND, 0), skew.TokenKind.BITWISE_OR, 0), skew.TokenKind.BITWISE_XOR, 0), skew.TokenKind.COMPARE, 0), skew.TokenKind.DECREMENT, 0), skew.TokenKind.DIVIDE, 0), skew.TokenKind.IN, 0), skew.TokenKind.INCREMENT, 0), skew.TokenKind.INDEX, 0), skew.TokenKind.LIST, 0), skew.TokenKind.MINUS, 0), skew.TokenKind.MULTIPLY, 0), skew.TokenKind.NOT, 0), skew.TokenKind.PLUS, 0), skew.TokenKind.POWER, 0), skew.TokenKind.REMAINDER, 0), skew.TokenKind.SET, 0), skew.TokenKind.SHIFT_LEFT, 0), skew.TokenKind.SHIFT_RIGHT, 0), skew.TokenKind.TILDE, 0);
   skew.parsing.boolLiteral = function(value) {
     return function(context, token) {
       return skew.Node.createBool(value).withRange(token.range);
@@ -11735,7 +11876,7 @@
     }
 
     else if (token.kind === skew.TokenKind.LIST_NEW || token.kind === skew.TokenKind.SET_NEW) {
-      in_List.append1(values, skew.Node.createName("new").withRange(new skew.Range(token.range.source, token.range.start + 1, token.range.end - 1)));
+      in_List.append1(values, skew.Node.createName("new").withRange(new skew.Range(token.range.source, token.range.start + 1 | 0, token.range.end - 1 | 0)));
     }
 
     return skew.Node.createInitializer(kind, values).withRange(context.spanSince(token.range));
@@ -11775,7 +11916,7 @@
   skew.Environment.nextID = 0;
   unicode.STRING_ENCODING = unicode.Encoding.UTF16;
   unicode.StringIterator.INSTANCE = new unicode.StringIterator();
-  terminal.colorToEscapeCode = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), ((terminal.Color.DEFAULT) | 0), 0), ((terminal.Color.BOLD) | 0), 1), ((terminal.Color.GRAY) | 0), 90), ((terminal.Color.RED) | 0), 91), ((terminal.Color.GREEN) | 0), 92), ((terminal.Color.YELLOW) | 0), 93), ((terminal.Color.BLUE) | 0), 94), ((terminal.Color.MAGENTA) | 0), 95), ((terminal.Color.CYAN) | 0), 96);
+  terminal.colorToEscapeCode = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.$new(), terminal.Color.DEFAULT, 0), terminal.Color.BOLD, 1), terminal.Color.GRAY, 90), terminal.Color.RED, 91), terminal.Color.GREEN, 92), terminal.Color.YELLOW, 93), terminal.Color.BLUE, 94), terminal.Color.MAGENTA, 95), terminal.Color.CYAN, 96);
 
   process.exit(skew.main(process.argv.slice(2)));
 }());

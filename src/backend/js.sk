@@ -1,9 +1,7 @@
 namespace skew {
   class JsEmitter : Emitter {
-    const options CompilerOptions
-    const cache TypeCache
-
     over visit(global ObjectSymbol) {
+      patchTree(global)
       var objects = sortedObjects(global)
 
       # The entire body of code is wrapped in a closure for safety
@@ -15,6 +13,13 @@ namespace skew {
         emit(indent + "  derived.prototype = Object.create(base.prototype);\n")
         emit(indent + "  derived.prototype.constructor = derived;\n")
         emit(indent + "}\n\n")
+      }
+
+      if needsMultiply {
+        emit(indent + "var $imul = Math.imul || function(a, b) {\n")
+        emit(indent + "  var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;\n")
+        emit(indent + "  return al * bl + (ah * bl + al * bh << 16) | 0;\n")
+        emit(indent + "};\n\n")
       }
 
       # Emit objects and functions
@@ -51,6 +56,9 @@ namespace skew {
     }
 
     @private {
+      const options CompilerOptions
+      const cache TypeCache
+      var needsMultiply = false
       var previousSymbol Symbol = null
       var previousNode Node = null
       var prefix = ""
@@ -128,8 +136,8 @@ namespace skew {
               }
             }
             decreaseIndent
-            if !isFirst { emit("\n") }
-            emit(indent + "};\n")
+            if !isFirst { emit("\n" + indent) }
+            emit("};\n")
             emitNewlineAfterSymbol(symbol)
           }
 
@@ -336,6 +344,7 @@ namespace skew {
             for i in 1..cases.count {
               var child = cases[i]
               var values = child.children
+              var block = child.caseBlock
               if i != 1 {
                 emit("\n")
               }
@@ -351,8 +360,10 @@ namespace skew {
               }
               emit(" {\n")
               increaseIndent
-              emitStatements(child.caseBlock.children)
-              emit(indent + "break;\n")
+              emitStatements(block.children)
+              if !block.blockAlwaysEndsWithReturn {
+                emit(indent + "break;\n")
+              }
               decreaseIndent
               emit(indent + "}\n")
             }
@@ -442,7 +453,8 @@ namespace skew {
           }
 
           case .NAME {
-            emit(node.symbol != null ? fullName(node.symbol) : node.asString)
+            var symbol = node.symbol
+            emit(symbol != null ? symbol.kind == .VARIABLE_ENUM && options.enumFormat == .STRING ? quoteString(symbol.name, '"') : fullName(symbol) : node.asString)
           }
 
           case .DOT {
@@ -550,32 +562,7 @@ namespace skew {
           }
 
           case .CAST {
-            var value = node.castValue
-            var from = value.resolvedType
-            var to = node.resolvedType
-
-            if from.isEnum && to == cache.stringType {
-              emit(fullName(from.symbol) + "[")
-              emitExpression(value, precedence)
-              emit("]")
-            }
-
-            else if from == cache.stringType && to.isEnum {
-              emit(fullName(to.symbol) + "[")
-              emitExpression(value, precedence)
-              emit("]")
-            }
-
-            # TODO: Do this better
-            else if to == cache.intType {
-              emit("((")
-              emitExpression(value, precedence)
-              emit(") | 0)")
-            }
-
-            else {
-              emitExpression(value, precedence)
-            }
+            emitExpression(node.castValue, precedence)
           }
 
           case .PARAMETERIZE {
@@ -622,15 +609,6 @@ namespace skew {
               }
             }
 
-            # TODO: Remove hack
-            else if node.kind == .DIVIDE && node.resolvedType == cache.intType {
-              emit("((")
-              emitExpression(node.binaryLeft, .LOWEST)
-              emit(") / (")
-              emitExpression(node.binaryRight, .LOWEST)
-              emit(") | 0)")
-            }
-
             else if node.kind.isBinary {
               var info = operatorInfo[node.kind]
               if info.precedence as int < precedence as int {
@@ -647,6 +625,133 @@ namespace skew {
             else {
               assert(false)
             }
+          }
+        }
+      }
+
+      def patchTree(symbol ObjectSymbol) {
+        for object in symbol.objects {
+          patchTree(object)
+        }
+
+        for function in symbol.functions {
+          patchTree(function.block)
+        }
+
+        for variable in symbol.variables {
+          patchTree(variable.value)
+        }
+      }
+
+      def createIntBinary(kind NodeKind, left Node, right Node) Node {
+        if kind == .MULTIPLY {
+          needsMultiply = true
+          return Node.createCall(Node.createName("$imul"), [left, right]).withType(cache.intType)
+        }
+        return wrapWithIntCast(Node.createBinary(kind, left, right).withType(cache.intType))
+      }
+
+      def wrapWithNot(node Node) Node {
+        return Node.createUnary(.NOT, node).withType(cache.boolType).withRange(node.range)
+      }
+
+      def wrapWithIntCast(node Node) Node {
+        return Node.createBinary(.BITWISE_OR, node, Node.createInt(0).withType(cache.intType)).withType(cache.intType).withRange(node.range)
+      }
+
+      def wrapWithTypeIndex(node Node, index Type, type Type) Node {
+        return Node.createIndex(Node.createType(index), [node]).withType(type).withRange(node.range)
+      }
+
+      def patchBinaryArithmetic(node Node) {
+        # Make sure arithmetic integer operators don't emit doubles outside the
+        # integer range. Allowing this causes JIT slowdowns due to extra checks
+        # during compilation and potential deoptimizations during execution.
+        if node.resolvedType == cache.intType && !alwaysConvertsOperandsToInt(node.parent) {
+          var left = node.binaryLeft
+          var right = node.binaryRight
+          if left.resolvedType == cache.intType && right.resolvedType == cache.intType {
+            node.become(createIntBinary(node.kind, left.replaceWithNull, right.replaceWithNull).withRange(node.range))
+          }
+        }
+      }
+
+      def patchTree(node Node) {
+        if node == null {
+          return
+        }
+
+        var children = node.children
+        var kind = node.kind
+
+        if children != null {
+          for child in children {
+            patchTree(child)
+          }
+        }
+
+        switch kind {
+          case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinaryArithmetic(node) }
+          case .CAST { patchCast(node) }
+          case .LAMBDA { patchTree(node.symbol.asFunctionSymbol.block) }
+          case .VAR { patchTree(node.symbol.asVariableSymbol.value) }
+        }
+      }
+
+      def patchCast(node Node) {
+        var value = node.castValue
+        var type = node.resolvedType
+        var valueType = value.resolvedType
+
+        # Cast to bool
+        if type == cache.boolType {
+          if valueType != cache.boolType {
+            node.become(wrapWithNot(wrapWithNot(value.replaceWithNull)))
+          }
+        }
+
+        # Cast to int
+        else if type == cache.intType {
+          # Cast from enum to int, only needed if the enum is represented as a string
+          if valueType.isEnum {
+            if options.enumFormat == .STRING {
+              node.become(wrapWithTypeIndex(value.replaceWithNull, valueType, type))
+            }
+          }
+
+          # Non-enum cast to int
+          else if valueType != cache.intType && !alwaysConvertsOperandsToInt(node.parent) {
+            node.become(wrapWithIntCast(value.replaceWithNull))
+          }
+        }
+
+        # Cast to double
+        else if type == cache.doubleType {
+          if !cache.isNumeric(valueType) {
+            node.become(Node.createUnary(.POSITIVE, value.replaceWithNull).withRange(node.range).withType(cache.doubleType))
+          }
+        }
+
+        # Cast to string
+        else if type == cache.stringType {
+          # Cast from enum to string, only needed if the enum is represented as an int
+          if valueType.isEnum {
+            if options.enumFormat == .INT {
+              node.become(wrapWithTypeIndex(value.replaceWithNull, valueType, type))
+            }
+          }
+
+          # Non-enum cast to string
+          else if valueType != cache.stringType {
+            node.become(Node.createBinary(.ADD, value.replaceWithNull, Node.createString("").withType(cache.stringType)).withType(cache.stringType).withRange(node.range))
+          }
+        }
+
+        # Cast to enum
+        else if type.isEnum {
+          # Cast from int or string to enum, only needed if the format is the other one
+          if valueType == cache.intType && options.enumFormat == .STRING || valueType == cache.stringType && options.enumFormat == .INT {
+            node.become(wrapWithTypeIndex(value.replaceWithNull, type, type))
           }
         }
       }
@@ -739,6 +844,20 @@ namespace skew {
       def computePrefix(symbol ObjectSymbol) string {
         assert(symbol.kind.isObject)
         return symbol.kind == .OBJECT_GLOBAL ? "" : computePrefix(symbol.parent.asObjectSymbol) + mangleName(symbol) + "."
+      }
+
+      def alwaysConvertsOperandsToInt(node Node) bool {
+        if node != null {
+          switch node.kind {
+            case
+              .ASSIGN_BITWISE_AND, .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_XOR,
+              .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT, .BITWISE_AND, .BITWISE_OR,
+              .BITWISE_XOR, .COMPLEMENT, .SHIFT_LEFT, .SHIFT_RIGHT {
+              return true
+            }
+          }
+        }
+        return false
       }
     }
   }

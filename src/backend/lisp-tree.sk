@@ -1,7 +1,5 @@
 namespace skew {
   class LispTreeEmitter : Emitter {
-    const options CompilerOptions
-
     over visit(global ObjectSymbol) {
       visitObject(global)
       emit("\n")
@@ -9,6 +7,8 @@ namespace skew {
     }
 
     @private {
+      const options CompilerOptions
+
       def visitObject(symbol ObjectSymbol) {
         emit("(" + mangleKind(symbol.kind) + " " + quoteString(symbol.name, '"'))
         increaseIndent

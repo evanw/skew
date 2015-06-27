@@ -8,6 +8,7 @@ namespace skew {
   var targetArea = document.getElementById("targetArea")
   var showSyntaxTree = false
   var constantFolding = false
+  var stringEnums = false
 
   def update {
     var log = Log.new
@@ -15,9 +16,8 @@ namespace skew {
     var options = CompilerOptions.new
     targetArea.textContent = "JavaScript"
     options.target = .JAVASCRIPT
-    if constantFolding {
-      options.foldAllConstants = true
-    }
+    if constantFolding { options.foldAllConstants = true }
+    if stringEnums { options.enumFormat = .STRING }
     var result = compile(log, options, [source])
     outputLog.value = log.toString
     outputTree.value = showSyntaxTree ? LispTreeEmitter.dump(result.global) : ""
@@ -44,6 +44,7 @@ namespace skew {
   def main {
     optionArea.appendChild(createCheckbox("Show syntax tree", false, value => showSyntaxTree = value))
     optionArea.appendChild(createCheckbox("Constant folding", false, value => constantFolding = value))
+    optionArea.appendChild(createCheckbox("String enums", false, value => stringEnums = value))
     input.oninput = => update
     update
   }

@@ -9,11 +9,18 @@ namespace skew {
     }
   }
 
+  # Strings are better for debugging but ints are better for performance
+  enum EnumFormat {
+    INT
+    STRING
+  }
+
   class CompilerOptions {
     var target CompilerTarget = .NONE
     var outputFile = ""
     var outputDirectory = ""
     var foldAllConstants = false
+    var enumFormat EnumFormat = .INT
   }
 
   class CompilerResult {

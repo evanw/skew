@@ -21,43 +21,33 @@ namespace skew {
 
         for function in symbol.functions {
           recordCallSite(function, null, null)
-          if function.block != null {
-            visitNode(function.block, function.self)
-          }
+          visitNode(function.block, function.self)
         }
 
         for variable in symbol.variables {
-          if variable.value != null {
-            visitNode(variable.value, null)
-          }
+          visitNode(variable.value, null)
         }
       }
 
       def visitNode(node Node, context VariableSymbol) {
-        if node.children != null {
-          for child in node.children {
-            if child != null {
+        if node != null {
+          if node.children != null {
+            for child in node.children {
               visitNode(child, context)
             }
           }
-        }
 
-        if node.kind == .CALL && node.symbol != null {
-          assert(node.symbol.kind.isFunction)
-          recordCallSite(node.symbol, node, context)
-        }
-
-        else if node.kind == .VAR {
-          var variable = node.symbol.asVariableSymbol
-          if variable.value != null {
-            visitNode(variable.value, context)
+          if node.kind == .CALL && node.symbol != null {
+            assert(node.symbol.kind.isFunction)
+            recordCallSite(node.symbol, node, context)
           }
-        }
 
-        else if node.kind == .LAMBDA {
-          var function = node.symbol.asFunctionSymbol
-          if function.block != null {
-            visitNode(function.block, context)
+          else if node.kind == .VAR {
+            visitNode(node.symbol.asVariableSymbol.value, context)
+          }
+
+          else if node.kind == .LAMBDA {
+            visitNode(node.symbol.asFunctionSymbol.block, context)
           }
         }
       }
