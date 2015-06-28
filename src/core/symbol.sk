@@ -81,26 +81,25 @@ namespace Skew {
 
   namespace Symbol {
     # Flags
-    const CHECKED_FOR_CONSTANT = 1 << 0
-    const IS_AUTOMATICALLY_GENERATED = 1 << 1
-    const IS_CONST = 1 << 2
-    const IS_GETTER = 1 << 3
-    const IS_LOOP_VARIABLE = 1 << 4
-    const IS_OVER = 1 << 5
-    const IS_SETTER = 1 << 6
-    const IS_VALUE_TYPE = 1 << 7
-    const SHOULD_INFER_RETURN_TYPE = 1 << 8
+    const IS_AUTOMATICALLY_GENERATED = 1 << 0
+    const IS_CONST = 1 << 1
+    const IS_GETTER = 1 << 2
+    const IS_LOOP_VARIABLE = 1 << 3
+    const IS_OVER = 1 << 4
+    const IS_SETTER = 1 << 5
+    const IS_VALUE_TYPE = 1 << 6
+    const SHOULD_INFER_RETURN_TYPE = 1 << 7
 
     # Modifiers
-    const IS_DEPRECATED = 1 << 9
-    const IS_ENTRY_POINT = 1 << 10
-    const IS_EXPORTED = 1 << 11
-    const IS_IMPORTED = 1 << 12
-    const IS_PREFERRED = 1 << 13
-    const IS_PRIVATE = 1 << 14
-    const IS_PROTECTED = 1 << 15
-    const IS_RENAMED = 1 << 16
-    const IS_SKIPPED = 1 << 17
+    const IS_DEPRECATED = 1 << 8
+    const IS_ENTRY_POINT = 1 << 9
+    const IS_EXPORTED = 1 << 10
+    const IS_IMPORTED = 1 << 11
+    const IS_PREFERRED = 1 << 12
+    const IS_PRIVATE = 1 << 13
+    const IS_PROTECTED = 1 << 14
+    const IS_RENAMED = 1 << 15
+    const IS_SKIPPED = 1 << 16
   }
 
   class Symbol {
@@ -117,7 +116,6 @@ namespace Skew {
     var flags = 0
 
     # Flags
-    def checkedForConstant bool       { return (flags & CHECKED_FOR_CONSTANT) != 0 }
     def isAutomaticallyGenerated bool { return (flags & IS_AUTOMATICALLY_GENERATED) != 0 }
     def isConst bool                  { return (flags & IS_CONST) != 0 }
     def isGetter bool                 { return (flags & IS_GETTER) != 0 }
@@ -227,33 +225,16 @@ namespace Skew {
     var block Node = null
   }
 
+  class EnumInfo {
+    var value int
+    var text string
+    var content Content # Either a string or an int depending on the current enum format, cached to avoid extra GC
+  }
+
   class VariableSymbol : Symbol {
     var type Node = null
     var value Node = null
-    var constant Content = null
-
-    def cachedConstantValue Content {
-      if !checkedForConstant {
-        flags |= Symbol.CHECKED_FOR_CONSTANT
-
-        if isConst && value != null {
-          switch value.kind {
-            case .CONSTANT {
-              constant = value.content
-            }
-
-            case .NAME {
-              var symbol = value.symbol
-              if symbol != null && symbol.kind.isVariable {
-                constant = symbol.asVariableSymbol.cachedConstantValue
-              }
-            }
-          }
-        }
-      }
-
-      return constant
-    }
+    var enumInfo EnumInfo = null
   }
 
   class OverloadedFunctionSymbol : Symbol {

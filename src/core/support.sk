@@ -87,6 +87,7 @@ def hashCombine(left int, right int) int {
 
 # JavaScript-specific library stuff
 
+@skip if RELEASE
 def assert(truth bool) {
   if !truth {
     throw dynamic.Error("Assertion failed")

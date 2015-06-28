@@ -39,7 +39,7 @@ namespace Skew {
 
   def compile(log Log, options CompilerOptions, sources List<Source>) CompilerResult {
     var start = Timestamp.seconds
-    var debug = true
+    var debug = !RELEASE
     var result = CompilerResult.new
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
 

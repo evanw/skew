@@ -1,12 +1,17 @@
 namespace Skew {
   def foldingPass(global ObjectSymbol, cache TypeCache) {
-    Folding.ConstantFolder.new(cache).visitObject(global)
+    Folding.ConstantFolder.new(cache, Folding.ConstantCache.new).visitObject(global)
   }
 }
 
 namespace Skew.Folding {
+  class ConstantLookup {
+    def constantForSymbol(symbol VariableSymbol) Content
+  }
+
   class ConstantFolder {
     const cache TypeCache
+    const constantLookup ConstantLookup
 
     def visitObject(symbol ObjectSymbol) {
       for object in symbol.objects {
@@ -264,7 +269,7 @@ namespace Skew.Folding {
       var symbol = node.symbol.asVariableSymbol
 
       # Remove this symbol entirely if it's being inlined everywhere
-      if symbol.isConst && symbol.cachedConstantValue != null {
+      if symbol.isConst && constantLookup.constantForSymbol(symbol) != null {
         node.remove
         return -1
       }
@@ -325,7 +330,7 @@ namespace Skew.Folding {
       # Only replace this with a constant if the target has no side effects.
       # This catches constants declared on imported types.
       if symbol != null && symbol.isConst && node.dotTarget.hasNoSideEffects {
-        var content = symbol.asVariableSymbol.cachedConstantValue
+        var content = constantLookup.constantForSymbol(symbol.asVariableSymbol)
         if content != null {
           flatten(node, content)
         }
@@ -337,7 +342,7 @@ namespace Skew.Folding {
 
       # Don't fold loop variables since they aren't actually constant across loop iterations
       if symbol != null && symbol.isConst && !symbol.isLoopVariable {
-        var content = symbol.asVariableSymbol.cachedConstantValue
+        var content = constantLookup.constantForSymbol(symbol.asVariableSymbol)
         if content != null {
           flatten(node, content)
         }
@@ -684,6 +689,41 @@ namespace Skew.Folding {
         result++
       }
       return result
+    }
+  }
+
+  class ConstantCache : ConstantLookup {
+    const map IntMap<Content> = {}
+
+    over constantForSymbol(symbol VariableSymbol) Content {
+      if symbol.id in map {
+        return map[symbol.id]
+      }
+
+      var constant Content = null
+      var value = symbol.value
+
+      if symbol.kind == .VARIABLE_ENUM {
+        constant = symbol.enumInfo.content
+      }
+
+      else if symbol.isConst && value != null {
+        switch value.kind {
+          case .CONSTANT {
+            constant = value.content
+          }
+
+          case .NAME, .DOT {
+            var target = value.symbol
+            if target != null && target.kind.isVariable {
+              constant = constantForSymbol(target.asVariableSymbol)
+            }
+          }
+        }
+      }
+
+      map[symbol.id] = constant
+      return constant
     }
   }
 }

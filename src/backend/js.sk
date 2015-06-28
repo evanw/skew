@@ -122,16 +122,13 @@ namespace Skew {
             var isFirst = true
             for variable in symbol.variables {
               if variable.kind == .VARIABLE_ENUM {
+                var value = variable.enumInfo.value.toString
                 if isFirst { isFirst = false }
                 else { emit(",") }
                 emit("\n")
                 emitNewlineBeforeSymbol(variable)
                 emitComments(variable.comments)
-                emit(indent + mangleName(variable) + ": ")
-                emitContent(variable.constant)
-                emit(", ")
-                emitContent(variable.constant)
-                emit(": " + quoteString(variable.name, '"'))
+                emit(indent + mangleName(variable) + ": " + value + ", " + value + ": " + quoteString(variable.enumInfo.text, '"'))
                 emitNewlineAfterSymbol(variable)
               }
             }

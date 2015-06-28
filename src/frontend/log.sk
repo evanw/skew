@@ -423,6 +423,10 @@ namespace Skew {
       error(range, "Could not find a variable named \"" + name + "\" to override")
     }
 
+    def semanticErrorExpectedConstant(range Range) {
+      error(range, "This value must be a compile-time constant")
+    }
+
     def semanticWarningUnreadLocalVariable(range Range, name string) {
       warning(range, "Local variable \"" + name + "\" is never read")
     }

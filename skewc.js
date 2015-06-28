@@ -319,7 +319,7 @@
 
   Skew.compile = function(log, options, sources) {
     var start = (typeof(performance) !== "undefined" && performance.now ? performance.now() : Date.now()) / 1000;
-    var debug = true;
+    var debug = !RELEASE;
     var result = new Skew.CompilerResult();
     sources.unshift(new Skew.Source("<native>", Skew.NATIVE_LIBRARY));
 
@@ -370,7 +370,7 @@
 
             // Partial evaluation before inlining to make more functions inlineable by removing dead code
             if (options.foldAllConstants) {
-              new Skew.Folding.ConstantFolder(result.cache).visitObject(result.global);
+              new Skew.Folding.ConstantFolder(result.cache, new Skew.Folding.ConstantCache()).visitObject(result.global);
 
               if (debug) {
                 Skew.verifyHierarchy1(result.global);
@@ -387,7 +387,7 @@
 
               // Partial evaluation after inlining will simplify inlined expressions
               if (options.foldAllConstants) {
-                new Skew.Folding.ConstantFolder(result.cache).visitObject(result.global);
+                new Skew.Folding.ConstantFolder(result.cache, new Skew.Folding.ConstantCache()).visitObject(result.global);
 
                 if (debug) {
                   Skew.verifyHierarchy1(result.global);
@@ -454,7 +454,7 @@
   };
 
   Skew.foldingPass = function(global, cache) {
-    new Skew.Folding.ConstantFolder(cache).visitObject(global);
+    new Skew.Folding.ConstantFolder(cache, new Skew.Folding.ConstantCache()).visitObject(global);
   };
 
   Skew.globalizingPass = function(global, graph) {
@@ -545,7 +545,9 @@
     cache.loadGlobals(log, global);
 
     if (!log.hasErrors()) {
-      new Skew.Resolving.Resolver(global, in_StringMap.clone(options.defines), cache, log).resolveGlobal();
+      var resolver = new Skew.Resolving.Resolver(global, options, in_StringMap.clone(options.defines), cache, log);
+      resolver.constantFolder = new Skew.Folding.ConstantFolder(cache, new Skew.Resolving.ConstantResolver(resolver));
+      resolver.resolveGlobal();
     }
   };
 
@@ -1063,6 +1065,8 @@
           var variable = list[i];
 
           if (variable.kind === Skew.SymbolKind.VARIABLE_ENUM) {
+            var value = variable.enumInfo.value.toString();
+
             if (isFirst) {
               isFirst = false;
             }
@@ -1074,11 +1078,7 @@
             self.emit("\n");
             self.emitNewlineBeforeSymbol(variable);
             self.emitComments(variable.comments);
-            self.emit(self.indent + Skew.JsEmitter.mangleName(variable) + ": ");
-            self.emitContent(variable.constant);
-            self.emit(", ");
-            self.emitContent(variable.constant);
-            self.emit(": " + Skew.quoteString(variable.name, 34));
+            self.emit(self.indent + Skew.JsEmitter.mangleName(variable) + ": " + value + ", " + value + ": " + Skew.quoteString(variable.enumInfo.text, 34));
             self.emitNewlineAfterSymbol(variable);
           }
         }
@@ -3429,11 +3429,6 @@
   };
 
   // Flags
-  Skew.Symbol.prototype.checkedForConstant = function() {
-    var self = this;
-    return (self.flags & Skew.Symbol.CHECKED_FOR_CONSTANT) !== 0;
-  };
-
   Skew.Symbol.prototype.isAutomaticallyGenerated = function() {
     var self = this;
     return (self.flags & Skew.Symbol.IS_AUTOMATICALLY_GENERATED) !== 0;
@@ -3635,42 +3630,22 @@
 
   $extends(Skew.FunctionSymbol, Skew.Symbol);
 
+  Skew.EnumInfo = function(value, text, content) {
+    var self = this;
+    self.value = value;
+    self.text = text;
+    self.content = content;
+  };
+
   Skew.VariableSymbol = function(kind, name) {
     var self = this;
     Skew.Symbol.call(self, kind, name);
     self.type = null;
     self.value = null;
-    self.constant = null;
+    self.enumInfo = null;
   };
 
   $extends(Skew.VariableSymbol, Skew.Symbol);
-
-  Skew.VariableSymbol.prototype.cachedConstantValue = function() {
-    var self = this;
-    if (!self.checkedForConstant()) {
-      self.flags |= Skew.Symbol.CHECKED_FOR_CONSTANT;
-
-      if (self.isConst() && self.value !== null) {
-        switch (self.value.kind) {
-          case Skew.NodeKind.CONSTANT: {
-            self.constant = self.value.content;
-            break;
-          }
-
-          case Skew.NodeKind.NAME: {
-            var symbol = self.value.symbol;
-
-            if (symbol !== null && Skew.SymbolKind.isVariable(symbol.kind)) {
-              self.constant = symbol.asVariableSymbol().cachedConstantValue();
-            }
-            break;
-          }
-        }
-      }
-    }
-
-    return self.constant;
-  };
 
   Skew.OverloadedFunctionSymbol = function(kind, name, symbols) {
     var self = this;
@@ -4301,6 +4276,11 @@
   Skew.Log.prototype.semanticErrorInvalidDefine2 = function(range, name) {
     var self = this;
     self.error(range, "Could not find a variable named \"" + name + "\" to override");
+  };
+
+  Skew.Log.prototype.semanticErrorExpectedConstant = function(range) {
+    var self = this;
+    self.error(range, "This value must be a compile-time constant");
   };
 
   Skew.Log.prototype.semanticWarningUnreadLocalVariable = function(range, name) {
@@ -6355,9 +6335,14 @@
 
   Skew.Folding = {};
 
-  Skew.Folding.ConstantFolder = function(cache) {
+  Skew.Folding.ConstantLookup = function() {
+    var self = this;
+  };
+
+  Skew.Folding.ConstantFolder = function(cache, constantLookup) {
     var self = this;
     self.cache = cache;
+    self.constantLookup = constantLookup;
   };
 
   Skew.Folding.ConstantFolder.prototype.visitObject = function(symbol) {
@@ -6670,7 +6655,7 @@
     var symbol = node.symbol.asVariableSymbol();
 
     // Remove this symbol entirely if it's being inlined everywhere
-    if (symbol.isConst() && symbol.cachedConstantValue() !== null) {
+    if (symbol.isConst() && self.constantLookup.constantForSymbol(symbol) !== null) {
       node.remove();
       return -1;
     }
@@ -6735,7 +6720,7 @@
     // Only replace this with a constant if the target has no side effects.
     // This catches constants declared on imported types.
     if (symbol !== null && symbol.isConst() && node.dotTarget().hasNoSideEffects()) {
-      var content = symbol.asVariableSymbol().cachedConstantValue();
+      var content = self.constantLookup.constantForSymbol(symbol.asVariableSymbol());
 
       if (content !== null) {
         self.flatten(node, content);
@@ -6749,7 +6734,7 @@
 
     // Don't fold loop variables since they aren't actually constant across loop iterations
     if (symbol !== null && symbol.isConst() && !symbol.isLoopVariable()) {
-      var content = symbol.asVariableSymbol().cachedConstantValue();
+      var content = self.constantLookup.constantForSymbol(symbol.asVariableSymbol());
 
       if (content !== null) {
         self.flatten(node, content);
@@ -7342,6 +7327,50 @@
     }
 
     return result;
+  };
+
+  Skew.Folding.ConstantCache = function() {
+    var self = this;
+    Skew.Folding.ConstantLookup.call(self);
+    self.map = Object.create(null);
+  };
+
+  $extends(Skew.Folding.ConstantCache, Skew.Folding.ConstantLookup);
+
+  Skew.Folding.ConstantCache.prototype.constantForSymbol = function(symbol) {
+    var self = this;
+    if (symbol.id in self.map) {
+      return self.map[symbol.id];
+    }
+
+    var constant = null;
+    var value = symbol.value;
+
+    if (symbol.kind === Skew.SymbolKind.VARIABLE_ENUM) {
+      constant = symbol.enumInfo.content;
+    }
+
+    else if (symbol.isConst() && value !== null) {
+      switch (value.kind) {
+        case Skew.NodeKind.CONSTANT: {
+          constant = value.content;
+          break;
+        }
+
+        case Skew.NodeKind.NAME:
+        case Skew.NodeKind.DOT: {
+          var target = value.symbol;
+
+          if (target !== null && Skew.SymbolKind.isVariable(target.kind)) {
+            constant = self.constantForSymbol(target.asVariableSymbol());
+          }
+          break;
+        }
+      }
+    }
+
+    self.map[symbol.id] = constant;
+    return constant;
   };
 
   Skew.Inlining = {};
@@ -7960,14 +7989,16 @@
     self.writeCount = 0;
   };
 
-  Skew.Resolving.Resolver = function(global, defines, cache, log) {
+  Skew.Resolving.Resolver = function(global, options, defines, cache, log) {
     var self = this;
     self.global = global;
+    self.options = options;
     self.defines = defines;
     self.cache = cache;
     self.log = log;
     self.foreachLoops = [];
     self.localVariableStatistics = Object.create(null);
+    self.constantFolder = null;
   };
 
   Skew.Resolving.Resolver.prototype.initializeSymbol = function(symbol) {
@@ -8215,7 +8246,7 @@
         var variable = list[i];
 
         if (variable.kind === Skew.SymbolKind.VARIABLE_ENUM) {
-          variable.constant = new Skew.IntContent(nextEnumValue);
+          variable.enumInfo = new Skew.EnumInfo(nextEnumValue, variable.name, self.options.enumFormat === Skew.EnumFormat.STRING ? new Skew.StringContent(variable.name) : new Skew.IntContent(nextEnumValue));
           ++nextEnumValue;
         }
       }
@@ -9239,6 +9270,8 @@
       return;
     }
 
+    node.symbol = value.symbol;
+
     // Apply built-in annotation logic
     var flag = in_StringMap.get(Skew.Resolving.Resolver.annotationSymbolFlags, value.symbol.fullName(), 0);
 
@@ -9294,26 +9327,42 @@
         self.log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name);
       }
 
-      else if ((symbol.flags & flag) !== 0) {
-        self.log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name);
-      }
-
       else {
+        // Don't add an annotation when the test expression is false
+        if (test !== null) {
+          self.recursivelyResolveAsConstant(test);
+
+          if (test.isFalse()) {
+            return;
+          }
+        }
+
+        // Only warn about duplicate annotations after checking the test expression
+        if ((symbol.flags & flag) !== 0) {
+          self.log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name);
+        }
+
         symbol.flags |= flag;
       }
     }
+  };
 
-    node.symbol = value.symbol;
+  Skew.Resolving.Resolver.prototype.recursivelyResolveAsConstant = function(node) {
+    var self = this;
+    self.constantFolder.foldConstants(node);
+
+    if (node.kind !== Skew.NodeKind.CONSTANT) {
+      self.log.semanticErrorExpectedConstant(node.range);
+    }
   };
 
   Skew.Resolving.Resolver.prototype.resolveBlock = function(node, scope) {
     var self = this;
     assert(node.kind === Skew.NodeKind.BLOCK);
     var children = node.children;
-    var n = children.length;
     var i = 0;
 
-    while (i < n) {
+    while (i < children.length) {
       var child = children[i];
 
       // There is a well-known ambiguity in languages like JavaScript where
@@ -9323,16 +9372,26 @@
       // statement. Luckily, we're better off than JavaScript since we know
       // the type of the function. Parse a single statement in a non-void
       // function but two statements in a void function.
-      if (child.kind === Skew.NodeKind.RETURN && (i + 1 | 0) < n && child.returnValue() === null && children[i + 1 | 0].kind === Skew.NodeKind.EXPRESSION) {
+      if (child.kind === Skew.NodeKind.RETURN && (i + 1 | 0) < children.length && child.returnValue() === null && children[i + 1 | 0].kind === Skew.NodeKind.EXPRESSION) {
         var $function = scope.findEnclosingFunctionOrLambda().symbol;
 
         if ($function.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR && $function.resolvedType.returnType !== null) {
           child.replaceChild(0, node.removeChildAtIndex(i + 1 | 0).expressionValue().replaceWithNull());
-          --n;
         }
       }
 
       self.resolveNode(child, scope, null);
+
+      // The "@skip" annotation removes function calls after type checking
+      if (child.kind === Skew.NodeKind.EXPRESSION) {
+        var value = child.expressionValue();
+
+        if (value.kind === Skew.NodeKind.CALL && value.symbol !== null && value.symbol.isSkipped()) {
+          node.removeChildAtIndex(i);
+          continue;
+        }
+      }
+
       ++i;
     }
   };
@@ -10718,6 +10777,41 @@
       symbol.overloaded = overloaded;
       overloaded.scope.asObjectScope().symbol.members[symbol.name] = overloaded;
     }
+  };
+
+  Skew.Resolving.ConstantResolver = function(resolver) {
+    var self = this;
+    Skew.Folding.ConstantLookup.call(self);
+    self.map = Object.create(null);
+    self.resolver = resolver;
+  };
+
+  $extends(Skew.Resolving.ConstantResolver, Skew.Folding.ConstantLookup);
+
+  Skew.Resolving.ConstantResolver.prototype.constantForSymbol = function(symbol) {
+    var self = this;
+    if (symbol.id in self.map) {
+      return self.map[symbol.id];
+    }
+
+    self.resolver.initializeSymbol(symbol);
+    var constant = null;
+    var value = symbol.value;
+
+    if (symbol.kind === Skew.SymbolKind.VARIABLE_ENUM) {
+      constant = symbol.enumInfo.content;
+    }
+
+    else if (symbol.isConst() && value !== null) {
+      self.resolver.constantFolder.foldConstants(value);
+
+      if (value.kind === Skew.NodeKind.CONSTANT) {
+        constant = value.content;
+      }
+    }
+
+    self.map[symbol.id] = constant;
+    return constant;
   };
 
   Skew.ScopeKind = {
@@ -12352,26 +12446,25 @@
   Skew.Node.IS_INSIDE_PARENTHESES = 1 << 1;
 
   // Flags
-  Skew.Symbol.CHECKED_FOR_CONSTANT = 1 << 0;
-  Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 1;
-  Skew.Symbol.IS_CONST = 1 << 2;
-  Skew.Symbol.IS_GETTER = 1 << 3;
-  Skew.Symbol.IS_LOOP_VARIABLE = 1 << 4;
-  Skew.Symbol.IS_OVER = 1 << 5;
-  Skew.Symbol.IS_SETTER = 1 << 6;
-  Skew.Symbol.IS_VALUE_TYPE = 1 << 7;
-  Skew.Symbol.SHOULD_INFER_RETURN_TYPE = 1 << 8;
+  Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 0;
+  Skew.Symbol.IS_CONST = 1 << 1;
+  Skew.Symbol.IS_GETTER = 1 << 2;
+  Skew.Symbol.IS_LOOP_VARIABLE = 1 << 3;
+  Skew.Symbol.IS_OVER = 1 << 4;
+  Skew.Symbol.IS_SETTER = 1 << 5;
+  Skew.Symbol.IS_VALUE_TYPE = 1 << 6;
+  Skew.Symbol.SHOULD_INFER_RETURN_TYPE = 1 << 7;
 
   // Modifiers
-  Skew.Symbol.IS_DEPRECATED = 1 << 9;
-  Skew.Symbol.IS_ENTRY_POINT = 1 << 10;
-  Skew.Symbol.IS_EXPORTED = 1 << 11;
-  Skew.Symbol.IS_IMPORTED = 1 << 12;
-  Skew.Symbol.IS_PREFERRED = 1 << 13;
-  Skew.Symbol.IS_PRIVATE = 1 << 14;
-  Skew.Symbol.IS_PROTECTED = 1 << 15;
-  Skew.Symbol.IS_RENAMED = 1 << 16;
-  Skew.Symbol.IS_SKIPPED = 1 << 17;
+  Skew.Symbol.IS_DEPRECATED = 1 << 8;
+  Skew.Symbol.IS_ENTRY_POINT = 1 << 9;
+  Skew.Symbol.IS_EXPORTED = 1 << 10;
+  Skew.Symbol.IS_IMPORTED = 1 << 11;
+  Skew.Symbol.IS_PREFERRED = 1 << 12;
+  Skew.Symbol.IS_PRIVATE = 1 << 13;
+  Skew.Symbol.IS_PROTECTED = 1 << 14;
+  Skew.Symbol.IS_RENAMED = 1 << 15;
+  Skew.Symbol.IS_SKIPPED = 1 << 16;
   Skew.Symbol.nextID = 0;
   Skew.Parsing.operatorOverloadTokenKinds = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_INDEX, 0), Skew.TokenKind.ASSIGN_MINUS, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_POWER, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.COMPARE, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.IN, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INDEX, 0), Skew.TokenKind.LIST, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.POWER, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SET, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.TILDE, 0);
   Skew.Parsing.boolLiteral = function(value) {

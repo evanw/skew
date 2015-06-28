@@ -2,7 +2,9 @@ namespace Skew {
   def resolvingPass(log Log, global ObjectSymbol, cache TypeCache, options CompilerOptions) {
     cache.loadGlobals(log, global)
     if !log.hasErrors {
-      Resolving.Resolver.new(global, options.defines.clone, cache, log).resolveGlobal
+      var resolver = Resolving.Resolver.new(global, options, options.defines.clone, cache, log)
+      resolver.constantFolder = Folding.ConstantFolder.new(cache, Resolving.ConstantResolver.new(resolver))
+      resolver.resolveGlobal
     }
   }
 }
@@ -26,11 +28,13 @@ namespace Skew.Resolving {
 
   class Resolver {
     const global ObjectSymbol
+    const options CompilerOptions
     const defines StringMap<Define>
     const cache TypeCache
     const log Log
     const foreachLoops List<Node> = []
     const localVariableStatistics IntMap<LocalVariableStatistics> = {}
+    var constantFolder Folding.ConstantFolder = null
 
     def initializeSymbol(symbol Symbol) {
       # The scope should have been set by the merging pass (or by this pass for local variables)
@@ -237,7 +241,7 @@ namespace Skew.Resolving {
         var nextEnumValue = 0
         for variable in symbol.variables {
           if variable.kind == .VARIABLE_ENUM {
-            variable.constant = IntContent.new(nextEnumValue)
+            variable.enumInfo = EnumInfo.new(nextEnumValue, variable.name, options.enumFormat == .STRING ? StringContent.new(variable.name) : IntContent.new(nextEnumValue))
             nextEnumValue++
           }
         }
@@ -1034,6 +1038,8 @@ namespace Skew.Resolving {
         return
       }
 
+      node.symbol = value.symbol
+
       # Apply built-in annotation logic
       var flag = annotationSymbolFlags.get(value.symbol.fullName, 0)
       if flag != 0 {
@@ -1051,24 +1057,40 @@ namespace Skew.Resolving {
         }
         if !isValid {
           log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
-        } else if (symbol.flags & flag) != 0 {
-          log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
         } else {
+          # Don't add an annotation when the test expression is false
+          if test != null {
+            recursivelyResolveAsConstant(test)
+            if test.isFalse {
+              return
+            }
+          }
+
+          # Only warn about duplicate annotations after checking the test expression
+          if (symbol.flags & flag) != 0 {
+            log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
+          }
+
           symbol.flags |= flag
         }
       }
+    }
 
-      node.symbol = value.symbol
+    def recursivelyResolveAsConstant(node Node) {
+      constantFolder.foldConstants(node)
+
+      if node.kind != .CONSTANT {
+        log.semanticErrorExpectedConstant(node.range)
+      }
     }
 
     def resolveBlock(node Node, scope Scope) {
       assert(node.kind == .BLOCK)
 
       var children = node.children
-      var n = children.count
       var i = 0
 
-      while i < n {
+      while i < children.count {
         var child = children[i]
 
         # There is a well-known ambiguity in languages like JavaScript where
@@ -1078,15 +1100,24 @@ namespace Skew.Resolving {
         # statement. Luckily, we're better off than JavaScript since we know
         # the type of the function. Parse a single statement in a non-void
         # function but two statements in a void function.
-        if child.kind == .RETURN && i + 1 < n && child.returnValue == null && children[i + 1].kind == .EXPRESSION {
+        if child.kind == .RETURN && i + 1 < children.count && child.returnValue == null && children[i + 1].kind == .EXPRESSION {
           var function = scope.findEnclosingFunctionOrLambda.symbol
           if function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null {
             child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue.replaceWithNull)
-            n--
           }
         }
 
         resolveNode(child, scope, null)
+
+        # The "@skip" annotation removes function calls after type checking
+        if child.kind == .EXPRESSION {
+          var value = child.expressionValue
+          if value.kind == .CALL && value.symbol != null && value.symbol.isSkipped {
+            node.removeChildAtIndex(i)
+            continue
+          }
+        }
+
         i++
       }
     }
@@ -2315,6 +2346,36 @@ namespace Skew.Resolving {
         symbol.overloaded = overloaded
         overloaded.scope.asObjectScope.symbol.members[symbol.name] = overloaded
       }
+    }
+  }
+
+  class ConstantResolver : Folding.ConstantLookup {
+    const map IntMap<Content> = {}
+    const resolver Resolver
+
+    over constantForSymbol(symbol VariableSymbol) Content {
+      if symbol.id in map {
+        return map[symbol.id]
+      }
+
+      resolver.initializeSymbol(symbol)
+
+      var constant Content = null
+      var value = symbol.value
+
+      if symbol.kind == .VARIABLE_ENUM {
+        constant = symbol.enumInfo.content
+      }
+
+      else if symbol.isConst && value != null {
+        resolver.constantFolder.foldConstants(value)
+        if value.kind == .CONSTANT {
+          constant = value.content
+        }
+      }
+
+      map[symbol.id] = constant
+      return constant
     }
   }
 }
