@@ -46,5 +46,5 @@ flex:
 	cd src/frontend && python build.py && cd -
 
 test:
-	node skewc.js $(SOURCES_TEST) --output-file=build/test.js
+	node skewc.js $(SOURCES_TEST) $(FLAGS) --output-file=build/test.js
 	mocha build/test.js

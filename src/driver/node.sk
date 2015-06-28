@@ -1,10 +1,11 @@
 namespace Skew {
   enum Option {
     DEFINE
-    MESSAGE_LIMIT
     FOLD_CONSTANTS
+    GLOBALIZE_FUNCTIONS
     HELP
     INLINE_FUNCTIONS
+    MESSAGE_LIMIT
     OUTPUT_DIRECTORY
     OUTPUT_FILE
     RELEASE
@@ -143,11 +144,12 @@ namespace Skew {
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
-    parser.define(.BOOL, .RELEASE, "--release", "Implies --fold-constants, --inline-functions, and --define:RELEASE=true.")
+    parser.define(.BOOL, .RELEASE, "--release", "Implies --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.")
     parser.define(.STRING_LIST, .DEFINE, "--define", "Override variable values at compile time.")
     parser.define(.INT, .MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is " + DEFAULT_MESSAGE_LIMIT.toString + ".")
     parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.")
     parser.define(.BOOL, .INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.")
+    parser.define(.BOOL, .GLOBALIZE_FUNCTIONS, "--globalize-functions", "Convert instance functions to global functions for better inlining.")
 
     # Parse the command line arguments
     parser.parse(log, arguments)
@@ -166,6 +168,7 @@ namespace Skew {
     var releaseFlag = parser.boolForOption(.RELEASE, false)
     options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag)
     options.inlineAllFunctions = parser.boolForOption(.INLINE_FUNCTIONS, releaseFlag)
+    options.globalizeAllFunctions = parser.boolForOption(.GLOBALIZE_FUNCTIONS, releaseFlag)
 
     # Prepare the defines
     if releaseFlag {

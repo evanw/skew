@@ -348,7 +348,7 @@
             var graph = new Skew.CallGraph(result.global);
 
             // Make certain functions global
-            Skew.globalizingPass(result.global, graph);
+            Skew.globalizingPass(result.global, graph, options);
 
             if (debug) {
               Skew.verifyHierarchy1(result.global);
@@ -457,13 +457,15 @@
     new Skew.Folding.ConstantFolder(cache, new Skew.Folding.ConstantCache()).visitObject(global);
   };
 
-  Skew.globalizingPass = function(global, graph) {
+  Skew.globalizingPass = function(global, graph, options) {
+    var virtualLookup = options.globalizeAllFunctions ? new Skew.VirtualLookup(global) : null;
+
     for (var i1 = 0, list1 = graph.callInfo, count1 = list1.length; i1 < count1; ++i1) {
       var info = list1[i1];
       var symbol = info.symbol;
 
       // Turn certain instance functions into global functions
-      if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind === Skew.SymbolKind.OBJECT_ENUM || symbol.parent.isImported() && !symbol.isImported())) {
+      if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind === Skew.SymbolKind.OBJECT_ENUM || symbol.parent.isImported() && !symbol.isImported() || !symbol.isImportedOrExported() && virtualLookup !== null && !virtualLookup.isVirtual(symbol))) {
         var $function = symbol.asFunctionSymbol();
         $function.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
         $function.$arguments.unshift($function.self);
@@ -701,11 +703,12 @@
     parser.define(Skew.Options.Type.BOOL, Skew.Option.HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
     parser.define(Skew.Options.Type.STRING, Skew.Option.OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
     parser.define(Skew.Options.Type.STRING, Skew.Option.OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
-    parser.define(Skew.Options.Type.BOOL, Skew.Option.RELEASE, "--release", "Implies --fold-constants, --inline-functions, and --define:RELEASE=true.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.RELEASE, "--release", "Implies --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.");
     parser.define(Skew.Options.Type.STRING_LIST, Skew.Option.DEFINE, "--define", "Override variable values at compile time.");
     parser.define(Skew.Options.Type.INT, Skew.Option.MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is " + Skew.DEFAULT_MESSAGE_LIMIT.toString() + ".");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.GLOBALIZE_FUNCTIONS, "--globalize-functions", "Convert instance functions to global functions for better inlining.");
 
     // Parse the command line arguments
     parser.parse(log, $arguments);
@@ -725,6 +728,7 @@
     var releaseFlag = parser.boolForOption(Skew.Option.RELEASE, false);
     options.foldAllConstants = parser.boolForOption(Skew.Option.FOLD_CONSTANTS, releaseFlag);
     options.inlineAllFunctions = parser.boolForOption(Skew.Option.INLINE_FUNCTIONS, releaseFlag);
+    options.globalizeAllFunctions = parser.boolForOption(Skew.Option.GLOBALIZE_FUNCTIONS, releaseFlag);
 
     // Prepare the defines
     if (releaseFlag) {
@@ -6321,6 +6325,7 @@
     self.outputDirectory = "";
     self.foldAllConstants = false;
     self.inlineAllFunctions = false;
+    self.globalizeAllFunctions = false;
     self.enumFormat = Skew.EnumFormat.INT;
     self.defines = Object.create(null);
   };
@@ -7371,6 +7376,38 @@
 
     self.map[symbol.id] = constant;
     return constant;
+  };
+
+  Skew.VirtualLookup = function(global) {
+    var self = this;
+    self.map = Object.create(null);
+    self.visitObject(global);
+  };
+
+  Skew.VirtualLookup.prototype.isVirtual = function(symbol) {
+    var self = this;
+    return in_IntMap.get(self.map, symbol.id, false);
+  };
+
+  Skew.VirtualLookup.prototype.visitObject = function(symbol) {
+    var self = this;
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      self.visitObject(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
+      var $function = list1[i1];
+      self.visitFunction($function);
+    }
+  };
+
+  Skew.VirtualLookup.prototype.visitFunction = function(symbol) {
+    var self = this;
+    if (symbol.overridden !== null) {
+      self.map[symbol.overridden.id] = true;
+      self.map[symbol.id] = true;
+    }
   };
 
   Skew.Inlining = {};
@@ -11617,13 +11654,14 @@
 
   Skew.Option = {
     DEFINE: 0, 0: "DEFINE",
-    MESSAGE_LIMIT: 1, 1: "MESSAGE_LIMIT",
-    FOLD_CONSTANTS: 2, 2: "FOLD_CONSTANTS",
+    FOLD_CONSTANTS: 1, 1: "FOLD_CONSTANTS",
+    GLOBALIZE_FUNCTIONS: 2, 2: "GLOBALIZE_FUNCTIONS",
     HELP: 3, 3: "HELP",
     INLINE_FUNCTIONS: 4, 4: "INLINE_FUNCTIONS",
-    OUTPUT_DIRECTORY: 5, 5: "OUTPUT_DIRECTORY",
-    OUTPUT_FILE: 6, 6: "OUTPUT_FILE",
-    RELEASE: 7, 7: "RELEASE"
+    MESSAGE_LIMIT: 5, 5: "MESSAGE_LIMIT",
+    OUTPUT_DIRECTORY: 6, 6: "OUTPUT_DIRECTORY",
+    OUTPUT_FILE: 7, 7: "OUTPUT_FILE",
+    RELEASE: 8, 8: "RELEASE"
   };
 
   Skew.Options = {};

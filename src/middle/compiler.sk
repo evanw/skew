@@ -26,6 +26,7 @@ namespace Skew {
     var outputDirectory = ""
     var foldAllConstants = false
     var inlineAllFunctions = false
+    var globalizeAllFunctions = false
     var enumFormat EnumFormat = .INT
     var defines StringMap<Define> = {}
   }
@@ -66,7 +67,7 @@ namespace Skew {
             var graph = CallGraph.new(result.global)
 
             # Make certain functions global
-            globalizingPass(result.global, graph)
+            globalizingPass(result.global, graph, options)
             if debug {
               verifyHierarchy(result.global)
             }

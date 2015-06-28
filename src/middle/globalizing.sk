@@ -1,10 +1,16 @@
 namespace Skew {
-  def globalizingPass(global ObjectSymbol, graph CallGraph) {
+  def globalizingPass(global ObjectSymbol, graph CallGraph, options CompilerOptions) {
+    var virtualLookup = options.globalizeAllFunctions ? VirtualLookup.new(global) : null
+
     for info in graph.callInfo {
       var symbol = info.symbol
 
       # Turn certain instance functions into global functions
-      if symbol.kind == .FUNCTION_INSTANCE && (symbol.parent.kind == .OBJECT_ENUM || symbol.parent.isImported && !symbol.isImported) {
+      if symbol.kind == .FUNCTION_INSTANCE && (
+          symbol.parent.kind == .OBJECT_ENUM ||
+          symbol.parent.isImported && !symbol.isImported ||
+          !symbol.isImportedOrExported && virtualLookup != null && !virtualLookup.isVirtual(symbol)) {
+
         var function = symbol.asFunctionSymbol
         function.kind = .FUNCTION_GLOBAL
         function.arguments.prepend(function.self)
@@ -26,6 +32,37 @@ namespace Skew {
           }
 
           callSite.callNode.insertChild(0, Node.createName(function.name).withSymbol(function))
+        }
+      }
+    }
+  }
+
+  class VirtualLookup {
+    def new(global ObjectSymbol) {
+      visitObject(global)
+    }
+
+    def isVirtual(symbol FunctionSymbol) bool {
+      return map.get(symbol.id, false)
+    }
+
+    @private {
+      const map IntMap<bool> = {}
+
+      def visitObject(symbol ObjectSymbol) {
+        for object in symbol.objects {
+          visitObject(object)
+        }
+
+        for function in symbol.functions {
+          visitFunction(function)
+        }
+      }
+
+      def visitFunction(symbol FunctionSymbol) {
+        if symbol.overridden != null {
+          map[symbol.overridden.id] = true
+          map[symbol.id] = true
         }
       }
     }
