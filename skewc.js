@@ -5751,7 +5751,7 @@
   // each with its own precedence. Pratt parsers excel at parsing expression
   // trees with deeply nested precedence levels. For an excellent writeup, see:
   //
-  //   http:#journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
+  //   http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
   //
   skew.Pratt = function() {
     var self = this;
@@ -6287,6 +6287,11 @@
         break;
       }
 
+      case skew.NodeKind.DOT: {
+        self.foldDot(node);
+        break;
+      }
+
       case skew.NodeKind.HOOK: {
         self.foldHook(node);
         break;
@@ -6546,6 +6551,21 @@
       }
 
       ++i;
+    }
+  };
+
+  skew.folding.ConstantFolder.prototype.foldDot = function(node) {
+    var self = this;
+    var symbol = node.symbol;
+
+    // Only replace this with a constant if the target has no side effects.
+    // This catches constants declared on imported types.
+    if (symbol !== null && symbol.isConst() && node.dotTarget().hasNoSideEffects()) {
+      var content = symbol.asVariableSymbol().cachedConstantValue();
+
+      if (content !== null) {
+        self.flatten(node, content);
+      }
     }
   };
 

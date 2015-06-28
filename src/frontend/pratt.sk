@@ -103,7 +103,7 @@ namespace skew {
   # each with its own precedence. Pratt parsers excel at parsing expression
   # trees with deeply nested precedence levels. For an excellent writeup, see:
   #
-  #   http:#journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
+  #   http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
   #
   class Pratt {
     @private

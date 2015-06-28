@@ -82,6 +82,7 @@ namespace skew.folding {
         case .BLOCK { foldBlock(node) }
         case .CALL { foldCall(node) }
         case .CAST { foldCast(node) }
+        case .DOT { foldDot(node) }
         case .HOOK { foldHook(node) }
         case .NAME { foldName(node) }
         default {
@@ -315,6 +316,19 @@ namespace skew.folding {
         }
 
         i++
+      }
+    }
+
+    def foldDot(node Node) {
+      var symbol = node.symbol
+
+      # Only replace this with a constant if the target has no side effects.
+      # This catches constants declared on imported types.
+      if symbol != null && symbol.isConst && node.dotTarget.hasNoSideEffects {
+        var content = symbol.asVariableSymbol.cachedConstantValue
+        if content != null {
+          flatten(node, content)
+        }
       }
     }
 
