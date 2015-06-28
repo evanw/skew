@@ -6,10 +6,6 @@ namespace Skew {
   var outputLog = document.getElementById("outputLog")
   var outputTree = document.getElementById("outputTree")
   var targetArea = document.getElementById("targetArea")
-  var constantFolding = false
-  var functionInlining = false
-  var showSyntaxTree = false
-  var stringEnums = false
 
   def update {
     var log = Log.new
@@ -17,39 +13,55 @@ namespace Skew {
     var options = CompilerOptions.new
     targetArea.textContent = "JavaScript"
     options.target = .JAVASCRIPT
-    if constantFolding { options.foldAllConstants = true }
-    if functionInlining { options.inlineAllFunctions = true }
-    if stringEnums { options.enumFormat = .STRING }
+    if Config.get(.CONSTANT_FOLDING) { options.foldAllConstants = true }
+    if Config.get(.FUNCTION_INLINING) { options.inlineAllFunctions = true }
+    if Config.get(.STRING_ENUMS) { options.enumFormat = .STRING }
     var result = compile(log, options, [source])
     outputLog.value = log.toString
-    outputTree.value = showSyntaxTree ? LispTreeEmitter.dump(result.global) : ""
+    outputTree.value = Config.get(.SHOW_SYNTAX_TREE) ? LispTreeEmitter.dump(result.global) : ""
     outputCode.value = log.hasErrors ? "" : result.outputs.first.contents
     compileTime.textContent = ((result.totalTime * 1000) as dynamic).toFixed(1) + "ms"
   }
 
-  def createCheckbox(label string, defaultValue bool, callback fn(bool)) dynamic {
+  def createCheckbox(label string, config Config) dynamic {
     var element = document.createElement("label")
     var checkbox = document.createElement("input")
     checkbox.type = "checkbox"
-    checkbox.checked = defaultValue
+    checkbox.checked = Config.get(config)
     checkbox.onchange = => {
-      callback(checkbox.checked)
+      Config.set(config, checkbox.checked)
       update
     }
     element.appendChild(checkbox)
     element.appendChild(document.createTextNode(" " + label))
-    callback(defaultValue)
     return element
   }
 
   @entry
   def main {
-    optionArea.appendChild(createCheckbox("Show syntax tree", false, value => showSyntaxTree = value))
-    optionArea.appendChild(createCheckbox("Constant folding", false, value => constantFolding = value))
-    optionArea.appendChild(createCheckbox("Function inlining", false, value => functionInlining = value))
-    optionArea.appendChild(createCheckbox("String enums", false, value => stringEnums = value))
+    optionArea.appendChild(createCheckbox("Show syntax tree", .SHOW_SYNTAX_TREE))
+    optionArea.appendChild(createCheckbox("Constant folding", .CONSTANT_FOLDING))
+    optionArea.appendChild(createCheckbox("Function inlining", .FUNCTION_INLINING))
+    optionArea.appendChild(createCheckbox("String enums", .STRING_ENUMS))
     input.oninput = => update
     update
+  }
+
+  enum Config {
+    CONSTANT_FOLDING
+    FUNCTION_INLINING
+    SHOW_SYNTAX_TREE
+    STRING_ENUMS
+  }
+
+  namespace Config {
+    def get(config Config) bool {
+      return dynamic.localStorage[config as string] == "true"
+    }
+
+    def set(config Config, value bool) {
+      dynamic.localStorage[config as string] = value
+    }
   }
 }
 
