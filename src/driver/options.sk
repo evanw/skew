@@ -3,7 +3,7 @@ namespace skew {
     def commandLineWarningDuplicateFlagValue(range Range, name string, previous Range) {
       warning(range, "Multiple values are specified for \"" + name + "\", using the later value")
       if previous != null {
-        note(previous, "Ignoring the value from the previous use")
+        note(previous, "Ignoring the previous value")
       }
     }
 
@@ -84,12 +84,12 @@ namespace skew.options {
       return node != null ? node.content.asInt : defaultValue
     }
 
-    def stringRangeForOption(option Option) Range {
+    def rangeForOption(option Option) Range {
       var node = nodeForOption(option)
       return node != null ? node.range : null
     }
 
-    def stringRangeListForOption(option Option) List<Range> {
+    def rangeListForOption(option Option) List<Range> {
       var node = nodeForOption(option)
       var ranges List<Range> = []
       if node != null {
@@ -167,13 +167,16 @@ namespace skew.options {
               log.commandLineErrorMissingValue(textRange, data.nameText)
             } else if argument[separator] != '=' {
               log.commandLineErrorExpectedToken(separatorRange, "=", argument.get(separator), argument)
-            } else if !isInteger(text) {
-              log.commandLineErrorNonIntegerValue(textRange, text, argument)
             } else {
-              if data.option in optionalArguments {
-                log.commandLineWarningDuplicateFlagValue(textRange, name, optionalArguments[data.option].range)
+              var box = parsing.parseIntLiteral(text)
+              if box == null {
+                log.commandLineErrorNonIntegerValue(textRange, text, argument)
+              } else {
+                if data.option in optionalArguments {
+                  log.commandLineWarningDuplicateFlagValue(textRange, name, optionalArguments[data.option].range)
+                }
+                optionalArguments[data.option] = Node.createInt(box.value).withRange(textRange)
               }
-              optionalArguments[data.option] = Node.createInt(parsing.parseIntLiteral(text, 10)).withRange(textRange)
             }
           }
 
@@ -237,20 +240,6 @@ namespace skew.options {
       }
 
       return text + "\n"
-    }
-  }
-
-  namespace Parser {
-    def isInteger(text string) bool {
-      var found = false
-      for i in (text.startsWith("-") ? 1 : 0)..text.count {
-        var c = text[i]
-        if c < '0' || c > '9' {
-          return false
-        }
-        found = true
-      }
-      return found
     }
   }
 }

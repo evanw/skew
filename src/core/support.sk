@@ -113,12 +113,28 @@ class StringMap {
     return key in self ? self[key] : value
   }
 
+  def keys List<string> {
+    return dynamic.Object.keys(self)
+  }
+
   def values List<T> {
     var values List<T> = []
     for key in self as dynamic {
       values.append(self[key])
     }
     return values
+  }
+
+  def clone StringMap<T> {
+    var clone = new
+    for key in keys {
+      clone[key] = self[key]
+    }
+    return clone
+  }
+
+  def remove(key string) {
+    dynamic.delete(self[key])
   }
 }
 
@@ -138,6 +154,14 @@ class IntMap {
     return key in self ? self[key] : value
   }
 
+  def keys List<int> {
+    var keys List<int> = []
+    for key in dynamic.Object.keys(self) as List<string> {
+      keys.append(key as dynamic as int)
+    }
+    return keys
+  }
+
   def values List<T> {
     var values List<T> = []
     for key in self as dynamic {
@@ -145,9 +169,35 @@ class IntMap {
     }
     return values
   }
+
+  def clone IntMap<T> {
+    var clone = new
+    for key in keys {
+      clone[key] = self[key]
+    }
+    return clone
+  }
+
+  def remove(key int) {
+    dynamic.delete(self[key])
+  }
+}
+
+class double {
+  def isFinite bool {
+    return dynamic.isFinite(self)
+  }
+
+  def isNAN bool {
+    return dynamic.isNaN(self)
+  }
 }
 
 class string {
+  def startsWith(text string) bool {
+    return count >= text.count && slice(0, text.count) == text
+  }
+
   def replaceAll(before string, after string) string {
     return after.join(self.split(before))
   }

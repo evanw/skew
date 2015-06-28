@@ -264,6 +264,10 @@ namespace skew {
       error(range, "Cannot convert from type \"" + from.toString + "\" to type \"" + to.toString + "\"" + (isCastAllowed ? " without a cast" : ""))
     }
 
+    def semanticErrorInvalidDefine(range Range, value string, type Type, name string) {
+      error(range, "Cannot convert \"" + value + "\" to type \"" + type.toString + "\" for variable \"" + name + "\"")
+    }
+
     def semanticWarningExtraCast(range Range, from Type, to Type) {
       warning(range, "Unnecessary cast from type \"" + from.toString + "\" to type \"" + to.toString + "\"")
     }
@@ -413,6 +417,10 @@ namespace skew {
 
     def semanticErrorInvalidEntryPointReturnType(range Range, name string) {
       error(range, "Entry point \"" + name + "\" must return either nothing or a value of type \"int\"")
+    }
+
+    def semanticErrorInvalidDefine(range Range, name string) {
+      error(range, "Could not find a variable named \"" + name + "\" to override")
     }
 
     def semanticWarningUnreadLocalVariable(range Range, name string) {

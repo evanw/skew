@@ -1,4 +1,6 @@
 const NATIVE_LIBRARY = "
+const RELEASE = false
+
 def @deprecated
 def @deprecated(message string)
 def @entry
@@ -39,6 +41,8 @@ namespace Math {
   def min(x int, y int) int
 
   const E = 2.718281828459045
+  const INFINITY = 1 / 0.0
+  const NAN = 0 / 0.0
   const PI = 3.141592653589793
 }
 
@@ -101,6 +105,9 @@ class double {
   def +=(x double)
   def -=(x double)
   def /=(x double)
+
+  def isFinite bool
+  def isNAN bool
 }
 
 @import
@@ -203,6 +210,7 @@ class List<T> {
 class StringMap<T> {
   def [](key string) T
   def []=(key string, value T)
+  def clone StringMap<T>
   def count int
   def each(x fn(string, T))
   def get(key string, defaultValue T) T
@@ -219,6 +227,7 @@ class StringMap<T> {
 class IntMap<T> {
   def [](key int) T
   def []=(key int, value T)
+  def clone IntMap<T>
   def count int
   def each(x fn(int, T))
   def get(key int, defaultValue T) T

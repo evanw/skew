@@ -1,8 +1,8 @@
 namespace skew {
-  def resolvingPass(log Log, global ObjectSymbol, cache TypeCache) {
+  def resolvingPass(log Log, global ObjectSymbol, cache TypeCache, options CompilerOptions) {
     cache.loadGlobals(log, global)
     if !log.hasErrors {
-      resolving.Resolver.new(cache, log).resolveGlobal(global)
+      resolving.Resolver.new(global, options.defines.clone, cache, log).resolveGlobal
     }
   }
 }
@@ -25,6 +25,8 @@ namespace skew.resolving {
   }
 
   class Resolver {
+    const global ObjectSymbol
+    const defines StringMap<Define>
     const cache TypeCache
     const log Log
     const foreachLoops List<Node> = []
@@ -113,6 +115,65 @@ namespace skew.resolving {
           log.semanticErrorInvalidEntryPointReturnType(symbol.returnType.range, symbol.name)
         }
       }
+    }
+
+    def resolveDefines(symbol VariableSymbol) {
+      var key = symbol.fullName
+      var define = defines.get(key, null)
+
+      if define == null {
+        return
+      }
+
+      # Remove the define so we can tell what defines weren't used later on
+      defines.remove(key)
+
+      var type = symbol.resolvedType
+      var range = define.value
+      var value = range.toString
+      var node Node = null
+
+      # Special-case booleans
+      if type == cache.boolType {
+        if value == "true" || value == "false" {
+          node = Node.createBool(value == "true")
+        }
+      }
+
+      # Special-case doubles
+      else if type == cache.doubleType {
+        var number = parsing.parseDoubleLiteral(value)
+        if !number.isNAN {
+          node = Node.createDouble(number)
+        }
+      }
+
+      # Special-case strings
+      else if type == cache.stringType {
+        node = Node.createString(value)
+      }
+
+      # Special-case enums
+      else if type.isEnum {
+        node = Node.createDot(null, value)
+      }
+
+      # Integers can also apply to doubles
+      if node == null && cache.isNumeric(type) {
+        var box = parsing.parseIntLiteral(value)
+        if box != null {
+          node = Node.createInt(box.value)
+        }
+      }
+
+      # Stop if anything failed above
+      if node == null {
+        log.semanticErrorInvalidDefine(range, value, type, key)
+        return
+      }
+
+      resolveAsParameterizedExpressionWithConversion(node.withRange(range), global.scope, type)
+      symbol.value = node
     }
 
     def resolveAnnotations(symbol Symbol) {
@@ -217,10 +278,11 @@ namespace skew.resolving {
       }
     }
 
-    def resolveGlobal(global ObjectSymbol) {
+    def resolveGlobal {
       resolveObject(global)
       convertForeachLoops
       scanLocalVariables
+      discardUnusedDefines
     }
 
     # Foreach loops are converted to for loops after everything is resolved
@@ -331,6 +393,12 @@ namespace skew.resolving {
         if scope.used != null && scope.used.get(symbol.name, null) != symbol {
           symbol.name = scope.generateName(symbol.name)
         }
+      }
+    }
+
+    def discardUnusedDefines {
+      for key in defines.keys {
+        log.semanticErrorInvalidDefine(defines[key].name, key)
       }
     }
 
@@ -669,6 +737,7 @@ namespace skew.resolving {
         symbol.resolvedType = .DYNAMIC
       }
 
+      resolveDefines(symbol)
       resolveAnnotations(symbol)
 
       # Run post-annotation checks

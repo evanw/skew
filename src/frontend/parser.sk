@@ -1,20 +1,54 @@
 namespace skew.parsing {
-  def parseIntLiteral(text string, base int) int {
+  def parseIntLiteral(text string) Box<int> {
+    var isNegative = text.startsWith("-") # Parse negative signs for use with the "--define" flag
+    var start = isNegative as int
+    var count = text.count
     var value = 0
-    switch base {
-      case 2, 8, 10 {
-        for i in (base == 10 ? 0 : 2)..text.count {
-          value = value * base + text[i] - '0'
-        }
-      }
-      case 16 {
-        for i in 2..text.count {
-          var c = text[i]
-          value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10)
-        }
+    var base = 10
+
+    # Parse the base
+    if start + 2 < count && text[start] == '0' {
+      var c = text[start + 1]
+      if c == 'b' {
+        base = 2
+        start += 2
+      } else if c == 'o' {
+        base = 8
+        start += 2
+      } else if c == 'x' {
+        base = 16
+        start += 2
       }
     }
-    return value
+
+    # There must be numbers after the base
+    if start == count {
+      return null
+    }
+
+    # Special-case hexadecimal since it's more complex
+    if base == 16 {
+      for i in start..text.count {
+        var c = text[i]
+        if (c < '0' || c > '9') && (c < 'A' || c > 'F') && (c < 'a' || c > 'f') {
+          return null
+        }
+        value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10)
+      }
+    }
+
+    # All other bases are zero-relative
+    else {
+      for i in start..text.count {
+        var c = text[i]
+        if c < '0' || c >= '0' + base {
+          return null
+        }
+        value = value * base + c - '0'
+      }
+    }
+
+    return Box<int>.new(isNegative ? -value : value)
   }
 
   def parseDoubleLiteral(text string) double {
@@ -935,7 +969,7 @@ namespace skew.parsing {
   }
 
   var boolLiteral = (value bool) => (context ParserContext, token Token) => Node.createBool(value).withRange(token.range)
-  var intLiteral = (base int) => (context ParserContext, token Token) Node => Node.createInt(parseIntLiteral(token.range.toString, base)).withRange(token.range)
+  var intLiteral = (context ParserContext, token Token) Node => Node.createInt(parseIntLiteral(token.range.toString).value).withRange(token.range)
   var stringLiteral = (context ParserContext, token Token) Node => Node.createString(parseStringLiteral(context.log, token.range)).withRange(token.range)
   var tokenLiteral = (kind NodeKind) => (context ParserContext, token Token) => Node.new(kind).withRange(token.range)
 
@@ -1036,10 +1070,10 @@ namespace skew.parsing {
 
     pratt.literal(.DOUBLE, (context, token) => Node.createDouble(parseDoubleLiteral(token.range.toString)).withRange(token.range))
     pratt.literal(.FALSE, boolLiteral(false))
-    pratt.literal(.INT, intLiteral(10))
-    pratt.literal(.INT_BINARY, intLiteral(2))
-    pratt.literal(.INT_HEX, intLiteral(16))
-    pratt.literal(.INT_OCTAL, intLiteral(8))
+    pratt.literal(.INT, intLiteral)
+    pratt.literal(.INT_BINARY, intLiteral)
+    pratt.literal(.INT_HEX, intLiteral)
+    pratt.literal(.INT_OCTAL, intLiteral)
     pratt.literal(.NULL, tokenLiteral(.NULL))
     pratt.literal(.STRING, stringLiteral)
     pratt.literal(.SUPER, tokenLiteral(.SUPER))

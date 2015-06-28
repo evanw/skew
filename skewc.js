@@ -334,7 +334,7 @@
 
       // Resolving pass, errors stop compilation
       if (!log.hasErrors()) {
-        skew.resolvingPass(log, result.global, result.cache);
+        skew.resolvingPass(log, result.global, result.cache, options);
 
         if (debug) {
           skew.verifyHierarchy1(result.global);
@@ -539,11 +539,11 @@
     skew.renaming.useOverriddenNames(global);
   };
 
-  skew.resolvingPass = function(log, global, cache) {
+  skew.resolvingPass = function(log, global, cache, options) {
     cache.loadGlobals(log, global);
 
     if (!log.hasErrors()) {
-      new skew.resolving.Resolver(cache, log).resolveGlobal(global);
+      new skew.resolving.Resolver(global, in_StringMap.clone(options.defines), cache, log).resolveGlobal();
     }
   };
 
@@ -565,8 +565,8 @@
           var output = list[i];
 
           if (!io.writeFile(output.name, output.contents)) {
-            var outputFile = parser.stringRangeForOption(skew.Option.OUTPUT_FILE);
-            var outputDirectory = parser.stringRangeForOption(skew.Option.OUTPUT_DIRECTORY);
+            var outputFile = parser.rangeForOption(skew.Option.OUTPUT_FILE);
+            var outputDirectory = parser.rangeForOption(skew.Option.OUTPUT_DIRECTORY);
             log.commandLineErrorUnwritableFile(outputFile !== null ? outputFile : outputDirectory, output.name);
             break;
           }
@@ -697,7 +697,8 @@
     parser.define(skew.options.Type.BOOL, skew.Option.HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
     parser.define(skew.options.Type.STRING, skew.Option.OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
     parser.define(skew.options.Type.STRING, skew.Option.OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
-    parser.define(skew.options.Type.BOOL, skew.Option.RELEASE, "--release", "Implies --fold-constants and --inline-functions.");
+    parser.define(skew.options.Type.BOOL, skew.Option.RELEASE, "--release", "Implies --fold-constants, --inline-functions, and --define:RELEASE=true.");
+    parser.define(skew.options.Type.STRING_LIST, skew.Option.DEFINE, "--define", "Override variable values at compile time.");
     parser.define(skew.options.Type.INT, skew.Option.ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is " + skew.DEFAULT_ERROR_LIMIT.toString() + ".");
     parser.define(skew.options.Type.BOOL, skew.Option.FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
     parser.define(skew.options.Type.BOOL, skew.Option.INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.");
@@ -721,6 +722,24 @@
     options.foldAllConstants = parser.boolForOption(skew.Option.FOLD_CONSTANTS, releaseFlag);
     options.inlineAllFunctions = parser.boolForOption(skew.Option.INLINE_FUNCTIONS, releaseFlag);
 
+    // Prepare the defines
+    if (releaseFlag) {
+      skew.createInternalDefine(options, "RELEASE", "true");
+    }
+
+    for (var i = 0, list = parser.rangeListForOption(skew.Option.DEFINE), count = list.length; i < count; ++i) {
+      var range = list[i];
+      var name = range.toString();
+      var equals = name.indexOf("=");
+
+      if (equals < 0) {
+        log.commandLineErrorExpectedDefineValue(range, name);
+        continue;
+      }
+
+      options.defines[name.slice(0, equals)] = new skew.Define(range.fromStart(equals), range.fromEnd((name.length - equals | 0) - 1 | 0));
+    }
+
     // There must be at least one source file
     var end = parser.source.contents.length;
     var trailingSpace = new skew.Range(parser.source, end - 1 | 0, end);
@@ -730,8 +749,8 @@
     }
 
     // Parse the output location
-    var outputFile = parser.stringRangeForOption(skew.Option.OUTPUT_FILE);
-    var outputDirectory = parser.stringRangeForOption(skew.Option.OUTPUT_DIRECTORY);
+    var outputFile = parser.rangeForOption(skew.Option.OUTPUT_FILE);
+    var outputDirectory = parser.rangeForOption(skew.Option.OUTPUT_DIRECTORY);
 
     if (outputFile === null && outputDirectory === null) {
       log.commandLineErrorMissingOutput(trailingSpace, "--output-file", "--output-dir");
@@ -750,6 +769,11 @@
     }
 
     return options;
+  };
+
+  skew.createInternalDefine = function(options, name, value) {
+    var range = new skew.Source("<internal>", "--define:" + name + "=" + value).entireRange();
+    options.defines[name] = new skew.Define(range.slice(9, 9 + name.length | 0), range.fromEnd(value.length));
   };
 
   skew.Emitter = function() {
@@ -3985,6 +4009,11 @@
     self.error(range, "Cannot convert from type \"" + from.toString() + "\" to type \"" + to.toString() + "\"" + (isCastAllowed ? " without a cast" : ""));
   };
 
+  skew.Log.prototype.semanticErrorInvalidDefine1 = function(range, value, type, name) {
+    var self = this;
+    self.error(range, "Cannot convert \"" + value + "\" to type \"" + type.toString() + "\" for variable \"" + name + "\"");
+  };
+
   skew.Log.prototype.semanticWarningExtraCast = function(range, from, to) {
     var self = this;
     self.warning(range, "Unnecessary cast from type \"" + from.toString() + "\" to type \"" + to.toString() + "\"");
@@ -4177,9 +4206,19 @@
     self.error(range, "Entry point \"" + name + "\" must return either nothing or a value of type \"int\"");
   };
 
+  skew.Log.prototype.semanticErrorInvalidDefine2 = function(range, name) {
+    var self = this;
+    self.error(range, "Could not find a variable named \"" + name + "\" to override");
+  };
+
   skew.Log.prototype.semanticWarningUnreadLocalVariable = function(range, name) {
     var self = this;
     self.warning(range, "Local variable \"" + name + "\" is never read");
+  };
+
+  skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
+    var self = this;
+    self.error(range, "Use \"--define:" + name + "=___\" to provide a value");
   };
 
   skew.Log.prototype.commandLineErrorMissingOutput = function(range, first, second) {
@@ -4212,7 +4251,7 @@
     self.warning(range, "Multiple values are specified for \"" + name + "\", using the later value");
 
     if (previous !== null) {
-      self.note(previous, "Ignoring the value from the previous use");
+      self.note(previous, "Ignoring the previous value");
     }
   };
 
@@ -4243,29 +4282,66 @@
 
   skew.parsing = {};
 
-  skew.parsing.parseIntLiteral = function(text, base) {
+  skew.parsing.parseIntLiteral = function(text) {
+    // Parse negative signs for use with the "--define" flag
+    var isNegative = in_string.startsWith(text, "-");
+    var start = isNegative | 0;
+    var count = text.length;
     var value = 0;
+    var base = 10;
 
-    switch (base) {
-      case 2:
-      case 8:
-      case 10: {
-        for (var i = base === 10 ? 0 : 2, count = text.length; i < count; i += 1) {
-          value = ($imul(value, base) + text.charCodeAt(i) | 0) - 48 | 0;
-        }
-        break;
+    // Parse the base
+    if ((start + 2 | 0) < count && text.charCodeAt(start) === 48) {
+      var c = text.charCodeAt(start + 1 | 0);
+
+      if (c === 98) {
+        base = 2;
+        start += 2;
       }
 
-      case 16: {
-        for (var i1 = 2, count1 = text.length; i1 < count1; i1 += 1) {
-          var c = text.charCodeAt(i1);
-          value = ($imul(value, 16) + c | 0) - (c <= 57 ? 48 : c <= 70 ? 65 - 10 | 0 : 97 - 10 | 0) | 0;
-        }
-        break;
+      else if (c === 111) {
+        base = 8;
+        start += 2;
+      }
+
+      else if (c === 120) {
+        base = 16;
+        start += 2;
       }
     }
 
-    return value;
+    // There must be numbers after the base
+    if (start === count) {
+      return null;
+    }
+
+    // Special-case hexadecimal since it's more complex
+    if (base === 16) {
+      for (var i = start, count1 = text.length; i < count1; i += 1) {
+        var c1 = text.charCodeAt(i);
+
+        if ((c1 < 48 || c1 > 57) && (c1 < 65 || c1 > 70) && (c1 < 97 || c1 > 102)) {
+          return null;
+        }
+
+        value = ($imul(value, 16) + c1 | 0) - (c1 <= 57 ? 48 : c1 <= 70 ? 65 - 10 | 0 : 97 - 10 | 0) | 0;
+      }
+    }
+
+    // All other bases are zero-relative
+    else {
+      for (var i1 = start, count2 = text.length; i1 < count2; i1 += 1) {
+        var c2 = text.charCodeAt(i1);
+
+        if (c2 < 48 || c2 >= (48 + base | 0)) {
+          return null;
+        }
+
+        value = ($imul(value, base) + c2 | 0) - 48 | 0;
+      }
+    }
+
+    return new Box(isNegative ? -value : value);
   };
 
   skew.parsing.parseDoubleLiteral = function(text) {
@@ -5385,10 +5461,10 @@
       return new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.DoubleContent(+token.range.toString())).withRange(token.range);
     });
     pratt.literal(skew.TokenKind.FALSE, skew.parsing.boolLiteral(false));
-    pratt.literal(skew.TokenKind.INT, skew.parsing.intLiteral(10));
-    pratt.literal(skew.TokenKind.INT_BINARY, skew.parsing.intLiteral(2));
-    pratt.literal(skew.TokenKind.INT_HEX, skew.parsing.intLiteral(16));
-    pratt.literal(skew.TokenKind.INT_OCTAL, skew.parsing.intLiteral(8));
+    pratt.literal(skew.TokenKind.INT, skew.parsing.intLiteral);
+    pratt.literal(skew.TokenKind.INT_BINARY, skew.parsing.intLiteral);
+    pratt.literal(skew.TokenKind.INT_HEX, skew.parsing.intLiteral);
+    pratt.literal(skew.TokenKind.INT_OCTAL, skew.parsing.intLiteral);
     pratt.literal(skew.TokenKind.NULL, skew.parsing.tokenLiteral(skew.NodeKind.NULL));
     pratt.literal(skew.TokenKind.STRING, skew.parsing.stringLiteral);
     pratt.literal(skew.TokenKind.SUPER, skew.parsing.tokenLiteral(skew.NodeKind.SUPER));
@@ -5998,6 +6074,11 @@
     self.lineOffsets = null;
   };
 
+  skew.Source.prototype.entireRange = function() {
+    var self = this;
+    return new skew.Range(self, 0, self.contents.length);
+  };
+
   skew.Source.prototype.lineCount = function() {
     var self = this;
     self.computeLineOffsets();
@@ -6161,6 +6242,12 @@
     STRING: 1, 1: "STRING"
   };
 
+  skew.Define = function(name, value) {
+    var self = this;
+    self.name = name;
+    self.value = value;
+  };
+
   skew.CompilerOptions = function() {
     var self = this;
     self.target = skew.CompilerTarget.NONE;
@@ -6169,6 +6256,7 @@
     self.foldAllConstants = false;
     self.inlineAllFunctions = false;
     self.enumFormat = skew.EnumFormat.INT;
+    self.defines = Object.create(null);
   };
 
   skew.CompilerResult = function() {
@@ -7786,8 +7874,10 @@
     self.writeCount = 0;
   };
 
-  skew.resolving.Resolver = function(cache, log) {
+  skew.resolving.Resolver = function(global, defines, cache, log) {
     var self = this;
+    self.global = global;
+    self.defines = defines;
     self.cache = cache;
     self.log = log;
     self.foreachLoops = [];
@@ -7900,6 +7990,67 @@
         self.log.semanticErrorInvalidEntryPointReturnType(symbol.returnType.range, symbol.name);
       }
     }
+  };
+
+  skew.resolving.Resolver.prototype.resolveDefines = function(symbol) {
+    var self = this;
+    var key = symbol.fullName();
+    var define = in_StringMap.get(self.defines, key, null);
+
+    if (define === null) {
+      return;
+    }
+
+    // Remove the define so we can tell what defines weren't used later on
+    delete(self.defines[key]);
+    var type = symbol.resolvedType;
+    var range = define.value;
+    var value = range.toString();
+    var node = null;
+
+    // Special-case booleans
+    if (type === self.cache.boolType) {
+      if (value === "true" || value === "false") {
+        node = new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.BoolContent(value === "true"));
+      }
+    }
+
+    // Special-case doubles
+    else if (type === self.cache.doubleType) {
+      var number = +value;
+
+      if (!isNaN(number)) {
+        node = new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.DoubleContent(number));
+      }
+    }
+
+    // Special-case strings
+    else if (type === self.cache.stringType) {
+      node = new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.StringContent(value));
+    }
+
+    // Special-case enums
+    else if (type.isEnum()) {
+      node = new skew.Node(skew.NodeKind.DOT).withContent(new skew.StringContent(value)).withChildren([null]);
+    }
+
+    // Integers can also apply to doubles
+    if (node === null && self.cache.isNumeric(type)) {
+      var box = skew.parsing.parseIntLiteral(value);
+
+      if (box !== null) {
+        node = new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.IntContent(box.value));
+      }
+    }
+
+    // Stop if anything failed above
+    if (node === null) {
+      self.log.semanticErrorInvalidDefine1(range, value, type, key);
+      return;
+    }
+
+    self.resolveAsParameterizedExpressionWithConversion(node.withRange(range), self.global.scope, type);
+    symbol.value = node;
   };
 
   skew.resolving.Resolver.prototype.resolveAnnotations = function(symbol) {
@@ -8025,11 +8176,12 @@
     }
   };
 
-  skew.resolving.Resolver.prototype.resolveGlobal = function(global) {
+  skew.resolving.Resolver.prototype.resolveGlobal = function() {
     var self = this;
-    self.resolveObject(global);
+    self.resolveObject(self.global);
     self.convertForeachLoops();
     self.scanLocalVariables();
+    self.discardUnusedDefines();
   };
 
   // Foreach loops are converted to for loops after everything is resolved
@@ -8148,6 +8300,14 @@
       if (scope.used !== null && in_StringMap.get(scope.used, symbol.name, null) !== symbol) {
         symbol.name = scope.generateName(symbol.name);
       }
+    }
+  };
+
+  skew.resolving.Resolver.prototype.discardUnusedDefines = function() {
+    var self = this;
+    for (var i = 0, list = Object.keys(self.defines), count = list.length; i < count; ++i) {
+      var key = list[i];
+      self.log.semanticErrorInvalidDefine2(self.defines[key].name, key);
     }
   };
 
@@ -8542,6 +8702,7 @@
       symbol.resolvedType = skew.Type.DYNAMIC;
     }
 
+    self.resolveDefines(symbol);
     self.resolveAnnotations(symbol);
 
     // Run post-annotation checks
@@ -11275,13 +11436,14 @@
   };
 
   skew.Option = {
-    ERROR_LIMIT: 0, 0: "ERROR_LIMIT",
-    FOLD_CONSTANTS: 1, 1: "FOLD_CONSTANTS",
-    HELP: 2, 2: "HELP",
-    INLINE_FUNCTIONS: 3, 3: "INLINE_FUNCTIONS",
-    OUTPUT_DIRECTORY: 4, 4: "OUTPUT_DIRECTORY",
-    OUTPUT_FILE: 5, 5: "OUTPUT_FILE",
-    RELEASE: 6, 6: "RELEASE"
+    DEFINE: 0, 0: "DEFINE",
+    ERROR_LIMIT: 1, 1: "ERROR_LIMIT",
+    FOLD_CONSTANTS: 2, 2: "FOLD_CONSTANTS",
+    HELP: 3, 3: "HELP",
+    INLINE_FUNCTIONS: 4, 4: "INLINE_FUNCTIONS",
+    OUTPUT_DIRECTORY: 5, 5: "OUTPUT_DIRECTORY",
+    OUTPUT_FILE: 6, 6: "OUTPUT_FILE",
+    RELEASE: 7, 7: "RELEASE"
   };
 
   skew.options = {};
@@ -11351,13 +11513,13 @@
     return node !== null ? node.content.asInt() : defaultValue;
   };
 
-  skew.options.Parser.prototype.stringRangeForOption = function(option) {
+  skew.options.Parser.prototype.rangeForOption = function(option) {
     var self = this;
     var node = self.nodeForOption(option);
     return node !== null ? node.range : null;
   };
 
-  skew.options.Parser.prototype.stringRangeListForOption = function(option) {
+  skew.options.Parser.prototype.rangeListForOption = function(option) {
     var self = this;
     var node = self.nodeForOption(option);
     var ranges = [];
@@ -11450,16 +11612,20 @@
             log.commandLineErrorExpectedToken(separatorRange, "=", argument1[separator], argument1);
           }
 
-          else if (!skew.options.Parser.isInteger(text)) {
-            log.commandLineErrorNonIntegerValue(textRange, text, argument1);
-          }
-
           else {
-            if (data.option in self.optionalArguments) {
-              log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[data.option].range);
+            var box = skew.parsing.parseIntLiteral(text);
+
+            if (box === null) {
+              log.commandLineErrorNonIntegerValue(textRange, text, argument1);
             }
 
-            self.optionalArguments[data.option] = new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.IntContent(skew.parsing.parseIntLiteral(text, 10))).withRange(textRange);
+            else {
+              if (data.option in self.optionalArguments) {
+                log.commandLineWarningDuplicateFlagValue(textRange, name, self.optionalArguments[data.option].range);
+              }
+
+              self.optionalArguments[data.option] = new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.IntContent(box.value)).withRange(textRange);
+            }
           }
           break;
         }
@@ -11544,22 +11710,6 @@
     }
 
     return text + "\n";
-  };
-
-  skew.options.Parser.isInteger = function(text) {
-    var found = false;
-
-    for (var i = text.startsWith("-") ? 1 : 0, count = text.length; i < count; i += 1) {
-      var c = text.charCodeAt(i);
-
-      if (c < 48 || c > 57) {
-        return false;
-      }
-
-      found = true;
-    }
-
-    return found;
   };
 
   var prettyPrint = {};
@@ -11832,7 +11982,25 @@
     return terminal.colorToEscapeCode[self];
   };
 
+  var in_double = {};
+
+  in_double.isFinite = function(self) {
+    return isFinite(self);
+  };
+
+  in_double.isNAN = function(self) {
+    return isNaN(self);
+  };
+
   var in_string = {};
+
+  in_string.startsWith = function(self, text) {
+    return self.length >= text.length && self.slice(0, text.length) === text;
+  };
+
+  in_string.count = function(self) {
+    return self.length;
+  };
 
   in_string.replaceAll = function(self, before, after) {
     return self.split(before).join(after);
@@ -11844,10 +12012,6 @@
 
   in_string.contains = function(self, value) {
     return self.indexOf(value) >= 0;
-  };
-
-  in_string.count = function(self) {
-    return self.length;
   };
 
   in_string.get1 = function(self, index) {
@@ -12085,6 +12249,10 @@
     return key in self ? self[key] : value;
   };
 
+  in_StringMap.keys = function(self) {
+    return Object.keys(self);
+  };
+
   in_StringMap.values = function(self) {
     var values = [];
 
@@ -12093,6 +12261,21 @@
     }
 
     return values;
+  };
+
+  in_StringMap.clone = function(self) {
+    var clone = Object.create(null);
+
+    for (var i = 0, list = Object.keys(self), count1 = list.length; i < count1; ++i) {
+      var key = list[i];
+      clone[key] = self[key];
+    }
+
+    return clone;
+  };
+
+  in_StringMap.remove = function(self, key) {
+    delete(self[key]);
   };
 
   var in_IntMap = {};
@@ -12110,6 +12293,17 @@
     return key in self ? self[key] : value;
   };
 
+  in_IntMap.keys = function(self) {
+    var keys = [];
+
+    for (var i = 0, list = Object.keys(self), count1 = list.length; i < count1; ++i) {
+      var key = list[i];
+      keys.push(key | 0);
+    }
+
+    return keys;
+  };
+
   in_IntMap.values = function(self) {
     var values = [];
 
@@ -12120,7 +12314,23 @@
     return values;
   };
 
-  var NATIVE_LIBRARY = "\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  def endsWith(x string) bool\n  def get(x int) string\n  def in(x string) bool\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  def startsWith(x string) bool\n  def toLowerCase string\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import\nclass StringBuilder {\n  def append(x string)\n  def new\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  def first T\n  def in(x T) bool\n  def indexOf(x T) int\n  def insert(x int, value T)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  def last T\n  def lastIndexOf(x T) int\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def +(x T) List<T>\n  def +(x List<T>) List<T>\n\n  @prefer\n  def +=(x T)\n  def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\nclass Box<T> {\n  var value T\n}\n";
+  in_IntMap.clone = function(self) {
+    var clone = Object.create(null);
+
+    for (var i = 0, list = in_IntMap.keys(self), count1 = list.length; i < count1; ++i) {
+      var key = list[i];
+      clone[key] = self[key];
+    }
+
+    return clone;
+  };
+
+  in_IntMap.remove = function(self, key) {
+    delete(self[key]);
+  };
+
+  var RELEASE = false;
+  var NATIVE_LIBRARY = "\nconst RELEASE = false\n\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const INFINITY = 1 / 0.0\n  const NAN = 0 / 0.0\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n\n  def isFinite bool\n  def isNAN bool\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  def endsWith(x string) bool\n  def get(x int) string\n  def in(x string) bool\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  def startsWith(x string) bool\n  def toLowerCase string\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import\nclass StringBuilder {\n  def append(x string)\n  def new\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  def first T\n  def in(x T) bool\n  def indexOf(x T) int\n  def insert(x int, value T)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  def last T\n  def lastIndexOf(x T) int\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def +(x T) List<T>\n  def +(x List<T>) List<T>\n\n  @prefer\n  def +=(x T)\n  def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def clone StringMap<T>\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def clone IntMap<T>\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\nclass Box<T> {\n  var value T\n}\n";
   skew.HEX = "0123456789ABCDEF";
   skew.operatorInfo = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), skew.NodeKind.COMPLEMENT, new skew.OperatorInfo("~", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), skew.NodeKind.DECREMENT, new skew.OperatorInfo("--", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), skew.NodeKind.INCREMENT, new skew.OperatorInfo("++", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), skew.NodeKind.NEGATIVE, new skew.OperatorInfo("-", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), skew.NodeKind.NOT, new skew.OperatorInfo("!", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO)), skew.NodeKind.POSITIVE, new skew.OperatorInfo("+", skew.Precedence.UNARY_PREFIX, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), skew.NodeKind.ADD, new skew.OperatorInfo("+", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), skew.NodeKind.BITWISE_AND, new skew.OperatorInfo("&", skew.Precedence.BITWISE_AND, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.BITWISE_OR, new skew.OperatorInfo("|", skew.Precedence.BITWISE_OR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.BITWISE_XOR, new skew.OperatorInfo("^", skew.Precedence.BITWISE_XOR, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.COMPARE, new skew.OperatorInfo("<=>", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.DIVIDE, new skew.OperatorInfo("/", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.EQUAL, new skew.OperatorInfo("==", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.GREATER_THAN, new skew.OperatorInfo(">", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.GREATER_THAN_OR_EQUAL, new skew.OperatorInfo(">=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.IN, new skew.OperatorInfo("in", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.LESS_THAN, new skew.OperatorInfo("<", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.LESS_THAN_OR_EQUAL, new skew.OperatorInfo("<=", skew.Precedence.COMPARE, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.LOGICAL_AND, new skew.OperatorInfo("&&", skew.Precedence.LOGICAL_AND, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.LOGICAL_OR, new skew.OperatorInfo("||", skew.Precedence.LOGICAL_OR, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.MULTIPLY, new skew.OperatorInfo("*", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.NOT_EQUAL, new skew.OperatorInfo("!=", skew.Precedence.EQUAL, skew.Associativity.LEFT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.POWER, new skew.OperatorInfo("**", skew.Precedence.UNARY_PREFIX, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.REMAINDER, new skew.OperatorInfo("%", skew.Precedence.MULTIPLY, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.SHIFT_LEFT, new skew.OperatorInfo("<<", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.SHIFT_RIGHT, new skew.OperatorInfo(">>", skew.Precedence.SHIFT, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.SUBTRACT, new skew.OperatorInfo("-", skew.Precedence.ADD, skew.Associativity.LEFT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ZERO_OR_ONE)), skew.NodeKind.ASSIGN, new skew.OperatorInfo("=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.FIXED, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_ADD, new skew.OperatorInfo("+=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_BITWISE_AND, new skew.OperatorInfo("&=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_BITWISE_OR, new skew.OperatorInfo("|=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_BITWISE_XOR, new skew.OperatorInfo("^=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_DIVIDE, new skew.OperatorInfo("/=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_MULTIPLY, new skew.OperatorInfo("*=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_POWER, new skew.OperatorInfo("**=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_REMAINDER, new skew.OperatorInfo("%=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_SHIFT_LEFT, new skew.OperatorInfo("<<=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_SHIFT_RIGHT, new skew.OperatorInfo(">>=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_SUBTRACT, new skew.OperatorInfo("-=", skew.Precedence.ASSIGN, skew.Associativity.RIGHT, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE)), skew.NodeKind.ASSIGN_INDEX, new skew.OperatorInfo("[]=", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.TWO_OR_MORE)), skew.NodeKind.INDEX, new skew.OperatorInfo("[]", skew.Precedence.MEMBER, skew.Associativity.NONE, skew.OperatorKind.OVERRIDABLE, skew.ArgumentCount.ONE_OR_MORE));
   skew.argumentCounts = null;
@@ -12167,10 +12377,8 @@
       return new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.BoolContent(value)).withRange(token.range);
     };
   };
-  skew.parsing.intLiteral = function(base) {
-    return function(context, token) {
-      return new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.IntContent(skew.parsing.parseIntLiteral(token.range.toString(), base))).withRange(token.range);
-    };
+  skew.parsing.intLiteral = function(context, token) {
+    return new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.IntContent(skew.parsing.parseIntLiteral(token.range.toString()).value)).withRange(token.range);
   };
   skew.parsing.stringLiteral = function(context, token) {
     return new skew.Node(skew.NodeKind.CONSTANT).withContent(new skew.StringContent(skew.parsing.parseStringLiteral(context.log, token.range))).withRange(token.range);

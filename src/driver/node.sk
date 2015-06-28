@@ -1,5 +1,6 @@
 namespace skew {
   enum Option {
+    DEFINE
     ERROR_LIMIT
     FOLD_CONSTANTS
     HELP
@@ -28,8 +29,8 @@ namespace skew {
       if !log.hasErrors {
         for output in result.outputs {
           if !io.writeFile(output.name, output.contents) {
-            var outputFile = parser.stringRangeForOption(.OUTPUT_FILE)
-            var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY)
+            var outputFile = parser.rangeForOption(.OUTPUT_FILE)
+            var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
             log.commandLineErrorUnwritableFile(outputFile != null ? outputFile : outputDirectory, output.name)
             break
           }
@@ -141,7 +142,8 @@ namespace skew {
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
-    parser.define(.BOOL, .RELEASE, "--release", "Implies --fold-constants and --inline-functions.")
+    parser.define(.BOOL, .RELEASE, "--release", "Implies --fold-constants, --inline-functions, and --define:RELEASE=true.")
+    parser.define(.STRING_LIST, .DEFINE, "--define", "Override variable values at compile time.")
     parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is " + DEFAULT_ERROR_LIMIT.toString + ".")
     parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.")
     parser.define(.BOOL, .INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.")
@@ -164,6 +166,20 @@ namespace skew {
     options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag)
     options.inlineAllFunctions = parser.boolForOption(.INLINE_FUNCTIONS, releaseFlag)
 
+    # Prepare the defines
+    if releaseFlag {
+      createInternalDefine(options, "RELEASE", "true")
+    }
+    for range in parser.rangeListForOption(.DEFINE) {
+      var name = range.toString
+      var equals = name.indexOf("=")
+      if equals < 0 {
+        log.commandLineErrorExpectedDefineValue(range, name)
+        continue
+      }
+      options.defines[name.slice(0, equals)] = Define.new(range.fromStart(equals), range.fromEnd(name.count - equals - 1))
+    }
+
     # There must be at least one source file
     var end = parser.source.contents.count
     var trailingSpace = Range.new(parser.source, end - 1, end)
@@ -172,8 +188,8 @@ namespace skew {
     }
 
     # Parse the output location
-    var outputFile = parser.stringRangeForOption(.OUTPUT_FILE)
-    var outputDirectory = parser.stringRangeForOption(.OUTPUT_DIRECTORY)
+    var outputFile = parser.rangeForOption(.OUTPUT_FILE)
+    var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
     if outputFile == null && outputDirectory == null {
       log.commandLineErrorMissingOutput(trailingSpace, "--output-file", "--output-dir")
     } else if outputFile != null && outputDirectory != null {
@@ -187,7 +203,16 @@ namespace skew {
     return options
   }
 
+  def createInternalDefine(options CompilerOptions, name string, value string) {
+    var range = Source.new("<internal>", "--define:" + name + "=" + value).entireRange
+    options.defines[name] = Define.new(range.slice(9, 9 + name.count), range.fromEnd(value.count))
+  }
+
   class Log {
+    def commandLineErrorExpectedDefineValue(range Range, name string) {
+      error(range, "Use \"--define:" + name + "=___\" to provide a value")
+    }
+
     def commandLineErrorMissingOutput(range Range, first string, second string) {
       error(range, "Specify the output location using either \"" + first + "\" or \"" + second + "\"")
     }

@@ -12,6 +12,10 @@ namespace skew {
     @private
     var lineOffsets List<int> = null
 
+    def entireRange Range {
+      return Range.new(self, 0, contents.count)
+    }
+
     def lineCount int {
       computeLineOffsets
       return lineOffsets.count - 1 # Ignore the line offset at 0

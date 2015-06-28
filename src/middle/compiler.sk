@@ -15,6 +15,11 @@ namespace skew {
     STRING
   }
 
+  class Define {
+    const name Range
+    const value Range
+  }
+
   class CompilerOptions {
     var target CompilerTarget = .NONE
     var outputFile = ""
@@ -22,6 +27,7 @@ namespace skew {
     var foldAllConstants = false
     var inlineAllFunctions = false
     var enumFormat EnumFormat = .INT
+    var defines StringMap<Define> = {}
   }
 
   class CompilerResult {
@@ -49,7 +55,7 @@ namespace skew {
 
       # Resolving pass, errors stop compilation
       if !log.hasErrors {
-        resolvingPass(log, result.global, result.cache)
+        resolvingPass(log, result.global, result.cache, options)
         if debug {
           verifyHierarchy(result.global)
         }
