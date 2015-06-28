@@ -777,7 +777,7 @@ namespace Skew {
         if !symbol.isImportedOrExported && symbol.name in isKeyword {
           return "$" + symbol.name
         }
-        return symbol.name
+        return symbol.nameWithRenaming
       }
 
       const isKeyword = {

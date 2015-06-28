@@ -1877,7 +1877,7 @@
       return "$" + symbol.name;
     }
 
-    return symbol.name;
+    return symbol.nameWithRenaming();
   };
 
   Skew.JsEmitter.needsExtends = function(objects) {
@@ -3586,6 +3586,25 @@
     else if (symbol.comments !== null) {
       in_List.append2(self.comments, symbol.comments);
     }
+  };
+
+  Skew.Symbol.prototype.nameWithRenaming = function() {
+    var self = this;
+    if (self.isRenamed()) {
+      for (var i = 0, list = self.annotations, count = list.length; i < count; ++i) {
+        var annotation = list[i];
+
+        if (annotation.symbol !== null && annotation.symbol.fullName() === "rename") {
+          var children = annotation.annotationValue().children;
+
+          if (children.length === 2) {
+            return in_List.last(children).content.asString();
+          }
+        }
+      }
+    }
+
+    return self.name;
   };
 
   Skew.Symbol.createID = function() {
@@ -9307,14 +9326,25 @@
       return;
     }
 
+    // Ensure all arguments are constants
+    var children = value.children;
+    var isValid = true;
+
+    for (var i = 1, count = children.length; i < count; i += 1) {
+      isValid = isValid && self.recursivelyResolveAsConstant(children[i]);
+    }
+
+    if (!isValid) {
+      return;
+    }
+
+    // Only store symbols for annotations with the correct arguments for ease of use
     node.symbol = value.symbol;
 
     // Apply built-in annotation logic
     var flag = in_StringMap.get(Skew.Resolving.Resolver.annotationSymbolFlags, value.symbol.fullName(), 0);
 
     if (flag !== 0) {
-      var isValid = true;
-
       switch (flag) {
         case Skew.Symbol.IS_DEPRECATED: {
           break;
@@ -9366,12 +9396,8 @@
 
       else {
         // Don't add an annotation when the test expression is false
-        if (test !== null) {
-          self.recursivelyResolveAsConstant(test);
-
-          if (test.isFalse()) {
-            return;
-          }
+        if (test !== null && self.recursivelyResolveAsConstant(test) && test.isFalse()) {
+          return;
         }
 
         // Only warn about duplicate annotations after checking the test expression
@@ -9390,7 +9416,10 @@
 
     if (node.kind !== Skew.NodeKind.CONSTANT) {
       self.log.semanticErrorExpectedConstant(node.range);
+      return false;
     }
+
+    return true;
   };
 
   Skew.Resolving.Resolver.prototype.resolveBlock = function(node, scope) {

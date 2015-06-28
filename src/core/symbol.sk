@@ -184,6 +184,20 @@ namespace Skew {
         comments.append(symbol.comments)
       }
     }
+
+    def nameWithRenaming string {
+      if isRenamed {
+        for annotation in annotations {
+          if annotation.symbol != null && annotation.symbol.fullName == "rename" {
+            var children = annotation.annotationValue.children
+            if children.count == 2 {
+              return children.last.content.asString
+            }
+          }
+        }
+      }
+      return name
+    }
   }
 
   namespace Symbol {

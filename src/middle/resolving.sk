@@ -1038,12 +1038,22 @@ namespace Skew.Resolving {
         return
       }
 
+      # Ensure all arguments are constants
+      var children = value.children
+      var isValid = true
+      for i in 1..children.count {
+        isValid = isValid && recursivelyResolveAsConstant(children[i])
+      }
+      if !isValid {
+        return
+      }
+
+      # Only store symbols for annotations with the correct arguments for ease of use
       node.symbol = value.symbol
 
       # Apply built-in annotation logic
       var flag = annotationSymbolFlags.get(value.symbol.fullName, 0)
       if flag != 0 {
-        var isValid = true
         switch flag {
           case Symbol.IS_DEPRECATED {}
           case Symbol.IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
@@ -1059,11 +1069,8 @@ namespace Skew.Resolving {
           log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
         } else {
           # Don't add an annotation when the test expression is false
-          if test != null {
-            recursivelyResolveAsConstant(test)
-            if test.isFalse {
-              return
-            }
+          if test != null && recursivelyResolveAsConstant(test) && test.isFalse {
+            return
           }
 
           # Only warn about duplicate annotations after checking the test expression
@@ -1076,12 +1083,15 @@ namespace Skew.Resolving {
       }
     }
 
-    def recursivelyResolveAsConstant(node Node) {
+    def recursivelyResolveAsConstant(node Node) bool {
       constantFolder.foldConstants(node)
 
       if node.kind != .CONSTANT {
         log.semanticErrorExpectedConstant(node.range)
+        return false
       }
+
+      return true
     }
 
     def resolveBlock(node Node, scope Scope) {
