@@ -1,10 +1,10 @@
-namespace skew {
+namespace Skew {
   def foldingPass(global ObjectSymbol, cache TypeCache) {
-    folding.ConstantFolder.new(cache).visitObject(global)
+    Folding.ConstantFolder.new(cache).visitObject(global)
   }
 }
 
-namespace skew.folding {
+namespace Skew.Folding {
   class ConstantFolder {
     const cache TypeCache
 

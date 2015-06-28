@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   enum SymbolKind {
     NONE
     PARAMETER_FUNCTION

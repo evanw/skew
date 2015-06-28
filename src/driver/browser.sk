@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   var compileTime = document.getElementById("compileTime")
   var input = document.getElementById("input")
   var optionArea = document.getElementById("optionArea")

@@ -1,5 +1,5 @@
-namespace timestamp {
-  def now double {
-    return dynamic.Date.now()
+namespace Timestamp {
+  def seconds double {
+    return (dynamic.typeof(dynamic.performance) != "undefined" && dynamic.performance.now ? dynamic.performance.now() : dynamic.Date.now()) / 1000
   }
 }

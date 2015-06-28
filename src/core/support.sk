@@ -1,4 +1,4 @@
-namespace prettyPrint {
+namespace Skew.PrettyPrint {
   def plural(value int) string {
     return value == 1 ? "" : "s"
   }
@@ -86,10 +86,6 @@ def hashCombine(left int, right int) int {
 }
 
 # JavaScript-specific library stuff
-
-def timestampInSeconds double {
-  return (dynamic.typeof(dynamic.performance) != "undefined" && dynamic.performance.now ? dynamic.performance.now() : dynamic.Date.now()) / 1000
-}
 
 def assert(truth bool) {
   if !truth {

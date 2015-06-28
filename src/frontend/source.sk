@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   class LineColumn {
     var line int # 0-based index
     var column int # 0-based index

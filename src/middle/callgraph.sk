@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   class CallSite {
     const callNode Node
     const enclosingFunction FunctionSymbol

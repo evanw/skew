@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   enum DiagnosticKind {
     ERROR
     WARNING
@@ -109,7 +109,7 @@ namespace skew {
   namespace Log {
     @private {
       def expectedCountText(singular string, expected int, found int) string {
-        return "Expected " + expected.toString + " " + singular + prettyPrint.plural(expected) + " but found " + found.toString + " " + singular + prettyPrint.plural(found)
+        return "Expected " + expected.toString + " " + singular + PrettyPrint.plural(expected) + " but found " + found.toString + " " + singular + PrettyPrint.plural(found)
       }
 
       def formatArgumentTypes(types List<Type>) string {
@@ -120,7 +120,7 @@ namespace skew {
         for type in types {
           names.append(type.toString)
         }
-        return " of type" + prettyPrint.plural(types.count) + " " + prettyPrint.join(names, "and")
+        return " of type" + PrettyPrint.plural(types.count) + " " + PrettyPrint.join(names, "and")
       }
     }
   }
@@ -245,11 +245,11 @@ namespace skew {
     }
 
     def semanticErrorNoMatchingOverload(range Range, name string, count int, types List<Type>) {
-      error(range, "No overload of \"" + name + "\" was found that takes " + count.toString + " argument" + prettyPrint.plural(count) + formatArgumentTypes(types))
+      error(range, "No overload of \"" + name + "\" was found that takes " + count.toString + " argument" + PrettyPrint.plural(count) + formatArgumentTypes(types))
     }
 
     def semanticErrorAmbiguousOverload(range Range, name string, count int, types List<Type>) {
-      error(range, "Multiple matching overloads of \"" + name + "\" were found that can take " + count.toString + " argument" + prettyPrint.plural(count) + formatArgumentTypes(types))
+      error(range, "Multiple matching overloads of \"" + name + "\" were found that can take " + count.toString + " argument" + PrettyPrint.plural(count) + formatArgumentTypes(types))
     }
 
     def semanticErrorUnexpectedExpression(range Range, type Type) {
@@ -273,14 +273,14 @@ namespace skew {
     }
 
     def semanticErrorWrongArgumentCount(range Range, name string, count int) {
-      error(range, "Expected \"" + name + "\" to take " + count.toString + " argument" + prettyPrint.plural(count))
+      error(range, "Expected \"" + name + "\" to take " + count.toString + " argument" + PrettyPrint.plural(count))
     }
 
     def semanticErrorWrongArgumentCountRange(range Range, name string, lower int, upper int) {
       if lower == 0 {
-        error(range, "Expected \"" + name + "\" to take at most " + upper.toString + " argument" + prettyPrint.plural(upper))
+        error(range, "Expected \"" + name + "\" to take at most " + upper.toString + " argument" + PrettyPrint.plural(upper))
       } else if upper == -1 {
-        error(range, "Expected \"" + name + "\" to take at least " + lower.toString + " argument" + prettyPrint.plural(lower))
+        error(range, "Expected \"" + name + "\" to take at least " + lower.toString + " argument" + PrettyPrint.plural(lower))
       } else {
         error(range, "Expected \"" + name + "\" to take between " + lower.toString + " and " + upper.toString + " arguments")
       }

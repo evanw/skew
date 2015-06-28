@@ -1,4 +1,12 @@
-namespace skew.parsing {
+namespace Skew {
+  def parseFile(log Log, tokens List<Token>, global ObjectSymbol) {
+    var context = ParserContext.new(log, tokens)
+    Parsing.parseSymbols(context, global, null)
+    context.expect(.END_OF_FILE)
+  }
+}
+
+namespace Skew.Parsing {
   def parseIntLiteral(text string) Box<int> {
     var isNegative = text.startsWith("-") # Parse negative signs for use with the "--define" flag
     var start = isNegative as int
@@ -869,12 +877,6 @@ namespace skew.parsing {
     }
   }
 
-  def parseFile(log Log, tokens List<Token>, global ObjectSymbol) {
-    var context = ParserContext.new(log, tokens)
-    parseSymbols(context, global, null)
-    context.expect(.END_OF_FILE)
-  }
-
   def parseCommaSeparatedList(context ParserContext, stop TokenKind) List<Node> {
     var values List<Node> = []
     while !context.peek(stop) {
@@ -1084,7 +1086,7 @@ namespace skew.parsing {
       var codePoint = 0
 
       # There must be exactly one unicode code point
-      var iterator = unicode.StringIterator.INSTANCE.reset(result, 0)
+      var iterator = Unicode.StringIterator.INSTANCE.reset(result, 0)
       codePoint = iterator.nextCodePoint
       if codePoint == -1 || iterator.nextCodePoint != -1 {
         context.log.syntaxErrorInvalidCharacter(token.range)

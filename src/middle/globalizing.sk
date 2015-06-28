@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   def globalizingPass(global ObjectSymbol, graph CallGraph) {
     for info in graph.callInfo {
       var symbol = info.symbol

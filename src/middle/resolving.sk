@@ -1,13 +1,13 @@
-namespace skew {
+namespace Skew {
   def resolvingPass(log Log, global ObjectSymbol, cache TypeCache, options CompilerOptions) {
     cache.loadGlobals(log, global)
     if !log.hasErrors {
-      resolving.Resolver.new(global, options.defines.clone, cache, log).resolveGlobal
+      Resolving.Resolver.new(global, options.defines.clone, cache, log).resolveGlobal
     }
   }
 }
 
-namespace skew.resolving {
+namespace Skew.Resolving {
   enum ConversionKind {
     IMPLICIT
     EXPLICIT
@@ -142,7 +142,7 @@ namespace skew.resolving {
 
       # Special-case doubles
       else if type == cache.doubleType {
-        var number = parsing.parseDoubleLiteral(value)
+        var number = Parsing.parseDoubleLiteral(value)
         if !number.isNAN {
           node = Node.createDouble(number)
         }
@@ -160,7 +160,7 @@ namespace skew.resolving {
 
       # Integers can also apply to doubles
       if node == null && cache.isNumeric(type) {
-        var box = parsing.parseIntLiteral(value)
+        var box = Parsing.parseIntLiteral(value)
         if box != null {
           node = Node.createInt(box.value)
         }
@@ -442,8 +442,8 @@ namespace skew.resolving {
       # Find the overridden function or overloaded function in the base class
       var overridden = findOverriddenMember(symbol)
       if overridden != null {
-        var symbolKind = merging.overloadedKind(symbol.kind)
-        var overriddenKind = merging.overloadedKind(overridden.kind)
+        var symbolKind = Merging.overloadedKind(symbol.kind)
+        var overriddenKind = Merging.overloadedKind(overridden.kind)
 
         # Make sure the overridden symbol can be merged with this symbol
         if symbolKind != overriddenKind {
@@ -2309,7 +2309,7 @@ namespace skew.resolving {
 
     def ensureFunctionIsOverloaded(symbol FunctionSymbol) {
       if symbol.overloaded == null {
-        var overloaded = OverloadedFunctionSymbol.new(merging.overloadedKind(symbol.kind), symbol.name, [symbol])
+        var overloaded = OverloadedFunctionSymbol.new(Merging.overloadedKind(symbol.kind), symbol.name, [symbol])
         overloaded.parent = symbol.parent
         overloaded.scope = overloaded.parent.scope
         symbol.overloaded = overloaded

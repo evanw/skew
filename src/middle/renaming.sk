@@ -1,11 +1,11 @@
-namespace skew {
+namespace Skew {
   def renamingPass(global ObjectSymbol) {
-    renaming.renameObject(global)
-    renaming.useOverriddenNames(global) # Use a second pass to avoid ordering issues
+    Renaming.renameObject(global)
+    Renaming.useOverriddenNames(global) # Use a second pass to avoid ordering issues
   }
 }
 
-namespace skew.renaming {
+namespace Skew.Renaming {
   def renameObject(symbol ObjectSymbol) {
     for object in symbol.objects {
       renameObject(object)

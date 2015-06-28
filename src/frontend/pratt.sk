@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   # The same operator precedence as C for the most part
   enum Precedence {
     LOWEST

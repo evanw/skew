@@ -1,13 +1,13 @@
-namespace skew {
+namespace Skew {
   def inliningPass(callGraph CallGraph) {
-    var graph = inlining.InliningGraph.new(callGraph)
+    var graph = Inlining.InliningGraph.new(callGraph)
     for info in graph.inliningInfo {
-      inlining.inlineSymbol(graph, info)
+      Inlining.inlineSymbol(graph, info)
     }
   }
 }
 
-namespace skew.inlining {
+namespace Skew.Inlining {
   def inlineSymbol(graph InliningGraph, info InliningInfo) {
     if !info.shouldInline {
       return

@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   def motionPass(global ObjectSymbol, graph CallGraph) {
     var parents = IntMap<ObjectSymbol>.new
 

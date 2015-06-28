@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   class FormattedRange {
     var line string
     var range string
@@ -37,7 +37,7 @@ namespace skew {
       var length = line.count
 
       # Use a unicode iterator to count the actual code points so they don't get sliced through the middle
-      var iterator = unicode.StringIterator.INSTANCE.reset(line, 0)
+      var iterator = Unicode.StringIterator.INSTANCE.reset(line, 0)
       var a = iterator.countCodePointsUntil(start.column)
       var b = a + iterator.countCodePointsUntil(end.line == start.line ? end.column : length)
       var count = b + iterator.countCodePointsUntil(length)

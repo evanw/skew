@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   class JsEmitter : Emitter {
     over visit(global ObjectSymbol) {
       patchTree(global)

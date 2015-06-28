@@ -1,4 +1,5 @@
-const NATIVE_LIBRARY = "
+namespace Skew {
+  const NATIVE_LIBRARY = "
 const RELEASE = false
 
 def @deprecated
@@ -244,3 +245,4 @@ class Box<T> {
   var value T
 }
 "
+}

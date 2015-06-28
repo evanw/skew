@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   class Emitter {
     def sources List<Source> {
       return _sources

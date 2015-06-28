@@ -1,6 +1,8 @@
 SOURCES += src/backend/*.sk
 SOURCES += src/core/*.sk
 SOURCES += src/frontend/*.sk
+SOURCES += src/lib/timestamp.sk
+SOURCES += src/lib/unicode.sk
 SOURCES += src/middle/*.sk
 
 SOURCES_NODE += $(SOURCES)
@@ -15,7 +17,6 @@ SOURCES_BROWSER += src/driver/browser.sk
 SOURCES_TEST += $(SOURCES)
 SOURCES_TEST += src/driver/tests.sk
 SOURCES_TEST += src/lib/terminal.sk
-SOURCES_TEST += src/lib/timestamp.sk
 SOURCES_TEST += src/lib/unit.sk
 SOURCES_TEST += tests/simple.sk
 

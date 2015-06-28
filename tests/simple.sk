@@ -1,4 +1,4 @@
-namespace skew.tests {
+namespace Skew.Tests {
   def testSimple {
 
 test("

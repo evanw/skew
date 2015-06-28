@@ -1,4 +1,4 @@
-namespace io {
+namespace IO {
   def readFile(path string) Box<string> {
     try {
       var contents string = dynamic.require("fs").readFileSync(path, "utf8")

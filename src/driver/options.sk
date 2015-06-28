@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   class Log {
     def commandLineWarningDuplicateFlagValue(range Range, name string, previous Range) {
       warning(range, "Multiple values are specified for \"" + name + "\", using the later value")
@@ -29,7 +29,7 @@ namespace skew {
   }
 }
 
-namespace skew.options {
+namespace Skew.Options {
   enum Type {
     BOOL
     INT
@@ -168,7 +168,7 @@ namespace skew.options {
             } else if argument[separator] != '=' {
               log.commandLineErrorExpectedToken(separatorRange, "=", argument.get(separator), argument)
             } else {
-              var box = parsing.parseIntLiteral(text)
+              var box = Parsing.parseIntLiteral(text)
               if box == null {
                 log.commandLineErrorNonIntegerValue(textRange, text, argument)
               } else {
@@ -233,7 +233,7 @@ namespace skew.options {
         var nameText = option.nameText
         var isFirst = true
         text += "\n  " + nameText + " ".repeat(columnWidth - nameText.count - 2)
-        for line in prettyPrint.wrapWords(option.description, wrapWidth - columnWidth) {
+        for line in PrettyPrint.wrapWords(option.description, wrapWidth - columnWidth) {
           text += (isFirst ? "" : columnText) + line + "\n"
           isFirst = false
         }

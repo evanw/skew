@@ -1,7 +1,7 @@
-namespace skew {
+namespace Skew {
   enum Option {
     DEFINE
-    ERROR_LIMIT
+    MESSAGE_LIMIT
     FOLD_CONSTANTS
     HELP
     INLINE_FUNCTIONS
@@ -10,13 +10,13 @@ namespace skew {
     RELEASE
   }
 
-  const DEFAULT_ERROR_LIMIT = 10
+  const DEFAULT_MESSAGE_LIMIT = 10
 
   @entry
   def main(arguments List<string>) int {
     # Translate frontend flags to compiler options
     var log = Log.new
-    var parser = options.Parser.new
+    var parser = Options.Parser.new
     var options = parseOptions(log, parser, arguments)
     var inputs = readSources(log, parser.normalArguments)
 
@@ -28,7 +28,7 @@ namespace skew {
       # Write all outputs
       if !log.hasErrors {
         for output in result.outputs {
-          if !io.writeFile(output.name, output.contents) {
+          if !IO.writeFile(output.name, output.contents) {
             var outputFile = parser.rangeForOption(.OUTPUT_FILE)
             var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
             log.commandLineErrorUnwritableFile(outputFile != null ? outputFile : outputDirectory, output.name)
@@ -39,14 +39,14 @@ namespace skew {
     }
 
     # Print any errors and warnings
-    printLogWithColor(log, parser.intForOption(.ERROR_LIMIT, DEFAULT_ERROR_LIMIT))
+    printLogWithColor(log, parser.intForOption(.MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT))
     return log.hasErrors ? 1 : 0
   }
 
-  def printWithColor(color terminal.Color, text string) {
-    terminal.setColor(color)
-    terminal.write(text)
-    terminal.setColor(.DEFAULT)
+  def printWithColor(color Terminal.Color, text string) {
+    Terminal.setColor(color)
+    Terminal.write(text)
+    Terminal.setColor(.DEFAULT)
   }
 
   def printError(text string) {
@@ -64,18 +64,18 @@ namespace skew {
     printWithColor(.BOLD, text + "\n")
   }
 
-  def printUsage(parser options.Parser) {
+  def printUsage(parser Options.Parser) {
     printWithColor(.GREEN, "\nusage: ")
     printWithColor(.BOLD, "skewc [flags] [inputs]\n")
-    terminal.write(parser.usageText(Math.min(terminal.width, 80)))
+    Terminal.write(parser.usageText(Math.min(Terminal.width, 80)))
   }
 
-  def printLogWithColor(log Log, errorLimit int) {
-    var terminalWidth = terminal.width
-    var errorCount = 0
+  def printLogWithColor(log Log, diagnosticLimit int) {
+    var terminalWidth = Terminal.width
+    var diagnosticCount = 0
 
     for diagnostic in log.diagnostics {
-      if diagnostic.kind == .ERROR && errorLimit > 0 && errorCount == errorLimit {
+      if diagnosticLimit > 0 && diagnosticCount == diagnosticLimit {
         break
       }
       if diagnostic.range != null {
@@ -87,19 +87,19 @@ namespace skew {
         }
         case .ERROR {
           printError(diagnostic.text)
-          errorCount++
+          diagnosticCount++
         }
       }
       if diagnostic.range != null {
         var formatted = diagnostic.range.format(terminalWidth)
-        terminal.print(formatted.line)
+        Terminal.print(formatted.line)
         printWithColor(.GREEN, formatted.range + "\n")
       }
       if diagnostic.noteRange != null {
         printWithColor(.BOLD, diagnostic.noteRange.locationString + ": ")
         printNote(diagnostic.noteText)
         var formatted = diagnostic.noteRange.format(terminalWidth)
-        terminal.print(formatted.line)
+        Terminal.print(formatted.line)
         printWithColor(.GREEN, formatted.range + "\n")
       }
     }
@@ -109,17 +109,18 @@ namespace skew {
     var hasWarnings = log.hasWarnings
     var summary = ""
     if hasWarnings {
-      summary += log.warningCount.toString + " warning" + prettyPrint.plural(log.warningCount)
+      summary += log.warningCount.toString + " warning" + PrettyPrint.plural(log.warningCount)
       if hasErrors {
         summary += " and "
       }
     }
     if hasErrors {
-      summary += log.errorCount.toString + " error" + prettyPrint.plural(log.errorCount)
+      summary += log.errorCount.toString + " error" + PrettyPrint.plural(log.errorCount)
     }
     if hasWarnings || hasErrors {
-      terminal.write(summary + " generated")
-      printWithColor(.GRAY, errorCount < log.errorCount ? " (only showing " + errorLimit.toString + " error" + prettyPrint.plural(errorLimit) + ", use \"--error-limit=0\" to see all)\n" : "\n")
+      Terminal.write(summary + " generated")
+      printWithColor(.GRAY, diagnosticCount < log.diagnostics.count ? " (only showing " + diagnosticLimit.toString +
+        " message" + PrettyPrint.plural(diagnosticLimit) + ", use \"--message-limit=0\" to see all)\n" : "\n")
     }
   }
 
@@ -127,7 +128,7 @@ namespace skew {
     var result List<Source>  = []
     for file in files {
       var path = file.toString
-      var contents = io.readFile(path)
+      var contents = IO.readFile(path)
       if contents == null {
         log.commandLineErrorUnreadableFile(file, path)
       } else {
@@ -137,14 +138,14 @@ namespace skew {
     return result
   }
 
-  def parseOptions(log Log, parser options.Parser, arguments List<string>) CompilerOptions {
+  def parseOptions(log Log, parser Options.Parser, arguments List<string>) CompilerOptions {
     # Configure the parser
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
     parser.define(.BOOL, .RELEASE, "--release", "Implies --fold-constants, --inline-functions, and --define:RELEASE=true.")
     parser.define(.STRING_LIST, .DEFINE, "--define", "Override variable values at compile time.")
-    parser.define(.INT, .ERROR_LIMIT, "--error-limit", "Sets the maximum number of errors to report. Pass 0 to disable the error limit. The default is " + DEFAULT_ERROR_LIMIT.toString + ".")
+    parser.define(.INT, .MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is " + DEFAULT_MESSAGE_LIMIT.toString + ".")
     parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.")
     parser.define(.BOOL, .INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.")
 

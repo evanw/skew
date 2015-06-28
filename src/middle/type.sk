@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   enum TypeKind {
     LAMBDA
     SPECIAL

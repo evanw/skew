@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   enum CompilerTarget {
     NONE
     JAVASCRIPT
@@ -38,7 +38,7 @@ namespace skew {
   }
 
   def compile(log Log, options CompilerOptions, sources List<Source>) CompilerResult {
-    var start = timestampInSeconds
+    var start = Timestamp.seconds
     var debug = true
     var result = CompilerResult.new
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
@@ -46,7 +46,7 @@ namespace skew {
     for source in sources {
       var tokens = tokenize(log, source)
       prepareTokens(tokens)
-      parsing.parseFile(log, tokens, result.global)
+      parseFile(log, tokens, result.global)
     }
 
     # Merging pass, errors stop compilation
@@ -122,7 +122,7 @@ namespace skew {
       }
     }
 
-    result.totalTime = timestampInSeconds - start
+    result.totalTime = Timestamp.seconds - start
     return result
   }
 

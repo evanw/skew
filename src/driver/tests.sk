@@ -1,5 +1,5 @@
-namespace skew.tests {
-  class CompilerTest : unit.Test {
+namespace Skew.Tests {
+  class CompilerTest : Unit.Test {
     over run {
       rename(compactWhitespace(input))
       var log = Log.new
@@ -54,8 +54,8 @@ namespace skew.tests {
   def main int {
     testSimple
 
-    var report = unit.TerminalReport.new
-    unit.Test.runAll(report)
+    var report = Unit.TerminalReport.new
+    Unit.Test.runAll(report)
     return report.failedCount
   }
 }

@@ -1,4 +1,4 @@
-namespace unicode {
+namespace Unicode {
   enum Encoding {
     UTF8
     UTF16
@@ -74,13 +74,13 @@ namespace unicode {
 
 class string {
   def codePoints List<int> {
-    if unicode.STRING_ENCODING == .UTF32 {
+    if Unicode.STRING_ENCODING == .UTF32 {
       return codeUnits
     }
 
     else {
       var codePoints List<int> = []
-      var instance = unicode.StringIterator.INSTANCE
+      var instance = Unicode.StringIterator.INSTANCE
       instance.reset(self, 0)
 
       while true {
@@ -96,7 +96,7 @@ class string {
 
 namespace string {
   def fromCodePoints(codePoints List<int>) string {
-    if unicode.STRING_ENCODING == .UTF8 {
+    if Unicode.STRING_ENCODING == .UTF8 {
       var builder = StringBuilder.new
 
       for codePoint in codePoints {
@@ -121,7 +121,7 @@ namespace string {
       return builder.toString
     }
 
-    else if unicode.STRING_ENCODING == .UTF16 {
+    else if Unicode.STRING_ENCODING == .UTF16 {
       var builder = StringBuilder.new
 
       for codePoint in codePoints {

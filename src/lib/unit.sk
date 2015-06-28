@@ -1,4 +1,4 @@
-namespace unit {
+namespace Unit {
   enum Status {
     FAILURE
     SUCCESS
@@ -78,45 +78,45 @@ namespace unit {
     }
 
     over begin(count int) {
-      _wrapWidth = terminal.width * 3 / 4
-      _startTime = timestamp.now
+      _wrapWidth = Terminal.width * 3 / 4
+      _startTime = Timestamp.seconds
       _count = count
       _completed = 0
-      terminal.write("\n  ")
+      Terminal.write("\n  ")
     }
 
     over completed(test Test, status Status) {
       _completed++
       if status == .FAILURE {
         _failed.append(test)
-        terminal.setColor(.RED)
-        terminal.write("x")
+        Terminal.setColor(.RED)
+        Terminal.write("x")
       } else {
-        terminal.setColor(.GREEN)
-        terminal.write(".")
+        Terminal.setColor(.GREEN)
+        Terminal.write(".")
       }
       if _completed < _count && _wrapWidth != 0 && _completed % _wrapWidth == 0 {
-        terminal.write("\n  ")
+        Terminal.write("\n  ")
       }
-      terminal.setColor(.DEFAULT)
-      terminal.flush
+      Terminal.setColor(.DEFAULT)
+      Terminal.flush
     }
 
     over end {
-      terminal.print("\n")
+      Terminal.print("\n")
 
       # Print the summary
-      var totalTime = Math.floor((timestamp.now - _startTime) / 100) as int
-      terminal.setColor(.GREEN)
-      terminal.write("  " + (_count - _failed.count).toString + " passing")
-      terminal.setColor(.GRAY)
-      terminal.print("  (" + (totalTime / 10).toString + "." + (totalTime % 10).toString + "s)")
+      var totalTime = Math.floor((Timestamp.seconds - _startTime) * 10) as int
+      Terminal.setColor(.GREEN)
+      Terminal.write("  " + (_count - _failed.count).toString + " passing")
+      Terminal.setColor(.GRAY)
+      Terminal.print("  (" + (totalTime / 10).toString + "." + (totalTime % 10).toString + "s)")
       if _failed.count != 0 {
-        terminal.setColor(.RED)
-        terminal.print("  " + _failed.count.toString + " failing")
+        Terminal.setColor(.RED)
+        Terminal.print("  " + _failed.count.toString + " failing")
       }
-      terminal.setColor(.DEFAULT)
-      terminal.print("")
+      Terminal.setColor(.DEFAULT)
+      Terminal.print("")
 
       # Print the failed tests
       var indent = " ".repeat(_failed.count.toString.count + 5)
@@ -124,13 +124,13 @@ namespace unit {
         var test = _failed[i]
         var text = "  " + (i + 1).toString + ")"
         var failure = test.failure
-        terminal.setColor(.BOLD)
-        terminal.print(text + " ".repeat(indent.count - text.count) + test.name + "\n")
+        Terminal.setColor(.BOLD)
+        Terminal.print(text + " ".repeat(indent.count - text.count) + test.name + "\n")
         printDiff(indent,
           failure.expected == "" ? [] : failure.expected.split("\n"),
           failure.observed == "" ? [] : failure.observed.split("\n"))
-        terminal.setColor(.DEFAULT)
-        terminal.print("")
+        Terminal.setColor(.DEFAULT)
+        Terminal.print("")
       }
     }
 
@@ -197,8 +197,8 @@ namespace unit {
       for i in 0..reversed.count {
         var text = reversed[reversed.count - i - 1]
         var c = text[0]
-        terminal.setColor(c == '+' ? .GREEN : c == '-' ? .RED : .GRAY)
-        terminal.print(indent + text)
+        Terminal.setColor(c == '+' ? .GREEN : c == '-' ? .RED : .GRAY)
+        Terminal.print(indent + text)
       }
     }
   }

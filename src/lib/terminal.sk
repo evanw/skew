@@ -1,4 +1,4 @@
-namespace terminal {
+namespace Terminal {
   enum Color {
     DEFAULT
     BOLD

@@ -1,10 +1,10 @@
-namespace skew {
+namespace Skew {
   def mergingPass(log Log, global ObjectSymbol) {
-    merging.mergeObject(log, null, global, global)
+    Merging.mergeObject(log, null, global, global)
   }
 }
 
-namespace skew.merging {
+namespace Skew.Merging {
   def mergeObject(log Log, parent ObjectSymbol, target ObjectSymbol, symbol ObjectSymbol) {
     target.scope = ObjectScope.new(parent != null ? parent.scope : null, target)
     symbol.parent = parent

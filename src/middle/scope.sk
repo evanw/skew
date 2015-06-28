@@ -1,4 +1,4 @@
-namespace skew {
+namespace Skew {
   enum ScopeKind {
     FUNCTION
     LOCAL

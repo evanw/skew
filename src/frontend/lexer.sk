@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-namespace skew {
+namespace Skew {
   enum TokenKind {
     ANNOTATION
     ARROW
@@ -177,7 +177,7 @@ namespace skew {
 
       # This is the default action in flex, which is usually called ECHO
       else if yy_act == .ERROR {
-        var iterator = unicode.StringIterator.INSTANCE.reset(text, yy_bp)
+        var iterator = Unicode.StringIterator.INSTANCE.reset(text, yy_bp)
         iterator.nextCodePoint
         var range = Range.new(source, yy_bp, iterator.index)
         log.syntaxErrorExtraData(range, range.toString)
