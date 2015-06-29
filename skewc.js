@@ -9,10 +9,6 @@
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
 
-  function hashCombine(left, right) {
-    return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
-  }
-
   function assert(truth) {
     if (!truth) {
       throw Error("Assertion failed");
@@ -96,6 +92,10 @@
     }
 
     return in_StringMap.get(Skew.argumentCounts, text, Skew.ArgumentCount.ZERO_OR_MORE);
+  };
+
+  Skew.hashCombine = function(left, right) {
+    return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
   };
 
   // This is the inner loop from "flex", an ancient lexer generator. The output
@@ -635,7 +635,6 @@
 
         case Skew.DiagnosticKind.ERROR: {
           Skew.printError(diagnostic.text);
-          ++diagnosticCount;
           break;
         }
       }
@@ -653,6 +652,8 @@
         process.stdout.write(formatted1.line + "\n");
         Skew.printWithColor(Terminal.Color.GREEN, formatted1.range + "\n");
       }
+
+      ++diagnosticCount;
     }
 
     // Print the summary
@@ -703,10 +704,11 @@
     parser.define(Skew.Options.Type.BOOL, Skew.Option.HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
     parser.define(Skew.Options.Type.STRING, Skew.Option.OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
     parser.define(Skew.Options.Type.STRING, Skew.Option.OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
-    parser.define(Skew.Options.Type.BOOL, Skew.Option.RELEASE, "--release", "Implies --js-minify, --fold-constants, --inline-functions, --globalize-functions,, and --define:RELEASE=true.");
-    parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_MINIFY, "--js-minify", "Remove whitespace when compiling to JavaScript.");
-    parser.define(Skew.Options.Type.STRING_LIST, Skew.Option.DEFINE, "--define", "Override variable values at compile time.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.RELEASE, "--release", "Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.");
     parser.define(Skew.Options.Type.INT, Skew.Option.MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is " + Skew.DEFAULT_MESSAGE_LIMIT.toString() + ".");
+    parser.define(Skew.Options.Type.STRING_LIST, Skew.Option.DEFINE, "--define", "Override variable values at compile time.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_MANGLE, "--js-mangle", "Transforms emitted JavaScript to be as small as possible. The \"@export\" annotation prevents renaming a symbol.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_MINIFY, "--js-minify", "Remove whitespace when compiling to JavaScript.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.GLOBALIZE_FUNCTIONS, "--globalize-functions", "Convert instance functions to global functions for better inlining.");
@@ -730,6 +732,7 @@
     options.foldAllConstants = parser.boolForOption(Skew.Option.FOLD_CONSTANTS, releaseFlag);
     options.globalizeAllFunctions = parser.boolForOption(Skew.Option.GLOBALIZE_FUNCTIONS, releaseFlag);
     options.inlineAllFunctions = parser.boolForOption(Skew.Option.INLINE_FUNCTIONS, releaseFlag);
+    options.jsMangle = parser.boolForOption(Skew.Option.JS_MANGLE, releaseFlag);
     options.jsMinify = parser.boolForOption(Skew.Option.JS_MINIFY, releaseFlag);
 
     // Prepare the defines
@@ -926,6 +929,18 @@
     return self + (associativity === Skew.Associativity.RIGHT | 0) | 0;
   };
 
+  Skew.ExtractGroupsMode = {
+    ALL_SYMBOLS: 0, 0: "ALL_SYMBOLS",
+    ONLY_LOCAL_VARIABLES: 1, 1: "ONLY_LOCAL_VARIABLES",
+    ONLY_INSTANCE_VARIABLES: 2, 2: "ONLY_INSTANCE_VARIABLES"
+  };
+
+  Skew.SymbolGroup = function(symbols, count) {
+    var self = this;
+    self.symbols = symbols;
+    self.count = count;
+  };
+
   Skew.JsEmitter = function(options, cache) {
     var self = this;
     Skew.Emitter.call(self);
@@ -935,8 +950,15 @@
     self.prefix = "";
     self.previousNode = null;
     self.previousSymbol = null;
+    self.enclosingFunction = null;
+    self.allSymbols = [];
     self.$extends = "$extends";
     self.imul = "$imul";
+    self.localVariableUnionFind = new Skew.UnionFind();
+    self.namingGroupIndexForSymbol = Object.create(null);
+    self.nextSymbolName = 0;
+    self.symbolCounts = Object.create(null);
+    self.mangle = false;
     self.minify = false;
     self.needsSemicolon = false;
     self.newline = "\n";
@@ -947,19 +969,30 @@
 
   Skew.JsEmitter.prototype.visit = function(global) {
     var self = this;
-    // JavaScript is a little different than other language targets due to minification
+    // Shorten the library function names while still avoiding needing to
+    // do conflict detection with user-defined symbol names
+    self.mangle = self.options.jsMangle;
+
+    if (self.mangle) {
+      self.$extends = "$e";
+      self.imul = "$i";
+    }
+
     self.minify = self.options.jsMinify;
 
     if (self.minify) {
-      self.$extends = "$e";
-      self.imul = "$i";
       self.indentAmount = "";
       self.newline = "";
       self.space = "";
     }
 
     // Preprocess the code
-    self.patchTree1(global);
+    self.patchObject(global);
+
+    if (self.mangle) {
+      self.renameSymbols();
+    }
+
     var objects = self.sortedObjects(global);
 
     // The entire body of code is wrapped in a closure for safety
@@ -967,8 +1000,8 @@
     self.increaseIndent();
 
     if (Skew.JsEmitter.needsExtends(objects)) {
-      var derived = self.minify ? "d" : "derived";
-      var base = self.minify ? "b" : "base";
+      var derived = self.mangle ? "d" : "derived";
+      var base = self.mangle ? "b" : "base";
       self.emit(self.indent + "function " + self.$extends + self.minifySpace("(" + derived + ", " + base + ") {") + self.newline);
       self.emit(self.indent + self.minifySpace("  " + derived + ".prototype = Object.create(" + base + ".prototype);") + self.newline);
       self.emit(self.indent + self.minifySpace("  " + derived + ".prototype.constructor = " + derived + ";") + self.newline);
@@ -1020,6 +1053,217 @@
     self.decreaseIndent();
     self.emit(self.indent + "})();\n");
     self.createSource(self.options.outputDirectory !== "" ? self.options.outputDirectory + "/compiled.js" : self.options.outputFile);
+  };
+
+  Skew.JsEmitter.prototype.allocateNamingGroupIndex = function(symbol) {
+    var self = this;
+    if (self.mangle && !(symbol.id in self.namingGroupIndexForSymbol)) {
+      var index = self.localVariableUnionFind.allocate1();
+      self.namingGroupIndexForSymbol[symbol.id] = index;
+      self.allSymbols.push(symbol);
+
+      // Explicitly add function arguments since they won't be reached by
+      // normal tree traversal
+      if (Skew.SymbolKind.isFunction(symbol.kind)) {
+        var context = symbol.asFunctionSymbol().self;
+
+        if (context !== null) {
+          self.allocateNamingGroupIndex(context);
+        }
+
+        for (var i = 0, list = symbol.asFunctionSymbol().$arguments, count = list.length; i < count; ++i) {
+          var argument = list[i];
+          self.allocateNamingGroupIndex(argument);
+        }
+      }
+    }
+  };
+
+  Skew.JsEmitter.prototype.renameSymbols = function() {
+    var self = this;
+    // This holds the groups used for naming. Unioning two labels using
+    // this object will cause both groups of symbols to have the same name.
+    var namingGroupsUnionFind = new Skew.UnionFind().allocate2(self.allSymbols.length);
+
+    // These are optional and only reduce the number of generated names
+    var order = [];
+    self.aliasLocalVariables(namingGroupsUnionFind, order);
+    self.aliasUnrelatedProperties(namingGroupsUnionFind, order);
+
+    // Ensure all overridden symbols have the same generated name. This is
+    // manditory for correctness, otherwise virtual functions break.
+    for (var i = 0, list = self.allSymbols, count1 = list.length; i < count1; ++i) {
+      var symbol = list[i];
+
+      if (Skew.SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().overridden !== null) {
+        assert(symbol.id in self.namingGroupIndexForSymbol);
+        assert(symbol.asFunctionSymbol().overridden.id in self.namingGroupIndexForSymbol);
+        namingGroupsUnionFind.union(self.namingGroupIndexForSymbol[symbol.id], self.namingGroupIndexForSymbol[symbol.asFunctionSymbol().overridden.id]);
+      }
+    }
+
+    // Collect all reserved names together into one big set for querying
+    var reservedNames = Object.create(null);
+
+    for (var i1 = 0, list1 = self.allSymbols, count2 = list1.length; i1 < count2; ++i1) {
+      var symbol1 = list1[i1];
+
+      if (symbol1.isImportedOrExported()) {
+        reservedNames[symbol1.name] = 0;
+      }
+    }
+
+    // Everything that should have the same name is now grouped together.
+    // Generate and assign names to all internal symbols, but use shorter
+    // names for more frequently used symbols.
+    var sortedGroups = [];
+
+    for (var i3 = 0, list3 = self.extractGroups(namingGroupsUnionFind, Skew.ExtractGroupsMode.ALL_SYMBOLS), count4 = list3.length; i3 < count4; ++i3) {
+      var group = list3[i3];
+      var count = 0;
+
+      for (var i2 = 0, list2 = group, count3 = list2.length; i2 < count3; ++i2) {
+        var symbol2 = list2[i2];
+
+        if (!symbol2.isImportedOrExported()) {
+          count += in_IntMap.get(self.symbolCounts, symbol2.id, 0);
+        }
+      }
+
+      sortedGroups.push(new Skew.SymbolGroup(group, count));
+    }
+
+    sortedGroups.sort(function(a, b) {
+      return b.count - a.count | 0;
+    });
+
+    for (var i5 = 0, list5 = sortedGroups, count6 = list5.length; i5 < count6; ++i5) {
+      var group1 = list5[i5];
+      var name = "";
+
+      for (var i4 = 0, list4 = group1.symbols, count5 = list4.length; i4 < count5; ++i4) {
+        var symbol3 = list4[i4];
+
+        if (!symbol3.isImportedOrExported()) {
+          if (name === "") {
+            name = self.generateSymbolName(reservedNames);
+          }
+
+          symbol3.name = name;
+        }
+      }
+    }
+  };
+
+  // Merge local variables from different functions together in the order
+  // they were declared. This will cause every argument list to use the same
+  // variables in the same order, which should offer better gzip:
+  //
+  //   function d(a, b) {}
+  //   function e(a, b, c) {}
+  //
+  Skew.JsEmitter.prototype.aliasLocalVariables = function(unionFind, order) {
+    var self = this;
+    self.zipTogetherInOrder(unionFind, order, self.extractGroups(self.localVariableUnionFind, Skew.ExtractGroupsMode.ONLY_LOCAL_VARIABLES));
+  };
+
+  // Merge all related types together into naming groups. This ensures names
+  // will be unique within a subclass hierarchy allowing names to be
+  // duplicated in separate subclass hierarchies.
+  Skew.JsEmitter.prototype.aliasUnrelatedProperties = function(unionFind, order) {
+    var self = this;
+    var relatedTypesUnionFind = new Skew.UnionFind().allocate2(self.allSymbols.length);
+
+    for (var i = 0, count1 = self.allSymbols.length; i < count1; ++i) {
+      var symbol = self.allSymbols[i];
+
+      if (symbol.kind === Skew.SymbolKind.OBJECT_CLASS) {
+        var baseClass = symbol.asObjectSymbol().baseClass;
+
+        if (baseClass !== null) {
+          relatedTypesUnionFind.union(i, self.namingGroupIndexForSymbol[baseClass.id]);
+        }
+
+        for (var i1 = 0, list = symbol.asObjectSymbol().variables, count = list.length; i1 < count; ++i1) {
+          var variable = list[i1];
+          relatedTypesUnionFind.union(i, self.namingGroupIndexForSymbol[variable.id]);
+        }
+      }
+    }
+
+    self.zipTogetherInOrder(unionFind, order, self.extractGroups(relatedTypesUnionFind, Skew.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES));
+  };
+
+  Skew.JsEmitter.prototype.zipTogetherInOrder = function(unionFind, order, groups) {
+    var self = this;
+    for (var i1 = 0, list = groups, count1 = list.length; i1 < count1; ++i1) {
+      var group = list[i1];
+
+      for (var i = 0, count = group.length; i < count; ++i) {
+        var symbol = group[i];
+        var index = self.namingGroupIndexForSymbol[symbol.id];
+
+        if (i >= order.length) {
+          order.push(index);
+        }
+
+        else {
+          unionFind.union(index, order[i]);
+        }
+      }
+    }
+  };
+
+  Skew.JsEmitter.prototype.numberToName = function(number) {
+    var self = this;
+    var WRAP = $imul(26, 2);
+    var name = "";
+
+    if (number >= WRAP) {
+      name = self.numberToName((number / WRAP | 0) - 1 | 0);
+      number = number % WRAP | 0;
+    }
+
+    name += String.fromCharCode(number + (number < 26 ? 97 : 65 - 26 | 0) | 0);
+    return name;
+  };
+
+  Skew.JsEmitter.prototype.generateSymbolName = function(reservedNames) {
+    var self = this;
+    while (true) {
+      var name = self.numberToName(self.nextSymbolName);
+      ++self.nextSymbolName;
+
+      if (!(name in reservedNames)) {
+        return name;
+      }
+    }
+  };
+
+  Skew.JsEmitter.prototype.extractGroups = function(unionFind, mode) {
+    var self = this;
+    var labelToGroup = Object.create(null);
+
+    for (var i = 0, list = self.allSymbols, count = list.length; i < count; ++i) {
+      var symbol = list[i];
+
+      if (mode === Skew.ExtractGroupsMode.ONLY_LOCAL_VARIABLES && symbol.kind !== Skew.SymbolKind.VARIABLE_LOCAL || mode === Skew.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES && symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE) {
+        continue;
+      }
+
+      assert(symbol.id in self.namingGroupIndexForSymbol);
+      var label = unionFind.find(self.namingGroupIndexForSymbol[symbol.id]);
+      var group = in_IntMap.get(labelToGroup, label, null);
+
+      if (group === null) {
+        group = [];
+        labelToGroup[label] = group;
+      }
+
+      group.push(symbol);
+    }
+
+    return in_IntMap.values(labelToGroup);
   };
 
   Skew.JsEmitter.prototype.minifySpace = function(text) {
@@ -1229,7 +1473,9 @@
       self.emitSemicolonAfterStatement();
     }
 
+    self.enclosingFunction = symbol;
     self.emitStatements(symbol.block.children);
+    self.enclosingFunction = null;
     self.decreaseIndent();
     self.emit(self.indent + "}");
 
@@ -1238,6 +1484,7 @@
     }
 
     else {
+      self.needsSemicolon = false;
       self.emit(self.newline);
     }
 
@@ -1645,7 +1892,7 @@
         self.emit("(");
 
         if ($call) {
-          self.emit(Skew.JsEmitter.mangleName(node.symbol.asFunctionSymbol().self));
+          self.emit(Skew.JsEmitter.mangleName(self.enclosingFunction.self));
         }
 
         for (var i = 1, count = node.children.length; i < count; ++i) {
@@ -1817,21 +2064,37 @@
     }
   };
 
-  Skew.JsEmitter.prototype.patchTree1 = function(symbol) {
+  Skew.JsEmitter.prototype.patchObject = function(symbol) {
     var self = this;
+    self.allocateNamingGroupIndex(symbol);
+
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
-      self.patchTree1(object);
+      self.patchObject(object);
     }
 
-    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
-      var $function = list1[i1];
-      self.patchTree2($function.block);
+    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
+      var $function = list2[i2];
+      self.allocateNamingGroupIndex($function);
+      self.enclosingFunction = $function;
+      self.patchNode($function.block);
+      self.enclosingFunction = null;
+
+      for (var i1 = 0, list1 = $function.$arguments, count1 = list1.length; i1 < count1; ++i1) {
+        var argument = list1[i1];
+        self.allocateNamingGroupIndex(argument);
+        self.unionVariableWithFunction(argument, $function);
+      }
+
+      if ($function.self !== null) {
+        self.unionVariableWithFunction($function.self, $function);
+      }
     }
 
-    for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
-      var variable = list2[i2];
-      self.patchTree2(variable.value);
+    for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; ++i3) {
+      var variable = list3[i3];
+      self.allocateNamingGroupIndex(variable);
+      self.patchNode(variable.value);
     }
   };
 
@@ -1875,19 +2138,49 @@
     }
   };
 
-  Skew.JsEmitter.prototype.patchTree2 = function(node) {
+  // Group each variable inside the function with the function itself so that
+  // they can be renamed together and won't cause any collisions inside the
+  // function
+  Skew.JsEmitter.prototype.unionVariableWithFunction = function(symbol, $function) {
+    var self = this;
+    if (self.mangle && $function !== null) {
+      assert(symbol.id in self.namingGroupIndexForSymbol);
+      assert($function.id in self.namingGroupIndexForSymbol);
+      self.localVariableUnionFind.union(self.namingGroupIndexForSymbol[symbol.id], self.namingGroupIndexForSymbol[$function.id]);
+    }
+  };
+
+  Skew.JsEmitter.prototype.patchNode = function(node) {
     var self = this;
     if (node === null) {
       return;
     }
 
+    var oldEnclosingFunction = self.enclosingFunction;
     var children = node.children;
+    var symbol = node.symbol;
     var kind = node.kind;
 
+    if (self.mangle && symbol !== null) {
+      self.allocateNamingGroupIndex(symbol);
+
+      if (node.kind !== Skew.NodeKind.TYPE) {
+        self.symbolCounts[symbol.id] = in_IntMap.get(self.symbolCounts, symbol.id, 0) + 1 | 0;
+      }
+    }
+
     if (children !== null) {
+      if (kind === Skew.NodeKind.LAMBDA) {
+        self.enclosingFunction = node.symbol.asFunctionSymbol();
+      }
+
       for (var i = 0, list = children, count = list.length; i < count; ++i) {
         var child = list[i];
-        self.patchTree2(child);
+        self.patchNode(child);
+      }
+
+      if (kind === Skew.NodeKind.LAMBDA) {
+        self.enclosingFunction = oldEnclosingFunction;
       }
     }
 
@@ -1903,6 +2196,29 @@
 
       case Skew.NodeKind.CAST: {
         self.patchCast(node);
+        break;
+      }
+
+      case Skew.NodeKind.FOREACH: {
+        self.unionVariableWithFunction(node.symbol, self.enclosingFunction);
+        break;
+      }
+
+      case Skew.NodeKind.LAMBDA: {
+        var $function = node.symbol.asFunctionSymbol();
+
+        for (var i1 = 0, list1 = $function.$arguments, count1 = list1.length; i1 < count1; ++i1) {
+          var argument = list1[i1];
+          self.allocateNamingGroupIndex(argument);
+          self.unionVariableWithFunction(argument, $function);
+        }
+
+        self.unionVariableWithFunction($function, self.enclosingFunction);
+        break;
+      }
+
+      case Skew.NodeKind.VAR: {
+        self.unionVariableWithFunction(node.symbol, self.enclosingFunction);
         break;
       }
     }
@@ -3397,6 +3713,45 @@
   Skew.OperatorKind = {
     FIXED: 0, 0: "FIXED",
     OVERRIDABLE: 1, 1: "OVERRIDABLE"
+  };
+
+  Skew.UnionFind = function() {
+    var self = this;
+    self.parents = [];
+  };
+
+  Skew.UnionFind.prototype.allocate1 = function() {
+    var self = this;
+    var index = self.parents.length;
+    self.parents.push(index);
+    return index;
+  };
+
+  Skew.UnionFind.prototype.allocate2 = function(count) {
+    var self = this;
+    for (var i = 0, count1 = count; i < count1; ++i) {
+      self.parents.push(self.parents.length);
+    }
+
+    return self;
+  };
+
+  Skew.UnionFind.prototype.union = function(left, right) {
+    var self = this;
+    self.parents[self.find(left)] = self.find(right);
+  };
+
+  Skew.UnionFind.prototype.find = function(index) {
+    var self = this;
+    assert(index >= 0 && index < self.parents.length);
+    var parent = self.parents[index];
+
+    if (parent !== index) {
+      parent = self.find(parent);
+      self.parents[index] = parent;
+    }
+
+    return parent;
   };
 
   Skew.PrettyPrint = {};
@@ -6490,6 +6845,7 @@
     self.foldAllConstants = false;
     self.globalizeAllFunctions = false;
     self.inlineAllFunctions = false;
+    self.jsMangle = false;
     self.jsMinify = false;
     self.outputDirectory = "";
     self.outputFile = "";
@@ -11793,7 +12149,7 @@
 
     for (var i = 0, list = parameters, count = list.length; i < count; ++i) {
       var parameter = list[i];
-      hash = hashCombine(hash, parameter.id);
+      hash = Skew.hashCombine(hash, parameter.id);
     }
 
     return hash;
@@ -11802,7 +12158,7 @@
   Skew.TypeCache.hashTypes = function(hash, types) {
     for (var i = 0, list = types, count = list.length; i < count; ++i) {
       var type = list[i];
-      hash = hashCombine(hash, type.id);
+      hash = Skew.hashCombine(hash, type.id);
     }
 
     return hash;
@@ -11834,11 +12190,12 @@
     GLOBALIZE_FUNCTIONS: 2, 2: "GLOBALIZE_FUNCTIONS",
     HELP: 3, 3: "HELP",
     INLINE_FUNCTIONS: 4, 4: "INLINE_FUNCTIONS",
-    JS_MINIFY: 5, 5: "JS_MINIFY",
-    MESSAGE_LIMIT: 6, 6: "MESSAGE_LIMIT",
-    OUTPUT_DIRECTORY: 7, 7: "OUTPUT_DIRECTORY",
-    OUTPUT_FILE: 8, 8: "OUTPUT_FILE",
-    RELEASE: 9, 9: "RELEASE"
+    JS_MANGLE: 5, 5: "JS_MANGLE",
+    JS_MINIFY: 6, 6: "JS_MINIFY",
+    MESSAGE_LIMIT: 7, 7: "MESSAGE_LIMIT",
+    OUTPUT_DIRECTORY: 8, 8: "OUTPUT_DIRECTORY",
+    OUTPUT_FILE: 9, 9: "OUTPUT_FILE",
+    RELEASE: 10, 10: "RELEASE"
   };
 
   Skew.Options = {};

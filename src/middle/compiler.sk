@@ -26,6 +26,7 @@ namespace Skew {
     var foldAllConstants = false
     var globalizeAllFunctions = false
     var inlineAllFunctions = false
+    var jsMangle = false
     var jsMinify = false
     var outputDirectory = ""
     var outputFile = ""

@@ -15,6 +15,8 @@ namespace Skew {
     options.target = .JAVASCRIPT
     if Config.get(.CONSTANT_FOLDING) { options.foldAllConstants = true }
     if Config.get(.FUNCTION_INLINING) { options.inlineAllFunctions = true }
+    if Config.get(.GLOBALIZE) { options.globalizeAllFunctions = true }
+    if Config.get(.MANGLE) { options.jsMangle = true }
     if Config.get(.MINIFY) { options.jsMinify = true }
     if Config.get(.STRING_ENUMS) { options.enumFormat = .STRING }
     var result = compile(log, options, [source])
@@ -41,9 +43,11 @@ namespace Skew {
   @entry
   def main {
     optionArea.appendChild(createCheckbox("Constant folding", .CONSTANT_FOLDING))
-    optionArea.appendChild(createCheckbox("Function inlining", .FUNCTION_INLINING))
+    optionArea.appendChild(createCheckbox("Inlining", .FUNCTION_INLINING))
+    optionArea.appendChild(createCheckbox("Mangle", .MANGLE))
     optionArea.appendChild(createCheckbox("Minify", .MINIFY))
-    optionArea.appendChild(createCheckbox("Show syntax tree", .SHOW_SYNTAX_TREE))
+    optionArea.appendChild(createCheckbox("Globalize", .GLOBALIZE))
+    optionArea.appendChild(createCheckbox("Syntax tree", .SHOW_SYNTAX_TREE))
     optionArea.appendChild(createCheckbox("String enums", .STRING_ENUMS))
     input.oninput = => update
     update
@@ -52,6 +56,8 @@ namespace Skew {
   enum Config {
     CONSTANT_FOLDING
     FUNCTION_INLINING
+    GLOBALIZE
+    MANGLE
     MINIFY
     SHOW_SYNTAX_TREE
     STRING_ENUMS

@@ -1,18 +1,37 @@
 namespace Skew {
+  enum ExtractGroupsMode {
+    ALL_SYMBOLS
+    ONLY_LOCAL_VARIABLES
+    ONLY_INSTANCE_VARIABLES
+  }
+
+  class SymbolGroup {
+    const symbols List<Symbol>
+    const count int
+  }
+
   class JsEmitter : Emitter {
     over visit(global ObjectSymbol) {
-      # JavaScript is a little different than other language targets due to minification
-      minify = options.jsMinify
-      if minify {
+      # Shorten the library function names while still avoiding needing to
+      # do conflict detection with user-defined symbol names
+      mangle = options.jsMangle
+      if mangle {
         extends = "$e"
         imul = "$i"
+      }
+
+      minify = options.jsMinify
+      if minify {
         indentAmount = ""
         newline = ""
         space = ""
       }
 
       # Preprocess the code
-      patchTree(global)
+      patchObject(global)
+      if mangle {
+        renameSymbols
+      }
       var objects = sortedObjects(global)
 
       # The entire body of code is wrapped in a closure for safety
@@ -20,8 +39,8 @@ namespace Skew {
       increaseIndent
 
       if needsExtends(objects) {
-        var derived = minify ? "d" : "derived"
-        var base = minify ? "b" : "base"
+        var derived = mangle ? "d" : "derived"
+        var base = mangle ? "b" : "base"
         emit(indent + "function " + extends + minifySpace("(" + derived + ", " + base + ") {") + newline)
         emit(indent + minifySpace("  " + derived + ".prototype = Object.create(" + base + ".prototype);") + newline)
         emit(indent + minifySpace("  " + derived + ".prototype.constructor = " + derived + ";") + newline)
@@ -87,14 +106,186 @@ namespace Skew {
       var prefix = ""
       var previousNode Node = null
       var previousSymbol Symbol = null
+      var enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
 
-      # These change with minification
+      # A union-find data structure is used to quickly merge symbols into
+      # groups. All local variables inside a function are merged with that
+      # function. The map create a quick way of getting from a symbol to its
+      # union/find index.
+      var allSymbols List<Symbol> = []
       var extends = "$extends"
       var imul = "$imul"
+      var localVariableUnionFind UnionFind = UnionFind.new
+      var namingGroupIndexForSymbol IntMap<int> = {}
+      var nextSymbolName = 0
+      var symbolCounts IntMap<int> = {}
+
+      # For minification
+      var mangle = false
       var minify = false
       var needsSemicolon = false
       var newline = "\n"
       var space = " "
+
+      def allocateNamingGroupIndex(symbol Symbol) {
+        if mangle && !(symbol.id in namingGroupIndexForSymbol) {
+          var index = localVariableUnionFind.allocate
+          namingGroupIndexForSymbol[symbol.id] = index
+          allSymbols.append(symbol)
+
+          # Explicitly add function arguments since they won't be reached by
+          # normal tree traversal
+          if symbol.kind.isFunction {
+            var context = symbol.asFunctionSymbol.self
+            if context != null {
+              allocateNamingGroupIndex(context)
+            }
+            for argument in symbol.asFunctionSymbol.arguments {
+              allocateNamingGroupIndex(argument)
+            }
+          }
+        }
+      }
+
+      def renameSymbols {
+        # This holds the groups used for naming. Unioning two labels using
+        # this object will cause both groups of symbols to have the same name.
+        var namingGroupsUnionFind = UnionFind.new.allocate(allSymbols.count)
+
+        # These are optional and only reduce the number of generated names
+        var order List<int> = []
+        aliasLocalVariables(namingGroupsUnionFind, order)
+        aliasUnrelatedProperties(namingGroupsUnionFind, order)
+
+        # Ensure all overridden symbols have the same generated name. This is
+        # manditory for correctness, otherwise virtual functions break.
+        for symbol in allSymbols {
+          if symbol.kind.isFunction && symbol.asFunctionSymbol.overridden != null {
+            assert(symbol.id in namingGroupIndexForSymbol)
+            assert(symbol.asFunctionSymbol.overridden.id in namingGroupIndexForSymbol)
+            namingGroupsUnionFind.union(namingGroupIndexForSymbol[symbol.id], namingGroupIndexForSymbol[symbol.asFunctionSymbol.overridden.id])
+          }
+        }
+
+        # Collect all reserved names together into one big set for querying
+        var reservedNames StringMap<int> = {}
+        for symbol in allSymbols {
+          if symbol.isImportedOrExported {
+            reservedNames[symbol.name] = 0
+          }
+        }
+
+        # Everything that should have the same name is now grouped together.
+        # Generate and assign names to all internal symbols, but use shorter
+        # names for more frequently used symbols.
+        var sortedGroups List<SymbolGroup> = []
+        for group in extractGroups(namingGroupsUnionFind, .ALL_SYMBOLS) {
+          var count = 0
+          for symbol in group {
+            if !symbol.isImportedOrExported {
+              count += symbolCounts.get(symbol.id, 0)
+            }
+          }
+          sortedGroups.append(SymbolGroup.new(group, count))
+        }
+        sortedGroups.sort((a, b) => b.count - a.count)
+        for group in sortedGroups {
+          var name = ""
+          for symbol in group.symbols {
+            if !symbol.isImportedOrExported {
+              if name == "" {
+                name = generateSymbolName(reservedNames)
+              }
+              symbol.name = name
+            }
+          }
+        }
+      }
+
+      # Merge local variables from different functions together in the order
+      # they were declared. This will cause every argument list to use the same
+      # variables in the same order, which should offer better gzip:
+      #
+      #   function d(a, b) {}
+      #   function e(a, b, c) {}
+      #
+      def aliasLocalVariables(unionFind UnionFind, order List<int>) {
+        zipTogetherInOrder(unionFind, order, extractGroups(localVariableUnionFind, .ONLY_LOCAL_VARIABLES))
+      }
+
+      # Merge all related types together into naming groups. This ensures names
+      # will be unique within a subclass hierarchy allowing names to be
+      # duplicated in separate subclass hierarchies.
+      def aliasUnrelatedProperties(unionFind UnionFind, order List<int>) {
+        var relatedTypesUnionFind = UnionFind.new.allocate(allSymbols.count)
+        for i in 0..allSymbols.count {
+          var symbol = allSymbols[i]
+          if symbol.kind == .OBJECT_CLASS {
+            var baseClass = symbol.asObjectSymbol.baseClass
+            if baseClass != null {
+              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol[baseClass.id])
+            }
+            for variable in symbol.asObjectSymbol.variables {
+              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol[variable.id])
+            }
+          }
+        }
+        zipTogetherInOrder(unionFind, order, extractGroups(relatedTypesUnionFind, .ONLY_INSTANCE_VARIABLES))
+      }
+
+      def zipTogetherInOrder(unionFind UnionFind, order List<int>, groups List<List<Symbol>>) {
+        for group in groups {
+          for i in 0..group.count {
+            var symbol = group[i]
+            var index = namingGroupIndexForSymbol[symbol.id]
+            if i >= order.count {
+              order.append(index)
+            } else {
+              unionFind.union(index, order[i])
+            }
+          }
+        }
+      }
+
+      def numberToName(number int) string {
+        const WRAP = 26 * 2
+        var name = ""
+        if number >= WRAP {
+          name = numberToName(number / WRAP - 1)
+          number = number % WRAP
+        }
+        name += string.fromCodeUnit(number + (number < 26 ? 'a' : 'A' - 26))
+        return name
+      }
+
+      def generateSymbolName(reservedNames StringMap<int>) string {
+        while true {
+          var name = numberToName(nextSymbolName)
+          nextSymbolName++
+          if !(name in reservedNames) {
+            return name
+          }
+        }
+      }
+
+      def extractGroups(unionFind UnionFind, mode ExtractGroupsMode) List<List<Symbol>> {
+        var labelToGroup IntMap<List<Symbol>> = {}
+        for symbol in allSymbols {
+          if mode == .ONLY_LOCAL_VARIABLES && symbol.kind != .VARIABLE_LOCAL ||
+              mode == .ONLY_INSTANCE_VARIABLES && symbol.kind != .VARIABLE_INSTANCE {
+            continue
+          }
+          assert(symbol.id in namingGroupIndexForSymbol)
+          var label = unionFind.find(namingGroupIndexForSymbol[symbol.id])
+          var group = labelToGroup.get(label, null)
+          if group == null {
+            group = []
+            labelToGroup[label] = group
+          }
+          group.append(symbol)
+        }
+        return labelToGroup.values
+      }
 
       def minifySpace(text string) string {
         return minify ? text.replaceAll(" ", "") : text
@@ -264,12 +455,15 @@ namespace Skew {
           emitSemicolonAfterStatement
         }
 
+        enclosingFunction = symbol
         emitStatements(symbol.block.children)
+        enclosingFunction = null
         decreaseIndent
         emit(indent + "}")
         if isExpression {
           emitSemicolonAfterStatement
         } else {
+          needsSemicolon = false
           emit(newline)
         }
         emitNewlineAfterSymbol(symbol)
@@ -592,7 +786,7 @@ namespace Skew {
             emit("(")
 
             if call {
-              emit(mangleName(node.symbol.asFunctionSymbol.self))
+              emit(mangleName(enclosingFunction.self))
             }
 
             for i in 1..node.children.count {
@@ -742,17 +936,30 @@ namespace Skew {
         }
       }
 
-      def patchTree(symbol ObjectSymbol) {
+      def patchObject(symbol ObjectSymbol) {
+        allocateNamingGroupIndex(symbol)
+
         for object in symbol.objects {
-          patchTree(object)
+          patchObject(object)
         }
 
         for function in symbol.functions {
-          patchTree(function.block)
+          allocateNamingGroupIndex(function)
+          enclosingFunction = function
+          patchNode(function.block)
+          enclosingFunction = null
+          for argument in function.arguments {
+            allocateNamingGroupIndex(argument)
+            unionVariableWithFunction(argument, function)
+          }
+          if function.self != null {
+            unionVariableWithFunction(function.self, function)
+          }
         }
 
         for variable in symbol.variables {
-          patchTree(variable.value)
+          allocateNamingGroupIndex(variable)
+          patchNode(variable.value)
         }
       }
 
@@ -789,23 +996,75 @@ namespace Skew {
         }
       }
 
-      def patchTree(node Node) {
+      # Group each variable inside the function with the function itself so that
+      # they can be renamed together and won't cause any collisions inside the
+      # function
+      def unionVariableWithFunction(symbol Symbol, function Symbol) {
+        if mangle && function != null {
+          assert(symbol.id in namingGroupIndexForSymbol)
+          assert(function.id in namingGroupIndexForSymbol)
+          localVariableUnionFind.union(
+            namingGroupIndexForSymbol[symbol.id],
+            namingGroupIndexForSymbol[function.id])
+        }
+      }
+
+      def patchNode(node Node) {
         if node == null {
           return
         }
 
+        var oldEnclosingFunction = enclosingFunction
         var children = node.children
+        var symbol = node.symbol
         var kind = node.kind
 
+        if mangle && symbol != null {
+          allocateNamingGroupIndex(symbol)
+          if node.kind != .TYPE {
+            symbolCounts[symbol.id] = symbolCounts.get(symbol.id, 0) + 1
+          }
+        }
+
         if children != null {
+          if kind == .LAMBDA {
+            enclosingFunction = node.symbol.asFunctionSymbol
+          }
+
           for child in children {
-            patchTree(child)
+            patchNode(child)
+          }
+
+          if kind == .LAMBDA {
+            enclosingFunction = oldEnclosingFunction
           }
         }
 
         switch kind {
-          case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { patchBinaryArithmetic(node) }
-          case .CAST { patchCast(node) }
+          case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
+            patchBinaryArithmetic(node)
+          }
+
+          case .CAST {
+            patchCast(node)
+          }
+
+          case .FOREACH {
+            unionVariableWithFunction(node.symbol, enclosingFunction)
+          }
+
+          case .LAMBDA {
+            var function = node.symbol.asFunctionSymbol
+            for argument in function.arguments {
+              allocateNamingGroupIndex(argument)
+              unionVariableWithFunction(argument, function)
+            }
+            unionVariableWithFunction(function, enclosingFunction)
+          }
+
+          case .VAR {
+            unionVariableWithFunction(node.symbol, enclosingFunction)
+          }
         }
       }
 
