@@ -7,14 +7,15 @@ namespace Skew {
     def visit(global ObjectSymbol)
 
     @protected {
+      var indentAmount = "  "
       var indent = ""
 
       def increaseIndent {
-        indent += "  "
+        indent += indentAmount
       }
 
       def decreaseIndent {
-        indent = indent.slice(2, indent.count)
+        indent = indent.slice(indentAmount.count)
       }
 
       def emit(text string) {

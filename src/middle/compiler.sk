@@ -21,14 +21,15 @@ namespace Skew {
   }
 
   class CompilerOptions {
-    var target CompilerTarget = .NONE
-    var outputFile = ""
-    var outputDirectory = ""
-    var foldAllConstants = false
-    var inlineAllFunctions = false
-    var globalizeAllFunctions = false
-    var enumFormat EnumFormat = .INT
     var defines StringMap<Define> = {}
+    var enumFormat EnumFormat = .INT
+    var foldAllConstants = false
+    var globalizeAllFunctions = false
+    var inlineAllFunctions = false
+    var jsMinify = false
+    var outputDirectory = ""
+    var outputFile = ""
+    var target CompilerTarget = .NONE
   }
 
   class CompilerResult {

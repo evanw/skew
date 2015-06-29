@@ -59,6 +59,7 @@ namespace Skew {
     DIVIDE
     EQUAL
     IN
+    IS
     LOGICAL_AND
     LOGICAL_OR
     MULTIPLY
@@ -350,6 +351,13 @@ namespace Skew {
 
     def isAssignTarget bool {
       return parent != null && (parent.kind.isUnaryAssign || parent.kind.isBinaryAssign && self == parent.binaryLeft)
+    }
+
+    def isNumberLessThanZero bool {
+      if kind == .CONSTANT {
+        return content.kind == .INT && content.asInt < 0 || content.kind == .DOUBLE && content.asDouble < 0
+      }
+      return false
     }
 
     def blockAlwaysEndsWithReturn bool {
@@ -729,6 +737,11 @@ namespace Skew {
     def asString string {
       assert(kind == .NAME || kind == .DOT || kind == .CONSTANT)
       return content.asString
+    }
+
+    def blockStatement Node {
+      assert(kind == .BLOCK)
+      return children.count == 1 ? children[0] : null
     }
 
     def firstValue Node {

@@ -41,6 +41,7 @@ namespace Skew {
     NodeKind.GREATER_THAN:          OperatorInfo.new(">", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.GREATER_THAN_OR_EQUAL: OperatorInfo.new(">=", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.IN:                    OperatorInfo.new("in", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
+    NodeKind.IS:                    OperatorInfo.new("is", .COMPARE, .LEFT, .FIXED, .ONE),
     NodeKind.LESS_THAN:             OperatorInfo.new("<", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.LESS_THAN_OR_EQUAL:    OperatorInfo.new("<=", .COMPARE, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.LOGICAL_AND:           OperatorInfo.new("&&", .LOGICAL_AND, .LEFT, .FIXED, .ONE),

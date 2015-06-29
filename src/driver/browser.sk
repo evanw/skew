@@ -15,6 +15,7 @@ namespace Skew {
     options.target = .JAVASCRIPT
     if Config.get(.CONSTANT_FOLDING) { options.foldAllConstants = true }
     if Config.get(.FUNCTION_INLINING) { options.inlineAllFunctions = true }
+    if Config.get(.MINIFY) { options.jsMinify = true }
     if Config.get(.STRING_ENUMS) { options.enumFormat = .STRING }
     var result = compile(log, options, [source])
     outputLog.value = log.toString
@@ -39,9 +40,10 @@ namespace Skew {
 
   @entry
   def main {
-    optionArea.appendChild(createCheckbox("Show syntax tree", .SHOW_SYNTAX_TREE))
     optionArea.appendChild(createCheckbox("Constant folding", .CONSTANT_FOLDING))
     optionArea.appendChild(createCheckbox("Function inlining", .FUNCTION_INLINING))
+    optionArea.appendChild(createCheckbox("Minify", .MINIFY))
+    optionArea.appendChild(createCheckbox("Show syntax tree", .SHOW_SYNTAX_TREE))
     optionArea.appendChild(createCheckbox("String enums", .STRING_ENUMS))
     input.oninput = => update
     update
@@ -50,6 +52,7 @@ namespace Skew {
   enum Config {
     CONSTANT_FOLDING
     FUNCTION_INLINING
+    MINIFY
     SHOW_SYNTAX_TREE
     STRING_ENUMS
   }

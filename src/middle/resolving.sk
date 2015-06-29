@@ -306,7 +306,7 @@ namespace Skew.Resolving {
           var second = value.secondValue.replaceWithNull
           var setup = [Node.createVar(symbol)]
           var symbolName = Node.createName(symbol.name).withSymbol(symbol).withType(cache.intType)
-          var update = Node.createBinary(.ASSIGN_ADD, symbolName, Node.createInt(1).withType(cache.intType))
+          var update = Node.createUnary(.INCREMENT, symbolName)
           var test Node
 
           # Special-case constant iteration limits to generate simpler code

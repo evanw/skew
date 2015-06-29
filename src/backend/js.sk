@@ -1,25 +1,38 @@
 namespace Skew {
   class JsEmitter : Emitter {
     over visit(global ObjectSymbol) {
+      # JavaScript is a little different than other language targets due to minification
+      minify = options.jsMinify
+      if minify {
+        extends = "$e"
+        imul = "$i"
+        indentAmount = ""
+        newline = ""
+        space = ""
+      }
+
+      # Preprocess the code
       patchTree(global)
       var objects = sortedObjects(global)
 
       # The entire body of code is wrapped in a closure for safety
-      emit(indent + "(function() {\n")
+      emit(indent + "(function()" + space + "{" + newline)
       increaseIndent
 
       if needsExtends(objects) {
-        emit(indent + "function $extends(derived, base) {\n")
-        emit(indent + "  derived.prototype = Object.create(base.prototype);\n")
-        emit(indent + "  derived.prototype.constructor = derived;\n")
-        emit(indent + "}\n\n")
+        var derived = minify ? "d" : "derived"
+        var base = minify ? "b" : "base"
+        emit(indent + "function " + extends + minifySpace("(" + derived + ", " + base + ") {") + newline)
+        emit(indent + minifySpace("  " + derived + ".prototype = Object.create(" + base + ".prototype);") + newline)
+        emit(indent + minifySpace("  " + derived + ".prototype.constructor = " + derived + ";") + newline)
+        emit(indent + minifySpace("}") + newline + newline)
       }
 
       if needsMultiply {
-        emit(indent + "var $imul = Math.imul || function(a, b) {\n")
-        emit(indent + "  var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;\n")
-        emit(indent + "  return al * bl + (ah * bl + al * bh << 16) | 0;\n")
-        emit(indent + "};\n\n")
+        emit(indent + "var " + imul + minifySpace(" = Math.imul || function(a, b) {") + newline)
+        emit(indent + indentAmount + "var " + minifySpace("ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;") + newline)
+        emit(indent + indentAmount + "return " + minifySpace("al * bl + (ah * bl + al * bh << 16) | 0;") + newline)
+        emit(indent + minifySpace("};") + newline + newline)
       }
 
       # Emit objects and functions
@@ -45,26 +58,66 @@ namespace Skew {
       if entryPointSymbol != null {
         var type = entryPointSymbol.resolvedType
         var callText = fullName(entryPointSymbol) + (type.argumentTypes.isEmpty ? "()" : "(process.argv.slice(2))")
-        emit("\n" + indent + (type.returnType == cache.intType ? "process.exit(" + callText + ")" : callText) + ";\n")
+        emitSemicolonIfNeeded
+        emit(newline + indent + (type.returnType == cache.intType ? "process.exit(" + callText + ")" : callText))
+        emitSemicolonAfterStatement
       }
 
       # End the closure wrapping everything
       decreaseIndent
-      emit(indent + "}());\n")
+      emit(indent + "})();\n")
 
       createSource(options.outputDirectory != "" ? options.outputDirectory + "/compiled.js" : options.outputFile)
     }
 
     @private {
+      enum AfterToken {
+        AFTER_KEYWORD
+        AFTER_PARENTHESIS
+      }
+
+      enum BracesMode {
+        MUST_KEEP_BRACES
+        CAN_OMIT_BRACES
+      }
+
       const options CompilerOptions
       const cache TypeCache
       var needsMultiply = false
-      var previousSymbol Symbol = null
-      var previousNode Node = null
       var prefix = ""
+      var previousNode Node = null
+      var previousSymbol Symbol = null
+
+      # These change with minification
+      var extends = "$extends"
+      var imul = "$imul"
+      var minify = false
+      var needsSemicolon = false
+      var newline = "\n"
+      var space = " "
+
+      def minifySpace(text string) string {
+        return minify ? text.replaceAll(" ", "") : text
+      }
+
+      def emitSemicolonAfterStatement {
+        if !minify {
+          emit(";\n")
+        } else {
+          needsSemicolon = true
+        }
+      }
+
+      def emitSemicolonIfNeeded {
+        if needsSemicolon {
+          emit(";")
+          needsSemicolon = false
+        }
+      }
 
       def emitNewlineBeforeSymbol(symbol Symbol) {
-        if previousSymbol != null &&
+        emitSemicolonIfNeeded
+        if !minify && previousSymbol != null &&
             (!previousSymbol.kind.isObject || !symbol.kind.isObject || symbol.comments != null || previousSymbol.kind == .OBJECT_ENUM || symbol.kind == .OBJECT_ENUM) &&
             (!previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
           emit("\n")
@@ -81,7 +134,7 @@ namespace Skew {
       }
 
       def emitNewlineBeforeStatement(node Node) {
-        if previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind)) {
+        if !minify && previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind)) {
           emit("\n")
         }
         previousNode = null
@@ -92,7 +145,7 @@ namespace Skew {
       }
 
       def emitComments(comments List<string>) {
-        if comments != null {
+        if comments != null && !minify {
           for comment in comments {
             emit(indent + "//" + comment)
           }
@@ -110,31 +163,38 @@ namespace Skew {
           case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
-            emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + " = {};\n")
+            emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + space + "=" + space + "{}")
+            emitSemicolonAfterStatement
             emitNewlineAfterSymbol(symbol)
           }
 
           case .OBJECT_ENUM {
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
-            emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + " = {")
+            emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + space + "=" + space + "{")
             increaseIndent
             var isFirst = true
             for variable in symbol.variables {
               if variable.kind == .VARIABLE_ENUM {
                 var value = variable.enumInfo.value.toString
-                if isFirst { isFirst = false }
-                else { emit(",") }
-                emit("\n")
+                if isFirst {
+                  isFirst = false
+                } else {
+                  emit(",")
+                }
+                emit(newline)
                 emitNewlineBeforeSymbol(variable)
                 emitComments(variable.comments)
-                emit(indent + mangleName(variable) + ": " + value + ", " + value + ": " + quoteString(variable.enumInfo.text, '"'))
+                emit(indent + mangleName(variable) + ":" + space + value + "," + space + value + ":" + space + quoteString(variable.enumInfo.text, '"'))
                 emitNewlineAfterSymbol(variable)
               }
             }
             decreaseIndent
-            if !isFirst { emit("\n" + indent) }
-            emit("};\n")
+            if !isFirst && !minify {
+              emit("\n" + indent)
+            }
+            emit("}")
+            emitSemicolonAfterStatement
             emitNewlineAfterSymbol(symbol)
           }
 
@@ -146,7 +206,12 @@ namespace Skew {
                 }
                 emitFunction(function)
                 if symbol.baseClass != null {
-                  emit("\n" + indent + "$extends(" + fullName(symbol) + ", " + fullName(symbol.baseClass) + ");\n")
+                  if !minify {
+                    emit("\n" + indent)
+                  }
+                  emitSemicolonIfNeeded
+                  emit(extends + "(" + fullName(symbol) + "," + space + fullName(symbol.baseClass) + ")")
+                  emitSemicolonAfterStatement
                 }
               }
             }
@@ -167,7 +232,7 @@ namespace Skew {
       def emitArgumentList(arguments List<VariableSymbol>) {
         for i in 0..arguments.count {
           if i > 0 {
-            emit(", ")
+            emit("," + space)
           }
           emit(mangleName(arguments[i]))
         }
@@ -185,22 +250,28 @@ namespace Skew {
         var name = mangleName(symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent : symbol)
 
         if isExpression {
-          emit(indent + prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + " = function(")
+          emit(indent + prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + space + "=" + space + "function(")
         } else {
           emit(indent + "function " + name + "(")
         }
 
         emitArgumentList(symbol.arguments)
-        emit(") {\n")
+        emit(")" + space + "{" + newline)
         increaseIndent
 
         if symbol.self != null {
-          emit(indent + "var " + mangleName(symbol.self) + " = this;\n")
+          emit(indent + "var " + mangleName(symbol.self) + space + "=" + space + "this")
+          emitSemicolonAfterStatement
         }
 
         emitStatements(symbol.block.children)
         decreaseIndent
-        emit(indent + "}" + (isExpression ? ";\n" : "\n"))
+        emit(indent + "}")
+        if isExpression {
+          emitSemicolonAfterStatement
+        } else {
+          emit(newline)
+        }
         emitNewlineAfterSymbol(symbol)
       }
 
@@ -215,11 +286,11 @@ namespace Skew {
           emit(indent + (prefix == "" && !symbol.isExported || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + mangleName(symbol))
 
           if symbol.value != null {
-            emit(" = ")
+            emit(space + "=" + space)
             emitExpression(symbol.value, .LOWEST)
           }
 
-          emit(";\n")
+          emitSemicolonAfterStatement
           emitNewlineAfterSymbol(symbol)
         }
       }
@@ -228,6 +299,7 @@ namespace Skew {
         previousNode = null
 
         for statement in statements {
+          emitSemicolonIfNeeded
           emitNewlineBeforeStatement(statement)
           emitComments(statement.comments)
           emitStatement(statement)
@@ -237,12 +309,25 @@ namespace Skew {
         previousNode = null
       }
 
-      def emitBlock(node Node) {
-        emit(" {\n")
-        increaseIndent
-        emitStatements(node.children)
-        decreaseIndent
-        emit(indent + "}")
+      def emitBlock(node Node, after AfterToken, mode BracesMode) {
+        var shouldMinify = mode == .CAN_OMIT_BRACES && minify
+        if shouldMinify && !node.hasChildren {
+          emit(";")
+        } else if shouldMinify && node.children.count == 1 {
+          if after == .AFTER_KEYWORD {
+            emit(" ")
+          }
+          emitStatement(node.children.first)
+        } else {
+          emit(space + "{" + newline)
+          if node.hasChildren {
+            increaseIndent
+            emitStatements(node.children)
+            decreaseIndent
+          }
+          emit(indent + "}")
+          needsSemicolon = false
+        }
       }
 
       def emitStatement(node Node) {
@@ -254,15 +339,17 @@ namespace Skew {
           case .EXPRESSION {
             emit(indent)
             emitExpression(node.expressionValue, .LOWEST)
-            emit(";\n")
+            emitSemicolonAfterStatement
           }
 
           case .BREAK {
-            emit(indent + "break;\n")
+            emit(indent + "break")
+            emitSemicolonAfterStatement
           }
 
           case .CONTINUE {
-            emit(indent + "continue;\n")
+            emit(indent + "continue")
+            emitSemicolonAfterStatement
           }
 
           case .RETURN {
@@ -272,13 +359,13 @@ namespace Skew {
               emit(" ")
               emitExpression(value, .LOWEST)
             }
-            emit(";\n")
+            emitSemicolonAfterStatement
           }
 
           case .THROW {
             emit(indent + "throw ")
             emitExpression(node.throwValue, .LOWEST)
-            emit(";\n")
+            emitSemicolonAfterStatement
           }
 
           case .FOR {
@@ -286,117 +373,127 @@ namespace Skew {
             var update = node.forUpdate
             var children = node.children
             var count = children.count
-            emit(indent + "for (")
+            emit(indent + "for" + space + "(")
             if count > 3 {
               for i in 3..count {
                 var child = children[i]
                 if i != 3 {
-                  emit(", ")
+                  emit("," + space)
                 }
                 if child.kind == .VAR {
                   var symbol = child.symbol.asVariableSymbol
                   if i == 3 {
                     emit("var ")
                   }
-                  emit(mangleName(symbol) + " = ")
+                  emit(mangleName(symbol) + space + "=" + space)
                   emitExpression(symbol.value, .LOWEST)
                 } else {
                   emitExpression(child, .LOWEST)
                 }
               }
             }
-            emit("; ")
+            emit(";" + space)
             if test != null {
               emitExpression(test, .LOWEST)
             }
-            emit("; ")
+            emit(";" + space)
             if update != null {
               emitExpression(update, .LOWEST)
             }
             emit(")")
-            emitBlock(node.forBlock)
-            emit("\n")
+            emitBlock(node.forBlock, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+            emit(newline)
           }
 
           case .FOREACH {
-            emit(indent + "for (var " + mangleName(node.symbol) + " in ")
+            emit(indent + "for" + space + "(var " + mangleName(node.symbol) + " in ")
             emitExpression(node.foreachValue, .LOWEST)
             emit(")")
-            emitBlock(node.foreachBlock)
-            emit("\n")
+            emitBlock(node.foreachBlock, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+            emit(newline)
           }
 
           case .IF {
             emit(indent)
             emitIf(node)
-            emit("\n")
+            emit(newline)
           }
 
           case .SWITCH {
             var cases = node.children
-            emit(indent + "switch (")
+            emit(indent + "switch" + space + "(")
             emitExpression(node.switchValue, .LOWEST)
-            emit(") {\n")
+            emit(")" + space + "{" + newline)
             increaseIndent
             for i in 1..cases.count {
               var child = cases[i]
               var values = child.children
               var block = child.caseBlock
+              emitSemicolonIfNeeded
               if i != 1 {
-                emit("\n")
+                emit(newline)
               }
               if values.count == 1 {
                 emit(indent + "default:")
               } else {
                 for j in 1..values.count {
-                  if j != 1 { emit("\n") }
+                  if j != 1 {
+                    emit(newline)
+                  }
                   emit(indent + "case ")
                   emitExpression(values[j], .LOWEST)
                   emit(":")
                 }
               }
-              emit(" {\n")
-              increaseIndent
+              if !minify {
+                emit(" {\n")
+                increaseIndent
+              }
               emitStatements(block.children)
               if !block.blockAlwaysEndsWithReturn {
-                emit(indent + "break;\n")
+                emitSemicolonIfNeeded
+                emit(indent + "break")
+                emitSemicolonAfterStatement
               }
-              decreaseIndent
-              emit(indent + "}\n")
+              if !minify {
+                decreaseIndent
+                emit(indent + "}\n")
+              }
             }
             decreaseIndent
-            emit(indent + "}\n")
+            emit(indent + "}" + newline)
+            needsSemicolon = false
           }
 
           case .TRY {
             var children = node.children
             var finallyBlock = node.finallyBlock
             emit(indent + "try")
-            emitBlock(node.tryBlock)
-            emit("\n")
+            emitBlock(node.tryBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+            emit(newline)
             for i in 1..children.count - 1 {
               var child = children[i]
-              emit("\n")
+              emit(newline)
               emitComments(child.comments)
-              emit(indent + "catch (" + (child.symbol != null ? mangleName(child.symbol) : "$e") + ")")
-              emitBlock(child.catchBlock)
-              emit("\n")
+              emit(indent + "catch" + space + "(" + (child.symbol != null ? mangleName(child.symbol) : "$e") + ")")
+              emitBlock(child.catchBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+              emit(newline)
             }
             if finallyBlock != null {
-              emit("\n")
+              emit(newline)
               emitComments(finallyBlock.comments)
               emit(indent + "finally")
-              emitBlock(finallyBlock)
-              emit("\n")
+              emitBlock(finallyBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+              emit(newline)
             }
           }
 
           case .WHILE {
-            emit(indent + "while (")
+            emit(indent + "while" + space + "(")
             emitExpression(node.whileTest, .LOWEST)
             emit(")")
-            emitBlock(node.whileBlock)
-            emit("\n")
+            emitBlock(node.whileBlock, .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
+            emit(newline)
           }
 
           default {
@@ -406,16 +503,22 @@ namespace Skew {
       }
 
       def emitIf(node Node) {
-        emit("if (")
+        var trueBlock = node.ifTrue
+        var falseBlock = node.ifFalse
+        emit("if" + space + "(")
         emitExpression(node.ifTest, .LOWEST)
         emit(")")
-        emitBlock(node.ifTrue)
 
-        var block = node.ifFalse
-        if block != null {
-          var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
-          emit("\n\n")
-          emitComments(block.comments)
+        # Make sure to always keep braces to avoid the dangling "else" case
+        var trueStatement = trueBlock.blockStatement
+        emitBlock(node.ifTrue, .AFTER_PARENTHESIS, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES)
+
+        if falseBlock != null {
+          var falseStatement = falseBlock.blockStatement
+          var singleIf = falseStatement != null && falseStatement.kind == .IF ? falseStatement : null
+          emitSemicolonIfNeeded
+          emit(newline + newline)
+          emitComments(falseBlock.comments)
           if singleIf != null {
             emitComments(singleIf.comments)
           }
@@ -425,7 +528,7 @@ namespace Skew {
             emit(" ")
             emitIf(singleIf)
           } else {
-            emitBlock(block)
+            emitBlock(falseBlock, .AFTER_KEYWORD, .CAN_OMIT_BRACES)
           }
         }
       }
@@ -440,7 +543,8 @@ namespace Skew {
       }
 
       def emitExpression(node Node, precedence Precedence) {
-        switch node.kind {
+        var kind = node.kind
+        switch kind {
           case .TYPE {
             emit(fullName(node.resolvedType.symbol))
           }
@@ -493,7 +597,7 @@ namespace Skew {
 
             for i in 1..node.children.count {
               if call || i > 1 {
-                emit(", ")
+                emit("," + space)
               }
               emitExpression(node.children[i], .LOWEST)
             }
@@ -502,12 +606,12 @@ namespace Skew {
           }
 
           case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
-            var useBraces = node.kind == .INITIALIZER_MAP || node.kind == .INITIALIZER_SET && node.children.isEmpty
+            var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && node.children.isEmpty
             emit(useBraces ? "{" : "[")
 
             for i in 0..node.children.count {
               if i != 0 {
-                emit(", ")
+                emit("," + space)
               }
               emitExpression(node.children[i], .LOWEST)
             }
@@ -517,7 +621,7 @@ namespace Skew {
 
           case .PAIR {
             emitExpression(node.firstValue, .LOWEST)
-            emit(": ")
+            emit(":" + space)
             emitExpression(node.secondValue, .LOWEST)
           }
 
@@ -527,7 +631,7 @@ namespace Skew {
 
             for i in 1..node.children.count {
               if i > 1 {
-                emit(", ")
+                emit("," + space)
               }
               emitExpression(node.children[i], .LOWEST)
             }
@@ -545,12 +649,12 @@ namespace Skew {
 
             for i in 1..node.children.count - 1 {
               if i > 1 {
-                emit(", ")
+                emit("," + space)
               }
               emitExpression(node.children[i], .LOWEST)
             }
 
-            emit("] = ")
+            emit("]" + space + "=" + space + "")
             emitExpression(node.children.last, .LOWEST)
 
             if Precedence.ASSIGN as int < precedence as int {
@@ -575,9 +679,9 @@ namespace Skew {
               emit("(")
             }
             emitExpression(node.hookTest, .LOGICAL_OR)
-            emit(" ? ")
+            emit(space + "?" + space)
             emitExpression(node.hookTrue, .ASSIGN)
-            emit(" : ")
+            emit(space + ":" + space)
             emitExpression(node.hookFalse, .ASSIGN)
             if Precedence.ASSIGN as int < precedence as int {
               emit(")")
@@ -589,13 +693,13 @@ namespace Skew {
             emit("function(")
             emitArgumentList(symbol.arguments)
             emit(")")
-            emitBlock(symbol.block)
+            emitBlock(symbol.block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
           }
 
           default {
-            if node.kind.isUnary {
+            if kind.isUnary {
               var value = node.unaryValue
-              var info = operatorInfo[node.kind]
+              var info = operatorInfo[kind]
               if info.precedence as int < precedence as int {
                 emit("(")
               }
@@ -606,14 +710,26 @@ namespace Skew {
               }
             }
 
-            else if node.kind.isBinary {
-              var info = operatorInfo[node.kind]
+            else if kind.isBinary {
+              var info = operatorInfo[kind]
+              var right = node.binaryRight
+
               if info.precedence as int < precedence as int {
                 emit("(")
               }
               emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
-              emit(node.kind == .EQUAL ? " === " : node.kind == .NOT_EQUAL ? " !== " : " " + info.text + " ")
-              emitExpression(node.binaryRight, info.precedence.incrementIfLeftAssociative(info.associativity))
+
+              # Always emit spaces around keyword operators, even when minifying
+              emit(kind == .IN ? " in " : kind == .IS ? " instanceof " : space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + space)
+
+              # Prevent "x - -1" from becoming "x--1"
+              if minify && (
+                  kind == .ADD && (right.kind == .POSITIVE || right.kind == .INCREMENT) ||
+                  kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .DECREMENT || right.isNumberLessThanZero)) {
+                emit(" ")
+              }
+
+              emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
               if info.precedence as int < precedence as int {
                 emit(")")
               }
@@ -643,7 +759,7 @@ namespace Skew {
       def createIntBinary(kind NodeKind, left Node, right Node) Node {
         if kind == .MULTIPLY {
           needsMultiply = true
-          return Node.createCall(Node.createName("$imul"), [left, right]).withType(cache.intType)
+          return Node.createCall(Node.createName(imul), [left, right]).withType(cache.intType)
         }
         return wrapWithIntCast(Node.createBinary(kind, left, right).withType(cache.intType))
       }

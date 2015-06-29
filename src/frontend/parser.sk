@@ -1123,6 +1123,7 @@ namespace Skew.Parsing {
     pratt.infix(.GREATER_THAN, .COMPARE, binaryInfix(.GREATER_THAN))
     pratt.infix(.GREATER_THAN_OR_EQUAL, .COMPARE, binaryInfix(.GREATER_THAN_OR_EQUAL))
     pratt.infix(.IN, .COMPARE, binaryInfix(.IN))
+    pratt.infix(.IS, .COMPARE, binaryInfix(.IS))
     pratt.infix(.LESS_THAN, .COMPARE, binaryInfix(.LESS_THAN))
     pratt.infix(.LESS_THAN_OR_EQUAL, .COMPARE, binaryInfix(.LESS_THAN_OR_EQUAL))
     pratt.infix(.LOGICAL_AND, .LOGICAL_AND, binaryInfix(.LOGICAL_AND))
