@@ -929,6 +929,11 @@
     return self + (associativity === Skew.Associativity.RIGHT | 0) | 0;
   };
 
+  Skew.BooleanSwap = {
+    SWAP: 0, 0: "SWAP",
+    NO_SWAP: 1, 1: "NO_SWAP"
+  };
+
   Skew.ExtractGroupsMode = {
     ALL_SYMBOLS: 0, 0: "ALL_SYMBOLS",
     ONLY_LOCAL_VARIABLES: 1, 1: "ONLY_LOCAL_VARIABLES",
@@ -1306,14 +1311,9 @@
     self.previousSymbol = symbol;
   };
 
-  Skew.JsEmitter.prototype.isCompactNodeKind = function(kind) {
-    var self = this;
-    return kind === Skew.NodeKind.EXPRESSION || kind === Skew.NodeKind.VAR || Skew.NodeKind.isJump(kind);
-  };
-
   Skew.JsEmitter.prototype.emitNewlineBeforeStatement = function(node) {
     var self = this;
-    if (!self.minify && self.previousNode !== null && (node.comments !== null || !self.isCompactNodeKind(self.previousNode.kind) || !self.isCompactNodeKind(node.kind))) {
+    if (!self.minify && self.previousNode !== null && (node.comments !== null || !Skew.JsEmitter.isCompactNodeKind(self.previousNode.kind) || !Skew.JsEmitter.isCompactNodeKind(node.kind))) {
       self.emit("\n");
     }
 
@@ -2204,6 +2204,20 @@
         break;
       }
 
+      case Skew.NodeKind.IF: {
+        if (self.mangle) {
+          self.peepholeMangleIf(node);
+        }
+        break;
+      }
+
+      case Skew.NodeKind.HOOK: {
+        if (self.mangle) {
+          self.peepholeMangleHook(node);
+        }
+        break;
+      }
+
       case Skew.NodeKind.LAMBDA: {
         var $function = node.symbol.asFunctionSymbol();
 
@@ -2220,6 +2234,241 @@
       case Skew.NodeKind.VAR: {
         self.unionVariableWithFunction(node.symbol, self.enclosingFunction);
         break;
+      }
+    }
+  };
+
+  Skew.JsEmitter.prototype.looksTheSame = function(left, right) {
+    var self = this;
+    if (left.kind === right.kind) {
+      switch (left.kind) {
+        case Skew.NodeKind.NULL: {
+          return true;
+        }
+
+        case Skew.NodeKind.CONSTANT: {
+          switch (left.content.kind()) {
+            case Skew.ContentKind.INT: {
+              return right.isInt() && left.asInt() === right.asInt();
+            }
+
+            case Skew.ContentKind.BOOL: {
+              return right.isBool() && left.asBool() === right.asBool();
+            }
+
+            case Skew.ContentKind.DOUBLE: {
+              return right.isDouble() && left.asDouble() === right.asDouble();
+            }
+
+            case Skew.ContentKind.STRING: {
+              return right.isString() && left.asString() === right.asString();
+            }
+          }
+          break;
+        }
+
+        case Skew.NodeKind.NAME: {
+          return left.symbol !== null && left.symbol === right.symbol || left.symbol === null && right.symbol === null && left.asString() === right.asString();
+        }
+
+        case Skew.NodeKind.DOT: {
+          return left.symbol === right.symbol && self.looksTheSame(left.dotTarget(), right.dotTarget());
+        }
+      }
+    }
+
+    // Null literals are always implicitly casted, so unwrap implicit casts
+    if (left.kind === Skew.NodeKind.CAST) {
+      return self.looksTheSame(left.castValue(), right);
+    }
+
+    if (right.kind === Skew.NodeKind.CAST) {
+      return self.looksTheSame(left, right.castValue());
+    }
+
+    return false;
+  };
+
+  // Simplifies the node assuming it's used in a boolean context
+  Skew.JsEmitter.prototype.peepholeMangleBoolean = function(node, canSwap) {
+    var self = this;
+    var kind = node.kind;
+
+    if (kind === Skew.NodeKind.EQUAL || kind === Skew.NodeKind.NOT_EQUAL) {
+      var left = node.binaryLeft();
+      var right = node.binaryRight();
+      var replacement = Skew.JsEmitter.isFalsy(right) ? left : Skew.JsEmitter.isFalsy(left) ? right : null;
+
+      // "if (a != 0) b;" => "if (a) b;"
+      if (replacement !== null) {
+        // This minification is not valid for floating-point values because
+        // of NaN, since NaN != 0 but NaN is falsy in JavaScript
+        if (left.resolvedType !== null && left.resolvedType !== self.cache.doubleType && right.resolvedType !== null && right.resolvedType !== self.cache.doubleType) {
+          replacement.replaceWithNull();
+          node.become(kind === Skew.NodeKind.EQUAL ? Skew.Node.createUnary(Skew.NodeKind.NOT, replacement) : replacement);
+        }
+      }
+
+      else if (left.resolvedType === self.cache.intType && right.resolvedType === self.cache.intType && (kind === Skew.NodeKind.NOT_EQUAL || kind === Skew.NodeKind.EQUAL && canSwap === Skew.BooleanSwap.SWAP)) {
+        // "if (a != -1) c;" => "if (~a) c;"
+        // "if (a == -1) c; else d;" => "if (~a) d; else c;"
+        if (right.isInt() && right.asInt() === -1) {
+          node.become(Skew.Node.createUnary(Skew.NodeKind.COMPLEMENT, left.replaceWithNull()));
+        }
+
+        // "if (-1 != b) c;" => "if (~b) c;"
+        // "if (-1 == b) c; else d;" => "if (~b) d; else c;"
+        else if (left.isInt() && left.asInt() === -1) {
+          node.become(Skew.Node.createUnary(Skew.NodeKind.COMPLEMENT, right.replaceWithNull()));
+        }
+
+        // "if (a != b) c;" => "if (a ^ b) c;"
+        // "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
+        else {
+          node.kind = Skew.NodeKind.BITWISE_XOR;
+        }
+
+        return kind === Skew.NodeKind.EQUAL ? Skew.BooleanSwap.SWAP : Skew.BooleanSwap.NO_SWAP;
+      }
+    }
+
+    // "if (a != 0 || b != 0) c;" => "if (a || b) c;"
+    else if (kind === Skew.NodeKind.LOGICAL_AND || kind === Skew.NodeKind.LOGICAL_OR) {
+      self.peepholeMangleBoolean(node.binaryLeft(), Skew.BooleanSwap.NO_SWAP);
+      self.peepholeMangleBoolean(node.binaryRight(), Skew.BooleanSwap.NO_SWAP);
+    }
+
+    // "if (!a) b; else c;" => "if (a) c; else b;"
+    // "a == 0 ? b : c;" => "a ? c : b;"
+    // This is not an "else if" check since EQUAL may be turned into NOT above
+    if (node.kind === Skew.NodeKind.NOT && canSwap === Skew.BooleanSwap.SWAP) {
+      node.become(node.unaryValue().replaceWithNull());
+      return Skew.BooleanSwap.SWAP;
+    }
+
+    return Skew.BooleanSwap.NO_SWAP;
+  };
+
+  Skew.JsEmitter.prototype.peepholeMangleIf = function(node) {
+    var self = this;
+    var test = node.ifTest();
+    var trueBlock = node.ifTrue();
+    var falseBlock = node.ifFalse();
+    var trueStatement = trueBlock.blockStatement();
+    var swapped = self.peepholeMangleBoolean(test, falseBlock !== null || trueStatement !== null && trueStatement.kind === Skew.NodeKind.EXPRESSION ? Skew.BooleanSwap.SWAP : Skew.BooleanSwap.NO_SWAP);
+
+    if (falseBlock !== null) {
+      var falseStatement = falseBlock.blockStatement();
+
+      // "if (!a) b; else c;" => "if (a) c; else b;"
+      if (swapped === Skew.BooleanSwap.SWAP) {
+        var block = trueBlock;
+        trueBlock = falseBlock;
+        falseBlock = block;
+        var statement = trueStatement;
+        trueStatement = falseStatement;
+        falseStatement = statement;
+        trueBlock.swapWith(falseBlock);
+      }
+
+      if (trueStatement !== null && falseStatement !== null) {
+        // "if (a) b; else c;" => "a ? b : c;"
+        if (trueStatement.kind === Skew.NodeKind.EXPRESSION && falseStatement.kind === Skew.NodeKind.EXPRESSION) {
+          var hook = Skew.Node.createHook(test.replaceWithNull(), trueStatement.expressionValue().replaceWithNull(), falseStatement.expressionValue().replaceWithNull());
+          self.peepholeMangleHook(hook);
+          node.become(Skew.Node.createExpression(hook));
+        }
+
+        // "if (a) return b; else return c;" => "return a ? b : c;"
+        else if (trueStatement.kind === Skew.NodeKind.RETURN && falseStatement.kind === Skew.NodeKind.RETURN) {
+          var trueValue = trueStatement.returnValue();
+          var falseValue = falseStatement.returnValue();
+
+          if (trueValue !== null && falseValue !== null) {
+            var hook1 = Skew.Node.createHook(test.replaceWithNull(), trueValue.replaceWithNull(), falseValue.replaceWithNull());
+            self.peepholeMangleHook(hook1);
+            node.become(Skew.Node.createReturn(hook1));
+          }
+        }
+      }
+    }
+
+    // "if (a) b;" => "a && b;"
+    // "if (!a) b;" => "a || b;"
+    else if (trueStatement !== null && trueStatement.kind === Skew.NodeKind.EXPRESSION) {
+      var value = trueStatement.expressionValue().replaceWithNull();
+      node.become(Skew.Node.createExpression(Skew.Node.createBinary(swapped === Skew.BooleanSwap.SWAP ? Skew.NodeKind.LOGICAL_OR : Skew.NodeKind.LOGICAL_AND, test.replaceWithNull(), value)));
+    }
+  };
+
+  Skew.JsEmitter.prototype.peepholeMangleHook = function(node) {
+    var self = this;
+    var test = node.hookTest();
+    var trueValue = node.hookTrue();
+    var falseValue = node.hookFalse();
+    var swapped = self.peepholeMangleBoolean(test, Skew.BooleanSwap.SWAP);
+
+    // "!a ? b : c;" => "a ? c : b;"
+    if (swapped === Skew.BooleanSwap.SWAP) {
+      var temp = trueValue;
+      trueValue = falseValue;
+      falseValue = temp;
+      trueValue.swapWith(falseValue);
+    }
+
+    // "a ? a : b" => "a || b"
+    if (self.looksTheSame(test, trueValue) && test.hasNoSideEffects()) {
+      node.become(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test.replaceWithNull(), falseValue.replaceWithNull()));
+      return;
+    }
+
+    // "a ? b : a" => "a && b"
+    if (self.looksTheSame(test, falseValue) && test.hasNoSideEffects()) {
+      node.become(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_AND, test.replaceWithNull(), trueValue.replaceWithNull()));
+      return;
+    }
+
+    // "a ? b : b" => "a, b"
+    if (self.looksTheSame(trueValue, falseValue)) {
+      node.become(test.hasNoSideEffects() ? trueValue.replaceWithNull() : new Skew.Node(Skew.NodeKind.SEQUENCE).withChildren([test.replaceWithNull(), trueValue.replaceWithNull()]));
+      return;
+    }
+
+    // Collapse partially-identical hook expressions
+    if (falseValue.kind === Skew.NodeKind.HOOK) {
+      var falseTest = falseValue.hookTest();
+      var falseTrueValue = falseValue.hookTrue();
+      var falseFalseValue = falseValue.hookFalse();
+
+      // "a ? b : c ? b : d" => "a || c ? b : d"
+      if (self.looksTheSame(trueValue, falseTrueValue)) {
+        var or = Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, new Skew.Node(Skew.NodeKind.NULL), falseTest.replaceWithNull());
+        or.binaryLeft().replaceWith(test.replaceWith(or));
+        falseValue.replaceWith(falseFalseValue.replaceWithNull());
+        self.peepholeMangleHook(node);
+        return;
+      }
+    }
+
+    // Collapse partially-identical binary expressions
+    if (trueValue.kind === falseValue.kind && Skew.NodeKind.isBinary(trueValue.kind)) {
+      var trueLeft = trueValue.binaryLeft();
+      var trueRight = trueValue.binaryRight();
+      var falseLeft = falseValue.binaryLeft();
+      var falseRight = falseValue.binaryRight();
+
+      // "a ? b = c : b = d;" => "b = a ? c : d;"
+      if (self.looksTheSame(trueLeft, falseLeft)) {
+        var hook = Skew.Node.createHook(test.replaceWithNull(), trueRight.replaceWithNull(), falseRight.replaceWithNull());
+        self.peepholeMangleHook(hook);
+        node.become(Skew.Node.createBinary(trueValue.kind, trueLeft.replaceWithNull(), hook));
+      }
+
+      // "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
+      else if (self.looksTheSame(trueRight, falseRight) && !Skew.NodeKind.isBinaryAssign(trueValue.kind)) {
+        var hook1 = Skew.Node.createHook(test.replaceWithNull(), trueLeft.replaceWithNull(), falseLeft.replaceWithNull());
+        self.peepholeMangleHook(hook1);
+        node.become(Skew.Node.createBinary(trueValue.kind, hook1, trueRight.replaceWithNull()));
       }
     }
   };
@@ -2281,6 +2530,43 @@
         node.become(self.wrapWithTypeIndex(value.replaceWithNull(), type, type));
       }
     }
+  };
+
+  Skew.JsEmitter.isCompactNodeKind = function(kind) {
+    return kind === Skew.NodeKind.EXPRESSION || kind === Skew.NodeKind.VAR || Skew.NodeKind.isJump(kind);
+  };
+
+  Skew.JsEmitter.isFalsy = function(node) {
+    switch (node.kind) {
+      case Skew.NodeKind.NULL: {
+        return true;
+      }
+
+      case Skew.NodeKind.CAST: {
+        return Skew.JsEmitter.isFalsy(node.castValue());
+      }
+
+      case Skew.NodeKind.CONSTANT: {
+        var content = node.content;
+
+        switch (content.kind()) {
+          case Skew.ContentKind.INT: {
+            return content.asInt() === 0;
+          }
+
+          case Skew.ContentKind.DOUBLE: {
+            return content.asDouble() === 0 || isNaN(content.asDouble());
+          }
+
+          case Skew.ContentKind.STRING: {
+            return content.asString() === "";
+          }
+        }
+        break;
+      }
+    }
+
+    return false;
   };
 
   Skew.JsEmitter.fullName = function(symbol) {
@@ -2993,11 +3279,7 @@
 
   Skew.Node.prototype.isNumberLessThanZero = function() {
     var self = this;
-    if (self.kind === Skew.NodeKind.CONSTANT) {
-      return self.content.kind() === Skew.ContentKind.INT && self.content.asInt() < 0 || self.content.kind() === Skew.ContentKind.DOUBLE && self.content.asDouble() < 0;
-    }
-
-    return false;
+    return self.isInt() && self.asInt() < 0 || self.isDouble() && self.asDouble() < 0;
   };
 
   Skew.Node.prototype.blockAlwaysEndsWithReturn = function() {
@@ -10001,7 +10283,7 @@
       self.checkConversion(second, self.cache.intType, Skew.Resolving.ConversionKind.IMPLICIT);
 
       // The ".." syntax only counts up, unlike CoffeeScript
-      if (first.kind === Skew.NodeKind.CONSTANT && first.content.kind() === Skew.ContentKind.INT && second.kind === Skew.NodeKind.CONSTANT && second.content.kind() === Skew.ContentKind.INT && first.content.asInt() >= second.content.asInt()) {
+      if (first.isInt() && second.isInt() && first.asInt() >= second.asInt()) {
         self.log.semanticWarningEmptyRange(value.range);
       }
     }

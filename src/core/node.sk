@@ -354,10 +354,7 @@ namespace Skew {
     }
 
     def isNumberLessThanZero bool {
-      if kind == .CONSTANT {
-        return content.kind == .INT && content.asInt < 0 || content.kind == .DOUBLE && content.asDouble < 0
-      }
-      return false
+      return isInt && asInt < 0 || isDouble && asDouble < 0
     }
 
     def blockAlwaysEndsWithReturn bool {

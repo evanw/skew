@@ -1165,9 +1165,7 @@ namespace Skew.Resolving {
         checkConversion(second, cache.intType, .IMPLICIT)
 
         # The ".." syntax only counts up, unlike CoffeeScript
-        if first.kind == .CONSTANT && first.content.kind == .INT &&
-            second.kind == .CONSTANT && second.content.kind == .INT &&
-            first.content.asInt >= second.content.asInt {
+        if first.isInt && second.isInt && first.asInt >= second.asInt {
           log.semanticWarningEmptyRange(value.range)
         }
       }

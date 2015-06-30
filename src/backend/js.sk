@@ -1,4 +1,9 @@
 namespace Skew {
+  enum BooleanSwap {
+    SWAP
+    NO_SWAP
+  }
+
   enum ExtractGroupsMode {
     ALL_SYMBOLS
     ONLY_LOCAL_VARIABLES
@@ -318,10 +323,6 @@ namespace Skew {
 
       def emitNewlineAfterSymbol(symbol Symbol) {
         previousSymbol = symbol
-      }
-
-      def isCompactNodeKind(kind NodeKind) bool {
-        return kind == .EXPRESSION || kind == .VAR || kind.isJump
       }
 
       def emitNewlineBeforeStatement(node Node) {
@@ -1053,6 +1054,18 @@ namespace Skew {
             unionVariableWithFunction(node.symbol, enclosingFunction)
           }
 
+          case .IF {
+            if mangle {
+              peepholeMangleIf(node)
+            }
+          }
+
+          case .HOOK {
+            if mangle {
+              peepholeMangleHook(node)
+            }
+          }
+
           case .LAMBDA {
             var function = node.symbol.asFunctionSymbol
             for argument in function.arguments {
@@ -1064,6 +1077,212 @@ namespace Skew {
 
           case .VAR {
             unionVariableWithFunction(node.symbol, enclosingFunction)
+          }
+        }
+      }
+
+      def looksTheSame(left Node, right Node) bool {
+        if left.kind == right.kind {
+          switch left.kind {
+            case .NULL { return true }
+            case .CONSTANT {
+              switch left.content.kind {
+                case .INT { return right.isInt && left.asInt == right.asInt }
+                case .BOOL { return right.isBool && left.asBool == right.asBool }
+                case .DOUBLE { return right.isDouble && left.asDouble == right.asDouble }
+                case .STRING { return right.isString && left.asString == right.asString }
+              }
+            }
+            case .NAME { return left.symbol != null && left.symbol == right.symbol || left.symbol == null && right.symbol == null && left.asString == right.asString }
+            case .DOT { return left.symbol == right.symbol && looksTheSame(left.dotTarget, right.dotTarget) }
+          }
+        }
+
+        # Null literals are always implicitly casted, so unwrap implicit casts
+        if left.kind == .CAST { return looksTheSame(left.castValue, right) }
+        if right.kind == .CAST { return looksTheSame(left, right.castValue) }
+        return false
+      }
+
+      # Simplifies the node assuming it's used in a boolean context
+      def peepholeMangleBoolean(node Node, canSwap BooleanSwap) BooleanSwap {
+        var kind = node.kind
+
+        if kind == .EQUAL || kind == .NOT_EQUAL {
+          var left = node.binaryLeft
+          var right = node.binaryRight
+          var replacement = isFalsy(right) ? left : isFalsy(left) ? right : null
+
+          # "if (a != 0) b;" => "if (a) b;"
+          if replacement != null {
+
+            # This minification is not valid for floating-point values because
+            # of NaN, since NaN != 0 but NaN is falsy in JavaScript
+            if left.resolvedType != null && left.resolvedType != cache.doubleType && right.resolvedType != null && right.resolvedType != cache.doubleType {
+              replacement.replaceWithNull
+              node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement)
+            }
+          }
+
+          else if left.resolvedType == cache.intType && right.resolvedType == cache.intType && (kind == .NOT_EQUAL || kind == .EQUAL && canSwap == .SWAP) {
+
+            # "if (a != -1) c;" => "if (~a) c;"
+            # "if (a == -1) c; else d;" => "if (~a) d; else c;"
+            if right.isInt && right.asInt == -1 {
+              node.become(Node.createUnary(.COMPLEMENT, left.replaceWithNull))
+            }
+
+            # "if (-1 != b) c;" => "if (~b) c;"
+            # "if (-1 == b) c; else d;" => "if (~b) d; else c;"
+            else if left.isInt && left.asInt == -1 {
+              node.become(Node.createUnary(.COMPLEMENT, right.replaceWithNull))
+            }
+
+            # "if (a != b) c;" => "if (a ^ b) c;"
+            # "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
+            else {
+              node.kind = .BITWISE_XOR
+            }
+
+            return kind == .EQUAL ? .SWAP : .NO_SWAP
+          }
+        }
+
+        # "if (a != 0 || b != 0) c;" => "if (a || b) c;"
+        else if kind == .LOGICAL_AND || kind == .LOGICAL_OR {
+          peepholeMangleBoolean(node.binaryLeft, .NO_SWAP)
+          peepholeMangleBoolean(node.binaryRight, .NO_SWAP)
+        }
+
+        # "if (!a) b; else c;" => "if (a) c; else b;"
+        # "a == 0 ? b : c;" => "a ? c : b;"
+        # This is not an "else if" check since EQUAL may be turned into NOT above
+        if node.kind == .NOT && canSwap == .SWAP {
+          node.become(node.unaryValue.replaceWithNull)
+          return .SWAP
+        }
+
+        return .NO_SWAP
+      }
+
+      def peepholeMangleIf(node Node) {
+        var test = node.ifTest
+        var trueBlock = node.ifTrue
+        var falseBlock = node.ifFalse
+        var trueStatement = trueBlock.blockStatement
+        var swapped = peepholeMangleBoolean(test, falseBlock != null || trueStatement != null && trueStatement.kind == .EXPRESSION ? .SWAP : .NO_SWAP)
+
+        if falseBlock != null {
+          var falseStatement = falseBlock.blockStatement
+
+          # "if (!a) b; else c;" => "if (a) c; else b;"
+          if swapped == .SWAP {
+            var block = trueBlock
+            trueBlock = falseBlock
+            falseBlock = block
+            var statement = trueStatement
+            trueStatement = falseStatement
+            falseStatement = statement
+            trueBlock.swapWith(falseBlock)
+          }
+
+          if trueStatement != null && falseStatement != null {
+
+            # "if (a) b; else c;" => "a ? b : c;"
+            if trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION {
+              var hook = Node.createHook(test.replaceWithNull, trueStatement.expressionValue.replaceWithNull, falseStatement.expressionValue.replaceWithNull)
+              peepholeMangleHook(hook)
+              node.become(Node.createExpression(hook))
+            }
+
+            # "if (a) return b; else return c;" => "return a ? b : c;"
+            else if trueStatement.kind == .RETURN && falseStatement.kind == .RETURN {
+              var trueValue = trueStatement.returnValue
+              var falseValue = falseStatement.returnValue
+              if trueValue != null && falseValue != null {
+                var hook = Node.createHook(test.replaceWithNull, trueValue.replaceWithNull, falseValue.replaceWithNull)
+                peepholeMangleHook(hook)
+                node.become(Node.createReturn(hook))
+              }
+            }
+          }
+        }
+
+        # "if (a) b;" => "a && b;"
+        # "if (!a) b;" => "a || b;"
+        else if trueStatement != null && trueStatement.kind == .EXPRESSION {
+          var value = trueStatement.expressionValue.replaceWithNull
+          node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.replaceWithNull, value)))
+        }
+      }
+
+      def peepholeMangleHook(node Node) {
+        var test = node.hookTest
+        var trueValue = node.hookTrue
+        var falseValue = node.hookFalse
+        var swapped = peepholeMangleBoolean(test, .SWAP)
+
+        # "!a ? b : c;" => "a ? c : b;"
+        if swapped == .SWAP {
+          var temp = trueValue
+          trueValue = falseValue
+          falseValue = temp
+          trueValue.swapWith(falseValue)
+        }
+
+        # "a ? a : b" => "a || b"
+        if looksTheSame(test, trueValue) && test.hasNoSideEffects {
+          node.become(Node.createBinary(.LOGICAL_OR, test.replaceWithNull, falseValue.replaceWithNull))
+          return
+        }
+
+        # "a ? b : a" => "a && b"
+        if looksTheSame(test, falseValue) && test.hasNoSideEffects {
+          node.become(Node.createBinary(.LOGICAL_AND, test.replaceWithNull, trueValue.replaceWithNull))
+          return
+        }
+
+        # "a ? b : b" => "a, b"
+        if looksTheSame(trueValue, falseValue) {
+          node.become(test.hasNoSideEffects ? trueValue.replaceWithNull : Node.createSequence([test.replaceWithNull, trueValue.replaceWithNull]))
+          return
+        }
+
+        # Collapse partially-identical hook expressions
+        if falseValue.kind == .HOOK {
+          var falseTest = falseValue.hookTest
+          var falseTrueValue = falseValue.hookTrue
+          var falseFalseValue = falseValue.hookFalse
+
+          # "a ? b : c ? b : d" => "a || c ? b : d"
+          if looksTheSame(trueValue, falseTrueValue) {
+            var or = Node.createBinary(.LOGICAL_OR, Node.createNull, falseTest.replaceWithNull)
+            or.binaryLeft.replaceWith(test.replaceWith(or))
+            falseValue.replaceWith(falseFalseValue.replaceWithNull)
+            peepholeMangleHook(node)
+            return
+          }
+        }
+
+        # Collapse partially-identical binary expressions
+        if trueValue.kind == falseValue.kind && trueValue.kind.isBinary {
+          var trueLeft = trueValue.binaryLeft
+          var trueRight = trueValue.binaryRight
+          var falseLeft = falseValue.binaryLeft
+          var falseRight = falseValue.binaryRight
+
+          # "a ? b = c : b = d;" => "b = a ? c : d;"
+          if looksTheSame(trueLeft, falseLeft) {
+            var hook = Node.createHook(test.replaceWithNull, trueRight.replaceWithNull, falseRight.replaceWithNull)
+            peepholeMangleHook(hook)
+            node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWithNull, hook))
+          }
+
+          # "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
+          else if looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryAssign {
+            var hook = Node.createHook(test.replaceWithNull, trueLeft.replaceWithNull, falseLeft.replaceWithNull)
+            peepholeMangleHook(hook)
+            node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWithNull))
           }
         }
       }
@@ -1130,6 +1349,26 @@ namespace Skew {
 
   namespace JsEmitter {
     @private {
+      def isCompactNodeKind(kind NodeKind) bool {
+        return kind == .EXPRESSION || kind == .VAR || kind.isJump
+      }
+
+      def isFalsy(node Node) bool {
+        switch node.kind {
+          case .NULL { return true }
+          case .CAST { return isFalsy(node.castValue) }
+          case .CONSTANT {
+            var content = node.content
+            switch content.kind {
+              case .INT { return content.asInt == 0 }
+              case .DOUBLE { return content.asDouble == 0 || content.asDouble.isNAN }
+              case .STRING { return content.asString == "" }
+            }
+          }
+        }
+        return false
+      }
+
       def fullName(symbol Symbol) string {
         var parent = symbol.parent
         if parent != null && parent.kind != .OBJECT_GLOBAL {
