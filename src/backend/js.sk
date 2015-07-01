@@ -34,6 +34,7 @@ namespace Skew {
 
       # Preprocess the code
       prepareGlobal(global)
+      shakingPass(global, cache.entryPointSymbol)
       var objects = sortedObjects(global)
 
       # The entire body of code is wrapped in a closure for safety
@@ -149,11 +150,6 @@ namespace Skew {
         global.objects.append(globalObjects)
         global.functions.append(globalFunctions)
         global.variables.append(globalVariables)
-
-        # Drop namespaces with nothing in them
-        global.objects.removeIf(symbol =>
-          symbol.kind == .OBJECT_NAMESPACE && !symbol.isImportedOrExported &&
-          symbol.objects.isEmpty && symbol.functions.isEmpty && symbol.variables.isEmpty)
 
         # Rename symbols based on frequency for better compression
         renameSymbols
@@ -866,7 +862,7 @@ namespace Skew {
               emit("(")
             }
 
-            emitExpression(node.children.first, .UNARY_POSTFIX)
+            emitExpression(node.children[0], .UNARY_POSTFIX)
             emit("[")
 
             for i in 1..node.children.count - 1 {
@@ -1443,18 +1439,24 @@ namespace Skew {
         if symbol.kind == .FUNCTION_CONSTRUCTOR {
           symbol = symbol.parent
         }
-        if !symbol.isImportedOrExported && symbol.name in isKeyword {
+        if !symbol.isImportedOrExported && (symbol.name in isKeyword ||
+          symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS && !symbol.kind.isOnInstances && symbol.name in isFunctionProperty) {
           return "$" + symbol.name
         }
         return symbol.nameWithRenaming
       }
 
-      const isKeyword = {
+      const isFunctionProperty = {
         "apply": 0,
+        "call": 0,
+        "length": 0,
+        "name": 0,
+      }
+
+      const isKeyword = {
         "arguments": 0,
         "Boolean": 0,
         "break": 0,
-        "call": 0,
         "case": 0,
         "catch": 0,
         "class": 0,

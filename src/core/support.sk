@@ -233,7 +233,7 @@ class string {
   }
 
   def in(value string) bool {
-    return indexOf(value) >= 0
+    return indexOf(value) != -1
   }
 
   def count int {
@@ -281,7 +281,7 @@ class List {
   }
 
   def in(value T) bool {
-    return indexOf(value) >= 0
+    return indexOf(value) != -1
   }
 
   def isEmpty bool {

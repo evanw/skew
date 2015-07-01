@@ -8,6 +8,7 @@ body {
 
 textarea {
   font: 12px Monaco, monospace;
+  width: 600px;
 }
 
 div {
@@ -36,12 +37,13 @@ label {
   height: 30px;
   margin-top: 10px;
   margin-bottom: -40px;
+  width: 600px;
 }
 
 </style>
 <div>
   <h2>Input</h2>
-  <textarea id="input" rows="10" cols="80" spellcheck="false" autofocus></textarea>
+  <textarea id="input" rows="10" spellcheck="false" autofocus></textarea>
   <p>
     <span id="compileTime">Loading...</span>
     Target: <span id="targetArea"></span>
@@ -50,14 +52,14 @@ label {
 </div>
 <div>
   <h2>Log</h2>
-  <textarea id="outputLog" rows="10" cols="80" spellcheck="false" readonly></textarea>
+  <textarea id="outputLog" rows="10" spellcheck="false" readonly></textarea>
 </div>
 <div>
   <h2>Tree</h2>
-  <textarea id="outputTree" rows="20" cols="80" spellcheck="false" readonly></textarea>
+  <textarea id="outputTree" rows="20" spellcheck="false" readonly></textarea>
 </div>
 <div>
   <h2>Code</h2>
-  <textarea id="outputCode" rows="20" cols="80" spellcheck="false" readonly></textarea>
+  <textarea id="outputCode" rows="20" spellcheck="false" readonly></textarea>
 </div>
 <script src="build/browser.js"></script>

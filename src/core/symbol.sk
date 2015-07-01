@@ -1,6 +1,5 @@
 namespace Skew {
   enum SymbolKind {
-    NONE
     PARAMETER_FUNCTION
     PARAMETER_OBJECT
 
@@ -53,10 +52,6 @@ namespace Skew {
       return self as int >= VARIABLE_ENUM as int && self as int <= VARIABLE_LOCAL as int
     }
 
-    def isOverloadableFunction bool {
-      return self as int >= FUNCTION_CONSTRUCTOR as int && self as int <= FUNCTION_INSTANCE as int
-    }
-
     def isGlobalReference bool {
       return
         self == VARIABLE_ENUM || self == VARIABLE_GLOBAL ||
@@ -70,6 +65,10 @@ namespace Skew {
 
     def isOnInstances bool {
       return self == FUNCTION_INSTANCE || self == VARIABLE_INSTANCE || self == OVERLOADED_INSTANCE
+    }
+
+    def isLocal bool {
+      return self == FUNCTION_LOCAL || self == VARIABLE_LOCAL
     }
   }
 

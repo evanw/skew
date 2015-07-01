@@ -43,7 +43,7 @@ namespace Skew {
 
     def toString string {
       if kind == .SYMBOL {
-        if substitutions != null {
+        if isParameterized {
           var name = symbol.name + "<"
           for i in 0..substitutions.count {
             if i != 0 {
@@ -147,7 +147,7 @@ namespace Skew {
     var listType Type = null
     var stringMapType Type = null
     var stringType Type = null
-    var entryPointSymbol Symbol = null
+    var entryPointSymbol FunctionSymbol = null
 
     def loadGlobals(log Log, global ObjectSymbol) {
       Type.initialize
