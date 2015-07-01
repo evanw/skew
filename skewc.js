@@ -2256,6 +2256,13 @@
         break;
       }
 
+      case Skew.NodeKind.BLOCK: {
+        if (self.mangle) {
+          self.peepholeMangleBlock(node);
+        }
+        break;
+      }
+
       case Skew.NodeKind.CAST: {
         self.patchCast(node);
         break;
@@ -2532,6 +2539,48 @@
         self.peepholeMangleHook(hook1);
         node.become(Skew.Node.createBinary(trueValue.kind, hook1, trueRight.replaceWithNull()));
       }
+    }
+  };
+
+  Skew.JsEmitter.prototype.peepholeMangleBlock = function(node) {
+    var self = this;
+    var children = node.children;
+    var i = 0;
+
+    while (i < children.length) {
+      var child = node.children[i];
+      var kind = child.kind;
+
+      if (kind === Skew.NodeKind.RETURN && child.returnValue() !== null) {
+        while (i !== 0) {
+          var previous = node.children[i - 1 | 0];
+
+          // "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
+          if (previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null) {
+            var statement = previous.ifTrue().blockStatement();
+
+            if (statement !== null && statement.kind === Skew.NodeKind.RETURN && statement.returnValue() !== null) {
+              var hook = Skew.Node.createHook(previous.ifTest().replaceWithNull(), statement.returnValue().replaceWithNull(), child.returnValue().replaceWithNull());
+              self.peepholeMangleHook(hook);
+              child.remove();
+              child = Skew.Node.createReturn(hook);
+              previous.replaceWith(child);
+            }
+
+            else {
+              break;
+            }
+          }
+
+          else {
+            break;
+          }
+
+          --i;
+        }
+      }
+
+      ++i;
     }
   };
 

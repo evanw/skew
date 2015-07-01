@@ -1097,6 +1097,12 @@ namespace Skew {
             patchBinaryArithmetic(node)
           }
 
+          case .BLOCK {
+            if mangle {
+              peepholeMangleBlock(node)
+            }
+          }
+
           case .CAST {
             patchCast(node)
           }
@@ -1335,6 +1341,44 @@ namespace Skew {
             peepholeMangleHook(hook)
             node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWithNull))
           }
+        }
+      }
+
+      def peepholeMangleBlock(node Node) {
+        var children = node.children
+        var i = 0
+
+        while i < children.count {
+          var child = node.children[i]
+          var kind = child.kind
+
+          if kind == .RETURN && child.returnValue != null {
+            while i != 0 {
+              var previous = node.children[i - 1]
+
+              # "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
+              if previous.kind == .IF && previous.ifFalse == null {
+                var statement = previous.ifTrue.blockStatement
+                if statement != null && statement.kind == .RETURN && statement.returnValue != null {
+                  var hook = Node.createHook(previous.ifTest.replaceWithNull, statement.returnValue.replaceWithNull, child.returnValue.replaceWithNull)
+                  peepholeMangleHook(hook)
+                  child.remove
+                  child = Node.createReturn(hook)
+                  previous.replaceWith(child)
+                } else {
+                  break
+                }
+              }
+
+              else {
+                break
+              }
+
+              i--
+            }
+          }
+
+          i++
         }
       }
 
