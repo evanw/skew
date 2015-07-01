@@ -361,6 +361,25 @@ class List {
   def clone List<T> {
     return (self as dynamic).slice()
   }
+
+  def removeIf(callback fn(T) bool) {
+    var index = 0
+
+    # Remove elements in place
+    for i in 0..count {
+      if !callback(self[i]) {
+        if index < i {
+          self[index] = self[i]
+        }
+        index++
+      }
+    }
+
+    # Shrink the array to the correct size
+    while index < count {
+      removeLast
+    }
+  }
 }
 
 class StringBuilder {

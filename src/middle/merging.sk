@@ -32,20 +32,14 @@ namespace Skew.Merging {
 
   def mergeObjects(log Log, parent ObjectSymbol, children List<ObjectSymbol>) {
     var members = parent.members
-    var n = children.count
-    var count = 0
-
-    for i in 0..n {
-      var child = children[i]
+    children.removeIf(child => {
       var other = members.get(child.name, null)
 
       # Simple case: no merging
       if other == null {
         members[child.name] = child
-        children[count] = child
-        count++
         mergeObject(log, parent, child, child)
-        continue
+        return false
       }
 
       # Can only merge with another of the same kind or with a namespace
@@ -53,14 +47,14 @@ namespace Skew.Merging {
         other.kind = child.kind
       } else if child.kind != .OBJECT_NAMESPACE && child.kind != other.kind {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
-        continue
+        return true
       }
 
       # Classes can only have one base type
       var object = other.asObjectSymbol
       if child.base != null && object.base != null {
         log.semanticErrorDuplicateBaseType(child.base.range, child.name, object.base.range)
-        continue
+        return true
       }
       if child.base != null {
         object.base = child.base
@@ -69,7 +63,7 @@ namespace Skew.Merging {
       # Cannot merge two objects that both have type parameters
       if child.parameters != null && object.parameters != null {
         log.semanticErrorDuplicateTypeParameters(rangeOfParameters(child.parameters), child.name, rangeOfParameters(object.parameters))
-        continue
+        return true
       }
 
       # Merge "child" into "other"
@@ -81,13 +75,8 @@ namespace Skew.Merging {
       if child.parameters != null {
         object.parameters = child.parameters
       }
-    }
-
-    # Remove merged declarations using O(n), would be O(n^2) if removeAt was used
-    while n > count {
-      children.removeLast
-      n--
-    }
+      return true
+    })
   }
 
   def mergeFunctions(log Log, parent ObjectSymbol, children List<FunctionSymbol>) {

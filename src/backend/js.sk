@@ -33,10 +33,7 @@ namespace Skew {
       }
 
       # Preprocess the code
-      patchObject(global)
-      if mangle {
-        renameSymbols
-      }
+      prepareGlobal(global)
       var objects = sortedObjects(global)
 
       # The entire body of code is wrapped in a closure for safety
@@ -131,6 +128,36 @@ namespace Skew {
       var needsSemicolon = false
       var newline = "\n"
       var space = " "
+
+      def prepareGlobal(global ObjectSymbol) {
+        var globalObjects List<ObjectSymbol> = []
+        var globalFunctions List<FunctionSymbol> = []
+        var globalVariables List<VariableSymbol> = []
+
+        # Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
+        patchObject(global, globalObjects, globalFunctions, globalVariables)
+
+        # Skip everything below if we aren't mangling
+        if !mangle {
+          return
+        }
+
+        # Move internal global symbols up to the global namespace
+        for object in globalObjects { object.parent = global }
+        for function in globalFunctions { function.parent = global }
+        for variable in globalVariables { variable.parent = global }
+        global.objects.append(globalObjects)
+        global.functions.append(globalFunctions)
+        global.variables.append(globalVariables)
+
+        # Drop namespaces with nothing in them
+        global.objects.removeIf(symbol =>
+          symbol.kind == .OBJECT_NAMESPACE && !symbol.isImportedOrExported &&
+          symbol.objects.isEmpty && symbol.functions.isEmpty && symbol.variables.isEmpty)
+
+        # Rename symbols based on frequency for better compression
+        renameSymbols
+      }
 
       def allocateNamingGroupIndex(symbol Symbol) {
         if mangle && !(symbol.id in namingGroupIndexForSymbol) {
@@ -937,14 +964,25 @@ namespace Skew {
         }
       }
 
-      def patchObject(symbol ObjectSymbol) {
+      def patchObject(symbol ObjectSymbol, globalObjects List<ObjectSymbol>, globalFunctions List<FunctionSymbol>, globalVariables List<VariableSymbol>) {
+        var shouldLiftGlobals = mangle && symbol.parent != null
         allocateNamingGroupIndex(symbol)
 
-        for object in symbol.objects {
-          patchObject(object)
-        }
+        # Scan over child objects
+        symbol.objects.removeIf(object => {
+          patchObject(object, globalObjects, globalFunctions, globalVariables)
 
-        for function in symbol.functions {
+          # When mangling, filter out all internal objects and move them to the global namespace
+          if shouldLiftGlobals && !object.isImportedOrExported {
+            globalObjects.append(object)
+            return true
+          }
+
+          return false
+        })
+
+        # Scan over child functions
+        symbol.functions.removeIf(function => {
           allocateNamingGroupIndex(function)
           enclosingFunction = function
           patchNode(function.block)
@@ -956,12 +994,29 @@ namespace Skew {
           if function.self != null {
             unionVariableWithFunction(function.self, function)
           }
-        }
 
-        for variable in symbol.variables {
+          # When mangling, filter out all internal global functions and move them to the global namespace
+          if shouldLiftGlobals && function.kind == .FUNCTION_GLOBAL && !function.isImportedOrExported {
+            globalFunctions.append(function)
+            return true
+          }
+
+          return false
+        })
+
+        # Scan over child variables
+        symbol.variables.removeIf(variable => {
           allocateNamingGroupIndex(variable)
           patchNode(variable.value)
-        }
+
+          # When mangling, filter out all internal global variables and move them to the global namespace
+          if shouldLiftGlobals && variable.kind == .VARIABLE_GLOBAL && !variable.isImportedOrExported {
+            globalVariables.append(variable)
+            return true
+          }
+
+          return false
+        })
       }
 
       def createIntBinary(kind NodeKind, left Node, right Node) Node {

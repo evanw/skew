@@ -31,6 +31,7 @@ namespace Skew {
   }
 
   var REMOVE_NEWLINE_AFTER IntMap<int> = {
+    TokenKind.ARROW: 0,
     TokenKind.COLON: 0,
     TokenKind.COMMA: 0,
     TokenKind.NEWLINE: 0,

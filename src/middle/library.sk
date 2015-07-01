@@ -176,6 +176,7 @@ class List<T> {
   def removeAt(x int)
   def removeDuplicates
   def removeFirst
+  def removeIf(x fn(T) bool)
   def removeLast
   def removeOne(x T)
   def removeRange(start int, end int)
