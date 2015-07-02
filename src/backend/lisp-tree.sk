@@ -10,7 +10,7 @@ namespace Skew {
       const options CompilerOptions
 
       def visitObject(symbol ObjectSymbol) {
-        emit("(" + mangleKind(symbol.kind) + " " + quoteString(symbol.name, '"'))
+        emit("(" + mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"'))
         increaseIndent
 
         for object in symbol.objects {
@@ -33,7 +33,7 @@ namespace Skew {
       }
 
       def visitFunction(symbol FunctionSymbol) {
-        emit("(" + mangleKind(symbol.kind) + " " + quoteString(symbol.name, '"'))
+        emit("(" + mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"'))
         increaseIndent
 
         for argument in symbol.arguments {
@@ -50,7 +50,7 @@ namespace Skew {
       }
 
       def visitVariable(symbol VariableSymbol) {
-        emit("(" + mangleKind(symbol.kind) + " " + quoteString(symbol.name, '"') + " ")
+        emit("(" + mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"') + " ")
         visitNode(symbol.type)
         emit(" ")
         visitNode(symbol.value)
@@ -63,7 +63,7 @@ namespace Skew {
           return
         }
 
-        emit("(" + mangleKind(node.kind))
+        emit("(" + mangleKind(node.kind.toString))
 
         var content = node.content
         if content != null {

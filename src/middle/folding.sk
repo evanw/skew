@@ -36,6 +36,7 @@ namespace Skew.Folding {
       node.removeChildren
       node.kind = .CONSTANT
       node.content = content
+      node.symbol = null
     }
 
     # Use this instead of node.become(Node.createBool(value)) to avoid more GC
@@ -703,11 +704,7 @@ namespace Skew.Folding {
       var constant Content = null
       var value = symbol.value
 
-      if symbol.kind == .VARIABLE_ENUM {
-        constant = symbol.enumInfo.content
-      }
-
-      else if symbol.isConst && value != null {
+      if symbol.isConst && value != null {
         switch value.kind {
           case .CONSTANT {
             constant = value.content

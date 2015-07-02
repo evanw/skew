@@ -238,16 +238,9 @@ namespace Skew {
     var block Node = null
   }
 
-  class EnumInfo {
-    var value int
-    var text string
-    var content Content # Either a string or an int depending on the current enum format, cached to avoid extra GC
-  }
-
   class VariableSymbol : Symbol {
     var type Node = null
     var value Node = null
-    var enumInfo EnumInfo = null
   }
 
   class OverloadedFunctionSymbol : Symbol {

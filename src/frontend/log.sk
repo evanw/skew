@@ -86,11 +86,11 @@ namespace Skew {
     }
 
     def syntaxErrorUnexpectedToken(token Token) {
-      error(token.range, "Unexpected " + token.kind)
+      error(token.range, "Unexpected " + token.kind.toString)
     }
 
     def syntaxErrorExpectedToken(range Range, found TokenKind, expected TokenKind) {
-      error(range, "Expected " + expected + " but found " + found)
+      error(range, "Expected " + expected.toString + " but found " + found.toString)
     }
 
     def syntaxErrorEmptyFunctionParentheses(range Range) {

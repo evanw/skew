@@ -1,3 +1,4 @@
+
 namespace Skew {
   var compileTime = document.getElementById("compileTime")
   var input = document.getElementById("input")
@@ -18,7 +19,6 @@ namespace Skew {
     if Config.get(.GLOBALIZE) { options.globalizeAllFunctions = true }
     if Config.get(.MANGLE) { options.jsMangle = true }
     if Config.get(.MINIFY) { options.jsMinify = true }
-    if Config.get(.STRING_ENUMS) { options.enumFormat = .STRING }
     var result = compile(log, options, [source])
     outputLog.value = log.toString
     outputTree.value = Config.get(.SHOW_SYNTAX_TREE) ? LispTreeEmitter.dump(result.global) : ""
@@ -48,7 +48,6 @@ namespace Skew {
     optionArea.appendChild(createCheckbox("Minify", .MINIFY))
     optionArea.appendChild(createCheckbox("Globalize", .GLOBALIZE))
     optionArea.appendChild(createCheckbox("Syntax tree", .SHOW_SYNTAX_TREE))
-    optionArea.appendChild(createCheckbox("String enums", .STRING_ENUMS))
     input.oninput = => update
     update
   }
@@ -60,7 +59,6 @@ namespace Skew {
     MANGLE
     MINIFY
     SHOW_SYNTAX_TREE
-    STRING_ENUMS
   }
 
   namespace Config {

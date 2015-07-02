@@ -160,8 +160,12 @@ namespace Skew {
       stringType = loadGlobalClass(log, global, "string", Symbol.IS_VALUE_TYPE)
     }
 
+    def isInteger(type Type) bool {
+      return type == intType || type.isEnum
+    }
+
     def isNumeric(type Type) bool {
-      return type == intType || type == doubleType
+      return isInteger(type) || type == doubleType
     }
 
     def isList(type Type) bool {
@@ -174,7 +178,7 @@ namespace Skew {
       if from == .NULL && to.isReference { return true }
       if from == intType && to == doubleType { return true }
       if from.hasBaseType(to) { return true }
-      if from.isEnum && (to == intType || to == stringType) { return true }
+      if from.isEnum && !to.isEnum && isNumeric(to) { return true }
       return false
     }
 
@@ -182,7 +186,7 @@ namespace Skew {
       if canImplicitlyConvert(from, to) { return true }
       if canCastToNumeric(from) && canCastToNumeric(to) { return true }
       if to.hasBaseType(from) { return true }
-      if to.isEnum && (from == intType || from == stringType) { return true }
+      if to.isEnum && isNumeric(from) { return true }
       return false
     }
 
@@ -199,7 +203,7 @@ namespace Skew {
 
       # Implement common implicit types for numeric types
       if isNumeric(left) && isNumeric(right) {
-        return left == intType && right == intType ? intType : doubleType
+        return isInteger(left) && isInteger(right) ? intType : doubleType
       }
 
       # Check for a common base class

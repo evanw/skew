@@ -241,7 +241,7 @@ namespace Skew.Resolving {
         var nextEnumValue = 0
         for variable in symbol.variables {
           if variable.kind == .VARIABLE_ENUM {
-            variable.enumInfo = EnumInfo.new(nextEnumValue, variable.name, options.enumFormat == .STRING ? StringContent.new(variable.name) : IntContent.new(nextEnumValue))
+            variable.value = Node.createInt(nextEnumValue).withType(symbol.resolvedType)
             nextEnumValue++
           }
         }
@@ -279,6 +279,17 @@ namespace Skew.Resolving {
           symbol.functions.append(generated)
           symbol.members[generated.name] = generated
         }
+      }
+
+      # Create a default toString if one doesn't exist
+      if symbol.kind == .OBJECT_ENUM && !symbol.isImported && !("toString" in symbol.members) {
+        var generated = FunctionSymbol.new(.FUNCTION_INSTANCE, "toString")
+        generated.scope = FunctionScope.new(symbol.scope, generated)
+        generated.flags |= Symbol.IS_AUTOMATICALLY_GENERATED
+        generated.parent = symbol
+        generated.range = symbol.range
+        symbol.functions.append(generated)
+        symbol.members[generated.name] = generated
       }
     }
 
@@ -439,8 +450,13 @@ namespace Skew.Resolving {
 
       # Lazily-initialize automatically generated functions
       if symbol.isAutomaticallyGenerated {
-        assert(symbol.kind == .FUNCTION_CONSTRUCTOR)
-        automaticallyGenerateConstructor(symbol)
+        if symbol.kind == .FUNCTION_CONSTRUCTOR {
+          assert(symbol.name == "new")
+          automaticallyGenerateClassConstructor(symbol)
+        } else if symbol.kind == .FUNCTION_INSTANCE {
+          assert(symbol.name == "toString")
+          automaticallyGenerateEnumToString(symbol)
+        }
       }
 
       # Find the overridden function or overloaded function in the base class
@@ -588,7 +604,7 @@ namespace Skew.Resolving {
       }
     }
 
-    def automaticallyGenerateConstructor(symbol FunctionSymbol) {
+    def automaticallyGenerateClassConstructor(symbol FunctionSymbol) {
       var statements List<Node> = []
 
       # Mirror the base constructor's arguments
@@ -636,6 +652,33 @@ namespace Skew.Resolving {
       if symbol.arguments.isEmpty {
         symbol.flags |= Symbol.IS_GETTER
       }
+    }
+
+    def automaticallyGenerateEnumToString(symbol FunctionSymbol) {
+      var parent = symbol.parent.asObjectSymbol
+      var names List<Node> = []
+      initializeSymbol(parent)
+
+      for variable in parent.variables {
+        if variable.kind == .VARIABLE_ENUM {
+          assert(variable.value.content.asInt == names.count)
+          names.append(Node.createString(variable.name))
+        }
+      }
+
+      var strings = VariableSymbol.new(.VARIABLE_GLOBAL, parent.scope.generateName("strings"))
+      strings.value = Node.createInitializer(.INITIALIZER_LIST, names)
+      strings.flags |= Symbol.IS_PRIVATE | Symbol.IS_CONST
+      strings.state = .INITIALIZED
+      strings.parent = parent
+      strings.scope = parent.scope
+      strings.resolvedType = cache.createListType(cache.stringType)
+      parent.variables.append(strings)
+      resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType)
+
+      symbol.returnType = Node.createType(cache.stringType)
+      symbol.block = Node.createBlock([Node.createReturn(Node.createIndex(createSymbolReference(strings), [Node.createName("self")]))])
+      symbol.flags |= Symbol.IS_GETTER
     }
 
     def resolveFunction(symbol FunctionSymbol) {
@@ -1942,7 +1985,7 @@ namespace Skew.Resolving {
       if symbol.kind.isOnInstances {
         var variable = enclosingFunction != null ? enclosingFunction.symbol.self : null
         if variable != null {
-          node.withChildren([Node.createName(variable.name).withSymbol(variable).withType(variable.resolvedType)]).kind = .DOT
+          node.withChildren([createSymbolReference(variable)]).kind = .DOT
         } else {
           log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
         }
@@ -2371,11 +2414,7 @@ namespace Skew.Resolving {
       var constant Content = null
       var value = symbol.value
 
-      if symbol.kind == .VARIABLE_ENUM {
-        constant = symbol.enumInfo.content
-      }
-
-      else if symbol.isConst && value != null {
+      if symbol.isConst && value != null {
         resolver.constantFolder.foldConstants(value)
         if value.kind == .CONSTANT {
           constant = value.content

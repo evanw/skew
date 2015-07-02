@@ -9,12 +9,6 @@ namespace Skew {
     }
   }
 
-  # Strings are better for debugging but ints are better for performance
-  enum EnumFormat {
-    INT
-    STRING
-  }
-
   class Define {
     const name Range
     const value Range
@@ -22,7 +16,6 @@ namespace Skew {
 
   class CompilerOptions {
     var defines StringMap<Define> = {}
-    var enumFormat EnumFormat = .INT
     var foldAllConstants = false
     var globalizeAllFunctions = false
     var inlineAllFunctions = false

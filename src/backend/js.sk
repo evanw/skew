@@ -391,7 +391,6 @@ namespace Skew {
             var isFirst = true
             for variable in symbol.variables {
               if variable.kind == .VARIABLE_ENUM {
-                var value = variable.enumInfo.value.toString
                 if isFirst {
                   isFirst = false
                 } else {
@@ -400,7 +399,8 @@ namespace Skew {
                 emit(newline)
                 emitNewlineBeforeSymbol(variable)
                 emitComments(variable.comments)
-                emit(indent + mangleName(variable) + ":" + space + value + "," + space + value + ":" + space + quoteString(variable.enumInfo.text, '"'))
+                emit(indent + mangleName(variable) + ":" + space)
+                emitContent(variable.value.content)
                 emitNewlineAfterSymbol(variable)
               }
             }
@@ -498,7 +498,7 @@ namespace Skew {
           return
         }
 
-        if symbol.kind != .VARIABLE_INSTANCE && (symbol.value != null || prefix == "" || symbol.kind == .VARIABLE_LOCAL) {
+        if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || prefix == "" || symbol.kind == .VARIABLE_LOCAL) {
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol.comments)
           emit(indent + (prefix == "" && !symbol.isExported || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + mangleName(symbol))
@@ -773,7 +773,7 @@ namespace Skew {
 
           case .NAME {
             var symbol = node.symbol
-            emit(symbol != null ? symbol.kind == .VARIABLE_ENUM && options.enumFormat == .STRING ? quoteString(symbol.name, '"') : fullName(symbol) : node.asString)
+            emit(symbol != null ? fullName(symbol) : node.asString)
           }
 
           case .DOT {
@@ -1395,16 +1395,8 @@ namespace Skew {
         }
 
         # Cast to int
-        else if type == cache.intType {
-          # Cast from enum to int, only needed if the enum is represented as a string
-          if valueType.isEnum {
-            if options.enumFormat == .STRING {
-              node.become(wrapWithTypeIndex(value.replaceWithNull, valueType, type))
-            }
-          }
-
-          # Non-enum cast to int
-          else if valueType != cache.intType && !alwaysConvertsOperandsToInt(node.parent) {
+        else if cache.isInteger(type) {
+          if !cache.isInteger(valueType) && !alwaysConvertsOperandsToInt(node.parent) {
             node.become(wrapWithIntCast(value.replaceWithNull))
           }
         }
@@ -1418,24 +1410,8 @@ namespace Skew {
 
         # Cast to string
         else if type == cache.stringType {
-          # Cast from enum to string, only needed if the enum is represented as an int
-          if valueType.isEnum {
-            if options.enumFormat == .INT {
-              node.become(wrapWithTypeIndex(value.replaceWithNull, valueType, type))
-            }
-          }
-
-          # Non-enum cast to string
-          else if valueType != cache.stringType {
+          if valueType != cache.stringType {
             node.become(Node.createBinary(.ADD, value.replaceWithNull, Node.createString("").withType(cache.stringType)).withType(cache.stringType).withRange(node.range))
-          }
-        }
-
-        # Cast to enum
-        else if type.isEnum {
-          # Cast from int or string to enum, only needed if the format is the other one
-          if valueType == cache.intType && options.enumFormat == .STRING || valueType == cache.stringType && options.enumFormat == .INT {
-            node.become(wrapWithTypeIndex(value.replaceWithNull, type, type))
           }
         }
       }

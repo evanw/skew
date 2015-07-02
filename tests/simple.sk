@@ -2175,34 +2175,37 @@ def main {
   var d bool = \"FOO\" as Foo
   var e bool = 0 as Foo
   var f bool = 0.0 as Foo
-  var g string = Foo.FOO
+  var g bool = Foo.FOO.toString
   var h int = Foo.FOO
 }
 ", "
+<stdin>:6:16: error: Cannot convert from type \"Foo\" to type \"string\"
+  var a bool = Foo.FOO as string
+               ~~~~~~~
 <stdin>:6:16: error: Cannot convert from type \"string\" to type \"bool\"
   var a bool = Foo.FOO as string
                ~~~~~~~~~~~~~~~~~
 <stdin>:7:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   var b bool = Foo.FOO as int
                ~~~~~~~~~~~~~~
-<stdin>:8:16: error: Cannot convert from type \"Foo\" to type \"double\"
-  var c bool = Foo.FOO as double
-               ~~~~~~~
 <stdin>:8:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
   var c bool = Foo.FOO as double
                ~~~~~~~~~~~~~~~~~
+<stdin>:9:16: error: Cannot convert from type \"string\" to type \"Foo\"
+  var d bool = \"FOO\" as Foo
+               ~~~~~
 <stdin>:9:16: error: Cannot convert from type \"Foo\" to type \"bool\"
   var d bool = \"FOO\" as Foo
                ~~~~~~~~~~~~
 <stdin>:10:16: error: Cannot convert from type \"Foo\" to type \"bool\"
   var e bool = 0 as Foo
                ~~~~~~~~
-<stdin>:11:16: error: Cannot convert from type \"double\" to type \"Foo\"
-  var f bool = 0.0 as Foo
-               ~~~
 <stdin>:11:16: error: Cannot convert from type \"Foo\" to type \"bool\"
   var f bool = 0.0 as Foo
                ~~~~~~~~~~
+<stdin>:12:16: error: Cannot convert from type \"string\" to type \"bool\"
+  var g bool = Foo.FOO.toString
+               ~~~~~~~~~~~~~~~~
 <stdin>:6:7: warning: Local variable \"a\" is never read
   var a bool = Foo.FOO as string
       ^
@@ -2222,7 +2225,7 @@ def main {
   var f bool = 0.0 as Foo
       ^
 <stdin>:12:7: warning: Local variable \"g\" is never read
-  var g string = Foo.FOO
+  var g bool = Foo.FOO.toString
       ^
 <stdin>:13:7: warning: Local variable \"h\" is never read
   var h int = Foo.FOO
