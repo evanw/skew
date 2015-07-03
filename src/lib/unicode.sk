@@ -50,7 +50,7 @@ namespace Unicode {
       }
     }
 
-    if STRING_ENCODING == .UTF16 {
+    else if STRING_ENCODING == .UTF16 {
       def nextCodePoint int {
         if index >= stop { return -1 }
         var a = value[index]
@@ -63,7 +63,7 @@ namespace Unicode {
       }
     }
 
-    if STRING_ENCODING == .UTF32 {
+    else {
       def nextCodePoint int {
         if index >= stop { return -1 }
         var c = value[index]
@@ -85,7 +85,7 @@ class string {
     }
   }
 
-  if Unicode.STRING_ENCODING != .UTF32 {
+  else {
     def codePoints List<int> {
       var codePoints List<int> = []
       var instance = Unicode.StringIterator.INSTANCE
@@ -130,7 +130,7 @@ namespace string {
     }
   }
 
-  if Unicode.STRING_ENCODING == .UTF16 {
+  else if Unicode.STRING_ENCODING == .UTF16 {
     def fromCodePoints(codePoints List<int>) string {
       var builder = StringBuilder.new
 
@@ -148,7 +148,7 @@ namespace string {
     }
   }
 
-  if Unicode.STRING_ENCODING == .UTF32 {
+  else {
     def fromCodePoints(codePoints List<int>) string {
       return fromCodeUnits(codePoints)
     }

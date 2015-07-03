@@ -4461,10 +4461,11 @@
 
   __extends(Skew.ParameterSymbol, Skew.Symbol);
 
-  Skew.Guard = function(parent, test, contents) {
+  Skew.Guard = function(parent, test, contents, elseGuard) {
     this.parent = parent;
     this.test = test;
     this.contents = contents;
+    this.elseGuard = elseGuard;
   };
 
   Skew.ObjectSymbol = function(kind, name) {
@@ -5807,6 +5808,41 @@
     return context.peek(Skew.TokenKind.END_OF_FILE) || context.peek(Skew.TokenKind.RIGHT_BRACE) || context.expect(Skew.TokenKind.NEWLINE);
   };
 
+  Skew.Parsing.recursiveParseGuard = function(context, parent, annotations) {
+    var test = null;
+
+    if (context.eat(Skew.TokenKind.IF)) {
+      test = Skew.Parsing.pratt.parse(context, Skew.Precedence.LOWEST);
+
+      if (test === null) {
+        return null;
+      }
+    }
+
+    if (!context.expect(Skew.TokenKind.LEFT_BRACE)) {
+      return null;
+    }
+
+    var contents = new Skew.ObjectSymbol(parent.kind, "<conditional>");
+    Skew.Parsing.parseSymbols(context, contents, annotations);
+
+    if (!context.expect(Skew.TokenKind.RIGHT_BRACE) || !context.peek(Skew.TokenKind.ELSE) && !Skew.Parsing.parseAfterBlock(context)) {
+      return null;
+    }
+
+    var elseGuard = null;
+
+    if (context.eat(Skew.TokenKind.ELSE)) {
+      elseGuard = Skew.Parsing.recursiveParseGuard(context, parent, annotations);
+
+      if (elseGuard === null) {
+        return null;
+      }
+    }
+
+    return new Skew.Guard(parent, test, contents, elseGuard);
+  };
+
   Skew.Parsing.parseSymbol = function(context, parent, annotations) {
     // Parse comments before the symbol declaration
     var comments = Skew.Parsing.parseLeadingComments(context);
@@ -5817,21 +5853,14 @@
     }
 
     // Parse a compile-time if statement
-    if (context.eat(Skew.TokenKind.IF)) {
-      var test = Skew.Parsing.pratt.parse(context, Skew.Precedence.LOWEST);
+    if (context.peek(Skew.TokenKind.IF)) {
+      var guard = Skew.Parsing.recursiveParseGuard(context, parent, annotations);
 
-      if (test === null || !context.expect(Skew.TokenKind.LEFT_BRACE)) {
+      if (guard === null) {
         return false;
       }
 
-      var contents = new Skew.ObjectSymbol(parent.kind, "<conditional>");
-      Skew.Parsing.parseSymbols(context, contents, annotations);
-
-      if (!context.expect(Skew.TokenKind.RIGHT_BRACE) || !Skew.Parsing.parseAfterBlock(context)) {
-        return false;
-      }
-
-      parent.guards.push(new Skew.Guard(parent, test, contents));
+      parent.guards.push(guard);
       return true;
     }
 
@@ -8975,18 +9004,19 @@
   };
 
   Skew.Resolving.Resolver.prototype.iterativelyMergeGuards = function() {
-    // Iterate until a fixed point is reached
-    var guards = [];
-    this.scanForGuards(this.global, guards);
+    var guards;
 
-    while (!(guards.length === 0)) {
-      var count = guards.length;
-      this.processGuards(guards);
+    // Iterate until a fixed point is reached
+    while (true) {
       guards = [];
       this.scanForGuards(this.global, guards);
 
+      if (guards.length === 0) {
+        break;
+      }
+
       // Each iteration must remove at least one guard to continue
-      if (guards.length === count) {
+      if (!this.processGuards(guards)) {
         break;
       }
     }
@@ -8996,10 +9026,10 @@
     // All remaining guards are errors
     for (var i = 0, list = guards, count1 = list.length; i < count1; ++i) {
       var guard = list[i];
-      var count2 = this.log.errorCount;
+      var count = this.log.errorCount;
       this.resolveAsParameterizedExpressionWithConversion(guard.test, guard.parent.scope, this.cache.boolType);
 
-      if (this.log.errorCount === count2) {
+      if (this.log.errorCount === count) {
         this.log.semanticErrorExpectedConstant(guard.test.range);
       }
     }
@@ -9044,6 +9074,8 @@
   };
 
   Skew.Resolving.Resolver.prototype.processGuards = function(guards) {
+    var wasGuardRemoved = false;
+
     for (var i = 0, list = guards, count = list.length; i < count; ++i) {
       var guard = list[i];
       var test = guard.test;
@@ -9056,18 +9088,53 @@
 
       if (test.isBool()) {
         in_List.removeOne(parent.guards, guard);
+        wasGuardRemoved = true;
 
-        // False values mean this subtree gets culled
         if (test.isTrue()) {
-          var symbol = guard.contents;
-          Skew.Merging.mergeObjects(this.log, parent, symbol.objects);
-          Skew.Merging.mergeFunctions(this.log, parent, symbol.functions);
-          Skew.Merging.mergeVariables(this.log, parent, symbol.variables);
-          in_List.append2(parent.objects, symbol.objects);
-          in_List.append2(parent.functions, symbol.functions);
-          in_List.append2(parent.variables, symbol.variables);
+          this.mergeGuardIntoObject(guard, parent);
+        }
+
+        else {
+          var elseGuard = guard.elseGuard;
+
+          if (elseGuard !== null) {
+            if (elseGuard.test !== null) {
+              elseGuard.parent = parent;
+              parent.guards.push(elseGuard);
+            }
+
+            else {
+              this.mergeGuardIntoObject(elseGuard, parent);
+            }
+          }
         }
       }
+    }
+
+    return wasGuardRemoved;
+  };
+
+  Skew.Resolving.Resolver.prototype.mergeGuardIntoObject = function(guard, object) {
+    var symbol = guard.contents;
+    Skew.Merging.mergeObjects(this.log, object, symbol.objects);
+    Skew.Merging.mergeFunctions(this.log, object, symbol.functions);
+    Skew.Merging.mergeVariables(this.log, object, symbol.variables);
+    in_List.append2(object.objects, symbol.objects);
+    in_List.append2(object.functions, symbol.functions);
+    in_List.append2(object.variables, symbol.variables);
+
+    // Handle nested guard clauses like this:
+    //
+    //   if true {
+    //     if true {
+    //       var foo = 0
+    //     }
+    //   }
+    //
+    for (var i = 0, list = symbol.guards, count = list.length; i < count; ++i) {
+      var nested = list[i];
+      nested.parent = object;
+      object.guards.push(nested);
     }
   };
 

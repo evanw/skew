@@ -227,6 +227,7 @@ namespace Skew {
     var parent ObjectSymbol
     var test Node
     var contents ObjectSymbol
+    var elseGuard Guard
   }
 
   class ObjectSymbol : Symbol {

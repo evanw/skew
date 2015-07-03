@@ -3473,5 +3473,96 @@ def main {
 ", "
 ")
 
+test("
+if true {
+  if true {
+    var foo = false
+  }
+}
+
+def main int {
+  return foo
+}
+", "
+<stdin>:8:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  return foo
+         ~~~
+")
+
+test("
+if true {
+  if false {
+  } else {
+    var foo = false
+  }
+}
+
+def main int {
+  return foo
+}
+", "
+<stdin>:9:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  return foo
+         ~~~
+")
+
+test("
+if true {
+  if false {
+    var foo = 0.0
+  }
+
+  else {
+    var foo = false
+  }
+}
+
+def main int {
+  return foo
+}
+", "
+<stdin>:12:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  return foo
+         ~~~
+")
+
+test("
+if true {
+  if false {
+    var foo = 0.0
+  } else if true {
+    var foo = false
+  }
+}
+
+def main int {
+  return foo
+}
+", "
+<stdin>:10:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  return foo
+         ~~~
+")
+
+test("
+if true {
+  if false {
+    var foo = 0.0
+  } else if false {
+    var foo = \"\"
+  } else {
+    var foo = false
+  }
+}
+
+def main int {
+  return foo
+}
+", "
+<stdin>:12:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  return foo
+         ~~~
+")
+
   }
 }

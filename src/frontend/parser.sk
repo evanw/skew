@@ -642,6 +642,32 @@ namespace Skew.Parsing {
     return context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE)
   }
 
+  def recursiveParseGuard(context ParserContext, parent ObjectSymbol, annotations List<Node>) Guard {
+    var test Node = null
+    if context.eat(.IF) {
+      test = pratt.parse(context, .LOWEST)
+      if test == null {
+        return null
+      }
+    }
+    if !context.expect(.LEFT_BRACE) {
+      return null
+    }
+    var contents = ObjectSymbol.new(parent.kind, "<conditional>")
+    parseSymbols(context, contents, annotations)
+    if !context.expect(.RIGHT_BRACE) || !context.peek(.ELSE) && !parseAfterBlock(context) {
+      return null
+    }
+    var elseGuard Guard = null
+    if context.eat(.ELSE) {
+      elseGuard = recursiveParseGuard(context, parent, annotations)
+      if elseGuard == null {
+        return null
+      }
+    }
+    return Guard.new(parent, test, contents, elseGuard)
+  }
+
   def parseSymbol(context ParserContext, parent ObjectSymbol, annotations List<Node>) bool {
     # Parse comments before the symbol declaration
     var comments = parseLeadingComments(context)
@@ -652,17 +678,12 @@ namespace Skew.Parsing {
     }
 
     # Parse a compile-time if statement
-    if context.eat(.IF) {
-      var test = pratt.parse(context, .LOWEST)
-      if test == null || !context.expect(.LEFT_BRACE) {
+    if context.peek(.IF) {
+      var guard = recursiveParseGuard(context, parent, annotations)
+      if guard == null {
         return false
       }
-      var contents = ObjectSymbol.new(parent.kind, "<conditional>")
-      parseSymbols(context, contents, annotations)
-      if !context.expect(.RIGHT_BRACE) || !parseAfterBlock(context) {
-        return false
-      }
-      parent.guards.append(Guard.new(parent, test, contents))
+      parent.guards.append(guard)
       return true
     }
 

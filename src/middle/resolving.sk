@@ -323,17 +323,18 @@ namespace Skew.Resolving {
     }
 
     def iterativelyMergeGuards {
+      var guards List<Guard>
+
       # Iterate until a fixed point is reached
-      var guards List<Guard> = []
-      scanForGuards(global, guards)
-      while !guards.isEmpty {
-        var count = guards.count
-        processGuards(guards)
+      while true {
         guards = []
         scanForGuards(global, guards)
+        if guards.isEmpty {
+          break
+        }
 
         # Each iteration must remove at least one guard to continue
-        if guards.count == count {
+        if !processGuards(guards) {
           break
         }
       }
@@ -382,7 +383,9 @@ namespace Skew.Resolving {
       return false
     }
 
-    def processGuards(guards List<Guard>) {
+    def processGuards(guards List<Guard>) bool {
+      var wasGuardRemoved = false
+
       for guard in guards {
         var test = guard.test
         var parent = guard.parent
@@ -394,18 +397,47 @@ namespace Skew.Resolving {
 
         if test.isBool {
           parent.guards.removeOne(guard)
+          wasGuardRemoved = true
 
-          # False values mean this subtree gets culled
           if test.isTrue {
-            var symbol = guard.contents
-            Merging.mergeObjects(log, parent, symbol.objects)
-            Merging.mergeFunctions(log, parent, symbol.functions)
-            Merging.mergeVariables(log, parent, symbol.variables)
-            parent.objects.append(symbol.objects)
-            parent.functions.append(symbol.functions)
-            parent.variables.append(symbol.variables)
+            mergeGuardIntoObject(guard, parent)
+          } else {
+            var elseGuard = guard.elseGuard
+            if elseGuard != null {
+              if elseGuard.test != null {
+                elseGuard.parent = parent
+                parent.guards.append(elseGuard)
+              } else {
+                mergeGuardIntoObject(elseGuard, parent)
+              }
+            }
           }
         }
+      }
+
+      return wasGuardRemoved
+    }
+
+    def mergeGuardIntoObject(guard Guard, object ObjectSymbol) {
+      var symbol = guard.contents
+      Merging.mergeObjects(log, object, symbol.objects)
+      Merging.mergeFunctions(log, object, symbol.functions)
+      Merging.mergeVariables(log, object, symbol.variables)
+      object.objects.append(symbol.objects)
+      object.functions.append(symbol.functions)
+      object.variables.append(symbol.variables)
+
+      # Handle nested guard clauses like this:
+      #
+      #   if true {
+      #     if true {
+      #       var foo = 0
+      #     }
+      #   }
+      #
+      for nested in symbol.guards {
+        nested.parent = object
+        object.guards.append(nested)
       }
     }
 
