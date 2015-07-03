@@ -148,7 +148,7 @@ namespace Skew {
     var content Content = null
     var resolvedType Type = null
     var comments List<string> = null
-    var children List<Node> = []
+    var children List<Node> = null
 
     # Change self node in place to become the provided node. The parent node is
     # not changed, so become() can be called within a nested method and does not
@@ -230,9 +230,11 @@ namespace Skew {
     }
 
     def withChildren(nodes List<Node>) Node {
-      assert(children.isEmpty)
-      for node in nodes {
-        updateParent(node, self)
+      assert(children == null)
+      if nodes != null {
+        for node in nodes {
+          updateParent(node, self)
+        }
       }
       children = nodes
       return self
@@ -278,10 +280,12 @@ namespace Skew {
 
     def removeChildren List<Node> {
       var result = children
-      for child in children {
-        updateParent(child, null)
+      if result != null {
+        for child in result {
+          updateParent(child, null)
+        }
+        children = null
       }
-      children = []
       return result
     }
 

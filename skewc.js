@@ -3118,7 +3118,7 @@
     self.content = null;
     self.resolvedType = null;
     self.comments = null;
-    self.children = [];
+    self.children = null;
   };
 
   // Change self node in place to become the provided node. The parent node is
@@ -3219,11 +3219,13 @@
 
   Skew.Node.prototype.withChildren = function(nodes) {
     var self = this;
-    assert(self.children.length === 0);
+    assert(self.children === null);
 
-    for (var i = 0, list = nodes, count = list.length; i < count; ++i) {
-      var node = list[i];
-      Skew.Node.updateParent(node, self);
+    if (nodes !== null) {
+      for (var i = 0, list = nodes, count = list.length; i < count; ++i) {
+        var node = list[i];
+        Skew.Node.updateParent(node, self);
+      }
     }
 
     self.children = nodes;
@@ -3279,12 +3281,15 @@
     var self = this;
     var result = self.children;
 
-    for (var i = 0, list = self.children, count = list.length; i < count; ++i) {
-      var child = list[i];
-      Skew.Node.updateParent(child, null);
+    if (result !== null) {
+      for (var i = 0, list = result, count = list.length; i < count; ++i) {
+        var child = list[i];
+        Skew.Node.updateParent(child, null);
+      }
+
+      self.children = null;
     }
 
-    self.children = [];
     return result;
   };
 
