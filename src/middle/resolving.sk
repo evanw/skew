@@ -4,6 +4,7 @@ namespace Skew {
     if !log.hasErrors {
       var resolver = Resolving.Resolver.new(global, options, options.defines.clone, cache, log)
       resolver.constantFolder = Folding.ConstantFolder.new(cache, Resolving.ConstantResolver.new(resolver))
+      resolver.iterativelyMergeGuards
       resolver.resolveGlobal
     }
   }
@@ -35,6 +36,7 @@ namespace Skew.Resolving {
     const foreachLoops List<Node> = []
     const localVariableStatistics IntMap<LocalVariableStatistics> = {}
     var constantFolder Folding.ConstantFolder = null
+    var isMergingGuards = true
 
     def initializeSymbol(symbol Symbol) {
       # The scope should have been set by the merging pass (or by this pass for local variables)
@@ -298,6 +300,88 @@ namespace Skew.Resolving {
       convertForeachLoops
       scanLocalVariables
       discardUnusedDefines
+    }
+
+    def reportGuardMergingFailure(node Node) {
+      if isMergingGuards {
+        while node != null {
+          node.resolvedType = null
+          node = node.parent
+        }
+        throw null
+      }
+    }
+
+    def iterativelyMergeGuards {
+      # Iterate until a fixed point is reached
+      var guards List<Guard> = []
+      scanForGuards(global, guards)
+      while !guards.isEmpty {
+        var count = guards.count
+        processGuards(guards)
+        guards = []
+        scanForGuards(global, guards)
+
+        # Each iteration must remove at least one guard to continue
+        if guards.count == count {
+          break
+        }
+      }
+
+      isMergingGuards = false
+
+      # All remaining guards are errors
+      for guard in guards {
+        var count = log.errorCount
+        resolveAsParameterizedExpressionWithConversion(guard.test, guard.parent.scope, cache.boolType)
+        if log.errorCount == count {
+          log.semanticErrorExpectedConstant(guard.test.range)
+        }
+      }
+    }
+
+    def scanForGuards(symbol ObjectSymbol, guards List<Guard>) {
+      guards.append(symbol.guards)
+
+      for object in symbol.objects {
+        scanForGuards(object, guards)
+      }
+    }
+
+    def attemptToResolveGuardConstant(node Node, scope Scope) bool {
+      try {
+        resolveAsParameterizedExpressionWithConversion(node, scope, cache.boolType)
+        constantFolder.foldConstants(node)
+        return true
+      }
+      return false
+    }
+
+    def processGuards(guards List<Guard>) {
+      for guard in guards {
+        var test = guard.test
+        var parent = guard.parent
+
+        # If it's not a constant, we'll just try again in the next iteration
+        if !attemptToResolveGuardConstant(test, parent.scope) {
+          continue
+        }
+
+        if test.isBool {
+          parent.guards.removeOne(guard)
+
+          # False values mean this subtree gets culled
+          if test.isTrue {
+            var symbol = guard.contents
+            Merging.mergeObjects(log, parent, symbol.objects)
+            Merging.mergeFunctions(log, parent, symbol.functions)
+            Merging.mergeVariables(log, parent, symbol.variables)
+            parent.objects.append(symbol.objects)
+            parent.functions.append(symbol.functions)
+            parent.variables.append(symbol.variables)
+          }
+        }
+      }
     }
 
     # Foreach loops are converted to for loops after everything is resolved
@@ -1667,6 +1751,7 @@ namespace Skew.Resolving {
         symbol = findMember(target.resolvedType, name)
         if symbol == null {
           if target.resolvedType != .DYNAMIC {
+            reportGuardMergingFailure(node)
             log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
           }
           if target.kind == .DYNAMIC {
@@ -1965,6 +2050,7 @@ namespace Skew.Resolving {
       if symbol == null {
         symbol = scope.find(name)
         if symbol == null {
+          reportGuardMergingFailure(node)
           log.semanticErrorUndeclaredSymbol(node.range, name)
           return
         }

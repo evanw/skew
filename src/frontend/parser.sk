@@ -638,6 +638,10 @@ namespace Skew.Parsing {
     TokenKind.TILDE: 0,
   }
 
+  def parseAfterBlock(context ParserContext) bool {
+    return context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE)
+  }
+
   def parseSymbol(context ParserContext, parent ObjectSymbol, annotations List<Node>) bool {
     # Parse comments before the symbol declaration
     var comments = parseLeadingComments(context)
@@ -645,6 +649,21 @@ namespace Skew.Parsing {
     # Ignore trailing comments
     if context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE) {
       return false
+    }
+
+    # Parse a compile-time if statement
+    if context.eat(.IF) {
+      var test = pratt.parse(context, .LOWEST)
+      if test == null || !context.expect(.LEFT_BRACE) {
+        return false
+      }
+      var contents = ObjectSymbol.new(.OBJECT_CONDITIONAL, "<conditional>")
+      parseSymbols(context, contents, annotations)
+      if !context.expect(.RIGHT_BRACE) || !parseAfterBlock(context) {
+        return false
+      }
+      parent.guards.append(Guard.new(parent, test, contents))
+      return true
     }
 
     # Parse annotations before the symbol declaration
@@ -657,7 +676,7 @@ namespace Skew.Parsing {
       # Parse an annotation block
       if context.eat(.LEFT_BRACE) {
         parseSymbols(context, parent, annotations)
-        return context.expect(.RIGHT_BRACE) && (context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE))
+        return context.expect(.RIGHT_BRACE) && parseAfterBlock(context)
       }
     }
 
@@ -860,7 +879,7 @@ namespace Skew.Parsing {
     if comments != null {
       symbol.comments = comments
       context.eat(.NEWLINE)
-    } else if !context.peek(.END_OF_FILE) && !context.peek(.RIGHT_BRACE) && !context.expect(.NEWLINE) {
+    } else if !parseAfterBlock(context) {
       return false
     }
 

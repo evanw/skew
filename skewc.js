@@ -545,6 +545,7 @@
     if (!log.hasErrors()) {
       var resolver = new Skew.Resolving.Resolver(global, options, in_StringMap.clone(options.defines), cache, log);
       resolver.constantFolder = new Skew.Folding.ConstantFolder(cache, new Skew.Resolving.ConstantResolver(resolver));
+      resolver.iterativelyMergeGuards();
       resolver.resolveGlobal();
     }
   };
@@ -4105,22 +4106,23 @@
     PARAMETER_FUNCTION: 0,
     PARAMETER_OBJECT: 1,
     OBJECT_CLASS: 2,
-    OBJECT_ENUM: 3,
-    OBJECT_GLOBAL: 4,
-    OBJECT_INTERFACE: 5,
-    OBJECT_NAMESPACE: 6,
-    FUNCTION_ANNOTATION: 7,
-    FUNCTION_CONSTRUCTOR: 8,
-    FUNCTION_GLOBAL: 9,
-    FUNCTION_INSTANCE: 10,
-    FUNCTION_LOCAL: 11,
-    OVERLOADED_ANNOTATION: 12,
-    OVERLOADED_GLOBAL: 13,
-    OVERLOADED_INSTANCE: 14,
-    VARIABLE_ENUM: 15,
-    VARIABLE_GLOBAL: 16,
-    VARIABLE_INSTANCE: 17,
-    VARIABLE_LOCAL: 18
+    OBJECT_CONDITIONAL: 3,
+    OBJECT_ENUM: 4,
+    OBJECT_GLOBAL: 5,
+    OBJECT_INTERFACE: 6,
+    OBJECT_NAMESPACE: 7,
+    FUNCTION_ANNOTATION: 8,
+    FUNCTION_CONSTRUCTOR: 9,
+    FUNCTION_GLOBAL: 10,
+    FUNCTION_INSTANCE: 11,
+    FUNCTION_LOCAL: 12,
+    OVERLOADED_ANNOTATION: 13,
+    OVERLOADED_GLOBAL: 14,
+    OVERLOADED_INSTANCE: 15,
+    VARIABLE_ENUM: 16,
+    VARIABLE_GLOBAL: 17,
+    VARIABLE_INSTANCE: 18,
+    VARIABLE_LOCAL: 19
   };
 
   Skew.SymbolKind.isType = function(self) {
@@ -4375,6 +4377,13 @@
 
   $extends(Skew.ParameterSymbol, Skew.Symbol);
 
+  Skew.Guard = function(parent, test, contents) {
+    var self = this;
+    self.parent = parent;
+    self.test = test;
+    self.contents = contents;
+  };
+
   Skew.ObjectSymbol = function(kind, name) {
     var self = this;
     Skew.Symbol.call(self, kind, name);
@@ -4385,6 +4394,7 @@
     self.functions = [];
     self.variables = [];
     self.parameters = null;
+    self.guards = [];
   };
 
   $extends(Skew.ObjectSymbol, Skew.Symbol);
@@ -5808,6 +5818,10 @@
     return parameters;
   };
 
+  Skew.Parsing.parseAfterBlock = function(context) {
+    return context.peek(Skew.TokenKind.END_OF_FILE) || context.peek(Skew.TokenKind.RIGHT_BRACE) || context.expect(Skew.TokenKind.NEWLINE);
+  };
+
   Skew.Parsing.parseSymbol = function(context, parent, annotations) {
     // Parse comments before the symbol declaration
     var comments = Skew.Parsing.parseLeadingComments(context);
@@ -5815,6 +5829,25 @@
     // Ignore trailing comments
     if (context.peek(Skew.TokenKind.RIGHT_BRACE) || context.peek(Skew.TokenKind.END_OF_FILE)) {
       return false;
+    }
+
+    // Parse a compile-time if statement
+    if (context.eat(Skew.TokenKind.IF)) {
+      var test = Skew.Parsing.pratt.parse(context, Skew.Precedence.LOWEST);
+
+      if (test === null || !context.expect(Skew.TokenKind.LEFT_BRACE)) {
+        return false;
+      }
+
+      var contents = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_CONDITIONAL, "<conditional>");
+      Skew.Parsing.parseSymbols(context, contents, annotations);
+
+      if (!context.expect(Skew.TokenKind.RIGHT_BRACE) || !Skew.Parsing.parseAfterBlock(context)) {
+        return false;
+      }
+
+      parent.guards.push(new Skew.Guard(parent, test, contents));
+      return true;
     }
 
     // Parse annotations before the symbol declaration
@@ -5828,7 +5861,7 @@
       // Parse an annotation block
       if (context.eat(Skew.TokenKind.LEFT_BRACE)) {
         Skew.Parsing.parseSymbols(context, parent, annotations);
-        return context.expect(Skew.TokenKind.RIGHT_BRACE) && (context.peek(Skew.TokenKind.END_OF_FILE) || context.peek(Skew.TokenKind.RIGHT_BRACE) || context.expect(Skew.TokenKind.NEWLINE));
+        return context.expect(Skew.TokenKind.RIGHT_BRACE) && Skew.Parsing.parseAfterBlock(context);
       }
     }
 
@@ -6087,7 +6120,7 @@
       context.eat(Skew.TokenKind.NEWLINE);
     }
 
-    else if (!context.peek(Skew.TokenKind.END_OF_FILE) && !context.peek(Skew.TokenKind.RIGHT_BRACE) && !context.expect(Skew.TokenKind.NEWLINE)) {
+    else if (!Skew.Parsing.parseAfterBlock(context)) {
       return false;
     }
 
@@ -8676,6 +8709,7 @@
     self.foreachLoops = [];
     self.localVariableStatistics = Object.create(null);
     self.constantFolder = null;
+    self.isMergingGuards = true;
   };
 
   Skew.Resolving.Resolver.prototype.initializeSymbol = function(symbol) {
@@ -8987,6 +9021,103 @@
     self.convertForeachLoops();
     self.scanLocalVariables();
     self.discardUnusedDefines();
+  };
+
+  Skew.Resolving.Resolver.prototype.reportGuardMergingFailure = function(node) {
+    var self = this;
+    if (self.isMergingGuards) {
+      while (node !== null) {
+        node.resolvedType = null;
+        node = node.parent;
+      }
+
+      throw null;
+    }
+  };
+
+  Skew.Resolving.Resolver.prototype.iterativelyMergeGuards = function() {
+    var self = this;
+    // Iterate until a fixed point is reached
+    var guards = [];
+    self.scanForGuards(self.global, guards);
+
+    while (!(guards.length === 0)) {
+      var count = guards.length;
+      self.processGuards(guards);
+      guards = [];
+      self.scanForGuards(self.global, guards);
+
+      // Each iteration must remove at least one guard to continue
+      if (guards.length === count) {
+        break;
+      }
+    }
+
+    self.isMergingGuards = false;
+
+    // All remaining guards are errors
+    for (var i = 0, list = guards, count1 = list.length; i < count1; ++i) {
+      var guard = list[i];
+      var count2 = self.log.errorCount;
+      self.resolveAsParameterizedExpressionWithConversion(guard.test, guard.parent.scope, self.cache.boolType);
+
+      if (self.log.errorCount === count2) {
+        self.log.semanticErrorExpectedConstant(guard.test.range);
+      }
+    }
+  };
+
+  Skew.Resolving.Resolver.prototype.scanForGuards = function(symbol, guards) {
+    var self = this;
+    in_List.append2(guards, symbol.guards);
+
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      self.scanForGuards(object, guards);
+    }
+  };
+
+  Skew.Resolving.Resolver.prototype.attemptToResolveGuardConstant = function(node, scope) {
+    var self = this;
+    try {
+      self.resolveAsParameterizedExpressionWithConversion(node, scope, self.cache.boolType);
+      self.constantFolder.foldConstants(node);
+      return true;
+    }
+
+    catch ($e) {
+    }
+
+    return false;
+  };
+
+  Skew.Resolving.Resolver.prototype.processGuards = function(guards) {
+    var self = this;
+    for (var i = 0, list = guards, count = list.length; i < count; ++i) {
+      var guard = list[i];
+      var test = guard.test;
+      var parent = guard.parent;
+
+      // If it's not a constant, we'll just try again in the next iteration
+      if (!self.attemptToResolveGuardConstant(test, parent.scope)) {
+        continue;
+      }
+
+      if (test.isBool()) {
+        in_List.removeOne(parent.guards, guard);
+
+        // False values mean this subtree gets culled
+        if (test.isTrue()) {
+          var symbol = guard.contents;
+          Skew.Merging.mergeObjects(self.log, parent, symbol.objects);
+          Skew.Merging.mergeFunctions(self.log, parent, symbol.functions);
+          Skew.Merging.mergeVariables(self.log, parent, symbol.variables);
+          in_List.append2(parent.objects, symbol.objects);
+          in_List.append2(parent.functions, symbol.functions);
+          in_List.append2(parent.variables, symbol.variables);
+        }
+      }
+    }
   };
 
   // Foreach loops are converted to for loops after everything is resolved
@@ -10701,6 +10832,7 @@
 
       if (symbol === null) {
         if (target.resolvedType !== Skew.Type.DYNAMIC) {
+          self.reportGuardMergingFailure(node);
           self.log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType);
         }
 
@@ -11054,6 +11186,7 @@
       symbol = scope.find(name);
 
       if (symbol === null) {
+        self.reportGuardMergingFailure(node);
         self.log.semanticErrorUndeclaredSymbol(node.range, name);
         return;
       }
@@ -13251,7 +13384,7 @@
   Skew.NodeKind.strings = ["ANNOTATION", "BLOCK", "CASE", "CATCH", "BREAK", "CONTINUE", "EXPRESSION", "FOR", "FOREACH", "IF", "RETURN", "SWITCH", "THROW", "TRY", "VAR", "WHILE", "ASSIGN_INDEX", "CALL", "CAST", "CONSTANT", "DOT", "DYNAMIC", "HOOK", "INDEX", "INITIALIZER_LIST", "INITIALIZER_MAP", "INITIALIZER_SET", "LAMBDA", "LAMBDA_TYPE", "NAME", "NULL", "PAIR", "PARAMETERIZE", "SEQUENCE", "SUPER", "TYPE", "COMPLEMENT", "DECREMENT", "INCREMENT", "NEGATIVE", "NOT", "POSITIVE", "ADD", "BITWISE_AND", "BITWISE_OR", "BITWISE_XOR", "COMPARE", "DIVIDE", "EQUAL", "IN", "IS", "LOGICAL_AND", "LOGICAL_OR", "MULTIPLY", "NOT_EQUAL", "POWER", "REMAINDER", "SHIFT_LEFT", "SHIFT_RIGHT", "SUBTRACT", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "LESS_THAN", "LESS_THAN_OR_EQUAL", "ASSIGN", "ASSIGN_ADD", "ASSIGN_BITWISE_AND", "ASSIGN_BITWISE_OR", "ASSIGN_BITWISE_XOR", "ASSIGN_DIVIDE", "ASSIGN_MULTIPLY", "ASSIGN_POWER", "ASSIGN_REMAINDER", "ASSIGN_SHIFT_LEFT", "ASSIGN_SHIFT_RIGHT", "ASSIGN_SUBTRACT"];
   Skew.Node.IS_IMPLICIT_RETURN = 1 << 0;
   Skew.Node.IS_INSIDE_PARENTHESES = 1 << 1;
-  Skew.SymbolKind.strings = ["PARAMETER_FUNCTION", "PARAMETER_OBJECT", "OBJECT_CLASS", "OBJECT_ENUM", "OBJECT_GLOBAL", "OBJECT_INTERFACE", "OBJECT_NAMESPACE", "FUNCTION_ANNOTATION", "FUNCTION_CONSTRUCTOR", "FUNCTION_GLOBAL", "FUNCTION_INSTANCE", "FUNCTION_LOCAL", "OVERLOADED_ANNOTATION", "OVERLOADED_GLOBAL", "OVERLOADED_INSTANCE", "VARIABLE_ENUM", "VARIABLE_GLOBAL", "VARIABLE_INSTANCE", "VARIABLE_LOCAL"];
+  Skew.SymbolKind.strings = ["PARAMETER_FUNCTION", "PARAMETER_OBJECT", "OBJECT_CLASS", "OBJECT_CONDITIONAL", "OBJECT_ENUM", "OBJECT_GLOBAL", "OBJECT_INTERFACE", "OBJECT_NAMESPACE", "FUNCTION_ANNOTATION", "FUNCTION_CONSTRUCTOR", "FUNCTION_GLOBAL", "FUNCTION_INSTANCE", "FUNCTION_LOCAL", "OVERLOADED_ANNOTATION", "OVERLOADED_GLOBAL", "OVERLOADED_INSTANCE", "VARIABLE_ENUM", "VARIABLE_GLOBAL", "VARIABLE_INSTANCE", "VARIABLE_LOCAL"];
 
   // Flags
   Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 0;

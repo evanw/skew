@@ -353,8 +353,10 @@ namespace Skew.Folding {
     def foldCall(node Node) {
       if node.kind == .CALL {
         var value = node.callValue
+
         if value.kind == .DOT {
           var target = value.dotTarget
+
           if target != null && target.kind == .CONSTANT && value.asString == "toString" {
             var content = target.content
             switch content.kind {
@@ -370,6 +372,7 @@ namespace Skew.Folding {
     def foldCast(node Node) {
       var type = node.castType.resolvedType
       var value = node.castValue
+
       if value.kind == .CONSTANT {
         var content = value.content
         var kind = content.kind

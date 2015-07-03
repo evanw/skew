@@ -4,6 +4,7 @@ namespace Skew {
     PARAMETER_OBJECT
 
     OBJECT_CLASS
+    OBJECT_CONDITIONAL
     OBJECT_ENUM
     OBJECT_GLOBAL
     OBJECT_INTERFACE
@@ -213,6 +214,12 @@ namespace Skew {
   class ParameterSymbol : Symbol {
   }
 
+  class Guard {
+    var parent ObjectSymbol
+    var test Node
+    var contents ObjectSymbol
+  }
+
   class ObjectSymbol : Symbol {
     var base Node = null
     var baseClass ObjectSymbol = null
@@ -221,6 +228,7 @@ namespace Skew {
     var functions List<FunctionSymbol> = []
     var variables List<VariableSymbol> = []
     var parameters List<ParameterSymbol> = null
+    var guards List<Guard> = [] # Compile-time if statements
 
     def hasBaseClass(symbol Symbol) bool {
       return baseClass != null && (baseClass == symbol || baseClass.hasBaseClass(symbol))

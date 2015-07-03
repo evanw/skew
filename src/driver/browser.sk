@@ -63,11 +63,11 @@ namespace Skew {
 
   namespace Config {
     def get(config Config) bool {
-      return dynamic.localStorage[config as string] == "true"
+      return dynamic.localStorage[config.toString] == "true"
     }
 
     def set(config Config, value bool) {
-      dynamic.localStorage[config as string] = value
+      dynamic.localStorage[config.toString] = value
     }
   }
 }

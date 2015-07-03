@@ -1,11 +1,7 @@
 - todo
   - interface auto-conversion and checking
   - automatic operator conversion so += can map to = and + if += isn't defined
-  - js generation
   - c++ generation
-  - compile-time constants
-  - top-level if statements instead of c-style preprocessor, conditions must be constants and are evaluated from the outside in
-  - inlining
   - lambda conversion to functions for javascript inside loops
   - lambda conversion to classes for c++
   - abstract functions/types
@@ -14,6 +10,10 @@
   - namespace imports via the "use" declaration prefix
 
 x done
+  x top-level if statements instead of c-style preprocessor, conditions must be constants and are evaluated from the outside in
+  x compile-time constants
+  x inlining
+  x js generation
   x throw/try/catch/finally
   x automatic renaming, especially important for overloaded functions
   x bootstrap the compiler
