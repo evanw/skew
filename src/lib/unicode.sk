@@ -6,7 +6,7 @@ namespace Unicode {
   }
 
   const STRING_ENCODING =
-    TARGET == .JAVASCRIPT ? Encoding.UTF16 :
+    TARGET == .CSHARP || TARGET == .JAVASCRIPT ? Encoding.UTF16 :
     Encoding.UTF32
 
   class StringIterator {

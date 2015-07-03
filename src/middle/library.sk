@@ -4,6 +4,7 @@ const RELEASE = false
 
 enum Target {
   NONE
+  CSHARP
   JAVASCRIPT
 }
 

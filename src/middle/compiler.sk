@@ -1,6 +1,7 @@
 namespace Skew {
   enum CompilerTarget {
     NONE
+    CSHARP
     JAVASCRIPT
     LISP_TREE
 
@@ -44,6 +45,9 @@ namespace Skew {
     var result = CompilerResult.new
 
     switch options.target {
+      case .CSHARP {
+        options.define("TARGET", "CSHARP")
+      }
       case .JAVASCRIPT {
         sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS))
         options.define("TARGET", "JAVASCRIPT")
@@ -120,6 +124,7 @@ namespace Skew {
           # Emit in the target language
           var emitter Emitter = null
           switch options.target {
+            case .CSHARP { emitter = CSharpEmitter.new(options, result.cache) }
             case .JAVASCRIPT { emitter = JsEmitter.new(options, result.cache) }
             case .LISP_TREE { emitter = LispTreeEmitter.new(options) }
           }

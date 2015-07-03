@@ -13,7 +13,7 @@ namespace Skew {
     var source = Source.new("<stdin>", input.value)
     var options = CompilerOptions.new
     targetArea.textContent = "JavaScript"
-    options.target = .JAVASCRIPT
+    options.target = .CSHARP
     if Config.get(.CONSTANT_FOLDING) { options.foldAllConstants = true }
     if Config.get(.FUNCTION_INLINING) { options.inlineAllFunctions = true }
     if Config.get(.GLOBALIZE) { options.globalizeAllFunctions = true }

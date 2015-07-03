@@ -1,0 +1,157 @@
+namespace Skew {
+  class CSharpEmitter : Emitter {
+    const options CompilerOptions
+    const cache TypeCache
+
+    over visit(global ObjectSymbol) {
+      for object in global.objects {
+        emitObject(object)
+      }
+
+      if options.outputDirectory == "" {
+        createSource(options.outputFile)
+      }
+    }
+
+    @private {
+      def emitObject(symbol ObjectSymbol) {
+        if symbol.isImported {
+          return
+        }
+
+        # Global functions and variables have to be in classes, not namespaces
+        if symbol.kind == .OBJECT_NAMESPACE && (!symbol.functions.isEmpty || !symbol.variables.isEmpty) {
+          symbol.kind = .OBJECT_CLASS
+        }
+
+        emit(indent + "public ")
+        switch symbol.kind {
+          case .OBJECT_CLASS { emit("class ") }
+          case .OBJECT_ENUM { emit("enum ") }
+          case .OBJECT_INTERFACE { emit("interface ") }
+          case .OBJECT_NAMESPACE { emit("namespace ") }
+          default { assert(false) }
+        }
+        emit(mangleName(symbol))
+        if symbol.baseClass != null {
+          emit(" : " + fullName(symbol.baseClass))
+        }
+        emit(" {\n")
+        increaseIndent
+        for object in symbol.objects {
+          emitObject(object)
+        }
+        decreaseIndent
+        emit(indent + "}\n")
+
+        if options.outputDirectory != "" {
+          createSource(options.outputDirectory + "/" + fullName(symbol) + ".cs")
+        }
+      }
+
+      def fullName(symbol Symbol) string {
+        var parent = symbol.parent
+        if parent != null && parent.kind != .OBJECT_GLOBAL {
+          var enclosingName = fullName(parent)
+          if symbol.kind == .FUNCTION_CONSTRUCTOR {
+            return enclosingName
+          }
+          return enclosingName + "." + mangleName(symbol)
+        }
+        return mangleName(symbol)
+      }
+
+      def mangleName(symbol Symbol) string {
+        if symbol.kind == .FUNCTION_CONSTRUCTOR {
+          symbol = symbol.parent
+        }
+        if !symbol.isImportedOrExported && symbol.name in isKeyword {
+          return "$" + symbol.name
+        }
+        return symbol.nameWithRenaming
+      }
+
+      const isKeyword = {
+        "abstract": 0,
+        "as": 0,
+        "base": 0,
+        "bool": 0,
+        "break": 0,
+        "byte": 0,
+        "case": 0,
+        "catch": 0,
+        "char": 0,
+        "checked": 0,
+        "class": 0,
+        "const": 0,
+        "continue": 0,
+        "decimal": 0,
+        "default": 0,
+        "delegate": 0,
+        "do": 0,
+        "double": 0,
+        "else": 0,
+        "enum": 0,
+        "event": 0,
+        "explicit": 0,
+        "extern": 0,
+        "false": 0,
+        "finally": 0,
+        "fixed": 0,
+        "float": 0,
+        "for": 0,
+        "foreach": 0,
+        "goto": 0,
+        "if": 0,
+        "implicit": 0,
+        "in": 0,
+        "in": 0,
+        "int": 0,
+        "interface": 0,
+        "internal": 0,
+        "is": 0,
+        "lock": 0,
+        "long": 0,
+        "namespace": 0,
+        "new": 0,
+        "null": 0,
+        "object": 0,
+        "operator": 0,
+        "out": 0,
+        "out": 0,
+        "override": 0,
+        "params": 0,
+        "private": 0,
+        "protected": 0,
+        "public": 0,
+        "readonly": 0,
+        "ref": 0,
+        "return": 0,
+        "sbyte": 0,
+        "sealed": 0,
+        "short": 0,
+        "sizeof": 0,
+        "stackalloc": 0,
+        "static": 0,
+        "string": 0,
+        "struct": 0,
+        "switch": 0,
+        "this": 0,
+        "throw": 0,
+        "true": 0,
+        "try": 0,
+        "typeof": 0,
+        "uint": 0,
+        "ulong": 0,
+        "unchecked": 0,
+        "unsafe": 0,
+        "ushort": 0,
+        "using": 0,
+        "virtual": 0,
+        "void": 0,
+        "volatile": 0,
+        "while": 0,
+      }
+    }
+  }
+}
