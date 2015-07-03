@@ -491,7 +491,7 @@ namespace Skew {
 
           if symbol.value != null {
             emit(space + "=" + space)
-            emitExpression(symbol.value, .LOWEST)
+            emitExpression(symbol.value, .COMMA)
           }
 
           emitSemicolonAfterStatement
@@ -581,19 +581,16 @@ namespace Skew {
             if count > 3 {
               for i in 3..count {
                 var child = children[i]
+                assert(child.kind == .VAR)
                 if i != 3 {
                   emit("," + space)
                 }
-                if child.kind == .VAR {
-                  var symbol = child.symbol.asVariableSymbol
-                  if i == 3 {
-                    emit("var ")
-                  }
-                  emit(mangleName(symbol) + space + "=" + space)
-                  emitExpression(symbol.value, .LOWEST)
-                } else {
-                  emitExpression(child, .LOWEST)
+                var symbol = child.symbol.asVariableSymbol
+                if i == 3 {
+                  emit("var ")
                 }
+                emit(mangleName(symbol) + space + "=" + space)
+                emitExpression(symbol.value, .COMMA)
               }
             }
             emit(";" + space)
@@ -803,7 +800,7 @@ namespace Skew {
               if call || i > 1 {
                 emit("," + space)
               }
-              emitExpression(node.children[i], .LOWEST)
+              emitExpression(node.children[i], .COMMA)
             }
 
             emit(")")
@@ -817,7 +814,7 @@ namespace Skew {
               if i != 0 {
                 emit("," + space)
               }
-              emitExpression(node.children[i], .LOWEST)
+              emitExpression(node.children[i], .COMMA)
             }
 
             emit(useBraces ? "}" : "]")
@@ -830,16 +827,10 @@ namespace Skew {
           }
 
           case .INDEX {
+            assert(node.children.count == 2)
             emitExpression(node.children[0], .UNARY_POSTFIX)
             emit("[")
-
-            for i in 1..node.children.count {
-              if i > 1 {
-                emit("," + space)
-              }
-              emitExpression(node.children[i], .LOWEST)
-            }
-
+            emitExpression(node.children[1], .LOWEST)
             emit("]")
           }
 
@@ -848,18 +839,12 @@ namespace Skew {
               emit("(")
             }
 
+            assert(node.children.count == 3)
             emitExpression(node.children[0], .UNARY_POSTFIX)
             emit("[")
-
-            for i in 1..node.children.count - 1 {
-              if i > 1 {
-                emit("," + space)
-              }
-              emitExpression(node.children[i], .LOWEST)
-            }
-
+            emitExpression(node.children[1], .LOWEST)
             emit("]" + space + "=" + space + "")
-            emitExpression(node.children.last, .LOWEST)
+            emitExpression(node.children[2], .LOWEST)
 
             if Precedence.ASSIGN as int < precedence as int {
               emit(")")
@@ -872,6 +857,21 @@ namespace Skew {
 
           case .PARAMETERIZE {
             emitExpression(node.parameterizeValue, precedence)
+          }
+
+          case .SEQUENCE {
+            if Precedence.COMMA as int <= precedence as int {
+              emit("(")
+            }
+            for i in 0..node.children.count {
+              if i != 0 {
+                emit("," + space)
+              }
+              emitExpression(node.children[i], .COMMA)
+            }
+            if Precedence.COMMA as int <= precedence as int {
+              emit(")")
+            }
           }
 
           case .SUPER {
@@ -1128,6 +1128,50 @@ namespace Skew {
         }
       }
 
+      def assignSourceIfNoSideEffects(node Node) Node {
+        if node.kind == .ASSIGN {
+          var right = node.binaryRight
+          return node.binaryLeft.hasNoSideEffects && right.hasNoSideEffects ? right : null
+        }
+
+        if node.kind == .ASSIGN_INDEX {
+          var children = node.children
+          return children.count == 3 && children[0].hasNoSideEffects && children[1].hasNoSideEffects && children[2].hasNoSideEffects ? children[2] : null
+        }
+
+        return null
+      }
+
+      def peepholeMangleSequence(node Node) {
+        assert(node.kind == .SEQUENCE)
+
+        # "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
+        var i = node.children.count - 1
+        while i > 0 {
+          var current = node.children[i]
+          var currentRight = assignSourceIfNoSideEffects(current)
+          if currentRight != null {
+            while i != 0 {
+              var previous = node.children[i - 1]
+              var previousRight = assignSourceIfNoSideEffects(previous)
+              if previousRight == null || !looksTheSame(previousRight, currentRight) {
+                break
+              }
+              previousRight.replaceWith(current.remove)
+              current = previous
+              i--
+            }
+          }
+          i--
+        }
+      }
+
+      def joinExpressions(left Node, right Node) Node {
+        var sequence = Node.createSequence(left.kind == .SEQUENCE ? left.removeChildren : [left])
+        sequence.appendChildren(right.kind == .SEQUENCE ? right.removeChildren : [right])
+        return sequence
+      }
+
       def looksTheSame(left Node, right Node) bool {
         if left.kind == right.kind {
           switch left.kind {
@@ -1339,12 +1383,29 @@ namespace Skew {
         var i = 0
 
         while i < children.count {
-          var child = node.children[i]
+          var child = children[i]
           var kind = child.kind
 
-          if kind == .RETURN && child.returnValue != null {
+          # "a; b; c;" => "a, b, c;"
+          if kind == .EXPRESSION {
+            while i + 1 < children.count {
+              var next = children[i + 1]
+              if next.kind != .EXPRESSION {
+                break
+              }
+              var combined = Node.createExpression(joinExpressions(child.expressionValue.replaceWithNull, next.remove.expressionValue.replaceWithNull))
+              child.replaceWith(combined)
+              child = combined
+            }
+            var value = child.expressionValue
+            if value.kind == .SEQUENCE {
+              peepholeMangleSequence(value)
+            }
+          }
+
+          else if kind == .RETURN && child.returnValue != null {
             while i != 0 {
-              var previous = node.children[i - 1]
+              var previous = children[i - 1]
 
               # "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
               if previous.kind == .IF && previous.ifFalse == null {

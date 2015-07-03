@@ -2,6 +2,7 @@ namespace Skew {
   # The same operator precedence as C for the most part
   enum Precedence {
     LOWEST
+    COMMA
     ASSIGN
     LOGICAL_OR
     LOGICAL_AND

@@ -261,8 +261,21 @@ namespace Skew {
       children.insert(index, node)
     }
 
+    def insertChildren(index int, nodes List<Node>) {
+      assert(index >= 0 && index <= children.count)
+      for node in nodes {
+        updateParent(node, self)
+        children.insert(index, node)
+        index++
+      }
+    }
+
     def appendChild(node Node) {
       insertChild(children.count, node)
+    }
+
+    def appendChildren(nodes List<Node>) {
+      insertChildren(children == null ? 0 : children.count, nodes)
     }
 
     def removeChildAtIndex(index int) Node {
@@ -824,13 +837,6 @@ namespace Skew {
 
     def callValue Node {
       assert(kind == .CALL)
-      assert(children.count >= 1)
-      assert(children[0].kind.isExpression)
-      return children[0]
-    }
-
-    def indexValue Node {
-      assert(kind == .INDEX)
       assert(children.count >= 1)
       assert(children[0].kind.isExpression)
       return children[0]

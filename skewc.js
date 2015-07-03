@@ -939,20 +939,21 @@
   // The same operator precedence as C for the most part
   Skew.Precedence = {
     LOWEST: 0,
-    ASSIGN: 1,
-    LOGICAL_OR: 2,
-    LOGICAL_AND: 3,
-    BITWISE_OR: 4,
-    BITWISE_XOR: 5,
-    BITWISE_AND: 6,
-    EQUAL: 7,
-    COMPARE: 8,
-    SHIFT: 9,
-    ADD: 10,
-    MULTIPLY: 11,
-    UNARY_PREFIX: 12,
-    UNARY_POSTFIX: 13,
-    MEMBER: 14
+    COMMA: 1,
+    ASSIGN: 2,
+    LOGICAL_OR: 3,
+    LOGICAL_AND: 4,
+    BITWISE_OR: 5,
+    BITWISE_XOR: 6,
+    BITWISE_AND: 7,
+    EQUAL: 8,
+    COMPARE: 9,
+    SHIFT: 10,
+    ADD: 11,
+    MULTIPLY: 12,
+    UNARY_PREFIX: 13,
+    UNARY_POSTFIX: 14,
+    MEMBER: 15
   };
 
   Skew.BooleanSwap = {
@@ -1576,7 +1577,7 @@
 
       if (symbol.value !== null) {
         self.emit(self.space + "=" + self.space);
-        self.emitExpression(symbol.value, Skew.Precedence.LOWEST);
+        self.emitExpression(symbol.value, Skew.Precedence.COMMA);
       }
 
       self.emitSemicolonAfterStatement();
@@ -1688,25 +1689,20 @@
         if (count > 3) {
           for (var i = 3, count1 = count; i < count1; ++i) {
             var child = children[i];
+            assert(child.kind === Skew.NodeKind.VAR);
 
             if (i !== 3) {
               self.emit("," + self.space);
             }
 
-            if (child.kind === Skew.NodeKind.VAR) {
-              var symbol = child.symbol.asVariableSymbol();
+            var symbol = child.symbol.asVariableSymbol();
 
-              if (i === 3) {
-                self.emit("var ");
-              }
-
-              self.emit(Skew.JsEmitter.mangleName(symbol) + self.space + "=" + self.space);
-              self.emitExpression(symbol.value, Skew.Precedence.LOWEST);
+            if (i === 3) {
+              self.emit("var ");
             }
 
-            else {
-              self.emitExpression(child, Skew.Precedence.LOWEST);
-            }
+            self.emit(Skew.JsEmitter.mangleName(symbol) + self.space + "=" + self.space);
+            self.emitExpression(symbol.value, Skew.Precedence.COMMA);
           }
         }
 
@@ -1974,7 +1970,7 @@
             self.emit("," + self.space);
           }
 
-          self.emitExpression(node.children[i], Skew.Precedence.LOWEST);
+          self.emitExpression(node.children[i], Skew.Precedence.COMMA);
         }
 
         self.emit(")");
@@ -1992,7 +1988,7 @@
             self.emit("," + self.space);
           }
 
-          self.emitExpression(node.children[i1], Skew.Precedence.LOWEST);
+          self.emitExpression(node.children[i1], Skew.Precedence.COMMA);
         }
 
         self.emit(useBraces ? "}" : "]");
@@ -2007,17 +2003,10 @@
       }
 
       case Skew.NodeKind.INDEX: {
+        assert(node.children.length === 2);
         self.emitExpression(node.children[0], Skew.Precedence.UNARY_POSTFIX);
         self.emit("[");
-
-        for (var i2 = 1, count2 = node.children.length; i2 < count2; ++i2) {
-          if (i2 > 1) {
-            self.emit("," + self.space);
-          }
-
-          self.emitExpression(node.children[i2], Skew.Precedence.LOWEST);
-        }
-
+        self.emitExpression(node.children[1], Skew.Precedence.LOWEST);
         self.emit("]");
         break;
       }
@@ -2027,19 +2016,12 @@
           self.emit("(");
         }
 
+        assert(node.children.length === 3);
         self.emitExpression(node.children[0], Skew.Precedence.UNARY_POSTFIX);
         self.emit("[");
-
-        for (var i3 = 1, count3 = node.children.length - 1 | 0; i3 < count3; ++i3) {
-          if (i3 > 1) {
-            self.emit("," + self.space);
-          }
-
-          self.emitExpression(node.children[i3], Skew.Precedence.LOWEST);
-        }
-
+        self.emitExpression(node.children[1], Skew.Precedence.LOWEST);
         self.emit("]" + self.space + "=" + self.space + "");
-        self.emitExpression(in_List.last(node.children), Skew.Precedence.LOWEST);
+        self.emitExpression(node.children[2], Skew.Precedence.LOWEST);
 
         if (Skew.Precedence.ASSIGN < precedence) {
           self.emit(")");
@@ -2054,6 +2036,25 @@
 
       case Skew.NodeKind.PARAMETERIZE: {
         self.emitExpression(node.parameterizeValue(), precedence);
+        break;
+      }
+
+      case Skew.NodeKind.SEQUENCE: {
+        if (Skew.Precedence.COMMA <= precedence) {
+          self.emit("(");
+        }
+
+        for (var i2 = 0, count2 = node.children.length; i2 < count2; ++i2) {
+          if (i2 !== 0) {
+            self.emit("," + self.space);
+          }
+
+          self.emitExpression(node.children[i2], Skew.Precedence.COMMA);
+        }
+
+        if (Skew.Precedence.COMMA <= precedence) {
+          self.emit(")");
+        }
         break;
       }
 
@@ -2349,6 +2350,59 @@
     }
   };
 
+  Skew.JsEmitter.prototype.assignSourceIfNoSideEffects = function(node) {
+    var self = this;
+
+    if (node.kind === Skew.NodeKind.ASSIGN) {
+      var right = node.binaryRight();
+      return node.binaryLeft().hasNoSideEffects() && right.hasNoSideEffects() ? right : null;
+    }
+
+    if (node.kind === Skew.NodeKind.ASSIGN_INDEX) {
+      var children = node.children;
+      return children.length === 3 && children[0].hasNoSideEffects() && children[1].hasNoSideEffects() && children[2].hasNoSideEffects() ? children[2] : null;
+    }
+
+    return null;
+  };
+
+  Skew.JsEmitter.prototype.peepholeMangleSequence = function(node) {
+    var self = this;
+    assert(node.kind === Skew.NodeKind.SEQUENCE);
+
+    // "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
+    var i = node.children.length - 1 | 0;
+
+    while (i > 0) {
+      var current = node.children[i];
+      var currentRight = self.assignSourceIfNoSideEffects(current);
+
+      if (currentRight !== null) {
+        while (i !== 0) {
+          var previous = node.children[i - 1 | 0];
+          var previousRight = self.assignSourceIfNoSideEffects(previous);
+
+          if (previousRight === null || !self.looksTheSame(previousRight, currentRight)) {
+            break;
+          }
+
+          previousRight.replaceWith(current.remove());
+          current = previous;
+          --i;
+        }
+      }
+
+      --i;
+    }
+  };
+
+  Skew.JsEmitter.prototype.joinExpressions = function(left, right) {
+    var self = this;
+    var sequence = new Skew.Node(Skew.NodeKind.SEQUENCE).withChildren(left.kind === Skew.NodeKind.SEQUENCE ? left.removeChildren() : [left]);
+    sequence.appendChildren(right.kind === Skew.NodeKind.SEQUENCE ? right.removeChildren() : [right]);
+    return sequence;
+  };
+
   Skew.JsEmitter.prototype.looksTheSame = function(left, right) {
     var self = this;
 
@@ -2591,12 +2645,33 @@
     var i = 0;
 
     while (i < children.length) {
-      var child = node.children[i];
+      var child = children[i];
       var kind = child.kind;
 
-      if (kind === Skew.NodeKind.RETURN && child.returnValue() !== null) {
+      // "a; b; c;" => "a, b, c;"
+      if (kind === Skew.NodeKind.EXPRESSION) {
+        while ((i + 1 | 0) < children.length) {
+          var next = children[i + 1 | 0];
+
+          if (next.kind !== Skew.NodeKind.EXPRESSION) {
+            break;
+          }
+
+          var combined = Skew.Node.createExpression(self.joinExpressions(child.expressionValue().replaceWithNull(), next.remove().expressionValue().replaceWithNull()));
+          child.replaceWith(combined);
+          child = combined;
+        }
+
+        var value = child.expressionValue();
+
+        if (value.kind === Skew.NodeKind.SEQUENCE) {
+          self.peepholeMangleSequence(value);
+        }
+      }
+
+      else if (kind === Skew.NodeKind.RETURN && child.returnValue() !== null) {
         while (i !== 0) {
-          var previous = node.children[i - 1 | 0];
+          var previous = children[i - 1 | 0];
 
           // "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
           if (previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null) {
@@ -3287,9 +3362,26 @@
     self.children.splice(index, 0, node);
   };
 
+  Skew.Node.prototype.insertChildren = function(index, nodes) {
+    var self = this;
+    assert(index >= 0 && index <= self.children.length);
+
+    for (var i = 0, list = nodes, count = list.length; i < count; ++i) {
+      var node = list[i];
+      Skew.Node.updateParent(node, self);
+      self.children.splice(index, 0, node);
+      ++index;
+    }
+  };
+
   Skew.Node.prototype.appendChild = function(node) {
     var self = this;
     self.insertChild(self.children.length, node);
+  };
+
+  Skew.Node.prototype.appendChildren = function(nodes) {
+    var self = this;
+    self.insertChildren(self.children === null ? 0 : self.children.length, nodes);
   };
 
   Skew.Node.prototype.removeChildAtIndex = function(index) {
