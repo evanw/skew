@@ -1845,7 +1845,7 @@
           var child2 = children1[i2];
           self.emit(self.newline);
           self.emitComments(child2.comments);
-          self.emit(self.indent + "catch" + self.space + "(" + (child2.symbol !== null ? Skew.JsEmitter.mangleName(child2.symbol) : "$e") + ")");
+          self.emit(self.indent + "catch" + self.space + "(" + Skew.JsEmitter.mangleName(child2.symbol) + ")");
           self.emitBlock(child2.catchBlock(), Skew.JsEmitter.AfterToken.AFTER_KEYWORD, Skew.JsEmitter.BracesMode.MUST_KEEP_BRACES);
           self.emit(self.newline);
         }
@@ -2409,10 +2409,49 @@
         break;
       }
 
+      case Skew.NodeKind.TRY: {
+        self.patchTry(node);
+        break;
+      }
+
       case Skew.NodeKind.VAR: {
         self.unionVariableWithFunction(node.symbol, self.enclosingFunction);
         break;
       }
+    }
+  };
+
+  Skew.JsEmitter.prototype.patchTry = function(node) {
+    var self = this;
+
+    if (node.children.length > 2) {
+      var children = node.removeChildren();
+      var tryNode = children[0];
+      var finallyNode = in_List.last(children);
+      var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, children.length === 3 && children[1].symbol !== null ? children[1].symbol.name : self.enclosingFunction.scope.generateName("e"));
+      var block = new Skew.Node(Skew.NodeKind.BLOCK).withChildren([Skew.Node.createThrow(Skew.Node.createSymbolReference(variable))]);
+
+      for (var i = 1, count = children.length - 1 | 0; i < count; ++i) {
+        var child = children[(children.length - i | 0) - 1 | 0];
+        var catchBlock = child.catchBlock().replaceWithNull();
+
+        // Just rename all catch symbols to the same name instead of substituting the variable
+        if (child.symbol !== null) {
+          child.symbol.name = variable.name;
+        }
+
+        // Build up the chain of tests in reverse
+        if (child.symbol !== null && child.symbol.resolvedType !== Skew.Type.DYNAMIC) {
+          var test = Skew.Node.createBinary(Skew.NodeKind.IS, Skew.Node.createSymbolReference(variable), new Skew.Node(Skew.NodeKind.TYPE).withType(child.symbol.resolvedType));
+          block = new Skew.Node(Skew.NodeKind.BLOCK).withChildren([catchBlock.children.length === 0 ? Skew.Node.createIf(Skew.Node.createUnary(Skew.NodeKind.NOT, test), block, null) : Skew.Node.createIf(test, catchBlock, block)]);
+        }
+
+        else {
+          block = catchBlock;
+        }
+      }
+
+      node.withChildren([tryNode, Skew.Node.createCatch(variable, block), finallyNode]);
     }
   };
 
@@ -3860,6 +3899,14 @@
   Skew.Node.createLambdaType = function(argTypes, returnType) {
     argTypes.push(returnType);
     return new Skew.Node(Skew.NodeKind.LAMBDA_TYPE).withChildren(argTypes);
+  };
+
+  Skew.Node.createSymbolReference = function(symbol) {
+    return new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(symbol.name)).withSymbol(symbol).withType(symbol.resolvedType);
+  };
+
+  Skew.Node.createMemberReference = function(target, member) {
+    return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(member.name)).withChildren([target]).withSymbol(member).withType(member.resolvedType);
   };
 
   Skew.Node.prototype.isInt = function() {
@@ -9343,19 +9390,6 @@
     });
   };
 
-  Skew.Resolving.Resolver.prototype.reportGuardMergingFailure = function(node) {
-    var self = this;
-
-    if (self.isMergingGuards) {
-      while (node !== null) {
-        node.resolvedType = null;
-        node = node.parent;
-      }
-
-      throw null;
-    }
-  };
-
   Skew.Resolving.Resolver.prototype.iterativelyMergeGuards = function() {
     var self = this;
 
@@ -9399,6 +9433,19 @@
     }
   };
 
+  Skew.Resolving.Resolver.prototype.reportGuardMergingFailure = function(node) {
+    var self = this;
+
+    if (self.isMergingGuards) {
+      while (node !== null) {
+        node.resolvedType = null;
+        node = node.parent;
+      }
+
+      throw new Skew.Resolving.Resolver.GuardMergingFailure();
+    }
+  };
+
   Skew.Resolving.Resolver.prototype.attemptToResolveGuardConstant = function(node, scope) {
     var self = this;
     assert(scope !== null);
@@ -9409,7 +9456,10 @@
       return true;
     }
 
-    catch ($e) {
+    catch (failure) {
+      if (!(failure instanceof Skew.Resolving.Resolver.GuardMergingFailure)) {
+        throw failure;
+      }
     }
 
     return false;
@@ -9814,7 +9864,7 @@
         argument.resolvedType = variable.resolvedType;
         argument.state = Skew.SymbolState.INITIALIZED;
         symbol.$arguments.push(argument);
-        values.push(Skew.Resolving.Resolver.createSymbolReference(argument));
+        values.push(Skew.Node.createSymbolReference(argument));
       }
 
       statements.push(Skew.Node.createExpression(values.length === 0 ? new Skew.Node(Skew.NodeKind.SUPER) : Skew.Node.createCall(new Skew.Node(Skew.NodeKind.SUPER), values)));
@@ -9835,11 +9885,11 @@
           argument1.resolvedType = variable1.resolvedType;
           argument1.state = Skew.SymbolState.INITIALIZED;
           symbol.$arguments.push(argument1);
-          statements.push(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Resolving.Resolver.createMemberReference(Skew.Resolving.Resolver.createSymbolReference(symbol.self), variable1), Skew.Resolving.Resolver.createSymbolReference(argument1))));
+          statements.push(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable1), Skew.Node.createSymbolReference(argument1))));
         }
 
         else {
-          statements.push(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Resolving.Resolver.createMemberReference(Skew.Resolving.Resolver.createSymbolReference(symbol.self), variable1), variable1.value)));
+          statements.push(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable1), variable1.value)));
           variable1.value = null;
         }
       }
@@ -9879,7 +9929,7 @@
     parent.variables.push(strings);
     self.resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType);
     symbol.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(self.cache.stringType);
-    symbol.block = new Skew.Node(Skew.NodeKind.BLOCK).withChildren([Skew.Node.createReturn(Skew.Node.createIndex(Skew.Resolving.Resolver.createSymbolReference(strings), [new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent("self"))]))]);
+    symbol.block = new Skew.Node(Skew.NodeKind.BLOCK).withChildren([Skew.Node.createReturn(Skew.Node.createIndex(Skew.Node.createSymbolReference(strings), [new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent("self"))]))]);
     symbol.flags |= Skew.Symbol.IS_GETTER;
   };
 
@@ -9915,7 +9965,7 @@
             self.initializeSymbol(variable);
 
             if (variable.value !== null) {
-              block.insertChild(index, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Resolving.Resolver.createMemberReference(Skew.Resolving.Resolver.createSymbolReference(symbol.self), variable), variable.value)));
+              block.insertChild(index, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable), variable.value)));
               ++index;
               variable.value = null;
             }
@@ -10776,7 +10826,7 @@
 
       if (child.symbol !== null) {
         var symbol = child.symbol.asVariableSymbol();
-        scope.asLocalScope().define(symbol, self.log);
+        childScope.define(symbol, self.log);
         self.resolveVariable(symbol);
       }
 
@@ -11552,7 +11602,7 @@
       var variable = enclosingFunction !== null ? enclosingFunction.symbol.self : null;
 
       if (variable !== null) {
-        node.withChildren([Skew.Resolving.Resolver.createSymbolReference(variable)]).kind = Skew.NodeKind.DOT;
+        node.withChildren([Skew.Node.createSymbolReference(variable)]).kind = Skew.NodeKind.DOT;
       }
 
       else {
@@ -11960,14 +12010,6 @@
     return type !== Skew.Type.NULL && (type.kind !== Skew.TypeKind.SYMBOL || !Skew.SymbolKind.isFunctionOrOverloadedFunction(type.symbol.kind));
   };
 
-  Skew.Resolving.Resolver.createSymbolReference = function(symbol) {
-    return new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(symbol.name)).withSymbol(symbol).withType(symbol.resolvedType);
-  };
-
-  Skew.Resolving.Resolver.createMemberReference = function(target, member) {
-    return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(member.name)).withChildren([target]).withSymbol(member).withType(member.resolvedType);
-  };
-
   Skew.Resolving.Resolver.isBaseGlobalReference = function(parent, member) {
     return parent !== null && parent.kind === Skew.SymbolKind.OBJECT_CLASS && Skew.SymbolKind.isGlobalReference(member.kind) && member.parent !== parent && member.parent.kind === Skew.SymbolKind.OBJECT_CLASS && parent.asObjectSymbol().hasBaseClass(member.parent);
   };
@@ -11989,6 +12031,10 @@
       symbol.overloaded = overloaded;
       overloaded.scope.asObjectScope().symbol.members[symbol.name] = overloaded;
     }
+  };
+
+  Skew.Resolving.Resolver.GuardMergingFailure = function() {
+    var self = this;
   };
 
   Skew.Resolving.ConstantResolver = function(resolver) {
@@ -13420,7 +13466,7 @@
       return new Box(contents.split("\r\n").join("\n"));
     }
 
-    catch ($e) {
+    catch (e) {
     }
 
     return null;
@@ -13432,7 +13478,7 @@
       return true;
     }
 
-    catch ($e) {
+    catch (e) {
     }
 
     return false;

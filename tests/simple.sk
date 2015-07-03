@@ -3464,5 +3464,14 @@ var a = [
         ^
 ")
 
+test("
+def main {
+  try {}
+  catch x dynamic {}
+  catch x dynamic {}
+}
+", "
+")
+
   }
 }

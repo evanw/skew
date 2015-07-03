@@ -705,7 +705,7 @@ namespace Skew {
               var child = children[i]
               emit(newline)
               emitComments(child.comments)
-              emit(indent + "catch" + space + "(" + (child.symbol != null ? mangleName(child.symbol) : "$e") + ")")
+              emit(indent + "catch" + space + "(" + mangleName(child.symbol) + ")")
               emitBlock(child.catchBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
               emit(newline)
             }
@@ -1175,9 +1175,45 @@ namespace Skew {
             unionVariableWithFunction(function, enclosingFunction)
           }
 
+          case .TRY {
+            patchTry(node)
+          }
+
           case .VAR {
             unionVariableWithFunction(node.symbol, enclosingFunction)
           }
+        }
+      }
+
+      def patchTry(node Node) {
+        if node.children.count > 2 {
+          var children = node.removeChildren
+          var tryNode = children.first
+          var finallyNode = children.last
+          var variable = VariableSymbol.new(.VARIABLE_LOCAL, children.count == 3 && children[1].symbol != null ? children[1].symbol.name : enclosingFunction.scope.generateName("e"))
+          var block Node = Node.createBlock([Node.createThrow(Node.createSymbolReference(variable))])
+
+          for i in 1..children.count - 1 {
+            var child = children[children.count - i - 1]
+            var catchBlock = child.catchBlock.replaceWithNull
+
+            # Just rename all catch symbols to the same name instead of substituting the variable
+            if child.symbol != null {
+              child.symbol.name = variable.name
+            }
+
+            # Build up the chain of tests in reverse
+            if child.symbol != null && child.symbol.resolvedType != .DYNAMIC {
+              var test = Node.createBinary(.IS, Node.createSymbolReference(variable), Node.createType(child.symbol.resolvedType))
+              block = Node.createBlock([catchBlock.children.isEmpty
+                ? Node.createIf(Node.createUnary(.NOT, test), block, null)
+                : Node.createIf(test, catchBlock, block)])
+            } else {
+              block = catchBlock
+            }
+          }
+
+          node.withChildren([tryNode, Node.createCatch(variable, block), finallyNode])
         }
       }
 

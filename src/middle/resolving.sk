@@ -322,16 +322,6 @@ namespace Skew.Resolving {
       symbol.functions.removeIf(function => function.isObsolete)
     }
 
-    def reportGuardMergingFailure(node Node) {
-      if isMergingGuards {
-        while node != null {
-          node.resolvedType = null
-          node = node.parent
-        }
-        throw null
-      }
-    }
-
     def iterativelyMergeGuards {
       # Iterate until a fixed point is reached
       var guards List<Guard> = []
@@ -368,12 +358,26 @@ namespace Skew.Resolving {
       }
     }
 
+    class GuardMergingFailure {
+    }
+
+    def reportGuardMergingFailure(node Node) {
+      if isMergingGuards {
+        while node != null {
+          node.resolvedType = null
+          node = node.parent
+        }
+        throw GuardMergingFailure.new
+      }
+    }
+
     def attemptToResolveGuardConstant(node Node, scope Scope) bool {
       assert(scope != null)
       try {
         resolveAsParameterizedExpressionWithConversion(node, scope, cache.boolType)
         constantFolder.foldConstants(node)
         return true
+      } catch failure GuardMergingFailure {
       }
       return false
     }
@@ -721,7 +725,7 @@ namespace Skew.Resolving {
           argument.resolvedType = variable.resolvedType
           argument.state = .INITIALIZED
           symbol.arguments.append(argument)
-          values.append(createSymbolReference(argument))
+          values.append(Node.createSymbolReference(argument))
         }
         statements.append(Node.createExpression(values.isEmpty ? Node.createSuper : Node.createCall(Node.createSuper, values)))
       }
@@ -738,11 +742,11 @@ namespace Skew.Resolving {
             argument.state = .INITIALIZED
             symbol.arguments.append(argument)
             statements.append(Node.createExpression(Node.createBinary(.ASSIGN,
-              createMemberReference(createSymbolReference(symbol.self), variable),
-              createSymbolReference(argument))))
+              Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
+              Node.createSymbolReference(argument))))
           } else {
             statements.append(Node.createExpression(Node.createBinary(.ASSIGN,
-              createMemberReference(createSymbolReference(symbol.self), variable),
+              Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
               variable.value)))
             variable.value = null
           }
@@ -781,7 +785,7 @@ namespace Skew.Resolving {
       resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType)
 
       symbol.returnType = Node.createType(cache.stringType)
-      symbol.block = Node.createBlock([Node.createReturn(Node.createIndex(createSymbolReference(strings), [Node.createName("self")]))])
+      symbol.block = Node.createBlock([Node.createReturn(Node.createIndex(Node.createSymbolReference(strings), [Node.createName("self")]))])
       symbol.flags |= Symbol.IS_GETTER
     }
 
@@ -811,7 +815,7 @@ namespace Skew.Resolving {
               initializeSymbol(variable)
               if variable.value != null {
                 block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN,
-                  createMemberReference(createSymbolReference(symbol.self), variable),
+                  Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
                   variable.value)))
                 index++
                 variable.value = null
@@ -1445,7 +1449,7 @@ namespace Skew.Resolving {
         var childScope = LocalScope.new(scope, .NORMAL)
         if child.symbol != null {
           var symbol = child.symbol.asVariableSymbol
-          scope.asLocalScope.define(symbol, log)
+          childScope.define(symbol, log)
           resolveVariable(symbol)
         }
         resolveBlock(child.catchBlock, childScope)
@@ -2095,7 +2099,7 @@ namespace Skew.Resolving {
       if symbol.kind.isOnInstances {
         var variable = enclosingFunction != null ? enclosingFunction.symbol.self : null
         if variable != null {
-          node.withChildren([createSymbolReference(variable)]).kind = .DOT
+          node.withChildren([Node.createSymbolReference(variable)]).kind = .DOT
         } else {
           log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
         }
@@ -2472,14 +2476,6 @@ namespace Skew.Resolving {
 
     def isValidVariableType(type Type) bool {
       return type != .NULL && (type.kind != .SYMBOL || !type.symbol.kind.isFunctionOrOverloadedFunction)
-    }
-
-    def createSymbolReference(symbol Symbol) Node {
-      return Node.createName(symbol.name).withSymbol(symbol).withType(symbol.resolvedType)
-    }
-
-    def createMemberReference(target Node, member Symbol) Node {
-      return Node.createDot(target, member.name).withSymbol(member).withType(member.resolvedType)
     }
 
     def isBaseGlobalReference(parent Symbol, member Symbol) bool {

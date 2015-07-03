@@ -719,6 +719,14 @@ namespace Skew {
       argTypes.append(returnType)
       return Node.new(.LAMBDA_TYPE).withChildren(argTypes)
     }
+
+    def createSymbolReference(symbol Symbol) Node {
+      return createName(symbol.name).withSymbol(symbol).withType(symbol.resolvedType)
+    }
+
+    def createMemberReference(target Node, member Symbol) Node {
+      return createDot(target, member.name).withSymbol(member).withType(member.resolvedType)
+    }
   }
 
   # Getters
