@@ -1134,6 +1134,7 @@
 
   Skew.JsEmitter.prototype.allocateNamingGroupIndex = function(symbol) {
     var self = this;
+
     if (self.mangle && !(symbol.id in self.namingGroupIndexForSymbol)) {
       var index = self.localVariableUnionFind.allocate1();
       self.namingGroupIndexForSymbol[symbol.id] = index;
@@ -1158,6 +1159,7 @@
 
   Skew.JsEmitter.prototype.renameSymbols = function() {
     var self = this;
+
     // This holds the groups used for naming. Unioning two labels using
     // this object will cause both groups of symbols to have the same name.
     var namingGroupsUnionFind = new Skew.UnionFind().allocate2(self.allSymbols.length);
@@ -1273,6 +1275,7 @@
 
   Skew.JsEmitter.prototype.zipTogetherInOrder = function(unionFind, order, groups) {
     var self = this;
+
     for (var i1 = 0, list = groups, count1 = list.length; i1 < count1; ++i1) {
       var group = list[i1];
 
@@ -1307,6 +1310,7 @@
 
   Skew.JsEmitter.prototype.generateSymbolName = function(reservedNames) {
     var self = this;
+
     while (true) {
       var name = self.numberToName(self.nextSymbolName);
       ++self.nextSymbolName;
@@ -1345,6 +1349,7 @@
 
   Skew.JsEmitter.prototype.emitSemicolonAfterStatement = function() {
     var self = this;
+
     if (!self.minify) {
       self.emit(";\n");
     }
@@ -1356,6 +1361,7 @@
 
   Skew.JsEmitter.prototype.emitSemicolonIfNeeded = function() {
     var self = this;
+
     if (self.needsSemicolon) {
       self.emit(";");
       self.needsSemicolon = false;
@@ -1380,6 +1386,7 @@
 
   Skew.JsEmitter.prototype.emitNewlineBeforeStatement = function(node) {
     var self = this;
+
     if (!self.minify && self.previousNode !== null && (node.comments !== null || !Skew.JsEmitter.isCompactNodeKind(self.previousNode.kind) || !Skew.JsEmitter.isCompactNodeKind(node.kind))) {
       self.emit("\n");
     }
@@ -1394,6 +1401,7 @@
 
   Skew.JsEmitter.prototype.emitComments = function(comments) {
     var self = this;
+
     if (comments !== null && !self.minify) {
       for (var i = 0, list = comments, count = list.length; i < count; ++i) {
         var comment = list[i];
@@ -1404,6 +1412,7 @@
 
   Skew.JsEmitter.prototype.emitObject = function(symbol) {
     var self = this;
+
     if (symbol.isImported()) {
       return;
     }
@@ -1502,6 +1511,7 @@
 
   Skew.JsEmitter.prototype.emitArgumentList = function($arguments) {
     var self = this;
+
     for (var i = 0, count = $arguments.length; i < count; ++i) {
       if (i > 0) {
         self.emit("," + self.space);
@@ -1513,6 +1523,7 @@
 
   Skew.JsEmitter.prototype.emitFunction = function(symbol) {
     var self = this;
+
     if (symbol.block === null) {
       return;
     }
@@ -1533,12 +1544,6 @@
     self.emitArgumentList(symbol.$arguments);
     self.emit(")" + self.space + "{" + self.newline);
     self.increaseIndent();
-
-    if (symbol.self !== null) {
-      self.emit(self.indent + "var " + Skew.JsEmitter.mangleName(symbol.self) + self.space + "=" + self.space + "this");
-      self.emitSemicolonAfterStatement();
-    }
-
     self.enclosingFunction = symbol;
     self.emitStatements(symbol.block.children);
     self.enclosingFunction = null;
@@ -1559,6 +1564,7 @@
 
   Skew.JsEmitter.prototype.emitVariable = function(symbol) {
     var self = this;
+
     if (symbol.isImported()) {
       return;
     }
@@ -1626,6 +1632,7 @@
 
   Skew.JsEmitter.prototype.emitStatement = function(node) {
     var self = this;
+
     switch (node.kind) {
       case Skew.NodeKind.VAR: {
         self.emitVariable(node.symbol.asVariableSymbol());
@@ -1875,6 +1882,7 @@
 
   Skew.JsEmitter.prototype.emitContent = function(content) {
     var self = this;
+
     switch (content.kind()) {
       case Skew.ContentKind.BOOL: {
         self.emit(content.asBool().toString());
@@ -2151,6 +2159,16 @@
     // Scan over child functions
     in_List.removeIf(symbol.functions, function($function) {
       self.allocateNamingGroupIndex($function);
+
+      if ($function.self !== null) {
+        self.unionVariableWithFunction($function.self, $function);
+
+        if ($function.block !== null) {
+          $function.self.value = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent("this"));
+          $function.block.children.unshift(Skew.Node.createVar($function.self));
+        }
+      }
+
       self.enclosingFunction = $function;
       self.patchNode($function.block);
       self.enclosingFunction = null;
@@ -2159,10 +2177,6 @@
         var argument = list[i];
         self.allocateNamingGroupIndex(argument);
         self.unionVariableWithFunction(argument, $function);
-      }
-
-      if ($function.self !== null) {
-        self.unionVariableWithFunction($function.self, $function);
       }
 
       // When mangling, filter out all internal global functions and move them to the global namespace
@@ -2191,6 +2205,7 @@
 
   Skew.JsEmitter.prototype.createIntBinary = function(kind, left, right) {
     var self = this;
+
     if (kind === Skew.NodeKind.MULTIPLY) {
       self.needsMultiply = true;
       return Skew.Node.createCall(new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(self.multiply.name)).withSymbol(self.multiply), [left, right]).withType(self.cache.intType);
@@ -2211,6 +2226,7 @@
 
   Skew.JsEmitter.prototype.patchBinaryArithmetic = function(node) {
     var self = this;
+
     // Make sure arithmetic integer operators don't emit doubles outside the
     // integer range. Allowing this causes JIT slowdowns due to extra checks
     // during compilation and potential deoptimizations during execution.
@@ -2229,6 +2245,7 @@
   // function
   Skew.JsEmitter.prototype.unionVariableWithFunction = function(symbol, $function) {
     var self = this;
+
     if (self.mangle && $function !== null) {
       assert(symbol.id in self.namingGroupIndexForSymbol);
       assert($function.id in self.namingGroupIndexForSymbol);
@@ -2238,6 +2255,7 @@
 
   Skew.JsEmitter.prototype.patchNode = function(node) {
     var self = this;
+
     if (node === null) {
       return;
     }
@@ -2333,6 +2351,7 @@
 
   Skew.JsEmitter.prototype.looksTheSame = function(left, right) {
     var self = this;
+
     if (left.kind === right.kind) {
       switch (left.kind) {
         case Skew.NodeKind.NULL: {
@@ -2834,6 +2853,7 @@
 
   Skew.LispTreeEmitter.prototype.visitNode = function(node) {
     var self = this;
+
     if (node === null) {
       self.emit("nil");
       return;
@@ -3150,6 +3170,7 @@
 
   Skew.Node.prototype.clone = function() {
     var self = this;
+
     // Lambda symbols reference their block, which will not get cloned
     assert(self.kind !== Skew.NodeKind.LAMBDA);
     var clone = new Skew.Node(self.kind);
@@ -4025,6 +4046,7 @@
 
   Skew.UnionFind.prototype.allocate2 = function(count) {
     var self = this;
+
     for (var i = 0, count1 = count; i < count1; ++i) {
       self.parents.push(self.parents.length);
     }
@@ -4354,6 +4376,7 @@
 
   Skew.Symbol.prototype.fullName = function() {
     var self = this;
+
     if (self.parent !== null && self.parent.kind !== Skew.SymbolKind.OBJECT_GLOBAL && !Skew.SymbolKind.isParameter(self.kind)) {
       return self.parent.fullName() + "." + self.name;
     }
@@ -4363,6 +4386,7 @@
 
   Skew.Symbol.prototype.mergeAnnotationsAndCommentsFrom = function(symbol) {
     var self = this;
+
     if (self.annotations === null) {
       self.annotations = symbol.annotations;
     }
@@ -4382,6 +4406,7 @@
 
   Skew.Symbol.prototype.nameWithRenaming = function() {
     var self = this;
+
     if (self.isRenamed()) {
       for (var i = 0, list = self.annotations, count = list.length; i < count; ++i) {
         var annotation = list[i];
@@ -4876,6 +4901,7 @@
 
   Skew.Log.prototype.semanticErrorWrongArgumentCountRange = function(range, name, lower, upper) {
     var self = this;
+
     if (lower === 0) {
       self.error(range, "Expected \"" + name + "\" to take at most " + upper.toString() + " argument" + (upper === 1 ? "" : "s"));
     }
@@ -6640,6 +6666,7 @@
 
   Skew.ParserContext.prototype.eat = function(kind) {
     var self = this;
+
     if (self.peek(kind)) {
       self.next();
       return true;
@@ -6656,6 +6683,7 @@
 
   Skew.ParserContext.prototype.expect = function(kind) {
     var self = this;
+
     if (!self.eat(kind)) {
       var token = self.current();
 
@@ -6735,6 +6763,7 @@
 
   Skew.Pratt.prototype.resume = function(context, precedence, left) {
     var self = this;
+
     while (left !== null) {
       var kind = context.current().kind;
       var parselet = in_IntMap.get(self.table, kind, null);
@@ -6956,6 +6985,7 @@
 
   Skew.Source.prototype.computeLineOffsets = function() {
     var self = this;
+
     if (self.lineOffsets === null) {
       self.lineOffsets = [0];
 
@@ -6975,6 +7005,7 @@
 
   Skew.Token.prototype.firstCodeUnit = function() {
     var self = this;
+
     if (self.kind === Skew.TokenKind.END_OF_FILE) {
       return 0;
     }
@@ -7004,6 +7035,7 @@
 
   Skew.CallGraph.prototype.visitObject = function(symbol) {
     var self = this;
+
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
       self.visitObject(object);
@@ -7023,6 +7055,7 @@
 
   Skew.CallGraph.prototype.visitNode = function(node, context) {
     var self = this;
+
     if (node !== null) {
       if (node.children !== null) {
         for (var i = 0, list = node.children, count = list.length; i < count; ++i) {
@@ -7106,6 +7139,7 @@
 
   Skew.Folding.ConstantFolder.prototype.visitObject = function(symbol) {
     var self = this;
+
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
       self.visitObject(object);
@@ -7504,6 +7538,7 @@
 
   Skew.Folding.ConstantFolder.prototype.foldCall = function(node) {
     var self = this;
+
     if (node.kind === Skew.NodeKind.CALL) {
       var value = node.callValue();
 
@@ -7773,6 +7808,7 @@
 
   Skew.Folding.ConstantFolder.prototype.foldBinaryWithConstant = function(node, left, right) {
     var self = this;
+
     // There are lots of other folding opportunities for most binary operators
     // here but those usually have a negligible performance and/or size impact
     // on the generated code and instead slow the compiler down. Only certain
@@ -8075,6 +8111,7 @@
   // Returns the log2(value) or -1 if log2(value) is not an integer
   Skew.Folding.ConstantFolder.prototype.logBase2 = function(value) {
     var self = this;
+
     if (value < 1 || (value & value - 1) !== 0) {
       return -1;
     }
@@ -8099,6 +8136,7 @@
 
   Skew.Folding.ConstantCache.prototype.constantForSymbol = function(symbol) {
     var self = this;
+
     if (symbol.id in self.map) {
       return self.map[symbol.id];
     }
@@ -8142,6 +8180,7 @@
 
   Skew.VirtualLookup.prototype.visitObject = function(symbol) {
     var self = this;
+
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
       self.visitObject(object);
@@ -8155,6 +8194,7 @@
 
   Skew.VirtualLookup.prototype.visitFunction = function(symbol) {
     var self = this;
+
     if (symbol.overridden !== null) {
       self.map[symbol.overridden.id] = true;
       self.map[symbol.id] = true;
@@ -8754,6 +8794,7 @@
 
   Skew.Resolving.Resolver.prototype.initializeSymbol = function(symbol) {
     var self = this;
+
     // The scope should have been set by the merging pass (or by this pass for local variables)
     assert(symbol.scope !== null);
 
@@ -8834,6 +8875,7 @@
 
   Skew.Resolving.Resolver.prototype.validateEntryPoint = function(symbol) {
     var self = this;
+
     // Detect duplicate entry points
     if (self.cache.entryPointSymbol !== null) {
       self.log.semanticErrorDuplicateEntryPoint(symbol.range, self.cache.entryPointSymbol.range);
@@ -8942,6 +8984,7 @@
 
   Skew.Resolving.Resolver.prototype.resolveParameters = function(parameters) {
     var self = this;
+
     if (parameters !== null) {
       for (var i = 0, list = parameters, count = list.length; i < count; ++i) {
         var parameter = list[i];
@@ -8952,6 +8995,7 @@
 
   Skew.Resolving.Resolver.prototype.initializeParameter = function(symbol) {
     var self = this;
+
     if (symbol.resolvedType === null) {
       symbol.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, symbol);
     }
@@ -8966,6 +9010,7 @@
 
   Skew.Resolving.Resolver.prototype.initializeObject = function(symbol) {
     var self = this;
+
     if (symbol.resolvedType === null) {
       symbol.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, symbol);
     }
@@ -9077,6 +9122,7 @@
 
   Skew.Resolving.Resolver.prototype.reportGuardMergingFailure = function(node) {
     var self = this;
+
     if (self.isMergingGuards) {
       while (node !== null) {
         node.resolvedType = null;
@@ -9089,6 +9135,7 @@
 
   Skew.Resolving.Resolver.prototype.iterativelyMergeGuards = function() {
     var self = this;
+
     // Iterate until a fixed point is reached
     var guards = [];
     self.scanForGuards(self.global, guards);
@@ -9131,6 +9178,7 @@
 
   Skew.Resolving.Resolver.prototype.attemptToResolveGuardConstant = function(node, scope) {
     var self = this;
+
     try {
       self.resolveAsParameterizedExpressionWithConversion(node, scope, self.cache.boolType);
       self.constantFolder.foldConstants(node);
@@ -9145,6 +9193,7 @@
 
   Skew.Resolving.Resolver.prototype.processGuards = function(guards) {
     var self = this;
+
     for (var i = 0, list = guards, count = list.length; i < count; ++i) {
       var guard = list[i];
       var test = guard.test;
@@ -9178,6 +9227,7 @@
   // been defined.
   Skew.Resolving.Resolver.prototype.convertForeachLoops = function() {
     var self = this;
+
     for (var i = 0, list1 = self.foreachLoops, count1 = list1.length; i < count1; ++i) {
       var node = list1[i];
       var symbol = node.symbol.asVariableSymbol();
@@ -9264,6 +9314,7 @@
 
   Skew.Resolving.Resolver.prototype.scanLocalVariables = function() {
     var self = this;
+
     for (var i = 0, list = in_IntMap.values(self.localVariableStatistics), count = list.length; i < count; ++i) {
       var info = list[i];
       var symbol = info.symbol;
@@ -9293,6 +9344,7 @@
 
   Skew.Resolving.Resolver.prototype.discardUnusedDefines = function() {
     var self = this;
+
     for (var i = 0, list = Object.keys(self.defines), count = list.length; i < count; ++i) {
       var key = list[i];
       self.log.semanticErrorInvalidDefine2(self.defines[key].name, key);
@@ -9321,6 +9373,7 @@
 
   Skew.Resolving.Resolver.prototype.initializeFunction = function(symbol) {
     var self = this;
+
     if (symbol.resolvedType === null) {
       symbol.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, symbol);
     }
@@ -9661,6 +9714,7 @@
 
   Skew.Resolving.Resolver.prototype.recordStatistic = function(symbol, statistic) {
     var self = this;
+
     if (symbol !== null && symbol.kind === Skew.SymbolKind.VARIABLE_LOCAL) {
       var info = in_IntMap.get(self.localVariableStatistics, symbol.id, null);
 
@@ -9814,6 +9868,7 @@
 
   Skew.Resolving.Resolver.prototype.resolveNode = function(node, scope, context) {
     var self = this;
+
     if (node.resolvedType !== null) {
       // Only resolve once
       return;
@@ -10010,6 +10065,7 @@
 
   Skew.Resolving.Resolver.prototype.resolveChildrenAsParameterizedExpressions = function(node, scope) {
     var self = this;
+
     for (var i = 0, list = node.children, count = list.length; i < count; ++i) {
       var child = list[i];
       self.resolveAsParameterizedExpression(child, scope);
@@ -10032,6 +10088,7 @@
 
   Skew.Resolving.Resolver.prototype.checkIsInstance = function(node) {
     var self = this;
+
     if (node.resolvedType !== Skew.Type.DYNAMIC && node.isType()) {
       self.log.semanticErrorUnexpectedType(node.range, node.resolvedType);
       node.resolvedType = Skew.Type.DYNAMIC;
@@ -10040,6 +10097,7 @@
 
   Skew.Resolving.Resolver.prototype.checkIsType = function(node) {
     var self = this;
+
     if (node.resolvedType !== Skew.Type.DYNAMIC && !node.isType()) {
       self.log.semanticErrorUnexpectedExpression(node.range, node.resolvedType);
       node.resolvedType = Skew.Type.DYNAMIC;
@@ -10048,6 +10106,7 @@
 
   Skew.Resolving.Resolver.prototype.checkIsParameterized = function(node) {
     var self = this;
+
     if (node.resolvedType.parameters() !== null && !node.resolvedType.isParameterized()) {
       self.log.semanticErrorUnparameterizedType(node.range, node.resolvedType);
       node.resolvedType = Skew.Type.DYNAMIC;
@@ -10320,6 +10379,7 @@
 
   Skew.Resolving.Resolver.prototype.resolveJump = function(node, scope) {
     var self = this;
+
     if (scope.findEnclosingLoop() === null) {
       self.log.semanticErrorBadJump(node.range, node.kind === Skew.NodeKind.BREAK ? "break" : "continue");
     }
@@ -10777,6 +10837,7 @@
 
   Skew.Resolving.Resolver.prototype.resolveConstant = function(node, scope) {
     var self = this;
+
     switch (node.content.kind()) {
       case Skew.ContentKind.BOOL: {
         node.resolvedType = self.cache.boolType;
@@ -10807,6 +10868,7 @@
 
   Skew.Resolving.Resolver.prototype.findOverriddenMember = function(symbol) {
     var self = this;
+
     if (symbol.parent !== null && symbol.parent.kind === Skew.SymbolKind.OBJECT_CLASS) {
       var object = symbol.parent.asObjectSymbol();
 
@@ -10966,6 +11028,7 @@
 
   Skew.Resolving.Resolver.prototype.resolveInitializer = function(node, scope, context) {
     var self = this;
+
     // Make sure to resolve the children even if the initializer is invalid
     if (context !== null) {
       if (context === Skew.Type.DYNAMIC || !self.resolveInitializerWithContext(node, scope, context)) {
@@ -11042,6 +11105,7 @@
 
   Skew.Resolving.Resolver.prototype.shouldUseMapConstructor = function(symbol) {
     var self = this;
+
     if (Skew.SymbolKind.isFunction(symbol.kind)) {
       return symbol.asFunctionSymbol().$arguments.length === 2;
     }
@@ -11143,6 +11207,7 @@
 
   Skew.Resolving.Resolver.prototype.mergeCommonType = function(commonType, child) {
     var self = this;
+
     if (commonType === null || child.resolvedType === Skew.Type.DYNAMIC) {
       return child.resolvedType;
     }
@@ -11466,6 +11531,7 @@
 
   Skew.Resolving.Resolver.prototype.resolveOperatorOverload = function(node, scope) {
     var self = this;
+
     // The order of operands are reversed for the "in" operator
     var kind = node.kind;
     var reverseBinaryOrder = kind === Skew.NodeKind.IN;
@@ -11708,6 +11774,7 @@
 
   Skew.Resolving.ConstantResolver.prototype.constantForSymbol = function(symbol) {
     var self = this;
+
     if (symbol.id in self.map) {
       return self.map[symbol.id];
     }
@@ -11830,6 +11897,7 @@
 
   Skew.Scope.prototype.reserveName = function(name, symbol) {
     var self = this;
+
     if (self.used === null) {
       self.used = Object.create(null);
     }
@@ -12032,6 +12100,7 @@
 
   Skew.UsageGraph.prototype.changeContext = function(symbol) {
     var self = this;
+
     if (self.context !== null) {
       self.usages[self.context.id] = in_IntMap.values(self.currentUsages);
     }
@@ -12047,6 +12116,7 @@
 
   Skew.UsageGraph.prototype.recordUsage = function(symbol) {
     var self = this;
+
     if (!Skew.SymbolKind.isLocal(symbol.kind)) {
       self.currentUsages[symbol.id] = symbol;
     }
@@ -12054,6 +12124,7 @@
 
   Skew.UsageGraph.prototype.visitObject = function(symbol) {
     var self = this;
+
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
       self.changeContext(object);
@@ -12095,6 +12166,7 @@
 
   Skew.UsageGraph.prototype.visitFunction = function(symbol) {
     var self = this;
+
     for (var i = 0, list = symbol.$arguments, count = list.length; i < count; ++i) {
       var argument = list[i];
       self.visitVariable(argument);
@@ -12112,6 +12184,7 @@
 
   Skew.UsageGraph.prototype.visitNode = function(node) {
     var self = this;
+
     if (node === null) {
       return;
     }
@@ -12151,6 +12224,7 @@
 
   Skew.UsageGraph.prototype.visitType = function(type) {
     var self = this;
+
     if (type.symbol !== null) {
       self.recordUsage(type.symbol);
 
@@ -12257,6 +12331,7 @@
 
   Skew.Type.prototype.toString = function() {
     var self = this;
+
     if (self.kind === Skew.TypeKind.SYMBOL) {
       if (self.isParameterized()) {
         var name = self.symbol.name + "<";
@@ -12294,6 +12369,7 @@
 
   Skew.Type.prototype.baseClass = function() {
     var self = this;
+
     if (self.isClass()) {
       var base = self.symbol.asObjectSymbol().base;
 
@@ -12382,6 +12458,7 @@
 
   Skew.TypeCache.prototype.canImplicitlyConvert = function(from, to) {
     var self = this;
+
     if (from === to) {
       return true;
     }
@@ -12411,6 +12488,7 @@
 
   Skew.TypeCache.prototype.canExplicitlyConvert = function(from, to) {
     var self = this;
+
     if (self.canImplicitlyConvert(from, to)) {
       return true;
     }
@@ -12432,6 +12510,7 @@
 
   Skew.TypeCache.prototype.commonImplicitType = function(left, right) {
     var self = this;
+
     // Short-circuit early for identical types
     if (left === right) {
       return left;
@@ -12542,6 +12621,7 @@
 
   Skew.TypeCache.prototype.mergeEnvironments = function(a, b, restrictions) {
     var self = this;
+
     if (a === null) {
       return b;
     }
@@ -12805,6 +12885,7 @@
 
   Skew.Options.Data.prototype.aliases = function(names) {
     var self = this;
+
     for (var i = 0, list = names, count = list.length; i < count; ++i) {
       var name = list[i];
       self.parser.map[name] = self;
@@ -13082,6 +13163,7 @@
 
   Unicode.StringIterator.prototype.nextCodePoint = function() {
     var self = this;
+
     if (Unicode.STRING_ENCODING === Unicode.Encoding.UTF8) {
       if (self.index >= self.stop) {
         return -1;

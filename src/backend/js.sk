@@ -465,12 +465,6 @@ namespace Skew {
         emitArgumentList(symbol.arguments)
         emit(")" + space + "{" + newline)
         increaseIndent
-
-        if symbol.self != null {
-          emit(indent + "var " + mangleName(symbol.self) + space + "=" + space + "this")
-          emitSemicolonAfterStatement
-        }
-
         enclosingFunction = symbol
         emitStatements(symbol.block.children)
         enclosingFunction = null
@@ -972,15 +966,19 @@ namespace Skew {
         # Scan over child functions
         symbol.functions.removeIf(function => {
           allocateNamingGroupIndex(function)
+          if function.self != null {
+            unionVariableWithFunction(function.self, function)
+            if function.block != null {
+              function.self.value = Node.createName("this")
+              function.block.children.prepend(Node.createVar(function.self))
+            }
+          }
           enclosingFunction = function
           patchNode(function.block)
           enclosingFunction = null
           for argument in function.arguments {
             allocateNamingGroupIndex(argument)
             unionVariableWithFunction(argument, function)
-          }
-          if function.self != null {
-            unionVariableWithFunction(function.self, function)
           }
 
           # When mangling, filter out all internal global functions and move them to the global namespace
