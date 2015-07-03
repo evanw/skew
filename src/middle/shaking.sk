@@ -1,0 +1,225 @@
+namespace Skew {
+  # Remove all code that isn't reachable from the entry point or from an
+  # imported or exported symbol. This is called tree shaking here but is also
+  # known as dead code elimination. Tree shaking is perhaps a better name
+  # because this pass doesn't remove dead code inside functions.
+  def shakingPass(global ObjectSymbol, entryPoint FunctionSymbol) {
+    var graph = UsageGraph.new(global)
+    var symbols List<Symbol> = []
+    Shaking.collectImportedOrExportedSymbols(global, symbols, entryPoint)
+    var usages = graph.usagesForSymbols(symbols)
+    if usages != null {
+      Shaking.removeUnusedSymbols(global, usages)
+    }
+  }
+
+  # This stores a mapping from every symbol to its immediate dependencies and
+  # uses that to provide a mapping from a subset of symbols to their complete
+  # dependencies. This is useful for dead code elimination.
+  class UsageGraph {
+    def new(global ObjectSymbol) {
+      visitObject(global)
+      changeContext(null)
+    }
+
+    def usagesForSymbols(symbols List<Symbol>) IntMap<Symbol> {
+      var combinedUsages IntMap<Symbol> = {}
+      var stack List<Symbol> = []
+      stack.append(symbols)
+
+      # Iterate until a fixed point is reached
+      while !stack.isEmpty {
+        var overridesToCheck List<Symbol> = []
+
+        # Follow immediate dependency links
+        while !stack.isEmpty {
+          var symbol = stack.takeLast
+
+          if !(symbol.id in combinedUsages) {
+            combinedUsages[symbol.id] = symbol
+            var symbolUsages = usages.get(symbol.id, null)
+
+            if symbolUsages != null {
+              stack.append(symbolUsages)
+            }
+
+            if symbol.kind.isFunction {
+              var overridden = symbol.asFunctionSymbol.overridden
+              var overrides = overridesForSymbol.get(symbol.id, null)
+
+              # Automatically include all overridden functions in case the use
+              # of this type is polymorphic, which is a conservative estimate
+              if overridden != null {
+                stack.append(overridden)
+              }
+
+              # Check function overrides after everything settles
+              if overrides != null {
+                overridesToCheck.append(overrides)
+              }
+            }
+          }
+        }
+
+        # Add overrides for all types that are currently included. Types that
+        # aren't included shouldn't ever be constructed and so encountering one
+        # should be impossible.
+        for override in overridesToCheck {
+          if override.parent.id in combinedUsages {
+            stack.append(override)
+          }
+        }
+      }
+
+      return combinedUsages
+    }
+
+    @private {
+      var context Symbol = null
+      var currentUsages IntMap<Symbol> = null
+      var overridesForSymbol IntMap<List<Symbol>> = {}
+      var usages IntMap<List<Symbol>> = {}
+
+      def changeContext(symbol Symbol) {
+        if context != null {
+          usages[context.id] = currentUsages.values
+        }
+        currentUsages = {}
+        if symbol != null {
+          currentUsages[symbol.id] = symbol
+        }
+        context = symbol
+      }
+
+      def recordUsage(symbol Symbol) {
+        if !symbol.kind.isLocal {
+          currentUsages[symbol.id] = symbol
+        }
+      }
+
+      def visitObject(symbol ObjectSymbol) {
+        for object in symbol.objects {
+          changeContext(object)
+          recordUsage(symbol)
+          if object.baseClass != null {
+            recordUsage(object.baseClass)
+          }
+          visitObject(object)
+        }
+
+        for function in symbol.functions {
+          changeContext(function)
+          recordUsage(symbol)
+          visitFunction(function)
+
+          # Remember which functions are overridden for later
+          if function.overridden != null {
+            var overrides = overridesForSymbol.get(function.overridden.id, null)
+            if overrides == null {
+              overrides = []
+              overridesForSymbol[function.overridden.id] = overrides
+            }
+            overrides.append(function)
+          }
+        }
+
+        for variable in symbol.variables {
+          changeContext(variable)
+          recordUsage(symbol)
+          visitVariable(variable)
+        }
+      }
+
+      def visitFunction(symbol FunctionSymbol) {
+        for argument in symbol.arguments {
+          visitVariable(argument)
+        }
+
+        visitNode(symbol.returnType)
+        visitNode(symbol.block)
+      }
+
+      def visitVariable(symbol VariableSymbol) {
+        visitType(symbol.resolvedType)
+        visitNode(symbol.value)
+      }
+
+      def visitNode(node Node) {
+        if node == null {
+          return
+        }
+
+        var children = node.children
+
+        if children != null {
+          for child in children {
+            visitNode(child)
+          }
+        }
+
+        if node.symbol != null {
+          recordUsage(node.symbol)
+        }
+
+        switch node.kind {
+          # The function block is a child node and has already been visited
+          case .LAMBDA {
+            var function = node.symbol.asFunctionSymbol
+            for argument in function.arguments {
+              visitVariable(argument)
+            }
+            visitNode(function.returnType)
+          }
+
+          # The variable value is a child node and has already been visited
+          case .VAR {
+            visitType(node.symbol.asVariableSymbol.resolvedType)
+          }
+        }
+      }
+
+      def visitType(type Type) {
+        if type.symbol != null {
+          recordUsage(type.symbol)
+
+          # This should be a tree too, so infinite loops should not happen
+          if type.isParameterized {
+            for substitution in type.substitutions {
+              visitType(substitution)
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+namespace Skew.Shaking {
+  def collectImportedOrExportedSymbols(symbol ObjectSymbol, symbols List<Symbol>, entryPoint FunctionSymbol) {
+    for object in symbol.objects {
+      collectImportedOrExportedSymbols(object, symbols, entryPoint)
+      if object.isImportedOrExported {
+        symbols.append(object)
+      }
+    }
+
+    for function in symbol.functions {
+      if function.isImportedOrExported || function == entryPoint {
+        symbols.append(function)
+      }
+    }
+
+    for variable in symbol.variables {
+      if variable.isImportedOrExported {
+        symbols.append(variable)
+      }
+    }
+  }
+
+  def removeUnusedSymbols(symbol ObjectSymbol, usages IntMap<Symbol>) {
+    symbol.objects.removeIf(object => !(object.id in usages))
+    symbol.functions.removeIf(function => !(function.id in usages))
+    symbol.variables.removeIf(variable => !(variable.id in usages))
+    for object in symbol.objects { removeUnusedSymbols(object, usages) }
+  }
+}

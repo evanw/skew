@@ -24,6 +24,11 @@ namespace Skew {
     var outputDirectory = ""
     var outputFile = ""
     var target CompilerTarget = .NONE
+
+    def define(name string, value string) {
+      var range = Source.new("<internal>", "--define:" + name + "=" + value).entireRange
+      defines[name] = Define.new(range.slice(9, 9 + name.count), range.fromEnd(value.count))
+    }
   }
 
   class CompilerResult {
@@ -37,6 +42,14 @@ namespace Skew {
     var start = Timestamp.seconds
     var debug = !RELEASE
     var result = CompilerResult.new
+
+    switch options.target {
+      case .JAVASCRIPT {
+        sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS))
+        options.define("TARGET", "JAVASCRIPT")
+      }
+    }
+
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
 
     for source in sources {

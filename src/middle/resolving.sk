@@ -4,6 +4,7 @@ namespace Skew {
     if !log.hasErrors {
       var resolver = Resolving.Resolver.new(global, options, options.defines.clone, cache, log)
       resolver.constantFolder = Folding.ConstantFolder.new(cache, Resolving.ConstantResolver.new(resolver))
+      resolver.initializeGlobals
       resolver.iterativelyMergeGuards
       resolver.resolveGlobal
     }
@@ -224,6 +225,7 @@ namespace Skew.Resolving {
         symbol.resolvedType = Type.new(.SYMBOL, symbol)
       }
 
+      resolveParameters(symbol.parameters)
       forbidOverriddenSymbol(symbol)
 
       # Resolve the base type (only for classes)
@@ -293,6 +295,16 @@ namespace Skew.Resolving {
         symbol.functions.append(generated)
         symbol.members[generated.name] = generated
       }
+    }
+
+    def initializeGlobals {
+      initializeSymbol(cache.boolType.symbol)
+      initializeSymbol(cache.doubleType.symbol)
+      initializeSymbol(cache.intMapType.symbol)
+      initializeSymbol(cache.intType.symbol)
+      initializeSymbol(cache.listType.symbol)
+      initializeSymbol(cache.stringMapType.symbol)
+      initializeSymbol(cache.stringType.symbol)
     }
 
     def resolveGlobal {
@@ -503,7 +515,6 @@ namespace Skew.Resolving {
 
     def resolveObject(symbol ObjectSymbol) {
       initializeSymbol(symbol)
-      resolveParameters(symbol.parameters)
 
       for object in symbol.objects {
         resolveObject(object)

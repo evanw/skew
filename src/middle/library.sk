@@ -2,6 +2,13 @@ namespace Skew {
   const NATIVE_LIBRARY = "
 const RELEASE = false
 
+enum Target {
+  NONE
+  JAVASCRIPT
+}
+
+const TARGET Target = .NONE
+
 def @deprecated
 def @deprecated(message string)
 def @entry
@@ -12,6 +19,9 @@ def @private
 def @protected
 def @rename(name string)
 def @skip
+
+@skip if RELEASE
+def assert(truth bool)
 
 @import
 namespace Math {
@@ -143,7 +153,7 @@ namespace string {
   def fromCodeUnits(x List<int>) string
 }
 
-@import
+@import if TARGET != .JAVASCRIPT
 class StringBuilder {
   def append(x string)
   def new

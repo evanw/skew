@@ -178,7 +178,7 @@ namespace Skew {
 
     # Prepare the defines
     if releaseFlag {
-      createInternalDefine(options, "RELEASE", "true")
+      options.define("RELEASE", "true")
     }
     for range in parser.rangeListForOption(.DEFINE) {
       var name = range.toString
@@ -211,11 +211,6 @@ namespace Skew {
     }
 
     return options
-  }
-
-  def createInternalDefine(options CompilerOptions, name string, value string) {
-    var range = Source.new("<internal>", "--define:" + name + "=" + value).entireRange
-    options.defines[name] = Define.new(range.slice(9, 9 + name.count), range.fromEnd(value.count))
   }
 
   class Log {
