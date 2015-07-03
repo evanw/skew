@@ -89,6 +89,14 @@ class StringBuilder {
 }
 
 class List {
+  def all(callback fn(T) bool) bool {
+    return (self as dynamic).every(callback)
+  }
+
+  def any(callback fn(T) bool) bool {
+    return (self as dynamic).some(callback)
+  }
+
   def isEqualTo(other List<T>) bool {
     if count != other.count {
       return false

@@ -1035,7 +1035,12 @@ namespace Skew.Parsing {
     if token.kind == .LEFT_BRACE || token.kind == .LEFT_BRACKET {
       var checkForColon = kind != .INITIALIZER_LIST
       var end TokenKind = checkForColon ? .RIGHT_BRACE : .RIGHT_BRACKET
-      while !context.peek(end) {
+      while true {
+        context.eat(.NEWLINE)
+        var comments = parseLeadingComments(context)
+        if context.peek(end) {
+          break
+        }
         var first = pratt.parse(context, .LOWEST)
         if first == null {
           return null
@@ -1052,14 +1057,17 @@ namespace Skew.Parsing {
           if second == null {
             return null
           }
-          values.append(Node.createPair(first, second).withRange(Range.span(first.range, second.range)).withInternalRange(colon.range))
+          first = Node.createPair(first, second).withRange(Range.span(first.range, second.range)).withInternalRange(colon.range)
+          values.append(first)
           kind = .INITIALIZER_MAP
         }
+        first.comments = comments
         if !context.eat(.COMMA) {
           break
         }
       }
-      context.eat(.NEWLINE)
+      while context.eat(.COMMENT) || context.eat(.NEWLINE) {
+      }
       if !context.expect(end) {
         return null
       }

@@ -3428,5 +3428,41 @@ class Foo {
 ", "
 ")
 
+test("
+var a = [
+  # comment
+]
+var b = [
+  100
+  # comment
+]
+var c = [
+  # comment
+  100
+]
+var d = [
+  100,
+  # comment
+]
+var e = [
+  # comment
+  100,
+]
+var f = [
+  # comment
+  100,
+  # comment
+]
+var g = [
+  100,
+  # comment
+  100,
+]
+", "
+<stdin>:1:9: error: Cannot infer a type for this literal
+var a = [
+        ^
+")
+
   }
 }

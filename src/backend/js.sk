@@ -836,16 +836,31 @@ namespace Skew {
           }
 
           case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
-            var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && node.children.isEmpty
-            emit(useBraces ? "{" : "[")
+            var children = node.children
+            var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && children.isEmpty
+            var isIndented = !minify && children.any(child => child.comments != null)
 
-            for i in 0..node.children.count {
-              if i != 0 {
-                emit("," + space)
-              }
-              emitExpression(node.children[i], .COMMA)
+            emit(useBraces ? "{" : "[")
+            if isIndented {
+              increaseIndent
             }
 
+            for child in children {
+              if child != children.first {
+                emit("," + (isIndented ? "" : space))
+              }
+              if isIndented {
+                emit("\n")
+                emitComments(child.comments)
+                emit(indent)
+              }
+              emitExpression(child, .COMMA)
+            }
+
+            if isIndented {
+              decreaseIndent
+              emit("\n" + indent)
+            }
             emit(useBraces ? "}" : "]")
           }
 

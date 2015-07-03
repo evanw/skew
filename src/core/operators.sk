@@ -24,6 +24,7 @@ namespace Skew {
   }
 
   var operatorInfo IntMap<OperatorInfo> = {
+    # Unary operators
     NodeKind.COMPLEMENT:            OperatorInfo.new("~", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
     NodeKind.DECREMENT:             OperatorInfo.new("--", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
     NodeKind.INCREMENT:             OperatorInfo.new("++", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
@@ -31,6 +32,7 @@ namespace Skew {
     NodeKind.NOT:                   OperatorInfo.new("!", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO),
     NodeKind.POSITIVE:              OperatorInfo.new("+", .UNARY_PREFIX, .NONE, .OVERRIDABLE, .ZERO_OR_ONE),
 
+    # Binary operators
     NodeKind.ADD:                   OperatorInfo.new("+", .ADD, .LEFT, .OVERRIDABLE, .ZERO_OR_ONE),
     NodeKind.BITWISE_AND:           OperatorInfo.new("&", .BITWISE_AND, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.BITWISE_OR:            OperatorInfo.new("|", .BITWISE_OR, .LEFT, .OVERRIDABLE, .ONE),
@@ -54,6 +56,7 @@ namespace Skew {
     NodeKind.SHIFT_RIGHT:           OperatorInfo.new(">>", .SHIFT, .LEFT, .OVERRIDABLE, .ONE),
     NodeKind.SUBTRACT:              OperatorInfo.new("-", .ADD, .LEFT, .OVERRIDABLE, .ZERO_OR_ONE),
 
+    # Binary assignment operators
     NodeKind.ASSIGN:                OperatorInfo.new("=", .ASSIGN, .RIGHT, .FIXED, .ONE),
     NodeKind.ASSIGN_ADD:            OperatorInfo.new("+=", .ASSIGN, .RIGHT, .OVERRIDABLE, .ONE),
     NodeKind.ASSIGN_BITWISE_AND:    OperatorInfo.new("&=", .ASSIGN, .RIGHT, .OVERRIDABLE, .ONE),
@@ -67,6 +70,7 @@ namespace Skew {
     NodeKind.ASSIGN_SHIFT_RIGHT:    OperatorInfo.new(">>=", .ASSIGN, .RIGHT, .OVERRIDABLE, .ONE),
     NodeKind.ASSIGN_SUBTRACT:       OperatorInfo.new("-=", .ASSIGN, .RIGHT, .OVERRIDABLE, .ONE),
 
+    # Index operators
     NodeKind.ASSIGN_INDEX:          OperatorInfo.new("[]=", .MEMBER, .NONE, .OVERRIDABLE, .TWO_OR_MORE),
     NodeKind.INDEX:                 OperatorInfo.new("[]", .MEMBER, .NONE, .OVERRIDABLE, .ONE_OR_MORE),
   }
