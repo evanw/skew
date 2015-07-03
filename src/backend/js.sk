@@ -28,6 +28,7 @@ namespace Skew {
       # Preprocess the code
       prepareGlobal(global)
       shakingPass(global, cache.entryPointSymbol, .IGNORE_TYPES)
+      convertLambdasToFunctions(global)
       var objects = sortedObjects(global)
 
       # The entire body of code is wrapped in a closure for safety
@@ -35,7 +36,7 @@ namespace Skew {
       increaseIndent
 
       # Emit special-cased variables that must come first
-      if needsExtends(objects) { emitVariable(extends) }
+      if needsExtends(objects) { emitFunction(convertLambdaToFunction(extends)) }
       if needsMultiply { emitVariable(multiply) }
 
       # Emit objects and functions
@@ -149,6 +150,28 @@ namespace Skew {
 
         # Rename symbols based on frequency for better compression
         renameSymbols
+      }
+
+      def convertLambdaToFunction(variable VariableSymbol) FunctionSymbol {
+        var function = variable.value.symbol.asFunctionSymbol
+        function.kind = .FUNCTION_GLOBAL
+        function.parent = variable.parent
+        function.name = variable.name
+        return function
+      }
+
+      def convertLambdasToFunctions(symbol ObjectSymbol) {
+        for object in symbol.objects {
+          convertLambdasToFunctions(object)
+        }
+
+        symbol.variables.removeIf(variable => {
+          if variable.kind == .VARIABLE_GLOBAL && variable.isConst && !variable.isExported && variable.value != null && variable.value.kind == .LAMBDA {
+            symbol.functions.append(convertLambdaToFunction(variable))
+            return true
+          }
+          return false
+        })
       }
 
       def allocateNamingGroupIndex(symbol Symbol) {

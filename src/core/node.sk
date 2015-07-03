@@ -256,12 +256,18 @@ namespace Skew {
     }
 
     def insertChild(index int, node Node) {
+      if children == null {
+        children = []
+      }
       assert(index >= 0 && index <= children.count)
       updateParent(node, self)
       children.insert(index, node)
     }
 
     def insertChildren(index int, nodes List<Node>) {
+      if children == null {
+        children = []
+      }
       assert(index >= 0 && index <= children.count)
       for node in nodes {
         updateParent(node, self)
@@ -271,7 +277,7 @@ namespace Skew {
     }
 
     def appendChild(node Node) {
-      insertChild(children.count, node)
+      insertChild(children == null ? 0 : children.count, node)
     }
 
     def appendChildren(nodes List<Node>) {

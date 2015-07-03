@@ -1,15 +1,15 @@
 namespace Skew {
   const NATIVE_LIBRARY_JS = "
-var __extends = (derived dynamic, base dynamic) => {
+const __extends = (derived dynamic, base dynamic) => {
   derived.prototype = dynamic.Object.create(base.prototype)
   derived.prototype.constructor = derived
 }
 
-var __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {
-  var ah dynamic = (a >> 16) & 65535
-  var bh dynamic = (b >> 16) & 65535
-  var al dynamic = a & 65535
-  var bl dynamic = b & 65535
+const __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {
+  const ah dynamic = (a >> 16) & 65535
+  const bh dynamic = (b >> 16) & 65535
+  const al dynamic = a & 65535
+  const bl dynamic = b & 65535
   return al * bl + ((ah * bl + al * bh) << 16) | 0
 }
 

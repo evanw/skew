@@ -989,10 +989,16 @@ namespace Skew.Parsing {
     return builder.toString
   }
 
-  var boolLiteral = (value bool) => (context ParserContext, token Token) => Node.createBool(value).withRange(token.range)
-  var intLiteral = (context ParserContext, token Token) Node => Node.createInt(parseIntLiteral(token.range.toString).value).withRange(token.range)
-  var stringLiteral = (context ParserContext, token Token) Node => Node.createString(parseStringLiteral(context.log, token.range)).withRange(token.range)
-  var tokenLiteral = (kind NodeKind) => (context ParserContext, token Token) => Node.new(kind).withRange(token.range)
+  const intLiteral = (context ParserContext, token Token) Node => Node.createInt(parseIntLiteral(token.range.toString).value).withRange(token.range)
+  const stringLiteral = (context ParserContext, token Token) Node => Node.createString(parseStringLiteral(context.log, token.range)).withRange(token.range)
+
+  def boolLiteral(value bool) fn(ParserContext, Token) Node {
+    return (context, token) => Node.createBool(value).withRange(token.range)
+  }
+
+  def tokenLiteral(kind NodeKind) fn(ParserContext, Token) Node {
+    return (context, token) => Node.new(kind).withRange(token.range)
+  }
 
   def unaryPrefix(kind NodeKind) fn(ParserContext, Token, Node) Node {
     return (context, token, value) => Node.createUnary(kind, value).withRange(Range.span(token.range, value.range)).withInternalRange(token.range)
