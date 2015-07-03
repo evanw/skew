@@ -430,7 +430,7 @@ namespace Skew {
 
           case .OBJECT_CLASS {
             for function in symbol.functions {
-              if function.kind == .FUNCTION_CONSTRUCTOR {
+              if function.isPrimaryConstructor {
                 if function.comments == null && symbol.comments != null {
                   function.comments = symbol.comments
                 }
@@ -453,7 +453,7 @@ namespace Skew {
         }
 
         for function in symbol.functions {
-          if function.kind != .FUNCTION_CONSTRUCTOR {
+          if !function.isPrimaryConstructor {
             emitFunction(function)
           }
         }
@@ -477,7 +477,7 @@ namespace Skew {
         emitComments(symbol.comments)
 
         var isExpression = prefix != "" || symbol.isExported
-        var name = mangleName(symbol.kind == .FUNCTION_CONSTRUCTOR ? symbol.parent : symbol)
+        var name = mangleName(symbol.isPrimaryConstructor ? symbol.parent : symbol)
 
         if isExpression {
           emit(indent + prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + space + "=" + space + "function(")
@@ -500,6 +500,12 @@ namespace Skew {
           emit(newline)
         }
         emitNewlineAfterSymbol(symbol)
+
+        if symbol.kind == .FUNCTION_CONSTRUCTOR && !symbol.isPrimaryConstructor {
+          emitSemicolonIfNeeded
+          emit(newline + indent + fullName(symbol) + ".prototype" + space + "=" + space + fullName(symbol.parent) + ".prototype")
+          emitSemicolonAfterStatement
+        }
       }
 
       def emitVariable(symbol VariableSymbol) {
@@ -987,6 +993,7 @@ namespace Skew {
         })
 
         # Scan over child functions
+        var isPrimaryConstructor = true
         symbol.functions.removeIf(function => {
           allocateNamingGroupIndex(function)
           if function.self != null {
@@ -1008,6 +1015,14 @@ namespace Skew {
           if shouldLiftGlobals && function.kind == .FUNCTION_GLOBAL && !function.isImportedOrExported {
             globalFunctions.append(function)
             return true
+          }
+
+          # Rename extra constructors overloads so they don't conflict
+          if function.kind == .FUNCTION_CONSTRUCTOR {
+            if isPrimaryConstructor {
+              function.flags |= Symbol.IS_PRIMARY_CONSTRUCTOR
+              isPrimaryConstructor = false
+            }
           }
 
           return false
@@ -1518,7 +1533,7 @@ namespace Skew {
         var parent = symbol.parent
         if parent != null && parent.kind != .OBJECT_GLOBAL {
           var enclosingName = fullName(parent)
-          if symbol.kind == .FUNCTION_CONSTRUCTOR {
+          if symbol.isPrimaryConstructor {
             return enclosingName
           }
           if symbol.kind == .FUNCTION_INSTANCE {
@@ -1530,7 +1545,7 @@ namespace Skew {
       }
 
       def mangleName(symbol Symbol) string {
-        if symbol.kind == .FUNCTION_CONSTRUCTOR {
+        if symbol.isPrimaryConstructor {
           symbol = symbol.parent
         }
         if !symbol.isImportedOrExported && (symbol.name in isKeyword ||

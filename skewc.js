@@ -575,6 +575,7 @@
       resolver.initializeGlobals();
       resolver.iterativelyMergeGuards();
       resolver.resolveGlobal();
+      resolver.removeObsoleteFunctions(global);
     }
   };
 
@@ -1504,7 +1505,7 @@
         for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
           var $function = list1[i1];
 
-          if ($function.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+          if ($function.isPrimaryConstructor()) {
             if ($function.comments === null && symbol.comments !== null) {
               $function.comments = symbol.comments;
             }
@@ -1533,7 +1534,7 @@
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
       var function1 = list2[i2];
 
-      if (function1.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+      if (!function1.isPrimaryConstructor()) {
         self.emitFunction(function1);
       }
     }
@@ -1561,7 +1562,7 @@
     self.emitNewlineBeforeSymbol(symbol);
     self.emitComments(symbol.comments);
     var isExpression = self.prefix !== "" || symbol.isExported();
-    var name = Skew.JsEmitter.mangleName(symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR ? symbol.parent : symbol);
+    var name = Skew.JsEmitter.mangleName(symbol.isPrimaryConstructor() ? symbol.parent : symbol);
 
     if (isExpression) {
       self.emit(self.indent + self.prefix + (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE ? "prototype." : "") + name + self.space + "=" + self.space + "function(");
@@ -1590,6 +1591,12 @@
     }
 
     self.emitNewlineAfterSymbol(symbol);
+
+    if (symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR && !symbol.isPrimaryConstructor()) {
+      self.emitSemicolonIfNeeded();
+      self.emit(self.newline + self.indent + Skew.JsEmitter.fullName(symbol) + ".prototype" + self.space + "=" + self.space + Skew.JsEmitter.fullName(symbol.parent) + ".prototype");
+      self.emitSemicolonAfterStatement();
+    }
   };
 
   Skew.JsEmitter.prototype.emitVariable = function(symbol) {
@@ -2187,6 +2194,7 @@
     });
 
     // Scan over child functions
+    var isPrimaryConstructor = true;
     in_List.removeIf(symbol.functions, function($function) {
       self.allocateNamingGroupIndex($function);
 
@@ -2213,6 +2221,14 @@
       if (shouldLiftGlobals && $function.kind === Skew.SymbolKind.FUNCTION_GLOBAL && !$function.isImportedOrExported()) {
         globalFunctions.push($function);
         return true;
+      }
+
+      // Rename extra constructors overloads so they don't conflict
+      if ($function.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+        if (isPrimaryConstructor) {
+          $function.flags |= Skew.Symbol.IS_PRIMARY_CONSTRUCTOR;
+          isPrimaryConstructor = false;
+        }
       }
 
       return false;
@@ -2809,7 +2825,7 @@
     if (parent !== null && parent.kind !== Skew.SymbolKind.OBJECT_GLOBAL) {
       var enclosingName = Skew.JsEmitter.fullName(parent);
 
-      if (symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+      if (symbol.isPrimaryConstructor()) {
         return enclosingName;
       }
 
@@ -2824,7 +2840,7 @@
   };
 
   Skew.JsEmitter.mangleName = function(symbol) {
-    if (symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+    if (symbol.isPrimaryConstructor()) {
       symbol = symbol.parent;
     }
 
@@ -4462,6 +4478,22 @@
   Skew.Symbol.prototype.isSkipped = function() {
     var self = this;
     return (self.flags & Skew.Symbol.IS_SKIPPED) !== 0;
+  };
+
+  // Pass-specific flags
+  Skew.Symbol.prototype.isMerged = function() {
+    var self = this;
+    return (self.flags & Skew.Symbol.IS_MERGED) !== 0;
+  };
+
+  Skew.Symbol.prototype.isObsolete = function() {
+    var self = this;
+    return (self.flags & Skew.Symbol.IS_OBSOLETE) !== 0;
+  };
+
+  Skew.Symbol.prototype.isPrimaryConstructor = function() {
+    var self = this;
+    return (self.flags & Skew.Symbol.IS_PRIMARY_CONSTRUCTOR) !== 0;
   };
 
   // Combinations
@@ -9271,6 +9303,19 @@
     self.discardUnusedDefines();
   };
 
+  Skew.Resolving.Resolver.prototype.removeObsoleteFunctions = function(symbol) {
+    var self = this;
+
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      self.removeObsoleteFunctions(object);
+    }
+
+    in_List.removeIf(symbol.functions, function($function) {
+      return $function.isObsolete();
+    });
+  };
+
   Skew.Resolving.Resolver.prototype.reportGuardMergingFailure = function(node) {
     var self = this;
 
@@ -9969,20 +10014,24 @@
         var other = symbols[index];
 
         // Allow duplicate function declarations with the same type to merge
-        // as long as there is one declaration that provides an implementation
-        if ($function.block !== null === (other.block !== null) || $function.resolvedType.returnType !== other.resolvedType.returnType) {
+        // as long as there is one declaration that provides an implementation.
+        // Mark the obsolete function as obsolete instead of removing it so it
+        // doesn't potentially mess up iteration in a parent call stack.
+        if ($function.isMerged() || other.isMerged() || $function.block !== null === (other.block !== null) || $function.resolvedType.returnType !== other.resolvedType.returnType) {
           self.log.semanticErrorDuplicateOverload($function.range, symbol.name, other.range);
         }
 
         else if ($function.block !== null) {
-          $function.flags |= other.flags & ~Skew.Symbol.IS_IMPORTED;
+          $function.flags |= other.flags & ~Skew.Symbol.IS_IMPORTED | Skew.Symbol.IS_MERGED;
           $function.mergeAnnotationsAndCommentsFrom(other);
+          other.flags |= Skew.Symbol.IS_OBSOLETE;
           symbols[index] = $function;
         }
 
         else {
-          other.flags |= $function.flags & ~Skew.Symbol.IS_IMPORTED;
+          other.flags |= $function.flags & ~Skew.Symbol.IS_IMPORTED | Skew.Symbol.IS_MERGED;
           other.mergeAnnotationsAndCommentsFrom($function);
+          $function.flags |= Skew.Symbol.IS_OBSOLETE;
         }
 
         // Remove the symbol after the merge so "types" still matches "symbols"
@@ -13697,6 +13746,11 @@
   Skew.Symbol.IS_PROTECTED = 1 << 14;
   Skew.Symbol.IS_RENAMED = 1 << 15;
   Skew.Symbol.IS_SKIPPED = 1 << 16;
+
+  // Pass-specific flags
+  Skew.Symbol.IS_MERGED = 1 << 17;
+  Skew.Symbol.IS_OBSOLETE = 1 << 18;
+  Skew.Symbol.IS_PRIMARY_CONSTRUCTOR = 1 << 19;
   Skew.Symbol.nextID = 0;
   Skew.TokenKind.strings = ["ANNOTATION", "ARROW", "AS", "ASSIGN", "ASSIGN_BITWISE_AND", "ASSIGN_BITWISE_OR", "ASSIGN_BITWISE_XOR", "ASSIGN_DIVIDE", "ASSIGN_INDEX", "ASSIGN_MINUS", "ASSIGN_MULTIPLY", "ASSIGN_PLUS", "ASSIGN_POWER", "ASSIGN_REMAINDER", "ASSIGN_SHIFT_LEFT", "ASSIGN_SHIFT_RIGHT", "BITWISE_AND", "BITWISE_OR", "BITWISE_XOR", "BREAK", "CASE", "CATCH", "CHARACTER", "CLASS", "COLON", "COMMA", "COMMENT", "COMPARE", "CONST", "CONTINUE", "DECREMENT", "DEF", "DEFAULT", "DIVIDE", "DOT", "DOT_DOT", "DOUBLE", "DYNAMIC", "ELSE", "END_OF_FILE", "ENUM", "EQUAL", "ERROR", "FALSE", "FINALLY", "FOR", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "IDENTIFIER", "IF", "IN", "INCREMENT", "INDEX", "INT", "INTERFACE", "INT_BINARY", "INT_HEX", "INT_OCTAL", "IS", "LEFT_BRACE", "LEFT_BRACKET", "LEFT_PARENTHESIS", "LESS_THAN", "LESS_THAN_OR_EQUAL", "LIST", "LIST_NEW", "LOGICAL_AND", "LOGICAL_OR", "MINUS", "MULTIPLY", "NAMESPACE", "NEWLINE", "NOT", "NOT_EQUAL", "NULL", "OVER", "PLUS", "POWER", "QUESTION_MARK", "REMAINDER", "RETURN", "RIGHT_BRACE", "RIGHT_BRACKET", "RIGHT_PARENTHESIS", "SET", "SET_NEW", "SHIFT_LEFT", "SHIFT_RIGHT", "STRING", "SUPER", "SWITCH", "THROW", "TILDE", "TRUE", "TRY", "VAR", "WHILE", "WHITESPACE", "YY_INVALID_ACTION", "START_PARAMETER_LIST", "END_PARAMETER_LIST"];
   Skew.Parsing.operatorOverloadTokenKinds = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_INDEX, 0), Skew.TokenKind.ASSIGN_MINUS, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_POWER, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.COMPARE, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.IN, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INDEX, 0), Skew.TokenKind.LIST, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.POWER, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SET, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.TILDE, 0);

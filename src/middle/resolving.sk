@@ -7,6 +7,7 @@ namespace Skew {
       resolver.initializeGlobals
       resolver.iterativelyMergeGuards
       resolver.resolveGlobal
+      resolver.removeObsoleteFunctions(global)
     }
   }
 }
@@ -312,6 +313,13 @@ namespace Skew.Resolving {
       convertForeachLoops
       scanLocalVariables
       discardUnusedDefines
+    }
+
+    def removeObsoleteFunctions(symbol ObjectSymbol) {
+      for object in symbol.objects {
+        removeObsoleteFunctions(object)
+      }
+      symbol.functions.removeIf(function => function.isObsolete)
     }
 
     def reportGuardMergingFailure(node Node) {
@@ -915,16 +923,20 @@ namespace Skew.Resolving {
           var other = symbols[index]
 
           # Allow duplicate function declarations with the same type to merge
-          # as long as there is one declaration that provides an implementation
-          if (function.block != null) == (other.block != null) || function.resolvedType.returnType != other.resolvedType.returnType {
+          # as long as there is one declaration that provides an implementation.
+          # Mark the obsolete function as obsolete instead of removing it so it
+          # doesn't potentially mess up iteration in a parent call stack.
+          if function.isMerged || other.isMerged || (function.block != null) == (other.block != null) || function.resolvedType.returnType != other.resolvedType.returnType {
             log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
           } else if function.block != null {
-            function.flags |= other.flags & ~Symbol.IS_IMPORTED
+            function.flags |= other.flags & ~Symbol.IS_IMPORTED | Symbol.IS_MERGED
             function.mergeAnnotationsAndCommentsFrom(other)
+            other.flags |= Symbol.IS_OBSOLETE
             symbols[index] = function
           } else {
-            other.flags |= function.flags & ~Symbol.IS_IMPORTED
+            other.flags |= function.flags & ~Symbol.IS_IMPORTED | Symbol.IS_MERGED
             other.mergeAnnotationsAndCommentsFrom(function)
+            function.flags |= Symbol.IS_OBSOLETE
           }
 
           # Remove the symbol after the merge so "types" still matches "symbols"

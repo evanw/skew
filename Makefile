@@ -22,10 +22,12 @@ SOURCES_TEST += tests/simple.sk
 
 FLAGS += --inline-functions
 
-default: compile
+default: compile-node compile-browser
 
-compile: | build
+compile-node: | build
 	node skewc.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node.js
+
+compile-browser: | build
 	node skewc.js $(SOURCES_BROWSER) $(FLAGS) --output-file=build/browser.js
 
 replace: | build
@@ -37,7 +39,7 @@ replace: | build
 	rm build/node2.js
 
 watch:
-	node_modules/.bin/watch src 'clear && make compile'
+	node_modules/.bin/watch src 'clear && make compile-browser'
 
 build:
 	mkdir -p build

@@ -100,6 +100,11 @@ namespace Skew {
     const IS_PROTECTED = 1 << 14
     const IS_RENAMED = 1 << 15
     const IS_SKIPPED = 1 << 16
+
+    # Pass-specific flags
+    const IS_MERGED = 1 << 17
+    const IS_OBSOLETE = 1 << 18
+    const IS_PRIMARY_CONSTRUCTOR = 1 << 19
   }
 
   class Symbol {
@@ -135,6 +140,11 @@ namespace Skew {
     def isProtected bool  { return (flags & IS_PROTECTED) != 0 }
     def isRenamed bool    { return (flags & IS_RENAMED) != 0 }
     def isSkipped bool    { return (flags & IS_SKIPPED) != 0 }
+
+    # Pass-specific flags
+    def isMerged bool             { return (flags & IS_MERGED) != 0 }
+    def isObsolete bool           { return (flags & IS_OBSOLETE) != 0 }
+    def isPrimaryConstructor bool { return (flags & IS_PRIMARY_CONSTRUCTOR) != 0 }
 
     # Combinations
     def isPrivateOrProtected bool { return (flags & (IS_PRIVATE | IS_PROTECTED)) != 0 }

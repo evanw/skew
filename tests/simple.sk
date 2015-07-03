@@ -2619,6 +2619,39 @@ def foo {}
 ")
 
 test("
+def foo
+def foo {}
+def foo
+", "
+<stdin>:3:5: error: Duplicate overloaded function \"foo\"
+def foo
+    ~~~
+<stdin>:2:5: note: The previous declaration is here
+def foo {}
+    ~~~
+")
+
+test("
+def foo {}
+def foo
+def foo {}
+def foo
+", "
+<stdin>:3:5: error: Duplicate overloaded function \"foo\"
+def foo {}
+    ~~~
+<stdin>:1:5: note: The previous declaration is here
+def foo {}
+    ~~~
+<stdin>:4:5: error: Duplicate overloaded function \"foo\"
+def foo
+    ~~~
+<stdin>:1:5: note: The previous declaration is here
+def foo {}
+    ~~~
+")
+
+test("
 def foo {}
 def foo {}
 ", "
