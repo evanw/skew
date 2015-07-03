@@ -330,7 +330,7 @@ namespace Skew.Folding {
 
       # Only replace this with a constant if the target has no side effects.
       # This catches constants declared on imported types.
-      if symbol != null && symbol.isConst && node.dotTarget.hasNoSideEffects {
+      if symbol != null && symbol.isConst && (node.dotTarget == null || node.dotTarget.hasNoSideEffects) {
         var content = constantLookup.constantForSymbol(symbol.asVariableSymbol)
         if content != null {
           flatten(node, content)

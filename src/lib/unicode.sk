@@ -5,7 +5,9 @@ namespace Unicode {
     UTF32
   }
 
-  const STRING_ENCODING = Encoding.UTF16
+  const STRING_ENCODING =
+    TARGET == .JAVASCRIPT ? Encoding.UTF16 :
+    Encoding.UTF32
 
   class StringIterator {
     var value = ""
@@ -27,8 +29,8 @@ namespace Unicode {
       return count
     }
 
-    def nextCodePoint int {
-      if STRING_ENCODING == .UTF8 {
+    if STRING_ENCODING == .UTF8 {
+      def nextCodePoint int {
         if index >= stop { return -1 }
         var a = value[index]
         index++
@@ -46,8 +48,10 @@ namespace Unicode {
         index++
         return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)
       }
+    }
 
-      else if STRING_ENCODING == .UTF16 {
+    if STRING_ENCODING == .UTF16 {
+      def nextCodePoint int {
         if index >= stop { return -1 }
         var a = value[index]
         index++
@@ -57,8 +61,10 @@ namespace Unicode {
         index++
         return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)
       }
+    }
 
-      else {
+    if STRING_ENCODING == .UTF32 {
+      def nextCodePoint int {
         if index >= stop { return -1 }
         var c = value[index]
         index++
@@ -73,12 +79,14 @@ namespace Unicode {
 }
 
 class string {
-  def codePoints List<int> {
-    if Unicode.STRING_ENCODING == .UTF32 {
+  if Unicode.STRING_ENCODING == .UTF32 {
+    def codePoints List<int> {
       return codeUnits
     }
+  }
 
-    else {
+  if Unicode.STRING_ENCODING != .UTF32 {
+    def codePoints List<int> {
       var codePoints List<int> = []
       var instance = Unicode.StringIterator.INSTANCE
       instance.reset(self, 0)
@@ -95,8 +103,8 @@ class string {
 }
 
 namespace string {
-  def fromCodePoints(codePoints List<int>) string {
-    if Unicode.STRING_ENCODING == .UTF8 {
+  if Unicode.STRING_ENCODING == .UTF8 {
+    def fromCodePoints(codePoints List<int>) string {
       var builder = StringBuilder.new
 
       for codePoint in codePoints {
@@ -120,8 +128,10 @@ namespace string {
 
       return builder.toString
     }
+  }
 
-    else if Unicode.STRING_ENCODING == .UTF16 {
+  if Unicode.STRING_ENCODING == .UTF16 {
+    def fromCodePoints(codePoints List<int>) string {
       var builder = StringBuilder.new
 
       for codePoint in codePoints {
@@ -136,8 +146,10 @@ namespace string {
 
       return builder.toString
     }
+  }
 
-    else {
+  if Unicode.STRING_ENCODING == .UTF32 {
+    def fromCodePoints(codePoints List<int>) string {
       return fromCodeUnits(codePoints)
     }
   }

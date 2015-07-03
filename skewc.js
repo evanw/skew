@@ -4330,23 +4330,22 @@
     PARAMETER_FUNCTION: 0,
     PARAMETER_OBJECT: 1,
     OBJECT_CLASS: 2,
-    OBJECT_CONDITIONAL: 3,
-    OBJECT_ENUM: 4,
-    OBJECT_GLOBAL: 5,
-    OBJECT_INTERFACE: 6,
-    OBJECT_NAMESPACE: 7,
-    FUNCTION_ANNOTATION: 8,
-    FUNCTION_CONSTRUCTOR: 9,
-    FUNCTION_GLOBAL: 10,
-    FUNCTION_INSTANCE: 11,
-    FUNCTION_LOCAL: 12,
-    OVERLOADED_ANNOTATION: 13,
-    OVERLOADED_GLOBAL: 14,
-    OVERLOADED_INSTANCE: 15,
-    VARIABLE_ENUM: 16,
-    VARIABLE_GLOBAL: 17,
-    VARIABLE_INSTANCE: 18,
-    VARIABLE_LOCAL: 19
+    OBJECT_ENUM: 3,
+    OBJECT_GLOBAL: 4,
+    OBJECT_INTERFACE: 5,
+    OBJECT_NAMESPACE: 6,
+    FUNCTION_ANNOTATION: 7,
+    FUNCTION_CONSTRUCTOR: 8,
+    FUNCTION_GLOBAL: 9,
+    FUNCTION_INSTANCE: 10,
+    FUNCTION_LOCAL: 11,
+    OVERLOADED_ANNOTATION: 12,
+    OVERLOADED_GLOBAL: 13,
+    OVERLOADED_INSTANCE: 14,
+    VARIABLE_ENUM: 15,
+    VARIABLE_GLOBAL: 16,
+    VARIABLE_INSTANCE: 17,
+    VARIABLE_LOCAL: 18
   };
 
   Skew.SymbolKind.isType = function(self) {
@@ -6083,7 +6082,7 @@
         return false;
       }
 
-      var contents = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_CONDITIONAL, "<conditional>");
+      var contents = new Skew.ObjectSymbol(parent.kind, "<conditional>");
       Skew.Parsing.parseSymbols(context, contents, annotations);
 
       if (!context.expect(Skew.TokenKind.RIGHT_BRACE) || !Skew.Parsing.parseAfterBlock(context)) {
@@ -7717,7 +7716,7 @@
 
     // Only replace this with a constant if the target has no side effects.
     // This catches constants declared on imported types.
-    if (symbol !== null && symbol.isConst() && node.dotTarget().hasNoSideEffects()) {
+    if (symbol !== null && symbol.isConst() && (node.dotTarget() === null || node.dotTarget().hasNoSideEffects())) {
       var content = self.constantLookup.constantForSymbol(symbol.asVariableSymbol());
 
       if (content !== null) {
@@ -8718,6 +8717,7 @@
 
   Skew.Merging.mergeObject = function(log, parent, target, symbol) {
     target.scope = new Skew.ObjectScope(parent !== null ? parent.scope : null, target);
+    symbol.scope = target.scope;
     symbol.parent = parent;
 
     if (symbol.parameters !== null) {
@@ -8792,6 +8792,12 @@
 
       if (child.parameters !== null) {
         object.parameters = child.parameters;
+      }
+
+      for (var i = 0, list = child.guards, count = list.length; i < count; ++i) {
+        var guard = list[i];
+        guard.parent = object;
+        object.guards.push(guard);
       }
 
       return true;
@@ -9247,7 +9253,7 @@
         var variable = list[i];
 
         if (variable.kind === Skew.SymbolKind.VARIABLE_ENUM) {
-          variable.value = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(nextEnumValue)).withType(symbol.resolvedType);
+          variable.value = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(nextEnumValue)).withType(symbol.resolvedType).withRange(variable.range);
           ++nextEnumValue;
         }
       }
@@ -9395,6 +9401,7 @@
 
   Skew.Resolving.Resolver.prototype.attemptToResolveGuardConstant = function(node, scope) {
     var self = this;
+    assert(scope !== null);
 
     try {
       self.resolveAsParameterizedExpressionWithConversion(node, scope, self.cache.boolType);
@@ -13356,12 +13363,6 @@
 
   var Unicode = {};
 
-  Unicode.Encoding = {
-    UTF8: 0,
-    UTF16: 1,
-    UTF32: 2
-  };
-
   Unicode.StringIterator = function() {
     var self = this;
     self.value = "";
@@ -13391,79 +13392,24 @@
   Unicode.StringIterator.prototype.nextCodePoint = function() {
     var self = this;
 
-    if (Unicode.STRING_ENCODING === Unicode.Encoding.UTF8) {
-      if (self.index >= self.stop) {
-        return -1;
-      }
-
-      var a = self.value.charCodeAt(self.index);
-      ++self.index;
-
-      if (a < 192) {
-        return a;
-      }
-
-      if (self.index >= self.stop) {
-        return -1;
-      }
-
-      var b = self.value.charCodeAt(self.index);
-      ++self.index;
-
-      if (a < 224) {
-        return (a & 31) << 6 | b & 63;
-      }
-
-      if (self.index >= self.stop) {
-        return -1;
-      }
-
-      var c = self.value.charCodeAt(self.index);
-      ++self.index;
-
-      if (a < 240) {
-        return (a & 15) << 12 | (b & 63) << 6 | c & 63;
-      }
-
-      if (self.index >= self.stop) {
-        return -1;
-      }
-
-      var d = self.value.charCodeAt(self.index);
-      ++self.index;
-      return (a & 7) << 18 | (b & 63) << 12 | (c & 63) << 6 | d & 63;
+    if (self.index >= self.stop) {
+      return -1;
     }
 
-    else if (Unicode.STRING_ENCODING === Unicode.Encoding.UTF16) {
-      if (self.index >= self.stop) {
-        return -1;
-      }
+    var a = self.value.charCodeAt(self.index);
+    ++self.index;
 
-      var a1 = self.value.charCodeAt(self.index);
-      ++self.index;
-
-      if (a1 < 55296) {
-        return a1;
-      }
-
-      if (self.index >= self.stop) {
-        return -1;
-      }
-
-      var b1 = self.value.charCodeAt(self.index);
-      ++self.index;
-      return ((a1 << 10) + b1 | 0) + ((65536 - (55296 << 10) | 0) - 56320 | 0) | 0;
+    if (a < 55296) {
+      return a;
     }
 
-    else {
-      if (self.index >= self.stop) {
-        return -1;
-      }
-
-      var c1 = self.value.charCodeAt(self.index);
-      ++self.index;
-      return c1;
+    if (self.index >= self.stop) {
+      return -1;
     }
+
+    var b = self.value.charCodeAt(self.index);
+    ++self.index;
+    return ((a << 10) + b | 0) + ((65536 - (55296 << 10) | 0) - 56320 | 0) | 0;
   };
 
   var IO = {};
@@ -13529,86 +13475,39 @@
   };
 
   in_string.codePoints = function(self) {
-    if (Unicode.STRING_ENCODING === Unicode.Encoding.UTF32) {
-      return self.codeUnits();
-    }
+    var codePoints = [];
+    var instance = Unicode.StringIterator.INSTANCE;
+    instance.reset(self, 0);
 
-    else {
-      var codePoints = [];
-      var instance = Unicode.StringIterator.INSTANCE;
-      instance.reset(self, 0);
+    while (true) {
+      var codePoint = instance.nextCodePoint();
 
-      while (true) {
-        var codePoint = instance.nextCodePoint();
-
-        if (codePoint < 0) {
-          return codePoints;
-        }
-
-        codePoints.push(codePoint);
+      if (codePoint < 0) {
+        return codePoints;
       }
+
+      codePoints.push(codePoint);
     }
   };
 
   in_string.fromCodePoints = function(codePoints) {
-    if (Unicode.STRING_ENCODING === Unicode.Encoding.UTF8) {
-      var builder = new StringBuilder();
+    var builder = new StringBuilder();
 
-      for (var i = 0, list = codePoints, count1 = list.length; i < count1; ++i) {
-        var codePoint = list[i];
+    for (var i = 0, list = codePoints, count1 = list.length; i < count1; ++i) {
+      var codePoint = list[i];
 
-        if (codePoint < 128) {
-          builder.append(String.fromCharCode(codePoint));
-        }
-
-        else {
-          if (codePoint < 2048) {
-            builder.append(String.fromCharCode(codePoint >> 6 & 31 | 192));
-          }
-
-          else {
-            if (codePoint < 65536) {
-              builder.append(String.fromCharCode(codePoint >> 12 & 15 | 224));
-            }
-
-            else {
-              builder.append(String.fromCharCode(codePoint >> 18 & 7 | 240));
-              builder.append(String.fromCharCode(codePoint >> 12 & 63 | 128));
-            }
-
-            builder.append(String.fromCharCode(codePoint >> 6 & 63 | 128));
-          }
-
-          builder.append(String.fromCharCode(codePoint & 63 | 128));
-        }
+      if (codePoint < 65536) {
+        builder.append(String.fromCharCode(codePoint));
       }
 
-      return builder.toString();
-    }
-
-    else if (Unicode.STRING_ENCODING === Unicode.Encoding.UTF16) {
-      var builder1 = new StringBuilder();
-
-      for (var i1 = 0, list1 = codePoints, count2 = list1.length; i1 < count2; ++i1) {
-        var codePoint1 = list1[i1];
-
-        if (codePoint1 < 65536) {
-          builder1.append(String.fromCharCode(codePoint1));
-        }
-
-        else {
-          var adjusted = codePoint1 - 65536 | 0;
-          builder1.append(String.fromCharCode((adjusted >> 10) + 55296 | 0));
-          builder1.append(String.fromCharCode((adjusted & (1 << 10) - 1) + 56320 | 0));
-        }
+      else {
+        var adjusted = codePoint - 65536 | 0;
+        builder.append(String.fromCharCode((adjusted >> 10) + 55296 | 0));
+        builder.append(String.fromCharCode((adjusted & (1 << 10) - 1) + 56320 | 0));
       }
-
-      return builder1.toString();
     }
 
-    else {
-      return string.fromCodeUnits(codePoints);
-    }
+    return builder.toString();
   };
 
   var in_List = {};
@@ -13745,7 +13644,7 @@
   Skew.NodeKind.strings = ["ANNOTATION", "BLOCK", "CASE", "CATCH", "BREAK", "CONTINUE", "EXPRESSION", "FOR", "FOREACH", "IF", "RETURN", "SWITCH", "THROW", "TRY", "VAR", "WHILE", "ASSIGN_INDEX", "CALL", "CAST", "CONSTANT", "DOT", "DYNAMIC", "HOOK", "INDEX", "INITIALIZER_LIST", "INITIALIZER_MAP", "INITIALIZER_SET", "LAMBDA", "LAMBDA_TYPE", "NAME", "NULL", "PAIR", "PARAMETERIZE", "SEQUENCE", "SUPER", "TYPE", "COMPLEMENT", "DECREMENT", "INCREMENT", "NEGATIVE", "NOT", "POSITIVE", "ADD", "BITWISE_AND", "BITWISE_OR", "BITWISE_XOR", "COMPARE", "DIVIDE", "EQUAL", "IN", "IS", "LOGICAL_AND", "LOGICAL_OR", "MULTIPLY", "NOT_EQUAL", "POWER", "REMAINDER", "SHIFT_LEFT", "SHIFT_RIGHT", "SUBTRACT", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "LESS_THAN", "LESS_THAN_OR_EQUAL", "ASSIGN", "ASSIGN_ADD", "ASSIGN_BITWISE_AND", "ASSIGN_BITWISE_OR", "ASSIGN_BITWISE_XOR", "ASSIGN_DIVIDE", "ASSIGN_MULTIPLY", "ASSIGN_POWER", "ASSIGN_REMAINDER", "ASSIGN_SHIFT_LEFT", "ASSIGN_SHIFT_RIGHT", "ASSIGN_SUBTRACT"];
   Skew.Node.IS_IMPLICIT_RETURN = 1 << 0;
   Skew.Node.IS_INSIDE_PARENTHESES = 1 << 1;
-  Skew.SymbolKind.strings = ["PARAMETER_FUNCTION", "PARAMETER_OBJECT", "OBJECT_CLASS", "OBJECT_CONDITIONAL", "OBJECT_ENUM", "OBJECT_GLOBAL", "OBJECT_INTERFACE", "OBJECT_NAMESPACE", "FUNCTION_ANNOTATION", "FUNCTION_CONSTRUCTOR", "FUNCTION_GLOBAL", "FUNCTION_INSTANCE", "FUNCTION_LOCAL", "OVERLOADED_ANNOTATION", "OVERLOADED_GLOBAL", "OVERLOADED_INSTANCE", "VARIABLE_ENUM", "VARIABLE_GLOBAL", "VARIABLE_INSTANCE", "VARIABLE_LOCAL"];
+  Skew.SymbolKind.strings = ["PARAMETER_FUNCTION", "PARAMETER_OBJECT", "OBJECT_CLASS", "OBJECT_ENUM", "OBJECT_GLOBAL", "OBJECT_INTERFACE", "OBJECT_NAMESPACE", "FUNCTION_ANNOTATION", "FUNCTION_CONSTRUCTOR", "FUNCTION_GLOBAL", "FUNCTION_INSTANCE", "FUNCTION_LOCAL", "OVERLOADED_ANNOTATION", "OVERLOADED_GLOBAL", "OVERLOADED_INSTANCE", "VARIABLE_ENUM", "VARIABLE_GLOBAL", "VARIABLE_INSTANCE", "VARIABLE_LOCAL"];
 
   // Flags
   Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 0;
@@ -13885,7 +13784,6 @@
   Skew.Type.NULL = null;
   Skew.Type.nextID = 0;
   Skew.Environment.nextID = 0;
-  Unicode.STRING_ENCODING = Unicode.Encoding.UTF16;
   Unicode.StringIterator.INSTANCE = new Unicode.StringIterator();
   Terminal.colorToEscapeCode = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Terminal.Color.DEFAULT, 0), Terminal.Color.BOLD, 1), Terminal.Color.GRAY, 90), Terminal.Color.RED, 91), Terminal.Color.GREEN, 92), Terminal.Color.YELLOW, 93), Terminal.Color.BLUE, 94), Terminal.Color.MAGENTA, 95), Terminal.Color.CYAN, 96);
 

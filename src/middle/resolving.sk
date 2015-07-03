@@ -246,7 +246,7 @@ namespace Skew.Resolving {
         var nextEnumValue = 0
         for variable in symbol.variables {
           if variable.kind == .VARIABLE_ENUM {
-            variable.value = Node.createInt(nextEnumValue).withType(symbol.resolvedType)
+            variable.value = Node.createInt(nextEnumValue).withType(symbol.resolvedType).withRange(variable.range)
             nextEnumValue++
           }
         }
@@ -369,6 +369,7 @@ namespace Skew.Resolving {
     }
 
     def attemptToResolveGuardConstant(node Node, scope Scope) bool {
+      assert(scope != null)
       try {
         resolveAsParameterizedExpressionWithConversion(node, scope, cache.boolType)
         constantFolder.foldConstants(node)
