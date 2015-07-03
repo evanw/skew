@@ -27,7 +27,7 @@ namespace Skew {
 
       # Preprocess the code
       prepareGlobal(global)
-      shakingPass(global, cache.entryPointSymbol)
+      shakingPass(global, cache.entryPointSymbol, .IGNORE_TYPES)
       var objects = sortedObjects(global)
 
       # The entire body of code is wrapped in a closure for safety

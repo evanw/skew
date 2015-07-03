@@ -581,8 +581,8 @@
   // imported or exported symbol. This is called tree shaking here but is also
   // known as dead code elimination. Tree shaking is perhaps a better name
   // because this pass doesn't remove dead code inside functions.
-  Skew.shakingPass = function(global, entryPoint) {
-    var graph = new Skew.UsageGraph(global);
+  Skew.shakingPass = function(global, entryPoint, mode) {
+    var graph = new Skew.UsageGraph(global, mode);
     var symbols = [];
     Skew.Shaking.collectImportedOrExportedSymbols(global, symbols, entryPoint);
     var usages = graph.usagesForSymbols(symbols);
@@ -1011,7 +1011,7 @@
 
     // Preprocess the code
     self.prepareGlobal(global);
-    Skew.shakingPass(global, self.cache.entryPointSymbol);
+    Skew.shakingPass(global, self.cache.entryPointSymbol, Skew.ShakingMode.IGNORE_TYPES);
     var objects = self.sortedObjects(global);
 
     // The entire body of code is wrapped in a closure for safety
@@ -12030,15 +12030,21 @@
     self.locals[symbol.name] = symbol;
   };
 
+  Skew.ShakingMode = {
+    USE_TYPES: 0,
+    IGNORE_TYPES: 1
+  };
+
   // This stores a mapping from every symbol to its immediate dependencies and
   // uses that to provide a mapping from a subset of symbols to their complete
   // dependencies. This is useful for dead code elimination.
-  Skew.UsageGraph = function(global) {
+  Skew.UsageGraph = function(global, mode) {
     var self = this;
     self.context = null;
     self.currentUsages = null;
     self.overridesForSymbol = Object.create(null);
     self.usages = Object.create(null);
+    self.mode = mode;
     self.visitObject(global);
     self.changeContext(null);
   };
@@ -12172,7 +12178,7 @@
       self.visitVariable(argument);
     }
 
-    self.visitNode(symbol.returnType);
+    self.visitType(symbol.resolvedType.returnType);
     self.visitNode(symbol.block);
   };
 
@@ -12211,7 +12217,7 @@
           self.visitVariable(argument);
         }
 
-        self.visitNode($function.returnType);
+        self.visitType($function.resolvedType.returnType);
         break;
       }
 
@@ -12225,7 +12231,7 @@
   Skew.UsageGraph.prototype.visitType = function(type) {
     var self = this;
 
-    if (type.symbol !== null) {
+    if (self.mode === Skew.ShakingMode.USE_TYPES && type !== null && type.symbol !== null) {
       self.recordUsage(type.symbol);
 
       // This should be a tree too, so infinite loops should not happen

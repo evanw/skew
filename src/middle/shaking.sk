@@ -1,10 +1,15 @@
 namespace Skew {
+  enum ShakingMode {
+    USE_TYPES
+    IGNORE_TYPES
+  }
+
   # Remove all code that isn't reachable from the entry point or from an
   # imported or exported symbol. This is called tree shaking here but is also
   # known as dead code elimination. Tree shaking is perhaps a better name
   # because this pass doesn't remove dead code inside functions.
-  def shakingPass(global ObjectSymbol, entryPoint FunctionSymbol) {
-    var graph = UsageGraph.new(global)
+  def shakingPass(global ObjectSymbol, entryPoint FunctionSymbol, mode ShakingMode) {
+    var graph = UsageGraph.new(global, mode)
     var symbols List<Symbol> = []
     Shaking.collectImportedOrExportedSymbols(global, symbols, entryPoint)
     var usages = graph.usagesForSymbols(symbols)
@@ -17,7 +22,8 @@ namespace Skew {
   # uses that to provide a mapping from a subset of symbols to their complete
   # dependencies. This is useful for dead code elimination.
   class UsageGraph {
-    def new(global ObjectSymbol) {
+    def new(global ObjectSymbol, mode ShakingMode) {
+      self.mode = mode
       visitObject(global)
       changeContext(null)
     }
@@ -75,6 +81,7 @@ namespace Skew {
     }
 
     @private {
+      var mode ShakingMode
       var context Symbol = null
       var currentUsages IntMap<Symbol> = null
       var overridesForSymbol IntMap<List<Symbol>> = {}
@@ -135,7 +142,7 @@ namespace Skew {
           visitVariable(argument)
         }
 
-        visitNode(symbol.returnType)
+        visitType(symbol.resolvedType.returnType)
         visitNode(symbol.block)
       }
 
@@ -168,7 +175,7 @@ namespace Skew {
             for argument in function.arguments {
               visitVariable(argument)
             }
-            visitNode(function.returnType)
+            visitType(function.resolvedType.returnType)
           }
 
           # The variable value is a child node and has already been visited
@@ -179,7 +186,7 @@ namespace Skew {
       }
 
       def visitType(type Type) {
-        if type.symbol != null {
+        if mode == .USE_TYPES && type != null && type.symbol != null {
           recordUsage(type.symbol)
 
           # This should be a tree too, so infinite loops should not happen
