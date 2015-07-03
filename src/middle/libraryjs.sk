@@ -1,5 +1,18 @@
 namespace Skew {
   const NATIVE_LIBRARY_JS = "
+var __extends = (derived dynamic, base dynamic) => {
+  derived.prototype = dynamic.Object.create(base.prototype)
+  derived.prototype.constructor = derived
+}
+
+var __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {
+  var ah dynamic = (a >> 16) & 65535
+  var bh dynamic = (b >> 16) & 65535
+  var al dynamic = a & 65535
+  var bl dynamic = b & 65535
+  return al * bl + ((ah * bl + al * bh) << 16) | 0
+}
+
 def assert(truth bool) {
   if !truth {
     throw dynamic.Error(\"Assertion failed\")
@@ -15,94 +28,6 @@ class double {
     return dynamic.isNaN(self)
   }
 }
-
-
-namespace StringMap {
-  def new StringMap<T> {
-    return dynamic.Object.create(null)
-  }
-}
-
-class StringMap {
-  def {...}(key string, value T) StringMap<T> {
-    self[key] = value
-    return self
-  }
-
-  def get(key string, value T) T {
-    return key in self ? self[key] : value
-  }
-
-  def keys List<string> {
-    return dynamic.Object.keys(self)
-  }
-
-  def values List<T> {
-    var values List<T> = []
-    for key in self as dynamic {
-      values.append(self[key])
-    }
-    return values
-  }
-
-  def clone StringMap<T> {
-    var clone = new
-    for key in keys {
-      clone[key] = self[key]
-    }
-    return clone
-  }
-
-  def remove(key string) {
-    dynamic.delete(self[key])
-  }
-}
-
-namespace IntMap {
-  def new IntMap<T> {
-    return dynamic.Object.create(null)
-  }
-}
-
-class IntMap {
-  def {...}(key int, value T) IntMap<T> {
-    self[key] = value
-    return self
-  }
-
-  def get(key int, value T) T {
-    return key in self ? self[key] : value
-  }
-
-  def keys List<int> {
-    var keys List<int> = []
-    for key in dynamic.Object.keys(self) as List<string> {
-      keys.append(key as dynamic as int)
-    }
-    return keys
-  }
-
-  def values List<T> {
-    var values List<T> = []
-    for key in self as dynamic {
-      values.append(self[key])
-    }
-    return values
-  }
-
-  def clone IntMap<T> {
-    var clone = new
-    for key in keys {
-      clone[key] = self[key]
-    }
-    return clone
-  }
-
-  def remove(key int) {
-    dynamic.delete(self[key])
-  }
-}
-
 
 class string {
   def startsWith(text string) bool {
@@ -145,6 +70,21 @@ class string {
 namespace string {
   def fromCodeUnit(x int) string {
     return dynamic.String.fromCharCode(x)
+  }
+}
+
+class StringBuilder {
+  var buffer = \"\"
+
+  def new {
+  }
+
+  def append(x string) {
+    buffer += x
+  }
+
+  def toString string {
+    return buffer
   }
 }
 
@@ -263,18 +203,89 @@ class List {
   }
 }
 
-class StringBuilder {
-  var buffer = \"\"
+namespace StringMap {
+  def new StringMap<T> {
+    return dynamic.Object.create(null)
+  }
+}
 
-  def new {
+class StringMap {
+  def {...}(key string, value T) StringMap<T> {
+    self[key] = value
+    return self
   }
 
-  def append(x string) {
-    buffer += x
+  def get(key string, value T) T {
+    return key in self ? self[key] : value
   }
 
-  def toString string {
-    return buffer
+  def keys List<string> {
+    return dynamic.Object.keys(self)
+  }
+
+  def values List<T> {
+    var values List<T> = []
+    for key in self as dynamic {
+      values.append(self[key])
+    }
+    return values
+  }
+
+  def clone StringMap<T> {
+    var clone = new
+    for key in keys {
+      clone[key] = self[key]
+    }
+    return clone
+  }
+
+  def remove(key string) {
+    dynamic.delete(self[key])
+  }
+}
+
+namespace IntMap {
+  def new IntMap<T> {
+    return dynamic.Object.create(null)
+  }
+}
+
+class IntMap {
+  def {...}(key int, value T) IntMap<T> {
+    self[key] = value
+    return self
+  }
+
+  def get(key int, value T) T {
+    return key in self ? self[key] : value
+  }
+
+  def keys List<int> {
+    var keys List<int> = []
+    for key in dynamic.Object.keys(self) as List<string> {
+      keys.append(key as dynamic as int)
+    }
+    return keys
+  }
+
+  def values List<T> {
+    var values List<T> = []
+    for key in self as dynamic {
+      values.append(self[key])
+    }
+    return values
+  }
+
+  def clone IntMap<T> {
+    var clone = new
+    for key in keys {
+      clone[key] = self[key]
+    }
+    return clone
+  }
+
+  def remove(key int) {
+    dynamic.delete(self[key])
   }
 }
 "

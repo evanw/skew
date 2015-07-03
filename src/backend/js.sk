@@ -17,14 +17,7 @@ namespace Skew {
 
   class JsEmitter : Emitter {
     over visit(global ObjectSymbol) {
-      # Shorten the library function names while still avoiding needing to
-      # do conflict detection with user-defined symbol names
       mangle = options.jsMangle
-      if mangle {
-        extends = "$e"
-        imul = "$i"
-      }
-
       minify = options.jsMinify
       if minify {
         indentAmount = ""
@@ -41,21 +34,9 @@ namespace Skew {
       emit(indent + "(function()" + space + "{" + newline)
       increaseIndent
 
-      if needsExtends(objects) {
-        var derived = mangle ? "d" : "derived"
-        var base = mangle ? "b" : "base"
-        emit(indent + "function " + extends + minifySpace("(" + derived + ", " + base + ") {") + newline)
-        emit(indent + minifySpace("  " + derived + ".prototype = Object.create(" + base + ".prototype);") + newline)
-        emit(indent + minifySpace("  " + derived + ".prototype.constructor = " + derived + ";") + newline)
-        emit(indent + minifySpace("}") + newline + newline)
-      }
-
-      if needsMultiply {
-        emit(indent + "var " + imul + minifySpace(" = Math.imul || function(a, b) {") + newline)
-        emit(indent + indentAmount + "var " + minifySpace("ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;") + newline)
-        emit(indent + indentAmount + "return " + minifySpace("al * bl + (ah * bl + al * bh << 16) | 0;") + newline)
-        emit(indent + minifySpace("};") + newline + newline)
-      }
+      # Emit special-cased variables that must come first
+      if needsExtends(objects) { emitVariable(extends) }
+      if needsMultiply { emitVariable(multiply) }
 
       # Emit objects and functions
       for object in objects {
@@ -71,7 +52,9 @@ namespace Skew {
           o = o.parent.asObjectSymbol
         }
         for variable in object.variables {
-          emitVariable(variable)
+          if variable != extends && variable != multiply {
+            emitVariable(variable)
+          }
         }
       }
 
@@ -110,14 +93,14 @@ namespace Skew {
       var previousNode Node = null
       var previousSymbol Symbol = null
       var enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
+      var extends VariableSymbol = null
+      var multiply VariableSymbol = null
 
       # A union-find data structure is used to quickly merge symbols into
       # groups. All local variables inside a function are merged with that
       # function. The map create a quick way of getting from a symbol to its
       # union/find index.
       var allSymbols List<Symbol> = []
-      var extends = "$extends"
-      var imul = "$imul"
       var localVariableUnionFind UnionFind = UnionFind.new
       var namingGroupIndexForSymbol IntMap<int> = {}
       var nextSymbolName = 0
@@ -134,6 +117,19 @@ namespace Skew {
         var globalObjects List<ObjectSymbol> = []
         var globalFunctions List<FunctionSymbol> = []
         var globalVariables List<VariableSymbol> = []
+
+        # Load special-cased variables
+        for variable in global.variables {
+          if variable.name == "__extends" {
+            extends = variable
+            if multiply != null { break }
+          } else if variable.name == "__imul" {
+            multiply = variable
+            if extends != null { break }
+          }
+        }
+        assert(extends != null)
+        assert(multiply != null)
 
         # Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
         patchObject(global, globalObjects, globalFunctions, globalVariables)
@@ -315,10 +311,6 @@ namespace Skew {
         return labelToGroup.values
       }
 
-      def minifySpace(text string) string {
-        return minify ? text.replaceAll(" ", "") : text
-      }
-
       def emitSemicolonAfterStatement {
         if !minify {
           emit(";\n")
@@ -425,7 +417,7 @@ namespace Skew {
                     emit("\n" + indent)
                   }
                   emitSemicolonIfNeeded
-                  emit(extends + "(" + fullName(symbol) + "," + space + fullName(symbol.baseClass) + ")")
+                  emit(mangleName(extends) + "(" + fullName(symbol) + "," + space + fullName(symbol.baseClass) + ")")
                   emitSemicolonAfterStatement
                 }
               }
@@ -1018,7 +1010,7 @@ namespace Skew {
       def createIntBinary(kind NodeKind, left Node, right Node) Node {
         if kind == .MULTIPLY {
           needsMultiply = true
-          return Node.createCall(Node.createName(imul), [left, right]).withType(cache.intType)
+          return Node.createCall(Node.createName(multiply.name).withSymbol(multiply), [left, right]).withType(cache.intType)
         }
         return wrapWithIntCast(Node.createBinary(kind, left, right).withType(cache.intType))
       }

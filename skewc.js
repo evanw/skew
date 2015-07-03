@@ -1,11 +1,13 @@
 (function() {
-  function $extends(derived, base) {
+  var __extends = function(derived, base) {
     derived.prototype = Object.create(base.prototype);
     derived.prototype.constructor = derived;
-  }
-
-  var $imul = Math.imul || function(a, b) {
-    var ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;
+  };
+  var __imul = Math.imul ? Math.imul : function(a, b) {
+    var ah = a >> 16 & 65535;
+    var bh = b >> 16 & 65535;
+    var al = a & 65535;
+    var bl = b & 65535;
     return al * bl + (ah * bl + al * bh << 16) | 0;
   };
 
@@ -980,9 +982,9 @@
     self.previousNode = null;
     self.previousSymbol = null;
     self.enclosingFunction = null;
+    self.$extends = null;
+    self.multiply = null;
     self.allSymbols = [];
-    self.$extends = "$extends";
-    self.imul = "$imul";
     self.localVariableUnionFind = new Skew.UnionFind();
     self.namingGroupIndexForSymbol = Object.create(null);
     self.nextSymbolName = 0;
@@ -994,19 +996,11 @@
     self.space = " ";
   };
 
-  $extends(Skew.JsEmitter, Skew.Emitter);
+  __extends(Skew.JsEmitter, Skew.Emitter);
 
   Skew.JsEmitter.prototype.visit = function(global) {
     var self = this;
-    // Shorten the library function names while still avoiding needing to
-    // do conflict detection with user-defined symbol names
     self.mangle = self.options.jsMangle;
-
-    if (self.mangle) {
-      self.$extends = "$e";
-      self.imul = "$i";
-    }
-
     self.minify = self.options.jsMinify;
 
     if (self.minify) {
@@ -1024,20 +1018,13 @@
     self.emit(self.indent + "(function()" + self.space + "{" + self.newline);
     self.increaseIndent();
 
+    // Emit special-cased variables that must come first
     if (Skew.JsEmitter.needsExtends(objects)) {
-      var derived = self.mangle ? "d" : "derived";
-      var base = self.mangle ? "b" : "base";
-      self.emit(self.indent + "function " + self.$extends + self.minifySpace("(" + derived + ", " + base + ") {") + self.newline);
-      self.emit(self.indent + self.minifySpace("  " + derived + ".prototype = Object.create(" + base + ".prototype);") + self.newline);
-      self.emit(self.indent + self.minifySpace("  " + derived + ".prototype.constructor = " + derived + ";") + self.newline);
-      self.emit(self.indent + self.minifySpace("}") + self.newline + self.newline);
+      self.emitVariable(self.$extends);
     }
 
     if (self.needsMultiply) {
-      self.emit(self.indent + "var " + self.imul + self.minifySpace(" = Math.imul || function(a, b) {") + self.newline);
-      self.emit(self.indent + self.indentAmount + "var " + self.minifySpace("ah = a >>> 16, al = a & 65535, bh = b >>> 16, bl = b & 65535;") + self.newline);
-      self.emit(self.indent + self.indentAmount + "return " + self.minifySpace("al * bl + (ah * bl + al * bh << 16) | 0;") + self.newline);
-      self.emit(self.indent + self.minifySpace("};") + self.newline + self.newline);
+      self.emitVariable(self.multiply);
     }
 
     // Emit objects and functions
@@ -1059,7 +1046,10 @@
 
       for (var i1 = 0, list1 = object1.variables, count1 = list1.length; i1 < count1; ++i1) {
         var variable = list1[i1];
-        self.emitVariable(variable);
+
+        if (variable !== self.$extends && variable !== self.multiply) {
+          self.emitVariable(variable);
+        }
       }
     }
 
@@ -1086,6 +1076,30 @@
     var globalFunctions = [];
     var globalVariables = [];
 
+    // Load special-cased variables
+    for (var i = 0, list = global.variables, count = list.length; i < count; ++i) {
+      var variable = list[i];
+
+      if (variable.name === "__extends") {
+        self.$extends = variable;
+
+        if (self.multiply !== null) {
+          break;
+        }
+      }
+
+      else if (variable.name === "__imul") {
+        self.multiply = variable;
+
+        if (self.$extends !== null) {
+          break;
+        }
+      }
+    }
+
+    assert(self.$extends !== null);
+    assert(self.multiply !== null);
+
     // Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
     self.patchObject(global, globalObjects, globalFunctions, globalVariables);
 
@@ -1095,19 +1109,19 @@
     }
 
     // Move internal global symbols up to the global namespace
-    for (var i = 0, list = globalObjects, count = list.length; i < count; ++i) {
-      var object = list[i];
+    for (var i1 = 0, list1 = globalObjects, count1 = list1.length; i1 < count1; ++i1) {
+      var object = list1[i1];
       object.parent = global;
     }
 
-    for (var i1 = 0, list1 = globalFunctions, count1 = list1.length; i1 < count1; ++i1) {
-      var $function = list1[i1];
+    for (var i2 = 0, list2 = globalFunctions, count2 = list2.length; i2 < count2; ++i2) {
+      var $function = list2[i2];
       $function.parent = global;
     }
 
-    for (var i2 = 0, list2 = globalVariables, count2 = list2.length; i2 < count2; ++i2) {
-      var variable = list2[i2];
-      variable.parent = global;
+    for (var i3 = 0, list3 = globalVariables, count3 = list3.length; i3 < count3; ++i3) {
+      var variable1 = list3[i3];
+      variable1.parent = global;
     }
 
     in_List.append2(global.objects, globalObjects);
@@ -1279,7 +1293,7 @@
 
   Skew.JsEmitter.prototype.numberToName = function(number) {
     var self = this;
-    var WRAP = $imul(26, 2);
+    var WRAP = __imul(26, 2);
     var name = "";
 
     if (number >= WRAP) {
@@ -1327,11 +1341,6 @@
     }
 
     return in_IntMap.values(labelToGroup);
-  };
-
-  Skew.JsEmitter.prototype.minifySpace = function(text) {
-    var self = this;
-    return self.minify ? text.split(" ").join("") : text;
   };
 
   Skew.JsEmitter.prototype.emitSemicolonAfterStatement = function() {
@@ -1469,7 +1478,7 @@
               }
 
               self.emitSemicolonIfNeeded();
-              self.emit(self.$extends + "(" + Skew.JsEmitter.fullName(symbol) + "," + self.space + Skew.JsEmitter.fullName(symbol.baseClass) + ")");
+              self.emit(Skew.JsEmitter.mangleName(self.$extends) + "(" + Skew.JsEmitter.fullName(symbol) + "," + self.space + Skew.JsEmitter.fullName(symbol.baseClass) + ")");
               self.emitSemicolonAfterStatement();
             }
           }
@@ -2184,7 +2193,7 @@
     var self = this;
     if (kind === Skew.NodeKind.MULTIPLY) {
       self.needsMultiply = true;
-      return Skew.Node.createCall(new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(self.imul)), [left, right]).withType(self.cache.intType);
+      return Skew.Node.createCall(new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(self.multiply.name)).withSymbol(self.multiply), [left, right]).withType(self.cache.intType);
     }
 
     return self.wrapWithIntCast(Skew.Node.createBinary(kind, left, right).withType(self.cache.intType));
@@ -2759,7 +2768,7 @@
     self.options = options;
   };
 
-  $extends(Skew.LispTreeEmitter, Skew.Emitter);
+  __extends(Skew.LispTreeEmitter, Skew.Emitter);
 
   Skew.LispTreeEmitter.prototype.visit = function(global) {
     var self = this;
@@ -2928,7 +2937,7 @@
     self.value = value;
   };
 
-  $extends(Skew.BoolContent, Skew.Content);
+  __extends(Skew.BoolContent, Skew.Content);
 
   Skew.BoolContent.prototype.kind = function() {
     var self = this;
@@ -2941,7 +2950,7 @@
     self.value = value;
   };
 
-  $extends(Skew.IntContent, Skew.Content);
+  __extends(Skew.IntContent, Skew.Content);
 
   Skew.IntContent.prototype.kind = function() {
     var self = this;
@@ -2954,7 +2963,7 @@
     self.value = value;
   };
 
-  $extends(Skew.DoubleContent, Skew.Content);
+  __extends(Skew.DoubleContent, Skew.Content);
 
   Skew.DoubleContent.prototype.kind = function() {
     var self = this;
@@ -2967,7 +2976,7 @@
     self.value = value;
   };
 
-  $extends(Skew.StringContent, Skew.Content);
+  __extends(Skew.StringContent, Skew.Content);
 
   Skew.StringContent.prototype.kind = function() {
     var self = this;
@@ -4400,7 +4409,7 @@
     Skew.Symbol.call(self, kind, name);
   };
 
-  $extends(Skew.ParameterSymbol, Skew.Symbol);
+  __extends(Skew.ParameterSymbol, Skew.Symbol);
 
   Skew.Guard = function(parent, test, contents) {
     var self = this;
@@ -4422,7 +4431,7 @@
     self.guards = [];
   };
 
-  $extends(Skew.ObjectSymbol, Skew.Symbol);
+  __extends(Skew.ObjectSymbol, Skew.Symbol);
 
   Skew.ObjectSymbol.prototype.hasBaseClass = function(symbol) {
     var self = this;
@@ -4442,7 +4451,7 @@
     self.block = null;
   };
 
-  $extends(Skew.FunctionSymbol, Skew.Symbol);
+  __extends(Skew.FunctionSymbol, Skew.Symbol);
 
   Skew.VariableSymbol = function(kind, name) {
     var self = this;
@@ -4451,7 +4460,7 @@
     self.value = null;
   };
 
-  $extends(Skew.VariableSymbol, Skew.Symbol);
+  __extends(Skew.VariableSymbol, Skew.Symbol);
 
   Skew.OverloadedFunctionSymbol = function(kind, name, symbols) {
     var self = this;
@@ -4460,7 +4469,7 @@
     self.symbols = symbols;
   };
 
-  $extends(Skew.OverloadedFunctionSymbol, Skew.Symbol);
+  __extends(Skew.OverloadedFunctionSymbol, Skew.Symbol);
 
   Skew.TokenKind = {
     ANNOTATION: 0,
@@ -5170,7 +5179,7 @@
           return null;
         }
 
-        value = ($imul(value, 16) + c1 | 0) - (c1 <= 57 ? 48 : c1 <= 70 ? 65 - 10 | 0 : 97 - 10 | 0) | 0;
+        value = (__imul(value, 16) + c1 | 0) - (c1 <= 57 ? 48 : c1 <= 70 ? 65 - 10 | 0 : 97 - 10 | 0) | 0;
       }
     }
 
@@ -5183,7 +5192,7 @@
           return null;
         }
 
-        value = ($imul(value, base) + c2 | 0) - 48 | 0;
+        value = (__imul(value, base) + c2 | 0) - 48 | 0;
       }
     }
 
@@ -7916,7 +7925,7 @@
           }
 
           case Skew.NodeKind.MULTIPLY: {
-            self.flattenInt(node, $imul(leftContent.asInt(), rightContent.asInt()));
+            self.flattenInt(node, __imul(leftContent.asInt(), rightContent.asInt()));
             break;
           }
 
@@ -8086,7 +8095,7 @@
     self.map = Object.create(null);
   };
 
-  $extends(Skew.Folding.ConstantCache, Skew.Folding.ConstantLookup);
+  __extends(Skew.Folding.ConstantCache, Skew.Folding.ConstantLookup);
 
   Skew.Folding.ConstantCache.prototype.constantForSymbol = function(symbol) {
     var self = this;
@@ -11695,7 +11704,7 @@
     self.resolver = resolver;
   };
 
-  $extends(Skew.Resolving.ConstantResolver, Skew.Folding.ConstantLookup);
+  __extends(Skew.Resolving.ConstantResolver, Skew.Folding.ConstantLookup);
 
   Skew.Resolving.ConstantResolver.prototype.constantForSymbol = function(symbol) {
     var self = this;
@@ -11836,7 +11845,7 @@
     self.symbol = symbol;
   };
 
-  $extends(Skew.ObjectScope, Skew.Scope);
+  __extends(Skew.ObjectScope, Skew.Scope);
 
   Skew.ObjectScope.prototype.kind = function() {
     var self = this;
@@ -11867,7 +11876,7 @@
     self.parameters = Object.create(null);
   };
 
-  $extends(Skew.FunctionScope, Skew.Scope);
+  __extends(Skew.FunctionScope, Skew.Scope);
 
   Skew.FunctionScope.prototype.kind = function() {
     var self = this;
@@ -11886,7 +11895,7 @@
     self.symbol = symbol;
   };
 
-  $extends(Skew.VariableScope, Skew.Scope);
+  __extends(Skew.VariableScope, Skew.Scope);
 
   Skew.VariableScope.prototype.kind = function() {
     var self = this;
@@ -11910,7 +11919,7 @@
     self.type = type;
   };
 
-  $extends(Skew.LocalScope, Skew.Scope);
+  __extends(Skew.LocalScope, Skew.Scope);
 
   Skew.LocalScope.prototype.kind = function() {
     var self = this;
@@ -13420,7 +13429,7 @@
   Skew.KEEP_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ANNOTATION, 0), Skew.TokenKind.CLASS, 0), Skew.TokenKind.COMMENT, 0), Skew.TokenKind.DEF, 0), Skew.TokenKind.INTERFACE, 0), Skew.TokenKind.NAMESPACE, 0), Skew.TokenKind.VAR, 0);
   Skew.REMOVE_NEWLINE_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ARROW, 0), Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.NEWLINE, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.LEFT_BRACE, 0), Skew.TokenKind.LEFT_BRACKET, 0), Skew.TokenKind.LEFT_PARENTHESIS, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.EQUAL, 0), Skew.TokenKind.GREATER_THAN, 0), Skew.TokenKind.GREATER_THAN_OR_EQUAL, 0), Skew.TokenKind.LESS_THAN, 0), Skew.TokenKind.LESS_THAN_OR_EQUAL, 0), Skew.TokenKind.LOGICAL_AND, 0), Skew.TokenKind.LOGICAL_OR, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT_EQUAL, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN_MINUS, 0);
   Skew.NATIVE_LIBRARY = "\nconst RELEASE = false\n\nenum Target {\n  NONE\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@skip if RELEASE\ndef assert(truth bool)\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const INFINITY = 1 / 0.0\n  const NAN = 0 / 0.0\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n\n  def isFinite bool\n  def isNAN bool\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  def endsWith(x string) bool\n  def get(x int) string\n  def in(x string) bool\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  def startsWith(x string) bool\n  def toLowerCase string\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET != .JAVASCRIPT\nclass StringBuilder {\n  def append(x string)\n  def new\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  def first T\n  def in(x T) bool\n  def indexOf(x T) int\n  def insert(x int, value T)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  def last T\n  def lastIndexOf(x T) int\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeIf(x fn(T) bool)\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def +(x T) List<T>\n  def +(x List<T>) List<T>\n\n  @prefer\n  def +=(x T)\n  def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def clone StringMap<T>\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def clone IntMap<T>\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\nclass Box<T> {\n  var value T\n}\n";
-  Skew.NATIVE_LIBRARY_JS = "\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error(\"Assertion failed\")\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNAN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete(self[key])\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in dynamic.Object.keys(self) as List<string> {\n      keys.append(key as dynamic as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete(self[key])\n  }\n}\n\n\nclass string {\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(x int) string {\n    return dynamic.String.fromCharCode(x)\n  }\n}\n\nclass List {\n  def isEqualTo(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    return self[0]\n  }\n\n  def last T {\n    return self[count - 1]\n  }\n\n  def prepend(value T) {\n    (self as dynamic).unshift(value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(value T) {\n    (self as dynamic).push(value)\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def removeFirst {\n    (self as dynamic).shift()\n  }\n\n  def removeLast {\n    (self as dynamic).pop()\n  }\n\n  def takeFirst T {\n    return (self as dynamic).shift()\n  }\n\n  def takeLast T {\n    return (self as dynamic).pop()\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n\n  def insert(index int, value T) {\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeAt(index int) {\n    (self as dynamic).splice(index, 1)\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def clone List<T> {\n    return (self as dynamic).slice()\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n}\n\nclass StringBuilder {\n  var buffer = \"\"\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n";
+  Skew.NATIVE_LIBRARY_JS = "\nvar __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = dynamic.Object.create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nvar __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {\n  var ah dynamic = (a >> 16) & 65535\n  var bh dynamic = (b >> 16) & 65535\n  var al dynamic = a & 65535\n  var bl dynamic = b & 65535\n  return al * bl + ((ah * bl + al * bh) << 16) | 0\n}\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error(\"Assertion failed\")\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNAN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(x int) string {\n    return dynamic.String.fromCharCode(x)\n  }\n}\n\nclass StringBuilder {\n  var buffer = \"\"\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\nclass List {\n  def isEqualTo(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    return self[0]\n  }\n\n  def last T {\n    return self[count - 1]\n  }\n\n  def prepend(value T) {\n    (self as dynamic).unshift(value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(value T) {\n    (self as dynamic).push(value)\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def removeFirst {\n    (self as dynamic).shift()\n  }\n\n  def removeLast {\n    (self as dynamic).pop()\n  }\n\n  def takeFirst T {\n    return (self as dynamic).shift()\n  }\n\n  def takeLast T {\n    return (self as dynamic).pop()\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n\n  def insert(index int, value T) {\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeAt(index int) {\n    (self as dynamic).splice(index, 1)\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def clone List<T> {\n    return (self as dynamic).slice()\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n}\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete(self[key])\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in dynamic.Object.keys(self) as List<string> {\n      keys.append(key as dynamic as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete(self[key])\n  }\n}\n";
   Skew.DEFAULT_MESSAGE_LIMIT = 10;
   Skew.JsEmitter.isFunctionProperty = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "apply", 0), "call", 0), "length", 0), "name", 0);
   Skew.JsEmitter.isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "arguments", 0), "Boolean", 0), "break", 0), "case", 0), "catch", 0), "class", 0), "const", 0), "constructor", 0), "continue", 0), "Date", 0), "debugger", 0), "default", 0), "delete", 0), "do", 0), "double", 0), "else", 0), "export", 0), "extends", 0), "false", 0), "finally", 0), "float", 0), "for", 0), "Function", 0), "function", 0), "if", 0), "import", 0), "in", 0), "instanceof", 0), "int", 0), "let", 0), "new", 0), "null", 0), "Number", 0), "Object", 0), "return", 0), "String", 0), "super", 0), "this", 0), "throw", 0), "true", 0), "try", 0), "var", 0);
