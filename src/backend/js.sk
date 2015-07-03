@@ -114,6 +114,10 @@ namespace Skew {
       var newline = "\n"
       var space = " "
 
+      # For tracking "this" vs "self"
+      var currentSelf VariableSymbol = null
+      var needsSelf = false
+
       def prepareGlobal(global ObjectSymbol) {
         var globalObjects List<ObjectSymbol> = []
         var globalFunctions List<FunctionSymbol> = []
@@ -1011,16 +1015,26 @@ namespace Skew {
         var isPrimaryConstructor = true
         symbol.functions.removeIf(function => {
           allocateNamingGroupIndex(function)
-          if function.self != null {
+
+          # Check to see if we need an explicit "self" parameter while patching the block
+          needsSelf = false
+          currentSelf = function.self
+          enclosingFunction = function
+          patchNode(function.block)
+          enclosingFunction = null
+
+          # Only insert the "self" variable if required to handle capture inside lambdas
+          if needsSelf {
             unionVariableWithFunction(function.self, function)
             if function.block != null {
               function.self.value = Node.createName("this")
               function.block.children.prepend(Node.createVar(function.self))
             }
+          } else if function.self != null {
+            function.self.name = "this"
+            function.self.flags |= Symbol.IS_EXPORTED
           }
-          enclosingFunction = function
-          patchNode(function.block)
-          enclosingFunction = null
+
           for argument in function.arguments {
             allocateNamingGroupIndex(argument)
             unionVariableWithFunction(argument, function)
@@ -1123,7 +1137,7 @@ namespace Skew {
 
         if children != null {
           if kind == .LAMBDA {
-            enclosingFunction = node.symbol.asFunctionSymbol
+            enclosingFunction = symbol.asFunctionSymbol
           }
 
           for child in children {
@@ -1151,7 +1165,7 @@ namespace Skew {
           }
 
           case .FOREACH {
-            unionVariableWithFunction(node.symbol, enclosingFunction)
+            unionVariableWithFunction(symbol, enclosingFunction)
           }
 
           case .IF {
@@ -1167,7 +1181,7 @@ namespace Skew {
           }
 
           case .LAMBDA {
-            var function = node.symbol.asFunctionSymbol
+            var function = symbol.asFunctionSymbol
             for argument in function.arguments {
               allocateNamingGroupIndex(argument)
               unionVariableWithFunction(argument, function)
@@ -1175,12 +1189,18 @@ namespace Skew {
             unionVariableWithFunction(function, enclosingFunction)
           }
 
+          case .NAME {
+            if symbol != null && symbol == currentSelf && enclosingFunction != null && enclosingFunction.kind == .FUNCTION_LOCAL {
+              needsSelf = true
+            }
+          }
+
           case .TRY {
             patchTry(node)
           }
 
           case .VAR {
-            unionVariableWithFunction(node.symbol, enclosingFunction)
+            unionVariableWithFunction(symbol, enclosingFunction)
           }
         }
       }
