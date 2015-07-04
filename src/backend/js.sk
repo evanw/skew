@@ -892,7 +892,7 @@ namespace Skew {
             emit("[")
             emitExpression(node.children[1], .LOWEST)
             emit("]" + space + "=" + space + "")
-            emitExpression(node.children[2], .LOWEST)
+            emitExpression(node.children[2], .ASSIGN)
 
             if Precedence.ASSIGN as int < precedence as int {
               emit(")")

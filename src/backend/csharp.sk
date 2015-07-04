@@ -4,16 +4,49 @@ namespace Skew {
     const cache TypeCache
 
     over visit(global ObjectSymbol) {
+      indentAmount = "    "
+
+      var globals = ObjectSymbol.new(.OBJECT_NAMESPACE, global.scope.generateName("Globals"))
+      globals.parent = global
+      global.objects.append(globals)
+
+      # Move global functions and variables into their own namespace
+      for function in global.functions {
+        if function.kind != .FUNCTION_ANNOTATION {
+          function.parent = globals
+          globals.functions.append(function)
+        }
+      }
+      for variable in global.variables {
+        variable.parent = globals
+        globals.variables.append(variable)
+      }
+
+      # All code in C# is inside objects, so just emit objects recursively
       for object in global.objects {
         emitObject(object)
       }
 
+      # Emit a single file if requested
       if options.outputDirectory == "" {
         createSource(options.outputFile)
       }
     }
 
     @private {
+      var previousSymbol Symbol = null
+
+      def emitNewlineBeforeSymbol(symbol Symbol) {
+        if previousSymbol != null && (!previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
+          emit("\n")
+        }
+        previousSymbol = null
+      }
+
+      def emitNewlineAfterSymbol(symbol Symbol) {
+        previousSymbol = symbol
+      }
+
       def emitObject(symbol ObjectSymbol) {
         if symbol.isImported {
           return
@@ -24,6 +57,7 @@ namespace Skew {
           symbol.kind = .OBJECT_CLASS
         }
 
+        emitNewlineBeforeSymbol(symbol)
         emit(indent + "public ")
         switch symbol.kind {
           case .OBJECT_CLASS { emit("class ") }
@@ -36,16 +70,319 @@ namespace Skew {
         if symbol.baseClass != null {
           emit(" : " + fullName(symbol.baseClass))
         }
-        emit(" {\n")
+        emit("\n" + indent + "{\n")
         increaseIndent
         for object in symbol.objects {
           emitObject(object)
         }
+        for function in symbol.functions {
+          emitFunction(function)
+        }
         decreaseIndent
         emit(indent + "}\n")
+        emitNewlineAfterSymbol(symbol)
 
+        # Emit each object into its own file if requested
         if options.outputDirectory != "" {
           createSource(options.outputDirectory + "/" + fullName(symbol) + ".cs")
+        }
+      }
+
+      def emitArgumentList(symbol FunctionSymbol) {
+        emit("(")
+        for argument in symbol.arguments {
+          if argument != symbol.arguments.first {
+            emit(", ")
+          }
+          emitType(argument.resolvedType)
+          emit(" " + mangleName(argument))
+        }
+        emit(")")
+      }
+
+      def emitFunction(symbol FunctionSymbol) {
+        if symbol.isImported {
+          return
+        }
+
+        # C# has sane capture rules for "this" so no variable insertion is needed
+        if symbol.self != null {
+          symbol.self.name = "this"
+          symbol.self.flags |= Symbol.IS_EXPORTED
+        }
+
+        emitNewlineBeforeSymbol(symbol)
+        emit(indent + "public ")
+        if symbol.kind == .FUNCTION_GLOBAL {
+          emit("static ")
+        }
+        if symbol.kind != .FUNCTION_CONSTRUCTOR {
+          emitType(symbol.resolvedType.returnType)
+          emit(" ")
+        }
+        emit(mangleName(symbol))
+        emitArgumentList(symbol)
+
+        if symbol.block == null {
+          emit(";\n")
+        }
+
+        else {
+          emit("\n")
+          emitBlock(symbol.block)
+          emit("\n")
+        }
+
+        emitNewlineAfterSymbol(symbol)
+      }
+
+      def emitType(type Type) {
+        if type == null {
+          emit("void")
+        }
+
+        else if type == .DYNAMIC {
+          emit("dynamic")
+        }
+
+        else if type.kind == .LAMBDA {
+          var returnType = type.returnType
+          emit(returnType != null ? "Func<" : "Action<")
+          for argumentType in type.argumentTypes {
+            if argumentType != type.argumentTypes.first {
+              emit(", ")
+            }
+            emitType(argumentType)
+          }
+          if returnType != null {
+            if !type.argumentTypes.isEmpty {
+              emit(", ")
+            }
+            emitType(returnType)
+          }
+          emit(">")
+        }
+
+        else {
+          emit(fullName(type.symbol))
+          if type.isParameterized {
+            emit("<")
+            for i in 0..type.substitutions.count {
+              if i != 0 {
+                emit(", ")
+              }
+              emitType(type.substitutions[i])
+            }
+            emit(">")
+          }
+        }
+      }
+
+      def emitBlock(node Node) {
+        assert(node.kind == .BLOCK)
+        emit(indent + "{\n")
+        increaseIndent
+        for child in node.children {
+          emitStatement(child)
+        }
+        decreaseIndent
+        emit(indent + "}")
+      }
+
+      def emitStatement(node Node) {
+        switch node.kind {
+          case .VAR {
+            var symbol = node.symbol.asVariableSymbol
+            emit(indent)
+            emitType(symbol.resolvedType)
+            emit(" " + mangleName(symbol))
+            if symbol.value != null {
+              emit(" = ")
+              emitExpression(symbol.value, .ASSIGN)
+            }
+            emit(";\n")
+          }
+
+          case .EXPRESSION {
+            emit(indent)
+            emitExpression(node.expressionValue, .LOWEST)
+            emit(";\n")
+          }
+
+          case .BREAK {
+            emit(indent + "break;\n")
+          }
+
+          case .CONTINUE {
+            emit(indent + "continue;\n")
+          }
+
+          case .RETURN {
+            emit(indent + "return")
+            var value = node.returnValue
+            if value != null {
+              emit(" ")
+              emitExpression(value, .LOWEST)
+            }
+            emit(";\n")
+          }
+
+          case .THROW {
+            emit(indent + "throw ")
+            emitExpression(node.throwValue, .LOWEST)
+            emit(";\n")
+          }
+        }
+      }
+
+      def emitContent(content Content) {
+        switch content.kind {
+          case .BOOL { emit(content.asBool.toString) }
+          case .INT { emit(content.asInt.toString) }
+          case .DOUBLE { emit(content.asDouble.toString) }
+          case .STRING { emit(quoteString(content.asString, '"')) }
+        }
+      }
+
+      def emitExpression(node Node, precedence Precedence) {
+        var kind = node.kind
+        switch kind {
+          case .TYPE {
+            emitType(node.resolvedType)
+          }
+
+          case .NULL {
+            emit("null")
+          }
+
+          case .NAME {
+            var symbol = node.symbol
+            emit(symbol != null ? fullName(symbol) : node.asString)
+          }
+
+          case .DOT {
+            emitExpression(node.dotTarget, .MEMBER)
+            emit("." + (node.symbol != null ? mangleName(node.symbol) : node.asString))
+          }
+
+          case .CONSTANT {
+            emitContent(node.content)
+          }
+
+          case .CALL {
+            var value = node.callValue
+
+            if node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR {
+              emit("new " + fullName(node.symbol))
+            } else {
+              emitExpression(value, .UNARY_POSTFIX)
+            }
+
+            emit("(")
+
+            for i in 1..node.children.count {
+              if i > 1 {
+                emit(", ")
+              }
+              emitExpression(node.children[i], .COMMA)
+            }
+
+            emit(")")
+          }
+
+          case .CAST {
+            if Precedence.UNARY_POSTFIX as int < precedence as int {
+              emit("(")
+            }
+            emit("(")
+            emitType(node.resolvedType)
+            emit(")")
+            emitExpression(node.castValue, .UNARY_POSTFIX)
+            if Precedence.UNARY_POSTFIX as int < precedence as int {
+              emit(")")
+            }
+          }
+
+          case .INDEX {
+            assert(node.children.count == 2)
+            emitExpression(node.children[0], .UNARY_POSTFIX)
+            emit("[")
+            emitExpression(node.children[1], .LOWEST)
+            emit("]")
+          }
+
+          case .ASSIGN_INDEX {
+            if Precedence.ASSIGN as int < precedence as int {
+              emit("(")
+            }
+            assert(node.children.count == 3)
+            emitExpression(node.children[0], .UNARY_POSTFIX)
+            emit("[")
+            emitExpression(node.children[1], .LOWEST)
+            emit("] = ")
+            emitExpression(node.children[2], .ASSIGN)
+            if Precedence.ASSIGN as int < precedence as int {
+              emit(")")
+            }
+          }
+
+          case .PARAMETERIZE {
+            emitExpression(node.parameterizeValue, precedence)
+          }
+
+          case .HOOK {
+            if Precedence.ASSIGN as int < precedence as int {
+              emit("(")
+            }
+            emitExpression(node.hookTest, .LOGICAL_OR)
+            emit(" ? ")
+            emitExpression(node.hookTrue, .ASSIGN)
+            emit(" : ")
+            emitExpression(node.hookFalse, .ASSIGN)
+            if Precedence.ASSIGN as int < precedence as int {
+              emit(")")
+            }
+          }
+
+          case .LAMBDA {
+            var function = node.symbol.asFunctionSymbol
+            emitArgumentList(function)
+            emit(" =>\n")
+            emitBlock(function.block)
+          }
+
+          default {
+            if kind.isUnary {
+              var value = node.unaryValue
+              var info = operatorInfo[kind]
+              if info.precedence as int < precedence as int {
+                emit("(")
+              }
+              emit(info.text)
+              emitExpression(value, info.precedence)
+              if info.precedence as int < precedence as int {
+                emit(")")
+              }
+            }
+
+            else if kind.isBinary {
+              var info = operatorInfo[kind]
+              if info.precedence as int < precedence as int {
+                emit("(")
+              }
+              emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
+              emit(" " + info.text + " ")
+              emitExpression(node.binaryRight, info.precedence.incrementIfLeftAssociative(info.associativity))
+              if info.precedence as int < precedence as int {
+                emit(")")
+              }
+            }
+
+            else {
+              emit("TODO:" + kind.toString)
+              # assert(false)
+            }
+          }
         }
       }
 
