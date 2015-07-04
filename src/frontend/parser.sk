@@ -1260,7 +1260,7 @@ namespace Skew.Parsing {
       return Node.createDot(Node.createDynamic, range.toString).withRange(context.spanSince(token.range)).withInternalRange(range)
     }
 
-    # Name expressions and lambda| expressions like "x => x * x"
+    # Name expressions and lambda expressions like "x => x * x"
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = (context) => {
       var range = context.next.range
       var name = range.toString

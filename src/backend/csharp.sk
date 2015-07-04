@@ -34,6 +34,7 @@ namespace Skew {
     }
 
     @private {
+      var previousNode Node = null
       var previousSymbol Symbol = null
 
       def emitNewlineBeforeSymbol(symbol Symbol) {
@@ -47,6 +48,29 @@ namespace Skew {
         previousSymbol = symbol
       }
 
+      def isCompactNodeKind(kind NodeKind) bool {
+        return kind == .EXPRESSION || kind == .VAR || kind.isJump
+      }
+
+      def emitNewlineBeforeStatement(node Node) {
+        if previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind)) {
+          emit("\n")
+        }
+        previousNode = null
+      }
+
+      def emitNewlineAfterStatement(node Node) {
+        previousNode = node
+      }
+
+      def emitComments(comments List<string>) {
+        if comments != null {
+          for comment in comments {
+            emit(indent + "//" + comment)
+          }
+        }
+      }
+
       def emitObject(symbol ObjectSymbol) {
         if symbol.isImported {
           return
@@ -58,6 +82,7 @@ namespace Skew {
         }
 
         emitNewlineBeforeSymbol(symbol)
+        emitComments(symbol.comments)
         emit(indent + "public ")
         switch symbol.kind {
           case .OBJECT_CLASS { emit("class ") }
@@ -67,6 +92,16 @@ namespace Skew {
           default { assert(false) }
         }
         emit(mangleName(symbol))
+        if symbol.parameters != null {
+          emit("<")
+          for parameter in symbol.parameters {
+            if parameter != symbol.parameters.first {
+              emit(", ")
+            }
+            emitType(parameter.resolvedType)
+          }
+          emit(">")
+        }
         if symbol.baseClass != null {
           emit(" : " + fullName(symbol.baseClass))
         }
@@ -74,6 +109,9 @@ namespace Skew {
         increaseIndent
         for object in symbol.objects {
           emitObject(object)
+        }
+        for variable in symbol.variables {
+          emitVariable(variable)
         }
         for function in symbol.functions {
           emitFunction(function)
@@ -100,6 +138,27 @@ namespace Skew {
         emit(")")
       }
 
+      def emitVariable(symbol VariableSymbol) {
+        if symbol.isImported {
+          return
+        }
+
+        emitNewlineBeforeSymbol(symbol)
+        emitComments(symbol.comments)
+        emit(indent + "public ")
+        if symbol.kind == .VARIABLE_GLOBAL {
+          emit("static ")
+        }
+        emitType(symbol.resolvedType)
+        emit(" " + mangleName(symbol))
+        if symbol.value != null {
+          emit(" = ")
+          emitExpression(symbol.value, .COMMA)
+        }
+        emit(";\n")
+        emitNewlineAfterSymbol(symbol)
+      }
+
       def emitFunction(symbol FunctionSymbol) {
         if symbol.isImported {
           return
@@ -112,6 +171,7 @@ namespace Skew {
         }
 
         emitNewlineBeforeSymbol(symbol)
+        emitComments(symbol.comments)
         emit(indent + "public ")
         if symbol.kind == .FUNCTION_GLOBAL {
           emit("static ")
@@ -178,15 +238,54 @@ namespace Skew {
         }
       }
 
+      def emitStatements(statements List<Node>) {
+        previousNode = null
+
+        for statement in statements {
+          emitNewlineBeforeStatement(statement)
+          emitComments(statement.comments)
+          emitStatement(statement)
+          emitNewlineAfterStatement(statement)
+        }
+
+        previousNode = null
+      }
+
       def emitBlock(node Node) {
         assert(node.kind == .BLOCK)
         emit(indent + "{\n")
         increaseIndent
-        for child in node.children {
-          emitStatement(child)
-        }
+        emitStatements(node.children)
         decreaseIndent
         emit(indent + "}")
+      }
+
+      def emitIf(node Node) {
+        emit("if (")
+        emitExpression(node.ifTest, .LOWEST)
+        emit(")\n")
+        emitBlock(node.ifTrue)
+        emit("\n")
+
+        var block = node.ifFalse
+        if block != null {
+          var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
+          emit("\n")
+          emitComments(block.comments)
+          if singleIf != null {
+            emitComments(singleIf.comments)
+          }
+          emit(indent + "else")
+
+          if singleIf != null {
+            emit(" ")
+            emitIf(singleIf)
+          } else {
+            emit("\n")
+            emitBlock(block)
+            emit("\n")
+          }
+        }
       }
 
       def emitStatement(node Node) {
@@ -217,6 +316,47 @@ namespace Skew {
             emit(indent + "continue;\n")
           }
 
+          case .IF {
+            emit(indent)
+            emitIf(node)
+          }
+
+          case .SWITCH {
+            var cases = node.children
+            emit(indent + "switch (")
+            emitExpression(node.switchValue, .LOWEST)
+            emit(")\n" + indent + "{\n")
+            increaseIndent
+            for i in 1..cases.count {
+              var child = cases[i]
+              var values = child.children
+              var block = child.caseBlock
+              if i != 1 {
+                emit("\n")
+              }
+              if values.count == 1 {
+                emit(indent + "default:")
+              } else {
+                for j in 1..values.count {
+                  if j != 1 { emit("\n") }
+                  emit(indent + "case ")
+                  emitExpression(values[j], .LOWEST)
+                  emit(":")
+                }
+              }
+              emit("\n" + indent + "{\n")
+              increaseIndent
+              emitStatements(block.children)
+              if !block.blockAlwaysEndsWithReturn {
+                emit(indent + "break;\n")
+              }
+              decreaseIndent
+              emit(indent + "}\n")
+            }
+            decreaseIndent
+            emit(indent + "}\n")
+          }
+
           case .RETURN {
             emit(indent + "return")
             var value = node.returnValue
@@ -231,6 +371,86 @@ namespace Skew {
             emit(indent + "throw ")
             emitExpression(node.throwValue, .LOWEST)
             emit(";\n")
+          }
+
+          case .FOR {
+            var test = node.forTest
+            var update = node.forUpdate
+            var children = node.children
+            var count = children.count
+            emit(indent + "for (")
+            if count > 3 {
+              for i in 3..count {
+                var child = children[i]
+                if i != 3 {
+                  emit(", ")
+                }
+                if child.kind == .VAR {
+                  var symbol = child.symbol.asVariableSymbol
+                  if i == 3 {
+                    emitType(symbol.resolvedType)
+                    emit(" ")
+                  }
+                  emit(mangleName(symbol) + " = ")
+                  emitExpression(symbol.value, .LOWEST)
+                } else {
+                  emitExpression(child, .LOWEST)
+                }
+              }
+            }
+            emit("; ")
+            if test != null {
+              emitExpression(test, .LOWEST)
+            }
+            emit("; ")
+            if update != null {
+              emitExpression(update, .LOWEST)
+            }
+            emit(")\n")
+            emitBlock(node.forBlock)
+            emit("\n")
+          }
+
+          case .TRY {
+            var children = node.children
+            var finallyBlock = node.finallyBlock
+            emit(indent + "try\n")
+            emitBlock(node.tryBlock)
+            emit("\n")
+            for i in 1..children.count - 1 {
+              var child = children[i]
+              emit("\n")
+              emitComments(child.comments)
+              emit(indent + "catch")
+              if child.symbol != null {
+                emit(" (")
+                emitType(child.symbol.resolvedType)
+                emit(" " + mangleName(child.symbol) + ")")
+              }
+              emit("\n")
+              emitBlock(child.catchBlock)
+              emit("\n")
+            }
+            if finallyBlock != null {
+              emit("\n")
+              emitComments(finallyBlock.comments)
+              emit(indent + "finally\n")
+              emitBlock(finallyBlock)
+              emit("\n")
+            }
+          }
+
+          case .WHILE {
+            emit(indent + "while (")
+            emitExpression(node.whileTest, .LOWEST)
+            emit(")\n")
+            emitBlock(node.whileBlock)
+            emit("\n")
+          }
+
+          default {
+            emit(indent + "TODO:" + node.kind.toString + "\n")
+            # assert(false)
           }
         }
       }
@@ -388,7 +608,7 @@ namespace Skew {
 
       def fullName(symbol Symbol) string {
         var parent = symbol.parent
-        if parent != null && parent.kind != .OBJECT_GLOBAL {
+        if parent != null && parent.kind != .OBJECT_GLOBAL && !symbol.kind.isParameter {
           var enclosingName = fullName(parent)
           if symbol.kind == .FUNCTION_CONSTRUCTOR {
             return enclosingName
