@@ -812,6 +812,9 @@ namespace Skew {
 
             if !call && node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR {
               emit("new " + fullName(node.symbol))
+            } else if !call && value.kind == .DOT && value.asString == "new" {
+              emit("new ")
+              emitExpression(value.dotTarget, .MEMBER)
             } else {
               emitExpression(value, .UNARY_POSTFIX)
               if call {

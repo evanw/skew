@@ -270,10 +270,12 @@ namespace Skew {
         var block = node.ifFalse
         if block != null {
           var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
-          emit("\n")
-          emitComments(block.comments)
-          if singleIf != null {
-            emitComments(singleIf.comments)
+          if block.comments != null || singleIf != null && singleIf.comments != null {
+            emit("\n")
+            emitComments(block.comments)
+            if singleIf != null {
+              emitComments(singleIf.comments)
+            }
           }
           emit(indent + "else")
 
@@ -449,8 +451,7 @@ namespace Skew {
           }
 
           default {
-            emit(indent + "TODO:" + node.kind.toString + "\n")
-            # assert(false)
+            assert(false)
           }
         }
       }
@@ -493,7 +494,11 @@ namespace Skew {
             var value = node.callValue
 
             if node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR {
-              emit("new " + fullName(node.symbol))
+              emit("new ")
+              emitType(node.resolvedType)
+            } else if value.kind == .DOT && value.asString == "new" {
+              emit("new ")
+              emitExpression(value.dotTarget, .MEMBER)
             } else {
               emitExpression(value, .UNARY_POSTFIX)
             }
@@ -511,15 +516,36 @@ namespace Skew {
           }
 
           case .CAST {
-            if Precedence.UNARY_POSTFIX as int < precedence as int {
+            if node.resolvedType == .DYNAMIC {
+              emitExpression(node.castValue, precedence)
+            } else {
+              if Precedence.UNARY_POSTFIX as int < precedence as int {
+                emit("(")
+              }
               emit("(")
-            }
-            emit("(")
-            emitType(node.resolvedType)
-            emit(")")
-            emitExpression(node.castValue, .UNARY_POSTFIX)
-            if Precedence.UNARY_POSTFIX as int < precedence as int {
+              emitType(node.resolvedType)
               emit(")")
+              emitExpression(node.castValue, .UNARY_POSTFIX)
+              if Precedence.UNARY_POSTFIX as int < precedence as int {
+                emit(")")
+              }
+            }
+          }
+
+          case .INITIALIZER_LIST {
+            emit("new ")
+            emitType(node.resolvedType)
+            if node.hasChildren {
+              emit(" { ")
+              for child in node.children {
+                if child != node.children.first {
+                  emit(", ")
+                }
+                emitExpression(child, .COMMA)
+              }
+              emit(" }")
+            } else {
+              emit("()")
             }
           }
 
@@ -599,8 +625,7 @@ namespace Skew {
             }
 
             else {
-              emit("TODO:" + kind.toString)
-              # assert(false)
+              assert(false)
             }
           }
         }

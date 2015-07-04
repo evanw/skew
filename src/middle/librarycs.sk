@@ -1,0 +1,150 @@
+namespace Skew {
+  const NATIVE_LIBRARY_CS = "
+def assert(truth bool) {
+  dynamic.Debug.Assert(truth)
+}
+
+class double {
+  def isFinite bool {
+    return !isNAN && dynamic.double.IsInfinity(self)
+  }
+
+  def isNAN bool {
+    return dynamic.double.IsNaN(self)
+  }
+}
+
+class string {
+  def count int {
+    return (self as dynamic).Length
+  }
+
+  def get(index int) string {
+    return fromCodeUnit(self[index])
+  }
+
+  def repeat(times int) string {
+    var result = \"\"
+    for i in 0..times {
+      result += self
+    }
+    return result
+  }
+
+  def join(parts List<string>) string {
+    return dynamic.string.Join(self, parts)
+  }
+
+  def slice(start int, end int) string {
+    return (self as dynamic).Substring(start, end - start)
+  }
+}
+
+namespace string {
+  def fromCodeUnit(x int) string {
+    return dynamic.string.new(x, 1)
+  }
+}
+
+class List {
+  def any(callback fn(T) bool) bool {
+    return !all(x => !callback(x))
+  }
+
+  def isEqualTo(other List<T>) bool {
+    if count != other.count {
+      return false
+    }
+    for i in 0..count {
+      if self[i] != other[i] {
+        return false
+      }
+    }
+    return true
+  }
+
+  def isEmpty bool {
+    return count == 0
+  }
+
+  def count int {
+    return (self as dynamic).Count
+  }
+
+  def prepend(value T) {
+    insert(0, value)
+  }
+
+  def prepend(values List<T>) {
+    var count = values.count
+    for i in 0..count {
+      prepend(values[count - i - 1])
+    }
+  }
+
+  def removeFirst {
+    removeAt(0)
+  }
+
+  def removeLast {
+    removeAt(count - 1)
+  }
+
+  def takeFirst T {
+    var value = first
+    removeFirst
+    return value
+  }
+
+  def takeLast T {
+    var value = last
+    removeLast
+    return value
+  }
+
+  def swap(i int, j int) {
+    var temp = self[i]
+    self[i] = self[j]
+    self[j] = temp
+  }
+}
+
+class StringMap {
+  def {...}(key string, value T) StringMap<T> {
+    self[key] = value
+    return self
+  }
+
+  def get(key string, value T) T {
+    return key in self ? self[key] : value
+  }
+
+  def keys List<string> {
+    return (self as dynamic).Keys.ToList()
+  }
+
+  def values List<T> {
+    return (self as dynamic).Values.ToList()
+  }
+}
+
+class IntMap {
+  def {...}(key int, value T) IntMap<T> {
+    self[key] = value
+    return self
+  }
+
+  def get(key int, value T) T {
+    return key in self ? self[key] : value
+  }
+
+  def keys List<int> {
+    return (self as dynamic).Keys.ToList()
+  }
+
+  def values List<T> {
+    return (self as dynamic).Values.ToList()
+  }
+}
+"
+}

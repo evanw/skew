@@ -46,6 +46,7 @@ namespace Skew {
 
     switch options.target {
       case .CSHARP {
+        sources.prepend(Source.new("<native-cs>", NATIVE_LIBRARY_CS))
         options.define("TARGET", "CSHARP")
       }
       case .JAVASCRIPT {
