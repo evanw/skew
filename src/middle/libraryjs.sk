@@ -89,14 +89,6 @@ class StringBuilder {
 }
 
 class List {
-  def all(callback fn(T) bool) bool {
-    return (self as dynamic).every(callback)
-  }
-
-  def any(callback fn(T) bool) bool {
-    return (self as dynamic).some(callback)
-  }
-
   def isEqualTo(other List<T>) bool {
     if count != other.count {
       return false
@@ -129,10 +121,6 @@ class List {
     return self[count - 1]
   }
 
-  def prepend(value T) {
-    (self as dynamic).unshift(value)
-  }
-
   def prepend(values List<T>) {
     var count = values.count
     for i in 0..count {
@@ -140,30 +128,10 @@ class List {
     }
   }
 
-  def append(value T) {
-    (self as dynamic).push(value)
-  }
-
   def append(values List<T>) {
     for value in values {
       append(value)
     }
-  }
-
-  def removeFirst {
-    (self as dynamic).shift()
-  }
-
-  def removeLast {
-    (self as dynamic).pop()
-  }
-
-  def takeFirst T {
-    return (self as dynamic).shift()
-  }
-
-  def takeLast T {
-    return (self as dynamic).pop()
   }
 
   def swap(i int, j int) {
@@ -185,10 +153,6 @@ class List {
     if index >= 0 {
       removeAt(index)
     }
-  }
-
-  def clone List<T> {
-    return (self as dynamic).slice()
   }
 
   def removeIf(callback fn(T) bool) {

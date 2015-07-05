@@ -47,10 +47,6 @@ namespace string {
 }
 
 class List {
-  def any(callback fn(T) bool) bool {
-    return !all(x => !callback(x))
-  }
-
   def isEqualTo(other List<T>) bool {
     if count != other.count {
       return false

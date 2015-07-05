@@ -845,7 +845,7 @@ namespace Skew {
           case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
             var children = node.children
             var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && children.isEmpty
-            var isIndented = !minify && children.any(child => child.comments != null)
+            var isIndented = !minify && !children.all(child => child.comments == null)
 
             emit(useBraces ? "{" : "[")
             if isIndented {

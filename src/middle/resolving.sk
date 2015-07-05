@@ -195,9 +195,7 @@ namespace Skew.Resolving {
 
       # Resolve annotations on this symbol after annotation inheritance
       if annotations != null {
-        for annotation in annotations {
-          resolveAnnotation(annotation, symbol)
-        }
+        annotations.removeIf(annotation => !resolveAnnotation(annotation, symbol))
       }
     }
 
@@ -1205,7 +1203,7 @@ namespace Skew.Resolving {
       }
     }
 
-    def resolveAnnotation(node Node, symbol Symbol) {
+    def resolveAnnotation(node Node, symbol Symbol) bool {
       var value = node.annotationValue
       var test = node.annotationTest
 
@@ -1216,13 +1214,13 @@ namespace Skew.Resolving {
 
       # Terminate early when there were errors
       if value.symbol == null {
-        return
+        return false
       }
 
       # Make sure annotations have the arguments they need
       if value.kind != .CALL {
         log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.count, 0, value.symbol.name, value.symbol.range)
-        return
+        return false
       }
 
       # Ensure all arguments are constants
@@ -1232,7 +1230,7 @@ namespace Skew.Resolving {
         isValid = isValid && recursivelyResolveAsConstant(children[i])
       }
       if !isValid {
-        return
+        return false
       }
 
       # Only store symbols for annotations with the correct arguments for ease of use
@@ -1245,7 +1243,7 @@ namespace Skew.Resolving {
           case Symbol.IS_DEPRECATED {}
           case Symbol.IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
           case Symbol.IS_EXPORTED { isValid = !symbol.isImported }
-          case Symbol.IS_IMPORTED { isValid = !symbol.isExported }
+          case Symbol.IS_IMPORTED { isValid = !symbol.isExported && (!symbol.kind.isFunction || symbol.asFunctionSymbol.block == null) }
           case Symbol.IS_PREFERRED { isValid = symbol.kind.isFunction }
           case Symbol.IS_PRIVATE { isValid = !symbol.isProtected && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case Symbol.IS_PROTECTED { isValid = !symbol.isPrivate && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
@@ -1254,20 +1252,23 @@ namespace Skew.Resolving {
         }
         if !isValid {
           log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
-        } else {
-          # Don't add an annotation when the test expression is false
-          if test != null && recursivelyResolveAsConstant(test) && test.isFalse {
-            return
-          }
-
-          # Only warn about duplicate annotations after checking the test expression
-          if (symbol.flags & flag) != 0 {
-            log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
-          }
-
-          symbol.flags |= flag
+          return false
         }
+
+        # Don't add an annotation when the test expression is false
+        if test != null && recursivelyResolveAsConstant(test) && test.isFalse {
+          return false
+        }
+
+        # Only warn about duplicate annotations after checking the test expression
+        if (symbol.flags & flag) != 0 {
+          log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
+        }
+
+        symbol.flags |= flag
       }
+
+      return true
     }
 
     def recursivelyResolveAsConstant(node Node) bool {

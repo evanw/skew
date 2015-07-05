@@ -1961,9 +1961,9 @@
       variable1.parent = global;
     }
 
-    in_List.append2(global.objects, globalObjects);
-    in_List.append2(global.functions, globalFunctions);
-    in_List.append2(global.variables, globalVariables);
+    in_List.append1(global.objects, globalObjects);
+    in_List.append1(global.functions, globalFunctions);
+    in_List.append1(global.variables, globalVariables);
 
     // Rename symbols based on frequency for better compression
     this.renameSymbols();
@@ -2816,8 +2816,8 @@
       case Skew.NodeKind.INITIALIZER_SET: {
         var children = node.children;
         var useBraces = kind === Skew.NodeKind.INITIALIZER_MAP || kind === Skew.NodeKind.INITIALIZER_SET && children.length === 0;
-        var isIndented = !this.minify && children.some(function(child) {
-          return child.comments !== null;
+        var isIndented = !this.minify && !children.every(function(child) {
+          return child.comments === null;
         });
         this.emit(useBraces ? "{" : "[");
 
@@ -4521,7 +4521,7 @@
     assert(test === null || Skew.NodeKind.isExpression(test.kind));
     assert(update === null || Skew.NodeKind.isExpression(update.kind));
     assert(block.kind === Skew.NodeKind.BLOCK);
-    in_List.prepend2(setup, [test, update, block]);
+    in_List.prepend1(setup, [test, update, block]);
     return new Skew.Node(Skew.NodeKind.FOR).withChildren(setup);
   };
 
@@ -5272,7 +5272,7 @@
     }
 
     else if (symbol.annotations !== null) {
-      in_List.append2(this.annotations, symbol.annotations);
+      in_List.append1(this.annotations, symbol.annotations);
     }
 
     if (this.comments === null) {
@@ -5280,7 +5280,7 @@
     }
 
     else if (symbol.comments !== null) {
-      in_List.append2(this.comments, symbol.comments);
+      in_List.append1(this.comments, symbol.comments);
     }
   };
 
@@ -9318,9 +9318,9 @@
       // Merge "child" into "other"
       Skew.Merging.mergeObject(log, parent, object, child);
       object.mergeAnnotationsAndCommentsFrom(child);
-      in_List.append2(object.objects, child.objects);
-      in_List.append2(object.functions, child.functions);
-      in_List.append2(object.variables, child.variables);
+      in_List.append1(object.objects, child.objects);
+      in_List.append1(object.functions, child.functions);
+      in_List.append1(object.variables, child.variables);
 
       if (child.parameters !== null) {
         object.parameters = child.parameters;
@@ -9699,6 +9699,7 @@
   };
 
   Skew.Resolving.Resolver.prototype.resolveAnnotations = function(symbol) {
+    var self = this;
     var parent = symbol.parent;
     var annotations = symbol.annotations;
 
@@ -9709,10 +9710,9 @@
 
     // Resolve annotations on this symbol after annotation inheritance
     if (annotations !== null) {
-      for (var i = 0, list = annotations, count = list.length; i < count; ++i) {
-        var annotation = list[i];
-        this.resolveAnnotation(annotation, symbol);
-      }
+      in_List.removeIf(annotations, function(annotation) {
+        return !self.resolveAnnotation(annotation, symbol);
+      });
     }
   };
 
@@ -9889,7 +9889,7 @@
   };
 
   Skew.Resolving.Resolver.prototype.scanForGuards = function(symbol, guards) {
-    in_List.append2(guards, symbol.guards);
+    in_List.append1(guards, symbol.guards);
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
@@ -9972,9 +9972,9 @@
     Skew.Merging.mergeObjects(this.log, object, symbol.objects);
     Skew.Merging.mergeFunctions(this.log, object, symbol.functions);
     Skew.Merging.mergeVariables(this.log, object, symbol.variables);
-    in_List.append2(object.objects, symbol.objects);
-    in_List.append2(object.functions, symbol.functions);
-    in_List.append2(object.variables, symbol.variables);
+    in_List.append1(object.objects, symbol.objects);
+    in_List.append1(object.functions, symbol.functions);
+    in_List.append1(object.variables, symbol.variables);
 
     // Handle nested guard clauses like this:
     //
@@ -10964,13 +10964,13 @@
 
     // Terminate early when there were errors
     if (value.symbol === null) {
-      return;
+      return false;
     }
 
     // Make sure annotations have the arguments they need
     if (value.kind !== Skew.NodeKind.CALL) {
       this.log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.length, 0, value.symbol.name, value.symbol.range);
-      return;
+      return false;
     }
 
     // Ensure all arguments are constants
@@ -10982,7 +10982,7 @@
     }
 
     if (!isValid) {
-      return;
+      return false;
     }
 
     // Only store symbols for annotations with the correct arguments for ease of use
@@ -11008,7 +11008,7 @@
         }
 
         case Skew.Symbol.IS_IMPORTED: {
-          isValid = !symbol.isExported();
+          isValid = !symbol.isExported() && (!Skew.SymbolKind.isFunction(symbol.kind) || symbol.asFunctionSymbol().block === null);
           break;
         }
 
@@ -11039,22 +11039,23 @@
 
       if (!isValid) {
         this.log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name);
+        return false;
       }
 
-      else {
-        // Don't add an annotation when the test expression is false
-        if (test !== null && this.recursivelyResolveAsConstant(test) && test.isFalse()) {
-          return;
-        }
-
-        // Only warn about duplicate annotations after checking the test expression
-        if ((symbol.flags & flag) !== 0) {
-          this.log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name);
-        }
-
-        symbol.flags |= flag;
+      // Don't add an annotation when the test expression is false
+      if (test !== null && this.recursivelyResolveAsConstant(test) && test.isFalse()) {
+        return false;
       }
+
+      // Only warn about duplicate annotations after checking the test expression
+      if ((symbol.flags & flag) !== 0) {
+        this.log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name);
+      }
+
+      symbol.flags |= flag;
     }
+
+    return true;
   };
 
   Skew.Resolving.Resolver.prototype.recursivelyResolveAsConstant = function(node) {
@@ -12711,7 +12712,7 @@
   Skew.UsageGraph.prototype.usagesForSymbols = function(symbols) {
     var combinedUsages = Object.create(null);
     var stack = [];
-    in_List.append2(stack, symbols);
+    in_List.append1(stack, symbols);
 
     // Iterate until a fixed point is reached
     while (!(stack.length === 0)) {
@@ -12726,7 +12727,7 @@
           var symbolUsages = in_IntMap.get(this.usages, symbol.id, null);
 
           if (symbolUsages !== null) {
-            in_List.append2(stack, symbolUsages);
+            in_List.append1(stack, symbolUsages);
           }
 
           if (Skew.SymbolKind.isFunction(symbol.kind)) {
@@ -12741,7 +12742,7 @@
 
             // Check function overrides after everything settles
             if (overrides !== null) {
-              in_List.append2(overridesToCheck, overrides);
+              in_List.append1(overridesToCheck, overrides);
             }
           }
         }
@@ -13895,7 +13896,7 @@
     return self[self.length - 1 | 0];
   };
 
-  in_List.prepend2 = function(self, values) {
+  in_List.prepend1 = function(self, values) {
     var count = values.length;
 
     for (var i = 0, count1 = count; i < count1; ++i) {
@@ -13903,7 +13904,7 @@
     }
   };
 
-  in_List.append2 = function(self, values) {
+  in_List.append1 = function(self, values) {
     for (var i = 0, list = values, count1 = list.length; i < count1; ++i) {
       var value = list[i];
       self.push(value);
@@ -14001,9 +14002,9 @@
   Skew.REMOVE_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.RIGHT_BRACKET, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0);
   Skew.KEEP_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ANNOTATION, 0), Skew.TokenKind.CLASS, 0), Skew.TokenKind.COMMENT, 0), Skew.TokenKind.DEF, 0), Skew.TokenKind.INTERFACE, 0), Skew.TokenKind.NAMESPACE, 0), Skew.TokenKind.VAR, 0);
   Skew.REMOVE_NEWLINE_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ARROW, 0), Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.NEWLINE, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.LEFT_BRACE, 0), Skew.TokenKind.LEFT_BRACKET, 0), Skew.TokenKind.LEFT_PARENTHESIS, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.EQUAL, 0), Skew.TokenKind.GREATER_THAN, 0), Skew.TokenKind.GREATER_THAN_OR_EQUAL, 0), Skew.TokenKind.LESS_THAN, 0), Skew.TokenKind.LESS_THAN_OR_EQUAL, 0), Skew.TokenKind.LOGICAL_AND, 0), Skew.TokenKind.LOGICAL_OR, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT_EQUAL, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN_MINUS, 0);
-  Skew.NATIVE_LIBRARY = "\nconst RELEASE = false\n\nenum Target {\n  NONE\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@skip if RELEASE\ndef assert(truth bool)\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const INFINITY = 1 / 0.0\n  const NAN = 0 / 0.0\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n\n  def isFinite bool\n  def isNAN bool\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  @rename(\"EndsWith\") if TARGET == .CSHARP\n  def endsWith(x string) bool\n  def get(x int) string\n  @rename(\"Contains\") if TARGET == .CSHARP\n  def in(x string) bool\n  @rename(\"IndexOf\") if TARGET == .CSHARP\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  @rename(\"Replace\") if TARGET == .CSHARP\n  def replaceAll(before string, after string) string\n  @rename(\"Substring\") if TARGET == .CSHARP\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  @rename(\"StartsWith\") if TARGET == .CSHARP\n  def startsWith(x string) bool\n  @rename(\"ToLower\") if TARGET == .CSHARP\n  def toLowerCase string\n  @rename(\"ToUpper\") if TARGET == .CSHARP\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .CSHARP\nclass StringBuilder {\n  @rename(\"Append\") if TARGET == .CSHARP\n  def append(x string)\n  def new\n  @rename(\"ToString\") if TARGET == .CSHARP\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  @rename(\"TrueForAll\") if TARGET == .CSHARP\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def appendOne(x T)\n  @rename(\"MemberwiseClone\") if TARGET == .CSHARP\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  @rename(\"First\") if TARGET == .CSHARP\n  def first T\n  @rename(\"Contains\") if TARGET == .CSHARP\n  def in(x T) bool\n  @rename(\"IndexOf\") if TARGET == .CSHARP\n  def indexOf(x T) int\n  @rename(\"Insert\") if TARGET == .CSHARP\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  @rename(\"Last\") if TARGET == .CSHARP\n  def last T\n  @rename(\"LastIndexOf\") if TARGET == .CSHARP\n  def lastIndexOf(x T) int\n  @rename(\"ConvertAll\") if TARGET == .CSHARP\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  @rename(\"RemoveAt\") if TARGET == .CSHARP\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  @rename(\"RemoveAll\") if TARGET == .CSHARP\n  def removeIf(x fn(T) bool)\n  def removeLast\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  @rename(\"Reverse\") if TARGET == .CSHARP\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  def takeFirst T\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  @rename(\"Add\") if TARGET == .CSHARP\n  def append(x T)\n  @rename(\"AddRange\") if TARGET == .CSHARP\n  def append(x List<T>)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  # @prefer\n  # def +(x T) List<T>\n  # def +(x List<T>) List<T>\n\n  # @prefer\n  # def +=(x T)\n  # def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  @rename(\"MemberwiseClone\") if TARGET == .CSHARP\n  def clone StringMap<T>\n  @rename(\"Count\") if TARGET == .CSHARP\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  @rename(\"ContainsKey\") if TARGET == .CSHARP\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  @rename(\"MemberwiseClone\") if TARGET == .CSHARP\n  def clone IntMap<T>\n  @rename(\"Count\") if TARGET == .CSHARP\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  @rename(\"ContainsKey\") if TARGET == .CSHARP\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\n@rename(\"Nullable\") if TARGET == .CSHARP\n@import if TARGET == .CSHARP\nclass Box<T> {\n  @rename(\"Value\") if TARGET == .CSHARP\n  var value T\n\n  if TARGET == .CSHARP {\n    def new(value T)\n  }\n}\n";
-  Skew.NATIVE_LIBRARY_CS = "\ndef assert(truth bool) {\n  dynamic.Debug.Assert(truth)\n}\n\nclass double {\n  def isFinite bool {\n    return !isNAN && dynamic.double.IsInfinity(self)\n  }\n\n  def isNAN bool {\n    return dynamic.double.IsNaN(self)\n  }\n}\n\nclass string {\n  def count int {\n    return (self as dynamic).Length\n  }\n\n  def get(index int) string {\n    return fromCodeUnit(self[index])\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return dynamic.string.Join(self, parts)\n  }\n\n  def slice(start int, end int) string {\n    return (self as dynamic).Substring(start, end - start)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(x int) string {\n    return dynamic.string.new(x, 1)\n  }\n}\n\nclass List {\n  def any(callback fn(T) bool) bool {\n    return !all(x => !callback(x))\n  }\n\n  def isEqualTo(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).Count\n  }\n\n  def prepend(value T) {\n    insert(0, value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def removeFirst {\n    removeAt(0)\n  }\n\n  def removeLast {\n    removeAt(count - 1)\n  }\n\n  def takeFirst T {\n    var value = first\n    removeFirst\n    return value\n  }\n\n  def takeLast T {\n    var value = last\n    removeLast\n    return value\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return (self as dynamic).Keys.ToList()\n  }\n\n  def values List<T> {\n    return (self as dynamic).Values.ToList()\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    return (self as dynamic).Keys.ToList()\n  }\n\n  def values List<T> {\n    return (self as dynamic).Values.ToList()\n  }\n}\n";
-  Skew.NATIVE_LIBRARY_JS = "\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = dynamic.Object.create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {\n  const ah dynamic = (a >> 16) & 65535\n  const bh dynamic = (b >> 16) & 65535\n  const al dynamic = a & 65535\n  const bl dynamic = b & 65535\n  return al * bl + ((ah * bl + al * bh) << 16) | 0\n}\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error(\"Assertion failed\")\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNAN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(x int) string {\n    return dynamic.String.fromCharCode(x)\n  }\n}\n\nclass StringBuilder {\n  var buffer = \"\"\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\nclass List {\n  def all(callback fn(T) bool) bool {\n    return (self as dynamic).every(callback)\n  }\n\n  def any(callback fn(T) bool) bool {\n    return (self as dynamic).some(callback)\n  }\n\n  def isEqualTo(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    return self[0]\n  }\n\n  def last T {\n    return self[count - 1]\n  }\n\n  def prepend(value T) {\n    (self as dynamic).unshift(value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(value T) {\n    (self as dynamic).push(value)\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def removeFirst {\n    (self as dynamic).shift()\n  }\n\n  def removeLast {\n    (self as dynamic).pop()\n  }\n\n  def takeFirst T {\n    return (self as dynamic).shift()\n  }\n\n  def takeLast T {\n    return (self as dynamic).pop()\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n\n  def insert(index int, value T) {\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeAt(index int) {\n    (self as dynamic).splice(index, 1)\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def clone List<T> {\n    return (self as dynamic).slice()\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n}\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete(self[key])\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in dynamic.Object.keys(self) as List<string> {\n      keys.append(key as dynamic as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete(self[key])\n  }\n}\n";
+  Skew.NATIVE_LIBRARY = "\nconst RELEASE = false\n\nenum Target {\n  NONE\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@skip if RELEASE\ndef assert(truth bool)\n\n@import\nnamespace Math {\n  def abs(x double) double\n  def abs(x int) int\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n  def ceil(x double) double\n  def cos(x double) double\n  def exp(x double) double\n  def floor(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def round(x double) double\n  def sin(x double) double\n  def sqrt(x double) double\n  def tan(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const INFINITY = 1 / 0.0\n  const NAN = 0 / 0.0\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def toString string\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n  def toString string\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n\n  def isFinite bool\n  def isNAN bool\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  @rename(\"EndsWith\") if TARGET == .CSHARP\n  def endsWith(x string) bool\n  def get(x int) string\n  @rename(\"Contains\") if TARGET == .CSHARP\n  def in(x string) bool\n  @rename(\"IndexOf\") if TARGET == .CSHARP\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  @rename(\"Replace\") if TARGET == .CSHARP\n  def replaceAll(before string, after string) string\n  @rename(\"Substring\") if TARGET == .CSHARP\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  @rename(\"StartsWith\") if TARGET == .CSHARP\n  def startsWith(x string) bool\n  @rename(\"ToLower\") if TARGET == .CSHARP\n  def toLowerCase string\n  @rename(\"ToUpper\") if TARGET == .CSHARP\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .CSHARP\nclass StringBuilder {\n  @rename(\"Append\") if TARGET == .CSHARP\n  def append(x string)\n  def new\n  @rename(\"ToString\") if TARGET == .CSHARP\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  @rename(\"TrueForAll\") if TARGET == .CSHARP\n  @rename(\"every\") if TARGET == .JAVASCRIPT\n  def all(x fn(T) bool) bool\n  def appendOne(x T)\n  @rename(\"MemberwiseClone\") if TARGET == .CSHARP\n  @rename(\"slice\") if TARGET == .JAVASCRIPT\n  def clone List<T>\n  def count int\n  def each(x fn(T))\n  def filter(x fn(T) bool) List<T>\n  @rename(\"First\") if TARGET == .CSHARP\n  def first T\n  @rename(\"Contains\") if TARGET == .CSHARP\n  def in(x T) bool\n  @rename(\"IndexOf\") if TARGET == .CSHARP\n  def indexOf(x T) int\n  @rename(\"Insert\") if TARGET == .CSHARP\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n  def isEmpty bool\n  def isEqualTo(other List<T>) bool\n  @rename(\"Last\") if TARGET == .CSHARP\n  def last T\n  @rename(\"LastIndexOf\") if TARGET == .CSHARP\n  def lastIndexOf(x T) int\n  @rename(\"ConvertAll\") if TARGET == .CSHARP\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  @rename(\"RemoveAt\") if TARGET == .CSHARP\n  def removeAt(x int)\n  def removeDuplicates\n  @rename(\"shift\") if TARGET == .JAVASCRIPT\n  def removeFirst\n  @rename(\"RemoveAll\") if TARGET == .CSHARP\n  def removeIf(x fn(T) bool)\n  @rename(\"pop\") if TARGET == .JAVASCRIPT\n  def removeLast\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  @rename(\"Reverse\") if TARGET == .CSHARP\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  @rename(\"shift\") if TARGET == .JAVASCRIPT\n  def takeFirst T\n  @rename(\"pop\") if TARGET == .JAVASCRIPT\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  @rename(\"Add\") if TARGET == .CSHARP\n  @rename(\"push\") if TARGET == .JAVASCRIPT\n  def append(x T)\n  @rename(\"AddRange\") if TARGET == .CSHARP\n  def append(x List<T>)\n\n  @prefer\n  @rename(\"unshift\") if TARGET == .JAVASCRIPT\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  # @prefer\n  # def +(x T) List<T>\n  # def +(x List<T>) List<T>\n\n  # @prefer\n  # def +=(x T)\n  # def +=(x List<T>)\n}\n\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  @rename(\"MemberwiseClone\") if TARGET == .CSHARP\n  def clone StringMap<T>\n  @rename(\"Count\") if TARGET == .CSHARP\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  @rename(\"ContainsKey\") if TARGET == .CSHARP\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  @rename(\"MemberwiseClone\") if TARGET == .CSHARP\n  def clone IntMap<T>\n  @rename(\"Count\") if TARGET == .CSHARP\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  @rename(\"ContainsKey\") if TARGET == .CSHARP\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\n@rename(\"Nullable\") if TARGET == .CSHARP\n@import if TARGET == .CSHARP\nclass Box<T> {\n  @rename(\"Value\") if TARGET == .CSHARP\n  var value T\n\n  if TARGET == .CSHARP {\n    def new(value T)\n  }\n}\n";
+  Skew.NATIVE_LIBRARY_CS = "\ndef assert(truth bool) {\n  dynamic.Debug.Assert(truth)\n}\n\nclass double {\n  def isFinite bool {\n    return !isNAN && dynamic.double.IsInfinity(self)\n  }\n\n  def isNAN bool {\n    return dynamic.double.IsNaN(self)\n  }\n}\n\nclass string {\n  def count int {\n    return (self as dynamic).Length\n  }\n\n  def get(index int) string {\n    return fromCodeUnit(self[index])\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return dynamic.string.Join(self, parts)\n  }\n\n  def slice(start int, end int) string {\n    return (self as dynamic).Substring(start, end - start)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(x int) string {\n    return dynamic.string.new(x, 1)\n  }\n}\n\nclass List {\n  def isEqualTo(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).Count\n  }\n\n  def prepend(value T) {\n    insert(0, value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def removeFirst {\n    removeAt(0)\n  }\n\n  def removeLast {\n    removeAt(count - 1)\n  }\n\n  def takeFirst T {\n    var value = first\n    removeFirst\n    return value\n  }\n\n  def takeLast T {\n    var value = last\n    removeLast\n    return value\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return (self as dynamic).Keys.ToList()\n  }\n\n  def values List<T> {\n    return (self as dynamic).Values.ToList()\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    return (self as dynamic).Keys.ToList()\n  }\n\n  def values List<T> {\n    return (self as dynamic).Values.ToList()\n  }\n}\n";
+  Skew.NATIVE_LIBRARY_JS = "\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = dynamic.Object.create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {\n  const ah dynamic = (a >> 16) & 65535\n  const bh dynamic = (b >> 16) & 65535\n  const al dynamic = a & 65535\n  const bl dynamic = b & 65535\n  return al * bl + ((ah * bl + al * bh) << 16) | 0\n}\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error(\"Assertion failed\")\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNAN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(x int) string {\n    return dynamic.String.fromCharCode(x)\n  }\n}\n\nclass StringBuilder {\n  var buffer = \"\"\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\nclass List {\n  def isEqualTo(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    return self[0]\n  }\n\n  def last T {\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n\n  def insert(index int, value T) {\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeAt(index int) {\n    (self as dynamic).splice(index, 1)\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n}\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete(self[key])\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in dynamic.Object.keys(self) as List<string> {\n      keys.append(key as dynamic as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete(self[key])\n  }\n}\n";
   Skew.DEFAULT_MESSAGE_LIMIT = 10;
   Skew.JsEmitter.isFunctionProperty = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "apply", 0), "call", 0), "length", 0), "name", 0);
   Skew.JsEmitter.isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "arguments", 0), "Boolean", 0), "break", 0), "case", 0), "catch", 0), "class", 0), "const", 0), "constructor", 0), "continue", 0), "Date", 0), "debugger", 0), "default", 0), "delete", 0), "do", 0), "double", 0), "else", 0), "export", 0), "extends", 0), "false", 0), "finally", 0), "float", 0), "for", 0), "Function", 0), "function", 0), "if", 0), "import", 0), "in", 0), "instanceof", 0), "int", 0), "let", 0), "new", 0), "null", 0), "Number", 0), "Object", 0), "return", 0), "String", 0), "super", 0), "this", 0), "throw", 0), "true", 0), "try", 0), "var", 0);
