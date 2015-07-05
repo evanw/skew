@@ -1,30 +1,77 @@
 namespace Skew {
-  def motionPass(global ObjectSymbol, graph CallGraph) {
-    var parents = IntMap<ObjectSymbol>.new
+  def motionPass(global ObjectSymbol, options CompilerOptions) {
+    var namespaces = IntMap<Motion.Namespace>.new
+    Motion.functionMotion(global, options, namespaces)
 
-    for info in graph.callInfo {
-      var symbol = info.symbol
-
-      # Move global functions with implementations off imported objects
-      if symbol.kind == .FUNCTION_GLOBAL && symbol.parent.isImported && !symbol.isImported {
-        var function = symbol.asFunctionSymbol
-        var parent = parents.get(function.parent.id, null)
-
-        # Create a parallel namespace next to the parent
-        if parent == null {
-          var common = function.parent.parent.asObjectSymbol
-          parent = ObjectSymbol.new(.OBJECT_NAMESPACE, "in_" + function.parent.name)
-          parent.scope = ObjectScope.new(common.scope, parent)
-          parent.parent = common
-          common.objects.append(parent)
-          parents[function.parent.id] = parent
-        }
-
-        # Move this function into that parallel namespace
-        function.parent.asObjectSymbol.functions.removeOne(function)
-        parent.functions.append(function)
-        function.parent = parent
-      }
+    # Avoid mutation during the iteration above
+    for pair in namespaces.values {
+      pair.parent.objects.append(pair.child)
     }
+  }
+}
+
+namespace Skew.Motion {
+  class Namespace {
+    const parent ObjectSymbol
+    const child ObjectSymbol
+  }
+
+  def functionMotion(symbol ObjectSymbol, options CompilerOptions, namespaces IntMap<Namespace>) {
+    for object in symbol.objects {
+      functionMotion(object, options, namespaces)
+    }
+
+    # Move global functions with implementations off imported objects
+    symbol.functions.removeIf(function => {
+      if function.kind == .FUNCTION_GLOBAL && symbol.isImported && !function.isImported {
+        moveSymbolIntoNewNamespace(function, namespaces).functions.append(function)
+        return true
+      }
+      return false
+    })
+
+    # Move stuff off of enums for C#
+    if options.target == .CSHARP && symbol.kind == .OBJECT_ENUM {
+      symbol.objects.each(object => moveSymbolIntoNewNamespace(object, namespaces).objects.append(object))
+      symbol.functions.each(function => moveSymbolIntoNewNamespace(function, namespaces).functions.append(function))
+      symbol.variables.removeIf(variable => {
+        if variable.kind != .VARIABLE_ENUM {
+          moveSymbolIntoNewNamespace(variable, namespaces).variables.append(variable)
+          return true
+        }
+        return false
+      })
+      symbol.objects = []
+      symbol.functions = []
+    }
+  }
+
+  def moveSymbolIntoNewNamespace(symbol Symbol, namespaces IntMap<Namespace>) ObjectSymbol {
+    var parent = symbol.parent
+    var target = namespaces.get(parent.id, null)
+    var object = target != null ? target.child.asObjectSymbol : null
+
+    # Create a parallel namespace next to the parent
+    if target == null {
+      var common = parent.parent.asObjectSymbol
+      object = ObjectSymbol.new(.OBJECT_NAMESPACE, "in_" + parent.name)
+      object.scope = ObjectScope.new(common.scope, object)
+      object.parent = common
+      target = Namespace.new(common, object)
+      namespaces[parent.id] = target
+    }
+
+    # Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)
+    if symbol.kind.isFunction && parent.asObjectSymbol.parameters != null {
+      var function = symbol.asFunctionSymbol
+      if function.parameters == null {
+        function.parameters = []
+      }
+      function.parameters.prepend(parent.asObjectSymbol.parameters)
+    }
+
+    # Move this function into that parallel namespace
+    symbol.parent = object
+    return object
   }
 }

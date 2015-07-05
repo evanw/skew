@@ -172,6 +172,14 @@ namespace Skew {
       return type.symbol == listType.symbol
     }
 
+    def isIntMap(type Type) bool {
+      return type.symbol == intMapType.symbol
+    }
+
+    def isStringMap(type Type) bool {
+      return type.symbol == stringMapType.symbol
+    }
+
     def canImplicitlyConvert(from Type, to Type) bool {
       if from == to { return true }
       if from == .DYNAMIC || to == .DYNAMIC { return true }

@@ -184,6 +184,7 @@ class List<T> {
   @rename(\"slice\") if TARGET == .JAVASCRIPT
   def clone List<T>
   def count int
+  @rename(\"forEach\") if TARGET == .JAVASCRIPT
   def each(x fn(T))
   def filter(x fn(T) bool) List<T>
   @rename(\"First\") if TARGET == .CSHARP

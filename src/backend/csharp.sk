@@ -22,6 +22,15 @@ namespace Skew {
         globals.variables.append(variable)
       }
 
+      # Avoid emitting unnecessary stuff
+      shakingPass(global, cache.entryPointSymbol, .USE_TYPES)
+
+      # TODO: Do this better
+      emit("using System.Collections.Generic;\n") # List, Dictionary
+      emit("using System.Diagnostics;\n") # Debug.Assert
+      emit("using System.Text;\n") # StringBuilder
+      emit("using System;\n")
+
       # All code in C# is inside objects, so just emit objects recursively
       for object in global.objects {
         emitObject(object)
@@ -77,13 +86,15 @@ namespace Skew {
         }
 
         # Global functions and variables have to be in classes, not namespaces
-        if symbol.kind == .OBJECT_NAMESPACE && (!symbol.functions.isEmpty || !symbol.variables.isEmpty) {
+        if symbol.kind == .OBJECT_NAMESPACE && (!symbol.functions.isEmpty || !symbol.variables.isEmpty || symbol.parent.kind == .OBJECT_CLASS) {
           symbol.kind = .OBJECT_CLASS
         }
 
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol.comments)
-        emit(indent + "public ")
+        if symbol.kind != .OBJECT_NAMESPACE {
+          emit(indent + "public ")
+        }
         switch symbol.kind {
           case .OBJECT_CLASS { emit("class ") }
           case .OBJECT_ENUM { emit("enum ") }
@@ -92,16 +103,7 @@ namespace Skew {
           default { assert(false) }
         }
         emit(mangleName(symbol))
-        if symbol.parameters != null {
-          emit("<")
-          for parameter in symbol.parameters {
-            if parameter != symbol.parameters.first {
-              emit(", ")
-            }
-            emitType(parameter.resolvedType)
-          }
-          emit(">")
-        }
+        emitTypeParameters(symbol.parameters)
         if symbol.baseClass != null {
           emit(" : " + fullName(symbol.baseClass))
         }
@@ -126,6 +128,19 @@ namespace Skew {
         }
       }
 
+      def emitTypeParameters(parameters List<ParameterSymbol>) {
+        if parameters != null {
+          emit("<")
+          for parameter in parameters {
+            if parameter != parameters.first {
+              emit(", ")
+            }
+            emitType(parameter.resolvedType)
+          }
+          emit(">")
+        }
+      }
+
       def emitArgumentList(symbol FunctionSymbol) {
         emit("(")
         for argument in symbol.arguments {
@@ -145,17 +160,26 @@ namespace Skew {
 
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol.comments)
-        emit(indent + "public ")
-        if symbol.kind == .VARIABLE_GLOBAL {
-          emit("static ")
+        if symbol.kind == .VARIABLE_ENUM {
+          emit(indent + mangleName(symbol))
+          if symbol.value != null {
+            emit(" = ")
+            emitExpression(symbol.value, .COMMA)
+          }
+          emit(",\n")
+        } else {
+          emit(indent + "public ")
+          if symbol.kind == .VARIABLE_GLOBAL {
+            emit("static ")
+          }
+          emitType(symbol.resolvedType)
+          emit(" " + mangleName(symbol))
+          if symbol.value != null {
+            emit(" = ")
+            emitExpression(symbol.value, .COMMA)
+          }
+          emit(";\n")
         }
-        emitType(symbol.resolvedType)
-        emit(" " + mangleName(symbol))
-        if symbol.value != null {
-          emit(" = ")
-          emitExpression(symbol.value, .COMMA)
-        }
-        emit(";\n")
         emitNewlineAfterSymbol(symbol)
       }
 
@@ -177,10 +201,16 @@ namespace Skew {
           emit("static ")
         }
         if symbol.kind != .FUNCTION_CONSTRUCTOR {
+          if symbol.block == null {
+            emit("abstract ")
+          } else if symbol.overridden != null {
+            emit("override ")
+          }
           emitType(symbol.resolvedType.returnType)
           emit(" ")
         }
         emit(mangleName(symbol))
+        emitTypeParameters(symbol.parameters)
         emitArgumentList(symbol)
 
         if symbol.block == null {
@@ -224,16 +254,30 @@ namespace Skew {
         }
 
         else {
-          emit(fullName(type.symbol))
-          if type.isParameterized {
-            emit("<")
-            for i in 0..type.substitutions.count {
-              if i != 0 {
-                emit(", ")
-              }
-              emitType(type.substitutions[i])
+          assert(type.kind == .SYMBOL)
+
+          if cache.isIntMap(type) || cache.isStringMap(type) {
+            emit("Dictionary")
+            if type.isParameterized {
+              emit("<" + (cache.isIntMap(type) ? "int" : "string"))
+              emit(", ")
+              emitType(type.substitutions.first)
+              emit(">")
             }
-            emit(">")
+          }
+
+          else {
+            emit(fullName(type.symbol))
+            if type.isParameterized {
+              emit("<")
+              for i in 0..type.substitutions.count {
+                if i != 0 {
+                  emit(", ")
+                }
+                emitType(type.substitutions[i])
+              }
+              emit(">")
+            }
           }
         }
       }
@@ -373,6 +417,14 @@ namespace Skew {
             emit(indent + "throw ")
             emitExpression(node.throwValue, .LOWEST)
             emit(";\n")
+          }
+
+          case .FOREACH {
+            emit(indent + "foreach (var " + mangleName(node.symbol) + " in ")
+            emitExpression(node.foreachValue, .LOWEST)
+            emit(")\n")
+            emitBlock(node.foreachBlock)
+            emit("\n")
           }
 
           case .FOR {
@@ -648,7 +700,8 @@ namespace Skew {
           symbol = symbol.parent
         }
         if !symbol.isImportedOrExported && symbol.name in isKeyword {
-          return "$" + symbol.name
+          symbol.name = symbol.scope.generateName(symbol.name)
+          return symbol.name
         }
         return symbol.nameWithRenaming
       }

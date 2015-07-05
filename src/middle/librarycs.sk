@@ -107,7 +107,7 @@ class List {
 
 class StringMap {
   def {...}(key string, value T) StringMap<T> {
-    self[key] = value
+    (self as dynamic).Add(key, value)
     return self
   }
 
@@ -126,7 +126,7 @@ class StringMap {
 
 class IntMap {
   def {...}(key int, value T) IntMap<T> {
-    self[key] = value
+    (self as dynamic).Add(key, value)
     return self
   }
 

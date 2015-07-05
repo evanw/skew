@@ -86,7 +86,7 @@ namespace Skew {
             }
 
             # Move symbols around
-            motionPass(result.global, graph)
+            motionPass(result.global, options)
             if debug {
               verifyHierarchy(result.global)
             }
