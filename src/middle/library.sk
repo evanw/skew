@@ -213,6 +213,7 @@ class List<T> {
   @rename(\"ForEach\") if TARGET == .CSHARP
   @rename(\"forEach\") if TARGET == .JAVASCRIPT
   def each(x fn(T))
+  @rename(\"FindAll\") if TARGET == .CSHARP
   def filter(x fn(T) bool) List<T>
   @rename(\"First\") if TARGET == .CSHARP
   def first T

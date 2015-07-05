@@ -15,6 +15,10 @@ class double {
 }
 
 class string {
+  def <=>(value string) int {
+    return (self as dynamic).CompareTo(value)
+  }
+
   def count int {
     return (self as dynamic).Length
   }
