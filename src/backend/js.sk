@@ -221,7 +221,7 @@ namespace Skew {
         # Collect all reserved names together into one big set for querying
         var reservedNames StringMap<int> = {}
         for symbol in allSymbols {
-          if symbol.isImportedOrExported {
+          if !shouldRenameSymbol(symbol) {
             reservedNames[symbol.name] = 0
           }
         }
@@ -233,7 +233,7 @@ namespace Skew {
         for group in extractGroups(namingGroupsUnionFind, .ALL_SYMBOLS) {
           var count = 0
           for symbol in group {
-            if !symbol.isImportedOrExported {
+            if shouldRenameSymbol(symbol) {
               count += symbolCounts.get(symbol.id, 0)
             }
           }
@@ -243,7 +243,7 @@ namespace Skew {
         for group in sortedGroups {
           var name = ""
           for symbol in group.symbols {
-            if !symbol.isImportedOrExported {
+            if shouldRenameSymbol(symbol) {
               if name == "" {
                 name = generateSymbolName(reservedNames)
               }
@@ -1616,6 +1616,11 @@ namespace Skew {
           return enclosingName + "." + mangleName(symbol)
         }
         return mangleName(symbol)
+      }
+
+      def shouldRenameSymbol(symbol Symbol) bool {
+        # Don't rename annotations since "@rename" is used for renaming and is identified by name
+        return !symbol.isImportedOrExported && symbol.kind != .FUNCTION_ANNOTATION
       }
 
       def mangleName(symbol Symbol) string {

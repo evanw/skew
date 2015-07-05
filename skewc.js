@@ -2165,7 +2165,7 @@
     for (var i1 = 0, list1 = this.allSymbols, count2 = list1.length; i1 < count2; ++i1) {
       var symbol1 = list1[i1];
 
-      if (symbol1.isImportedOrExported()) {
+      if (!Skew.JsEmitter.shouldRenameSymbol(symbol1)) {
         reservedNames[symbol1.name] = 0;
       }
     }
@@ -2182,7 +2182,7 @@
       for (var i2 = 0, list2 = group, count3 = list2.length; i2 < count3; ++i2) {
         var symbol2 = list2[i2];
 
-        if (!symbol2.isImportedOrExported()) {
+        if (Skew.JsEmitter.shouldRenameSymbol(symbol2)) {
           count += in_IntMap.get(this.symbolCounts, symbol2.id, 0);
         }
       }
@@ -2201,7 +2201,7 @@
       for (var i4 = 0, list4 = group1.symbols, count5 = list4.length; i4 < count5; ++i4) {
         var symbol3 = list4[i4];
 
-        if (!symbol3.isImportedOrExported()) {
+        if (Skew.JsEmitter.shouldRenameSymbol(symbol3)) {
           if (name === "") {
             name = this.generateSymbolName(reservedNames);
           }
@@ -3807,6 +3807,11 @@
     }
 
     return Skew.JsEmitter.mangleName(symbol);
+  };
+
+  Skew.JsEmitter.shouldRenameSymbol = function(symbol) {
+    // Don't rename annotations since "@rename" is used for renaming and is identified by name
+    return !symbol.isImportedOrExported() && symbol.kind !== Skew.SymbolKind.FUNCTION_ANNOTATION;
   };
 
   Skew.JsEmitter.mangleName = function(symbol) {
