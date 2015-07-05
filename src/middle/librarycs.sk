@@ -31,6 +31,11 @@ class string {
     return result
   }
 
+  def split(separator string) List<string> {
+    var separators = [separator]
+    return (self as dynamic).Split((separators as dynamic).ToArray(), dynamic.StringSplitOptions.RemoveEmptyEntries).ToList()
+  }
+
   def join(parts List<string>) string {
     return dynamic.string.Join(self, parts)
   }
@@ -41,24 +46,12 @@ class string {
 }
 
 namespace string {
-  def fromCodeUnit(x int) string {
-    return dynamic.string.new(x, 1)
+  def fromCodeUnit(codeUnit int) string {
+    return dynamic.string.new(codeUnit, 1)
   }
 }
 
 class List {
-  def isEqualTo(other List<T>) bool {
-    if count != other.count {
-      return false
-    }
-    for i in 0..count {
-      if self[i] != other[i] {
-        return false
-      }
-    }
-    return true
-  }
-
   def isEmpty bool {
     return count == 0
   }
@@ -98,10 +91,24 @@ class List {
     return value
   }
 
+  def slice(start int) List<T> {
+    return slice(start, count)
+  }
+
+  def slice(start int, end int) List<T> {
+    return (self as dynamic).GetRange(start, end - start)
+  }
+
   def swap(i int, j int) {
     var temp = self[i]
     self[i] = self[j]
     self[j] = temp
+  }
+
+  def clone List<T> {
+    var clone = new
+    clone.append(self)
+    return clone
   }
 }
 
@@ -122,6 +129,14 @@ class StringMap {
   def values List<T> {
     return (self as dynamic).Values.ToList()
   }
+
+  def clone StringMap<T> {
+    var clone = new
+    for key in keys {
+      clone[key] = self[key]
+    }
+    return clone
+  }
 }
 
 class IntMap {
@@ -140,6 +155,14 @@ class IntMap {
 
   def values List<T> {
     return (self as dynamic).Values.ToList()
+  }
+
+  def clone IntMap<T> {
+    var clone = new
+    for key in keys {
+      clone[key] = self[key]
+    }
+    return clone
   }
 }
 "

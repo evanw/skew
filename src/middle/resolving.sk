@@ -193,9 +193,10 @@ namespace Skew.Resolving {
         symbol.flags |= parent.flags & (symbol.kind.isFunction && symbol.asFunctionSymbol.block != null ? Symbol.IS_EXPORTED : Symbol.IS_IMPORTED | Symbol.IS_EXPORTED)
       }
 
-      # Resolve annotations on this symbol after annotation inheritance
+      # Resolve annotations on this symbol after annotation inheritance. Don't
+      # use removeIf() since this annotation list may be shared elsewhere.
       if annotations != null {
-        annotations.removeIf(annotation => !resolveAnnotation(annotation, symbol))
+        symbol.annotations = annotations.filter(annotation => resolveAnnotation(annotation, symbol))
       }
     }
 
@@ -294,6 +295,25 @@ namespace Skew.Resolving {
         symbol.functions.append(generated)
         symbol.members[generated.name] = generated
       }
+    }
+
+    def isAbstractObject(symbol ObjectSymbol) bool {
+      if !symbol.hasCheckedForAbstract {
+        symbol.hasCheckedForAbstract = true
+
+        if symbol.kind == .OBJECT_CLASS && !symbol.isImported {
+          for function in symbol.functions {
+            initializeSymbol(function)
+
+            if !function.isImported && !function.isObsolete && function.block == null {
+              symbol.isAbstractBecauseOf = function
+              break
+            }
+          }
+        }
+      }
+
+      return symbol.isAbstract
     }
 
     def initializeGlobals {
@@ -570,6 +590,8 @@ namespace Skew.Resolving {
       for variable in symbol.variables {
         resolveVariable(variable)
       }
+
+      isAbstractObject(symbol)
     }
 
     def initializeFunction(symbol FunctionSymbol) {
@@ -1591,8 +1613,14 @@ namespace Skew.Resolving {
         resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i])
       }
 
+      # Forbid constructing an abstract type
+      var callValue = node.children.first
+      if function != null && function.kind == .FUNCTION_CONSTRUCTOR && isAbstractObject(function.parent.asObjectSymbol) && callValue.kind != .SUPER {
+        var reason = function.parent.asObjectSymbol.isAbstractBecauseOf
+        log.semanticErrorAbstractNew(node.internalRangeOrRange, function.parent.resolvedType, reason.range, reason.name)
+      }
+
       # Replace overloaded symbols with the chosen overload
-      var callValue = node.children[0]
       if function != null && function.overloaded != null && callValue.symbol == function.overloaded {
         callValue.symbol = function
       }

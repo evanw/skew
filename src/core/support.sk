@@ -117,3 +117,46 @@ namespace Skew.PrettyPrint {
     return lines
   }
 }
+
+# These are separate for now due to an unfortunate C# limitation of operator == and generic type parameters
+namespace Skew {
+  def areListsEqual(a List<ParameterSymbol>, b List<ParameterSymbol>) bool {
+    if a.count != b.count {
+      return false
+    }
+    for i in 0..a.count {
+      if a[i] != b[i] {
+        return false
+      }
+    }
+    return true
+  }
+
+  def areListsEqual(a List<Type>, b List<Type>) bool {
+    if a.count != b.count {
+      return false
+    }
+    for i in 0..a.count {
+      if a[i] != b[i] {
+        return false
+      }
+    }
+    return true
+  }
+}
+
+# Language-specific stuff
+
+namespace Skew.Parsing {
+  if TARGET == .JAVASCRIPT {
+    def parseDoubleLiteral(text string) double {
+      return +(text as dynamic)
+    }
+  }
+
+  else if TARGET == .CSHARP {
+    def parseDoubleLiteral(text string) double {
+      return dynamic.double.Parse(text)
+    }
+  }
+}

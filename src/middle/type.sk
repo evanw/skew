@@ -141,6 +141,7 @@ namespace Skew {
 
   class TypeCache {
     var boolType Type = null
+    var boxType Type = null
     var doubleType Type = null
     var intMapType Type = null
     var intType Type = null
@@ -151,13 +152,14 @@ namespace Skew {
 
     def loadGlobals(log Log, global ObjectSymbol) {
       Type.initialize
-      boolType = loadGlobalClass(log, global, "bool", Symbol.IS_VALUE_TYPE)
-      doubleType = loadGlobalClass(log, global, "double", Symbol.IS_VALUE_TYPE)
-      intMapType = loadGlobalClass(log, global, "IntMap", 0)
-      intType = loadGlobalClass(log, global, "int", Symbol.IS_VALUE_TYPE)
-      listType = loadGlobalClass(log, global, "List", 0)
-      stringMapType = loadGlobalClass(log, global, "StringMap", 0)
-      stringType = loadGlobalClass(log, global, "string", Symbol.IS_VALUE_TYPE)
+      boolType = loadGlobalClass(global, "bool", Symbol.IS_VALUE_TYPE)
+      boxType = loadGlobalClass(global, "Box", 0)
+      doubleType = loadGlobalClass(global, "double", Symbol.IS_VALUE_TYPE)
+      intMapType = loadGlobalClass(global, "IntMap", 0)
+      intType = loadGlobalClass(global, "int", Symbol.IS_VALUE_TYPE)
+      listType = loadGlobalClass(global, "List", 0)
+      stringMapType = loadGlobalClass(global, "StringMap", 0)
+      stringType = loadGlobalClass(global, "string", Symbol.IS_VALUE_TYPE)
     }
 
     def isInteger(type Type) bool {
@@ -166,6 +168,10 @@ namespace Skew {
 
     def isNumeric(type Type) bool {
       return isInteger(type) || type == doubleType
+    }
+
+    def isBox(type Type) bool {
+      return type.symbol == boxType.symbol
     }
 
     def isList(type Type) bool {
@@ -244,7 +250,7 @@ namespace Skew {
       # Check existing environments in the bucket for a match
       if bucket != null {
         for existing in bucket {
-          if parameters.isEqualTo(existing.parameters) && substitutions.isEqualTo(existing.substitutions) {
+          if areListsEqual(parameters, existing.parameters) && areListsEqual(substitutions, existing.substitutions) {
             return existing
           }
         }
@@ -269,7 +275,7 @@ namespace Skew {
       # Check existing types in the bucket for a match
       if bucket != null {
         for existing in bucket {
-          if argumentTypes.isEqualTo(existing.argumentTypes) && returnType == existing.returnType {
+          if areListsEqual(argumentTypes, existing.argumentTypes) && returnType == existing.returnType {
             return existing
           }
         }
@@ -437,7 +443,7 @@ namespace Skew {
 
   namespace TypeCache {
     @private {
-      def loadGlobalClass(log Log, global ObjectSymbol, name string, flags int) Type {
+      def loadGlobalClass(global ObjectSymbol, name string, flags int) Type {
         var symbol = global.members.get(name, null)
         assert(symbol != null)
         assert(symbol.kind == .OBJECT_CLASS)

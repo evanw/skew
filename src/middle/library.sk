@@ -26,30 +26,51 @@ def assert(truth bool)
 
 @import
 namespace Math {
+  @rename(\"Abs\") if TARGET == .CSHARP
   def abs(x double) double
+  @rename(\"Abs\") if TARGET == .CSHARP
   def abs(x int) int
+  @rename(\"Acos\") if TARGET == .CSHARP
   def acos(x double) double
+  @rename(\"Asin\") if TARGET == .CSHARP
   def asin(x double) double
+  @rename(\"Atan\") if TARGET == .CSHARP
   def atan(x double) double
+  @rename(\"Atan2\") if TARGET == .CSHARP
   def atan2(x double, y double) double
+  @rename(\"Ceil\") if TARGET == .CSHARP
   def ceil(x double) double
+  @rename(\"Cos\") if TARGET == .CSHARP
   def cos(x double) double
+  @rename(\"Exp\") if TARGET == .CSHARP
   def exp(x double) double
+  @rename(\"Floor\") if TARGET == .CSHARP
   def floor(x double) double
+  @rename(\"Log\") if TARGET == .CSHARP
   def log(x double) double
+  @rename(\"Pow\") if TARGET == .CSHARP
   def pow(x double, y double) double
+  @rename(\"Random\") if TARGET == .CSHARP
   def random double
+  @rename(\"Round\") if TARGET == .CSHARP
   def round(x double) double
+  @rename(\"Sin\") if TARGET == .CSHARP
   def sin(x double) double
+  @rename(\"Sqrt\") if TARGET == .CSHARP
   def sqrt(x double) double
+  @rename(\"Tan\") if TARGET == .CSHARP
   def tan(x double) double
 
   @prefer
+  @rename(\"Max\") if TARGET == .CSHARP
   def max(x double, y double) double
+  @rename(\"Max\") if TARGET == .CSHARP
   def max(x int, y int) int
 
   @prefer
+  @rename(\"Min\") if TARGET == .CSHARP
   def min(x double, y double) double
+  @rename(\"Min\") if TARGET == .CSHARP
   def min(x int, y int) int
 
   const E = 2.718281828459045
@@ -61,6 +82,8 @@ namespace Math {
 @import
 class bool {
   def ! bool
+
+  @rename(\"ToString\") if TARGET == .CSHARP
   def toString string
 }
 
@@ -70,7 +93,6 @@ class int {
   def ++
   def - int
   def --
-  def toString string
   def ~ int
 
   def %(x int) int
@@ -95,6 +117,9 @@ class int {
   def >>=(x int)
   def ^=(x int)
   def |=(x int)
+
+  @rename(\"ToString\") if TARGET == .CSHARP
+  def toString string
 }
 
 @import
@@ -103,7 +128,6 @@ class double {
   def ++
   def - double
   def --
-  def toString string
 
   def *(x double) double
   def **(x double) double
@@ -120,6 +144,9 @@ class double {
 
   def isFinite bool
   def isNAN bool
+
+  @rename(\"ToString\") if TARGET == .CSHARP
+  def toString string
 }
 
 @import
@@ -180,10 +207,10 @@ class List<T> {
   @rename(\"every\") if TARGET == .JAVASCRIPT
   def all(x fn(T) bool) bool
   def appendOne(x T)
-  @rename(\"MemberwiseClone\") if TARGET == .CSHARP
   @rename(\"slice\") if TARGET == .JAVASCRIPT
   def clone List<T>
   def count int
+  @rename(\"ForEach\") if TARGET == .CSHARP
   @rename(\"forEach\") if TARGET == .JAVASCRIPT
   def each(x fn(T))
   def filter(x fn(T) bool) List<T>
@@ -197,7 +224,6 @@ class List<T> {
   def insert(x int, value T)
   def insert(x int, values List<T>)
   def isEmpty bool
-  def isEqualTo(other List<T>) bool
   @rename(\"Last\") if TARGET == .CSHARP
   def last T
   @rename(\"LastIndexOf\") if TARGET == .CSHARP
@@ -224,6 +250,7 @@ class List<T> {
   def shuffle
   def slice(start int) List<T>
   def slice(start int, end int) List<T>
+  @rename(\"Sort\") if TARGET == .CSHARP
   def sort(x fn(T, T) int)
   def swap(x int, y int)
   @rename(\"shift\") if TARGET == .JAVASCRIPT
@@ -253,11 +280,11 @@ class List<T> {
   # def +=(x List<T>)
 }
 
+@rename(\"Dictionary\") if TARGET == .CSHARP
 @import
 class StringMap<T> {
   def [](key string) T
   def []=(key string, value T)
-  @rename(\"MemberwiseClone\") if TARGET == .CSHARP
   def clone StringMap<T>
   @rename(\"Count\") if TARGET == .CSHARP
   def count int
@@ -274,11 +301,11 @@ class StringMap<T> {
   def {...}(key string, value T) StringMap<T>
 }
 
+@rename(\"Dictionary\") if TARGET == .CSHARP
 @import
 class IntMap<T> {
   def [](key int) T
   def []=(key int, value T)
-  @rename(\"MemberwiseClone\") if TARGET == .CSHARP
   def clone IntMap<T>
   @rename(\"Count\") if TARGET == .CSHARP
   def count int
@@ -295,15 +322,8 @@ class IntMap<T> {
   def {...}(key int, value T) IntMap<T>
 }
 
-@rename(\"Nullable\") if TARGET == .CSHARP
-@import if TARGET == .CSHARP
 class Box<T> {
-  @rename(\"Value\") if TARGET == .CSHARP
   var value T
-
-  if TARGET == .CSHARP {
-    def new(value T)
-  }
 }
 "
 }

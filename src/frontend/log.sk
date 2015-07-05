@@ -430,5 +430,12 @@ namespace Skew {
     def semanticWarningUnreadLocalVariable(range Range, name string) {
       warning(range, "Local variable \"" + name + "\" is never read")
     }
+
+    def semanticErrorAbstractNew(range Range, type Type, reason Range, name string) {
+      error(range, "Cannot construct abstract type \"" + type.toString + "\"")
+      if reason != null {
+        note(reason, "The type \"" + type.toString + "\" is abstract due to member \"" + name + "\"")
+      }
+    }
   }
 }

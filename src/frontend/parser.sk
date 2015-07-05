@@ -7,6 +7,8 @@ namespace Skew {
 }
 
 namespace Skew.Parsing {
+  def parseDoubleLiteral(text string) double
+
   def parseIntLiteral(text string) Box<int> {
     var isNegative = text.startsWith("-") # Parse negative signs for use with the "--define" flag
     var start = isNegative as int
@@ -57,10 +59,6 @@ namespace Skew.Parsing {
     }
 
     return Box<int>.new(isNegative ? -value : value)
-  }
-
-  def parseDoubleLiteral(text string) double {
-    return +(text as dynamic)
   }
 
   def checkExtraParentheses(context ParserContext, node Node) {

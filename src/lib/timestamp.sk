@@ -1,5 +1,15 @@
 namespace Timestamp {
-  def seconds double {
-    return (dynamic.typeof(dynamic.performance) != "undefined" && dynamic.performance.now ? dynamic.performance.now() : dynamic.Date.now()) / 1000
+  def seconds double
+
+  if TARGET == .JAVASCRIPT {
+    def seconds double {
+      return (dynamic.typeof(dynamic.performance) != "undefined" && dynamic.performance.now ? dynamic.performance.now() : dynamic.Date.now()) / 1000
+    }
+  }
+
+  else if TARGET == .CSHARP {
+    def seconds double {
+      return dynamic.DateTime.Now.Ticks / (dynamic.TimeSpan.TicksPerSecond as double)
+    }
   }
 }

@@ -28,6 +28,7 @@ namespace Skew {
       # TODO: Do this better
       emit("using System.Collections.Generic;\n") # List, Dictionary
       emit("using System.Diagnostics;\n") # Debug.Assert
+      emit("using System.Linq;\n") # List extension methods
       emit("using System.Text;\n") # StringBuilder
       emit("using System;\n")
 
@@ -94,6 +95,9 @@ namespace Skew {
         emitComments(symbol.comments)
         if symbol.kind != .OBJECT_NAMESPACE {
           emit(indent + "public ")
+        }
+        if symbol.isAbstract {
+          emit("abstract ")
         }
         switch symbol.kind {
           case .OBJECT_CLASS { emit("class ") }
@@ -213,13 +217,27 @@ namespace Skew {
         emitTypeParameters(symbol.parameters)
         emitArgumentList(symbol)
 
-        if symbol.block == null {
+        var block = symbol.block
+        if block == null {
           emit(";\n")
         }
 
         else {
+          # Move the super constructor call out of the function body
+          if symbol.kind == .FUNCTION_CONSTRUCTOR && !block.children.isEmpty {
+            var first = block.children.first
+            if first.kind == .EXPRESSION {
+              var call = first.expressionValue
+              if call.kind == .CALL && call.callValue.kind == .SUPER {
+                emit(" : ")
+                first.remove
+                emitExpression(call, .LOWEST)
+              }
+            }
+          }
+
           emit("\n")
-          emitBlock(symbol.block)
+          emitBlock(block)
           emit("\n")
         }
 
@@ -255,29 +273,27 @@ namespace Skew {
 
         else {
           assert(type.kind == .SYMBOL)
+          emit(fullName(type.symbol))
 
-          if cache.isIntMap(type) || cache.isStringMap(type) {
-            emit("Dictionary")
-            if type.isParameterized {
-              emit("<" + (cache.isIntMap(type) ? "int" : "string"))
+          if type.isParameterized {
+            emit("<")
+
+            if cache.isIntMap(type) || cache.isStringMap(type) {
+              emit(cache.isIntMap(type) ? "int" : "string")
               emit(", ")
               emitType(type.substitutions.first)
-              emit(">")
             }
-          }
 
-          else {
-            emit(fullName(type.symbol))
-            if type.isParameterized {
-              emit("<")
+            else {
               for i in 0..type.substitutions.count {
                 if i != 0 {
                   emit(", ")
                 }
                 emitType(type.substitutions[i])
               }
-              emit(">")
             }
+
+            emit(">")
           }
         }
       }
@@ -544,14 +560,27 @@ namespace Skew {
 
           case .CALL {
             var value = node.callValue
+            var symbol = node.symbol
 
-            if node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR {
+            if value.kind == .SUPER {
+              emit("base")
+              if symbol.kind != .FUNCTION_CONSTRUCTOR {
+                emit(".")
+                mangleName(symbol)
+              }
+            }
+
+            else if symbol != null && symbol.kind == .FUNCTION_CONSTRUCTOR {
               emit("new ")
               emitType(node.resolvedType)
-            } else if value.kind == .DOT && value.asString == "new" {
+            }
+
+            else if value.kind == .DOT && value.asString == "new" {
               emit("new ")
               emitExpression(value.dotTarget, .MEMBER)
-            } else {
+            }
+
+            else {
               emitExpression(value, .UNARY_POSTFIX)
             }
 
@@ -568,16 +597,31 @@ namespace Skew {
           }
 
           case .CAST {
-            if node.resolvedType == .DYNAMIC {
-              emitExpression(node.castValue, precedence)
-            } else {
+            var type = node.resolvedType
+            var value = node.castValue
+
+            if type == .DYNAMIC {
+              emitExpression(value, precedence)
+            }
+
+            # C# doesn't have a cast from bool to int
+            else if cache.isNumeric(type) && value.resolvedType == cache.boolType {
+              emitExpression(Node.createHook(value.replaceWithNull, Node.createInt(1), Node.createInt(0)), precedence)
+            }
+
+            # C# doesn't have a cast from int to bool
+            else if type == cache.boolType && cache.isNumeric(value.resolvedType) {
+              emitExpression(Node.createBinary(.NOT_EQUAL, value.replaceWithNull, Node.createInt(0)), precedence)
+            }
+
+            else {
               if Precedence.UNARY_POSTFIX as int < precedence as int {
                 emit("(")
               }
               emit("(")
-              emitType(node.resolvedType)
+              emitType(type)
               emit(")")
-              emitExpression(node.castValue, .UNARY_POSTFIX)
+              emitExpression(value, .UNARY_POSTFIX)
               if Precedence.UNARY_POSTFIX as int < precedence as int {
                 emit(")")
               }

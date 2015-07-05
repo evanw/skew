@@ -110,8 +110,8 @@ def main {
 
 test("
 class Foo {
-  def new
-  def foo<T>(t T) Foo
+  def new {}
+  def foo<T>(t T) Foo { return self }
 }
 
 def main {
@@ -132,9 +132,9 @@ def main {
 
 test("
 class Foo {
-  def new
-  def foo Foo
-  def bar
+  def new {}
+  def foo Foo { return self }
+  def bar {}
 }
 
 def main {
@@ -300,7 +300,7 @@ def main {
 
 test("
 class Foo<T> {
-  def new
+  def new {}
 }
 
 def main {
@@ -1109,8 +1109,8 @@ class Foo {
 }
 
 class Bar<X> {
-  def new
-  def foo List<X>
+  def new {}
+  def foo List<X> { return null }
 }
 ", "
 <stdin>:3:12: error: Cannot convert from type \"List<int>\" to type \"int\"
@@ -1181,7 +1181,7 @@ def main {
 
 test("
 namespace Foo {
-  def [new](x List<int>)
+  def [new](x List<int>) {}
 }
 
 class Foo {}
@@ -1194,19 +1194,19 @@ def main(foo Foo) {
   foo = []
         ~~
 <stdin>:2:7: note: The function declaration is here
-  def [new](x List<int>)
+  def [new](x List<int>) {}
       ~~~~~
 ")
 
 test("
 namespace Foo {
-  def foo
+  def foo {}
   var bar = 0
 }
 
 class Foo<T> {
-  def new
-  def ifoo
+  def new {}
+  def ifoo {}
   var ibar = 0
 }
 
@@ -1281,9 +1281,9 @@ class Baz : Baz {}
 ")
 
 test("
-class Foo { def foo }
-class Bar : Foo { def bar }
-class Baz : Foo { def baz }
+class Foo { def foo {} }
+class Bar : Foo { def bar {} }
+class Baz : Foo { def baz {} }
 
 def main(foo Foo, bar Bar, baz Baz) {
   foo.foo
@@ -1303,9 +1303,9 @@ def main(foo Foo, bar Bar, baz Baz) {
 ")
 
 test("
-class Foo { def new }
-class Bar : Foo { def new }
-class Baz : Foo { def new }
+class Foo { def new {} }
+class Bar : Foo { def new {} }
+class Baz : Foo { def new {} }
 
 def main {
   var a Foo = Foo.new
@@ -1343,9 +1343,9 @@ def main {
 ")
 
 test("
-class Foo<T> { def new }
-class Bar : Foo<int> { def new }
-class Baz : Foo<int> { def new }
+class Foo<T> { def new {} }
+class Bar : Foo<int> { def new {} }
+class Baz : Foo<int> { def new {} }
 
 def main {
   var foo = true ? Bar.new : Baz.new
@@ -1361,9 +1361,9 @@ def main {
 ")
 
 test("
-class Foo<T> { def new }
-class Bar : Foo<int> { def new }
-class Baz : Foo<bool> { def new }
+class Foo<T> { def new {} }
+class Bar : Foo<int> { def new {} }
+class Baz : Foo<bool> { def new {} }
 
 def main {
   var foo = true ? Bar.new : Baz.new
@@ -1417,15 +1417,15 @@ def main(foo Foo) {
 
 test("
 class Foo<A, B> {
-  def foo(a A) Foo<A, B>
-  def bar(b B) A
+  def foo(a A) Foo<A, B> { return self }
+  def bar(b B) A { return b as dynamic }
 }
 
 class Bar<T> : Foo<int, T> {
 }
 
 class Baz : Bar<bool> {
-  def new
+  def new {}
 }
 
 def foo string {
@@ -1557,8 +1557,8 @@ def foo(foo Foo) {
 
 test("
 class Foo {
-  def new
-  def <=>(x Foo) int
+  def new {}
+  def <=>(x Foo) int { return 0 }
 }
 
 var foo int = Foo.new < Foo.new
@@ -2721,9 +2721,9 @@ def main {
 
 test("
 class Foo {
-  def new(x int)
-  def foo(x int)
-  def foo(x double)
+  def new(x int) {}
+  def foo(x int) {}
+  def foo(x double) {}
 }
 
 def main {
@@ -2861,8 +2861,8 @@ class Foo<T> {
 }
 
 namespace Foo {
-  def foo
-  def bar T
+  def foo {}
+  def bar T { return dynamic.t }
 }
 
 def main {
@@ -2897,11 +2897,11 @@ class Foo<A, B, C> {
 
 test("
 class Foo<T> {
-  def [new](t List<T>)
+  def [new](t List<T>) {}
 }
 
 class Bar<T> {
-  def [new](t T)
+  def [new](t T) {}
 }
 
 def main {
@@ -2910,7 +2910,7 @@ def main {
 }
 ", "
 <stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
-  def [new](t T)
+  def [new](t T) {}
             ^
 <stdin>:10:7: warning: Local variable \"foo\" is never read
   var foo Foo<int> = [0]
@@ -2922,11 +2922,11 @@ def main {
 
 test("
 class Foo<T> {
-  def {new}(t List<T>)
+  def {new}(t List<T>) {}
 }
 
 class Bar<T> {
-  def {new}(t T)
+  def {new}(t T) {}
 }
 
 def main {
@@ -2935,7 +2935,7 @@ def main {
 }
 ", "
 <stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
-  def {new}(t T)
+  def {new}(t T) {}
             ^
 <stdin>:10:7: warning: Local variable \"foo\" is never read
   var foo Foo<int> = {0}
@@ -2947,11 +2947,11 @@ def main {
 
 test("
 class Foo<K, V> {
-  def {new}(k List<K>, v List<V>)
+  def {new}(k List<K>, v List<V>) {}
 }
 
 class Bar<K, V> {
-  def {new}(k K, v V)
+  def {new}(k K, v V) {}
 }
 
 def main {
@@ -2960,10 +2960,10 @@ def main {
 }
 ", "
 <stdin>:6:13: error: Expected argument \"k\" to be of type \"List<T>\" instead of type \"K\"
-  def {new}(k K, v V)
+  def {new}(k K, v V) {}
             ^
 <stdin>:6:18: error: Expected argument \"v\" to be of type \"List<T>\" instead of type \"V\"
-  def {new}(k K, v V)
+  def {new}(k K, v V) {}
                  ^
 <stdin>:10:7: warning: Local variable \"foo\" is never read
   var foo Foo<int, bool> = {1: false}
@@ -2975,7 +2975,7 @@ def main {
 
 test("
 class Foo<K, V> {
-  def []=(key K, value V)
+  def []=(key K, value V) {}
 }
 
 namespace Foo {
@@ -3005,13 +3005,12 @@ def main {
 
 test("
 class Foo<T> {
-  def new
-  def {...}(x int, y T) Foo<T>
+  def new {}
+  def {...}(x int, y T) Foo<T> { return self }
 }
 
 class Bar<T> {
-  def new
-  def {...}(x int, y T) Bar<T>
+  def {...}(x int, y T) Bar<T> { return self }
 }
 
 namespace Bar {
@@ -3023,10 +3022,10 @@ def main {
   var bar Bar<int> = {0: 1}
 }
 ", "
-<stdin>:16:7: warning: Local variable \"foo\" is never read
+<stdin>:15:7: warning: Local variable \"foo\" is never read
   var foo Foo<int> = {0: 1}
       ~~~
-<stdin>:17:7: warning: Local variable \"bar\" is never read
+<stdin>:16:7: warning: Local variable \"bar\" is never read
   var bar Bar<int> = {0: 1}
       ~~~
 ")
@@ -3034,20 +3033,20 @@ def main {
 test("
 class Foo {
   var ivar = 0
-  def ifun
+  def ifun {}
 }
 class Bar : Foo {}
 class Baz : Bar {
-  over ifun
+  over ifun {}
 }
 
 namespace Foo {
   var gvar = 0
-  def gfun
+  def gfun {}
 }
 namespace Bar {}
 namespace Baz {
-  def gfun
+  def gfun {}
 }
 
 def main {
@@ -3562,6 +3561,23 @@ def main int {
 <stdin>:12:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   return foo
          ~~~
+")
+
+test("
+class Foo {
+  def foo
+}
+
+def main {
+  Foo.new
+}
+", "
+<stdin>:6:3: error: Cannot construct abstract type \"Foo\"
+  Foo.new
+  ~~~~~~~
+<stdin>:2:7: note: The type \"Foo\" is abstract due to member \"foo\"
+  def foo
+      ~~~
 ")
 
   }
