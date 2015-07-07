@@ -322,7 +322,7 @@ namespace Skew {
       def extractGroups(unionFind UnionFind, mode ExtractGroupsMode) List<List<Symbol>> {
         var labelToGroup IntMap<List<Symbol>> = {}
         for symbol in allSymbols {
-          if mode == .ONLY_LOCAL_VARIABLES && symbol.kind != .VARIABLE_LOCAL ||
+          if mode == .ONLY_LOCAL_VARIABLES && !symbol.kind.isLocalOrArgumentVariable ||
               mode == .ONLY_INSTANCE_VARIABLES && symbol.kind != .VARIABLE_INSTANCE {
             continue
           }
@@ -517,10 +517,10 @@ namespace Skew {
           return
         }
 
-        if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || prefix == "" || symbol.kind == .VARIABLE_LOCAL) {
+        if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || prefix == "" || symbol.kind.isLocalOrArgumentVariable) {
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol.comments)
-          emit(indent + (prefix == "" && !symbol.isExported || symbol.kind == .VARIABLE_LOCAL ? "var " : prefix) + mangleName(symbol))
+          emit(indent + (prefix == "" && !symbol.isExported || symbol.kind.isLocalOrArgumentVariable ? "var " : prefix) + mangleName(symbol))
 
           if symbol.value != null {
             emit(space + "=" + space)

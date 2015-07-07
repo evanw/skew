@@ -2303,7 +2303,7 @@
     for (var i = 0, list = this.allSymbols, count = list.length; i < count; ++i) {
       var symbol = list[i];
 
-      if (mode === Skew.ExtractGroupsMode.ONLY_LOCAL_VARIABLES && symbol.kind !== Skew.SymbolKind.VARIABLE_LOCAL || mode === Skew.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES && symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE) {
+      if (mode === Skew.ExtractGroupsMode.ONLY_LOCAL_VARIABLES && !Skew.SymbolKind.isLocalOrArgumentVariable(symbol.kind) || mode === Skew.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES && symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE) {
         continue;
       }
 
@@ -2531,10 +2531,10 @@
       return;
     }
 
-    if (symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind !== Skew.SymbolKind.VARIABLE_ENUM && (symbol.value !== null || this.prefix === "" || symbol.kind === Skew.SymbolKind.VARIABLE_LOCAL)) {
+    if (symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind !== Skew.SymbolKind.VARIABLE_ENUM && (symbol.value !== null || this.prefix === "" || Skew.SymbolKind.isLocalOrArgumentVariable(symbol.kind))) {
       this.emitNewlineBeforeSymbol(symbol);
       this.emitComments(symbol.comments);
-      this.emit(this.indent + (this.prefix === "" && !symbol.isExported() || symbol.kind === Skew.SymbolKind.VARIABLE_LOCAL ? "var " : this.prefix) + Skew.JsEmitter.mangleName(symbol));
+      this.emit(this.indent + (this.prefix === "" && !symbol.isExported() || Skew.SymbolKind.isLocalOrArgumentVariable(symbol.kind) ? "var " : this.prefix) + Skew.JsEmitter.mangleName(symbol));
 
       if (symbol.value !== null) {
         this.emit(this.space + "=" + this.space);
@@ -5837,7 +5837,7 @@
         return false;
       }
 
-      var arg = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, range.toString());
+      var arg = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, range.toString());
       arg.range = range;
 
       // Parse argument type
@@ -5991,7 +5991,7 @@
 
     else {
       // Parse the symbol kind
-      var kind;
+      var kind = 0;
 
       switch (token.kind) {
         case Skew.TokenKind.CLASS: {
@@ -6549,7 +6549,7 @@
 
       if (context.peek(Skew.TokenKind.ARROW)) {
         var symbol = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_LOCAL, "<lambda>");
-        var argument = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, name);
+        var argument = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, name);
         argument.range = range;
         symbol.$arguments.push(argument);
 
@@ -6714,10 +6714,11 @@
     OVERLOADED_ANNOTATION: 12,
     OVERLOADED_GLOBAL: 13,
     OVERLOADED_INSTANCE: 14,
-    VARIABLE_ENUM: 15,
-    VARIABLE_GLOBAL: 16,
-    VARIABLE_INSTANCE: 17,
-    VARIABLE_LOCAL: 18
+    VARIABLE_ARGUMENT: 15,
+    VARIABLE_ENUM: 16,
+    VARIABLE_GLOBAL: 17,
+    VARIABLE_INSTANCE: 18,
+    VARIABLE_LOCAL: 19
   };
 
   Skew.SymbolKind.isType = function(self) {
@@ -6745,7 +6746,11 @@
   };
 
   Skew.SymbolKind.isVariable = function(self) {
-    return self >= Skew.SymbolKind.VARIABLE_ENUM && self <= Skew.SymbolKind.VARIABLE_LOCAL;
+    return self >= Skew.SymbolKind.VARIABLE_ARGUMENT && self <= Skew.SymbolKind.VARIABLE_LOCAL;
+  };
+
+  Skew.SymbolKind.isLocalOrArgumentVariable = function(self) {
+    return self === Skew.SymbolKind.VARIABLE_ARGUMENT || self === Skew.SymbolKind.VARIABLE_LOCAL;
   };
 
   Skew.SymbolKind.isGlobalReference = function(self) {
@@ -6761,7 +6766,7 @@
   };
 
   Skew.SymbolKind.isLocal = function(self) {
-    return self === Skew.SymbolKind.FUNCTION_LOCAL || self === Skew.SymbolKind.VARIABLE_LOCAL;
+    return self === Skew.SymbolKind.FUNCTION_LOCAL || self === Skew.SymbolKind.VARIABLE_LOCAL || self === Skew.SymbolKind.VARIABLE_ARGUMENT;
   };
 
   Skew.SymbolState = {
@@ -7008,6 +7013,11 @@
   };
 
   __extends(Skew.VariableSymbol, Skew.Symbol);
+
+  Skew.VariableSymbol.prototype.enumValue = function() {
+    assert(this.kind === Skew.SymbolKind.VARIABLE_ENUM);
+    return this.value.asInt();
+  };
 
   Skew.OverloadedFunctionSymbol = function(kind, name, symbols) {
     Skew.Symbol.call(this, kind, name);
@@ -7321,8 +7331,12 @@
     this.error(range, "This call does not return a value");
   };
 
-  Skew.Log.prototype.semanticErrorBadVariableType = function(range, type) {
+  Skew.Log.prototype.semanticErrorBadImplicitVariableType = function(range, type) {
     this.error(range, "Implicitly typed variables cannot be of type \"" + type.toString() + "\"");
+  };
+
+  Skew.Log.prototype.semanticErrorNoDefaultValue = function(range, type) {
+    this.error(range, "Cannot construct a default value of type \"" + type.toString() + "\"");
   };
 
   Skew.Log.prototype.semanticErrorMemberUnexpectedGlobal = function(range, name) {
@@ -9777,6 +9791,7 @@
           break;
         }
 
+        case Skew.SymbolKind.VARIABLE_ARGUMENT:
         case Skew.SymbolKind.VARIABLE_ENUM:
         case Skew.SymbolKind.VARIABLE_GLOBAL:
         case Skew.SymbolKind.VARIABLE_INSTANCE:
@@ -10096,7 +10111,7 @@
   };
 
   Skew.Resolving.Resolver.prototype.iterativelyMergeGuards = function() {
-    var guards;
+    var guards = null;
 
     // Iterate until a fixed point is reached
     while (true) {
@@ -10251,7 +10266,7 @@
         var setup = [Skew.Node.createVar(symbol)];
         var symbolName = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(symbol.name)).withSymbol(symbol).withType(this.cache.intType);
         var update = Skew.Node.createUnary(Skew.NodeKind.INCREMENT, symbolName);
-        var test;
+        var test = null;
 
         // Special-case constant iteration limits to generate simpler code
         if (second.kind === Skew.NodeKind.CONSTANT || second.kind === Skew.NodeKind.NAME && second.symbol !== null && second.symbol.isConst()) {
@@ -10383,7 +10398,7 @@
     // Referencing a normal variable instead of a special node kind for "this"
     // makes many things much easier including lambda capture and devirtualization
     if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE || symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
-      symbol.self = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, "self");
+      symbol.self = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, "self");
       symbol.self.flags |= Skew.Symbol.IS_CONST;
       symbol.self.resolvedType = this.cache.parameterize(symbol.parent.resolvedType);
       symbol.self.state = Skew.SymbolState.INITIALIZED;
@@ -10587,7 +10602,7 @@
 
       for (var i = 0, list = $arguments, count = list.length; i < count; ++i) {
         var variable = list[i];
-        var argument = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, variable.name);
+        var argument = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, variable.name);
         argument.resolvedType = variable.resolvedType;
         argument.state = Skew.SymbolState.INITIALIZED;
         symbol.$arguments.push(argument);
@@ -10608,7 +10623,7 @@
         this.initializeSymbol(variable1);
 
         if (variable1.value === null) {
-          var argument1 = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, variable1.name);
+          var argument1 = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, variable1.name);
           argument1.resolvedType = variable1.resolvedType;
           argument1.state = Skew.SymbolState.INITIALIZED;
           symbol.$arguments.push(argument1);
@@ -10640,7 +10655,7 @@
       var variable = list[i];
 
       if (variable.kind === Skew.SymbolKind.VARIABLE_ENUM) {
-        assert(variable.value.content.asInt() === names.length);
+        assert(variable.enumValue() === names.length);
         names.push(new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.StringContent(variable.name)));
       }
     }
@@ -10688,6 +10703,20 @@
 
           if (variable.kind === Skew.SymbolKind.VARIABLE_INSTANCE) {
             this.initializeSymbol(variable);
+
+            // Attempt to create a default value if absent. Right now this
+            // avoids the problem of initializing type parameters:
+            //
+            //   class Foo<T> {
+            //     var foo T
+            //     def new {}
+            //     def use T { return foo }
+            //   }
+            //
+            // This should be fixed at some point.
+            if (variable.value === null && !variable.resolvedType.isParameter()) {
+              variable.value = this.createDefaultValueForType(variable.resolvedType, variable.range);
+            }
 
             if (variable.value !== null) {
               block.insertChild(index, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable), variable.value)));
@@ -10758,7 +10787,7 @@
 
       // Forbid certain types
       if (!Skew.Resolving.Resolver.isValidVariableType(type)) {
-        this.log.semanticErrorBadVariableType(symbol.range, type);
+        this.log.semanticErrorBadImplicitVariableType(symbol.range, type);
         symbol.resolvedType = Skew.Type.DYNAMIC;
       }
     }
@@ -10790,6 +10819,41 @@
     if (symbol.value !== null) {
       this.resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType);
     }
+
+    // Default-initialize variables
+    else if (symbol.kind !== Skew.SymbolKind.VARIABLE_ARGUMENT && symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind !== Skew.SymbolKind.VARIABLE_ENUM) {
+      symbol.value = this.createDefaultValueForType(symbol.resolvedType, symbol.range);
+    }
+  };
+
+  Skew.Resolving.Resolver.prototype.createDefaultValueForType = function(type, range) {
+    if (type === this.cache.intType) {
+      return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(type);
+    }
+
+    if (type === this.cache.doubleType) {
+      return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.DoubleContent(0)).withType(type);
+    }
+
+    if (type === this.cache.boolType) {
+      return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.BoolContent(false)).withType(type);
+    }
+
+    if (type === this.cache.stringType) {
+      return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.StringContent("")).withType(type);
+    }
+
+    if (type.isEnum()) {
+      return Skew.Node.createCast(new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this.cache.intType), new Skew.Node(Skew.NodeKind.TYPE).withType(type)).withType(type);
+    }
+
+    if (type.isParameter()) {
+      this.log.semanticErrorNoDefaultValue(range, type);
+      return null;
+    }
+
+    assert(type.isReference());
+    return new Skew.Node(Skew.NodeKind.NULL).withType(type);
   };
 
   Skew.Resolving.Resolver.prototype.initializeOverloadedFunction = function(symbol) {
@@ -12431,7 +12495,7 @@
       }
 
       // Avoid "==" and "!=" on type parameters since target languages may have value type restrictions
-      else if (commonType.symbol !== null && Skew.SymbolKind.isParameter(commonType.symbol.kind)) {
+      else if (commonType.isParameter()) {
         this.log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), Skew.operatorInfo[kind].text, commonType);
       }
 
@@ -12947,6 +13011,7 @@
   // uses that to provide a mapping from a subset of symbols to their complete
   // dependencies. This is useful for dead code elimination.
   Skew.UsageGraph = function(global, mode) {
+    this.mode = 0;
     this.context = null;
     this.currentUsages = null;
     this.overridesForSymbol = Object.create(null);
@@ -13214,6 +13279,10 @@
 
   Skew.Type.prototype.isEnum = function() {
     return this.symbol !== null && this.symbol.kind === Skew.SymbolKind.OBJECT_ENUM;
+  };
+
+  Skew.Type.prototype.isParameter = function() {
+    return this.symbol !== null && Skew.SymbolKind.isParameter(this.symbol.kind);
   };
 
   // Type parameters are not guaranteed to be nullable since generics are
@@ -13937,7 +14006,7 @@
           }
 
           else {
-            var node;
+            var node = null;
 
             if (data.option in this.optionalArguments) {
               node = this.optionalArguments[data.option];
@@ -14358,7 +14427,7 @@
   };
   Skew.Parsing.pratt = Skew.Parsing.createExpressionParser();
   Skew.Parsing.typePratt = Skew.Parsing.createTypeParser();
-  Skew.SymbolKind.strings = ["PARAMETER_FUNCTION", "PARAMETER_OBJECT", "OBJECT_CLASS", "OBJECT_ENUM", "OBJECT_GLOBAL", "OBJECT_INTERFACE", "OBJECT_NAMESPACE", "FUNCTION_ANNOTATION", "FUNCTION_CONSTRUCTOR", "FUNCTION_GLOBAL", "FUNCTION_INSTANCE", "FUNCTION_LOCAL", "OVERLOADED_ANNOTATION", "OVERLOADED_GLOBAL", "OVERLOADED_INSTANCE", "VARIABLE_ENUM", "VARIABLE_GLOBAL", "VARIABLE_INSTANCE", "VARIABLE_LOCAL"];
+  Skew.SymbolKind.strings = ["PARAMETER_FUNCTION", "PARAMETER_OBJECT", "OBJECT_CLASS", "OBJECT_ENUM", "OBJECT_GLOBAL", "OBJECT_INTERFACE", "OBJECT_NAMESPACE", "FUNCTION_ANNOTATION", "FUNCTION_CONSTRUCTOR", "FUNCTION_GLOBAL", "FUNCTION_INSTANCE", "FUNCTION_LOCAL", "OVERLOADED_ANNOTATION", "OVERLOADED_GLOBAL", "OVERLOADED_INSTANCE", "VARIABLE_ARGUMENT", "VARIABLE_ENUM", "VARIABLE_GLOBAL", "VARIABLE_INSTANCE", "VARIABLE_LOCAL"];
 
   // Flags
   Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 0;

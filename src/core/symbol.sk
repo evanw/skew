@@ -19,6 +19,7 @@ namespace Skew {
     OVERLOADED_GLOBAL
     OVERLOADED_INSTANCE
 
+    VARIABLE_ARGUMENT
     VARIABLE_ENUM
     VARIABLE_GLOBAL
     VARIABLE_INSTANCE
@@ -49,7 +50,11 @@ namespace Skew {
     }
 
     def isVariable bool {
-      return self as int >= VARIABLE_ENUM as int && self as int <= VARIABLE_LOCAL as int
+      return self as int >= VARIABLE_ARGUMENT as int && self as int <= VARIABLE_LOCAL as int
+    }
+
+    def isLocalOrArgumentVariable bool {
+      return self == VARIABLE_ARGUMENT || self == VARIABLE_LOCAL
     }
 
     def isGlobalReference bool {
@@ -68,7 +73,7 @@ namespace Skew {
     }
 
     def isLocal bool {
-      return self == FUNCTION_LOCAL || self == VARIABLE_LOCAL
+      return self == FUNCTION_LOCAL || self == VARIABLE_LOCAL || self == VARIABLE_ARGUMENT
     }
   }
 
@@ -265,6 +270,11 @@ namespace Skew {
   class VariableSymbol : Symbol {
     var type Node = null
     var value Node = null
+
+    def enumValue int {
+      assert(kind == .VARIABLE_ENUM)
+      return value.asInt
+    }
   }
 
   class OverloadedFunctionSymbol : Symbol {

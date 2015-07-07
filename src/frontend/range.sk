@@ -2,23 +2,12 @@ namespace Skew {
   class FormattedRange {
     var line string
     var range string
-
-    def new(line string, range string) {
-      self.line = line
-      self.range = range
-    }
   }
 
   class Range {
     var source Source
     var start int
     var end int
-
-    def new(source Source, start int, end int) {
-      self.source = source
-      self.start = start
-      self.end = end
-    }
 
     def toString string {
       return source.contents.slice(start, end)

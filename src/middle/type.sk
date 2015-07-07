@@ -35,6 +35,10 @@ namespace Skew {
       return symbol != null && symbol.kind == .OBJECT_ENUM
     }
 
+    def isParameter bool {
+      return symbol != null && symbol.kind.isParameter
+    }
+
     # Type parameters are not guaranteed to be nullable since generics are
     # implemented through type erasure and the substituted type may be "int"
     def isReference bool {

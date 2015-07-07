@@ -2795,9 +2795,15 @@ namespace Foo {
 <stdin>:9:13: error: Cannot access type parameter \"T\" here
     var bar T
             ^
+<stdin>:9:9: error: Cannot construct a default value of type \"T\"
+    var bar T
+        ~~~
 <stdin>:14:11: error: Cannot access type parameter \"T\" here
   var bar T
           ^
+<stdin>:14:7: error: Cannot construct a default value of type \"T\"
+  var bar T
+      ~~~
 ")
 
 test("
@@ -3578,6 +3584,19 @@ def main {
 <stdin>:2:7: note: The type \"Foo\" is abstract due to member \"foo\"
   def foo
       ~~~
+")
+
+test("
+class Foo<T> {
+  def foo T {
+    var bar T
+    return bar
+  }
+}
+", "
+<stdin>:3:9: error: Cannot construct a default value of type \"T\"
+    var bar T
+        ~~~
 ")
 
   }

@@ -224,8 +224,12 @@ namespace Skew {
       error(range, "This call does not return a value")
     }
 
-    def semanticErrorBadVariableType(range Range, type Type) {
+    def semanticErrorBadImplicitVariableType(range Range, type Type) {
       error(range, "Implicitly typed variables cannot be of type \"" + type.toString + "\"")
+    }
+
+    def semanticErrorNoDefaultValue(range Range, type Type) {
+      error(range, "Cannot construct a default value of type \"" + type.toString + "\"")
     }
 
     def semanticErrorMemberUnexpectedGlobal(range Range, name string) {

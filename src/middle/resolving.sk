@@ -57,7 +57,7 @@ namespace Skew.Resolving {
             initializeFunction(symbol.asFunctionSymbol)
           }
 
-          case .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
+          case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
             initializeVariable(symbol.asVariableSymbol)
           }
 
@@ -609,7 +609,7 @@ namespace Skew.Resolving {
       # Referencing a normal variable instead of a special node kind for "this"
       # makes many things much easier including lambda capture and devirtualization
       if symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR {
-        symbol.self = VariableSymbol.new(.VARIABLE_LOCAL, "self")
+        symbol.self = VariableSymbol.new(.VARIABLE_ARGUMENT, "self")
         symbol.self.flags |= Symbol.IS_CONST
         symbol.self.resolvedType = cache.parameterize(symbol.parent.resolvedType)
         symbol.self.state = .INITIALIZED
@@ -780,7 +780,7 @@ namespace Skew.Resolving {
         var arguments = symbol.overridden.arguments
         var values List<Node> = []
         for variable in arguments {
-          var argument = VariableSymbol.new(.VARIABLE_LOCAL, variable.name)
+          var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
           argument.resolvedType = variable.resolvedType
           argument.state = .INITIALIZED
           symbol.arguments.append(argument)
@@ -796,7 +796,7 @@ namespace Skew.Resolving {
         if variable.kind == .VARIABLE_INSTANCE {
           initializeSymbol(variable)
           if variable.value == null {
-            var argument = VariableSymbol.new(.VARIABLE_LOCAL, variable.name)
+            var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
             argument.resolvedType = variable.resolvedType
             argument.state = .INITIALIZED
             symbol.arguments.append(argument)
@@ -828,7 +828,7 @@ namespace Skew.Resolving {
 
       for variable in parent.variables {
         if variable.kind == .VARIABLE_ENUM {
-          assert(variable.value.content.asInt == names.count)
+          assert(variable.enumValue == names.count)
           names.append(Node.createString(variable.name))
         }
       }
@@ -872,6 +872,21 @@ namespace Skew.Resolving {
           for variable in symbol.parent.asObjectSymbol.variables {
             if variable.kind == .VARIABLE_INSTANCE {
               initializeSymbol(variable)
+
+              # Attempt to create a default value if absent. Right now this
+              # avoids the problem of initializing type parameters:
+              #
+              #   class Foo<T> {
+              #     var foo T
+              #     def new {}
+              #     def use T { return foo }
+              #   }
+              #
+              # This should be fixed at some point.
+              if variable.value == null && !variable.resolvedType.isParameter {
+                variable.value = createDefaultValueForType(variable.resolvedType, variable.range)
+              }
+
               if variable.value != null {
                 block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN,
                   Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
@@ -934,7 +949,7 @@ namespace Skew.Resolving {
 
         # Forbid certain types
         if !isValidVariableType(type) {
-          log.semanticErrorBadVariableType(symbol.range, type)
+          log.semanticErrorBadImplicitVariableType(symbol.range, type)
           symbol.resolvedType = .DYNAMIC
         }
       }
@@ -966,6 +981,41 @@ namespace Skew.Resolving {
       if symbol.value != null {
         resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
       }
+
+      # Default-initialize variables
+      else if symbol.kind != .VARIABLE_ARGUMENT && symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM {
+        symbol.value = createDefaultValueForType(symbol.resolvedType, symbol.range)
+      }
+    }
+
+    def createDefaultValueForType(type Type, range Range) Node {
+      if type == cache.intType {
+        return Node.createInt(0).withType(type)
+      }
+
+      if type == cache.doubleType {
+        return Node.createDouble(0).withType(type)
+      }
+
+      if type == cache.boolType {
+        return Node.createBool(false).withType(type)
+      }
+
+      if type == cache.stringType {
+        return Node.createString("").withType(type)
+      }
+
+      if type.isEnum {
+        return Node.createCast(Node.createInt(0).withType(cache.intType), Node.createType(type)).withType(type)
+      }
+
+      if type.isParameter {
+        log.semanticErrorNoDefaultValue(range, type)
+        return null
+      }
+
+      assert(type.isReference)
+      return Node.createNull.withType(type)
     }
 
     def initializeOverloadedFunction(symbol OverloadedFunctionSymbol) {
@@ -2310,7 +2360,7 @@ namespace Skew.Resolving {
         }
 
         # Avoid "==" and "!=" on type parameters since target languages may have value type restrictions
-        else if commonType.symbol != null && commonType.symbol.kind.isParameter {
+        else if commonType.isParameter {
           log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, operatorInfo[kind].text, commonType)
         }
 

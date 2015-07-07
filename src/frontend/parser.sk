@@ -548,7 +548,7 @@ namespace Skew.Parsing {
         return false
       }
 
-      var arg = VariableSymbol.new(.VARIABLE_LOCAL, range.toString)
+      var arg = VariableSymbol.new(.VARIABLE_ARGUMENT, range.toString)
       arg.range = range
 
       # Parse argument type
@@ -1264,7 +1264,7 @@ namespace Skew.Parsing {
       var name = range.toString
       if context.peek(.ARROW) {
         var symbol = FunctionSymbol.new(.FUNCTION_LOCAL, "<lambda>")
-        var argument = VariableSymbol.new(.VARIABLE_LOCAL, name)
+        var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, name)
         argument.range = range
         symbol.arguments.append(argument)
         if !parseFunctionBlock(context, symbol) {
