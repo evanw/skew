@@ -31,6 +31,7 @@ namespace Skew {
       # TODO: Do this better
       emit("using System.Collections.Generic;\n") # List, Dictionary
       emit("using System.Diagnostics;\n") # Debug.Assert
+      emit("using System.IO;\n") # File
       emit("using System.Linq;\n") # List extension methods
       emit("using System.Text;\n") # StringBuilder
       emit("using System;\n")
@@ -111,8 +112,9 @@ namespace Skew {
         }
         emit(mangleName(symbol))
         emitTypeParameters(symbol.parameters)
-        if symbol.baseClass != null {
-          emit(" : " + fullName(symbol.baseClass))
+        if symbol.base != null {
+          emit(" : ")
+          emitExpression(symbol.base, .LOWEST)
         }
         emit("\n" + indent + "{\n")
         increaseIndent
@@ -142,7 +144,7 @@ namespace Skew {
             if parameter != parameters.first {
               emit(", ")
             }
-            emitType(parameter.resolvedType)
+            emit(mangleName(parameter))
           }
           emit(">")
         }
@@ -600,20 +602,21 @@ namespace Skew {
           }
 
           case .CAST {
-            var type = node.resolvedType
+            var resolvedType = node.resolvedType
+            var type = node.castType
             var value = node.castValue
 
-            if type == .DYNAMIC {
+            if type.kind == .DYNAMIC {
               emitExpression(value, precedence)
             }
 
             # C# doesn't have a cast from bool to int
-            else if cache.isNumeric(type) && value.resolvedType == cache.boolType {
+            else if cache.isNumeric(resolvedType) && value.resolvedType == cache.boolType {
               emitExpression(Node.createHook(value.replaceWithNull, Node.createInt(1), Node.createInt(0)), precedence)
             }
 
             # C# doesn't have a cast from int to bool
-            else if type == cache.boolType && cache.isNumeric(value.resolvedType) {
+            else if resolvedType == cache.boolType && cache.isNumeric(value.resolvedType) {
               emitExpression(Node.createBinary(.NOT_EQUAL, value.replaceWithNull, Node.createInt(0)), precedence)
             }
 
@@ -622,7 +625,7 @@ namespace Skew {
                 emit("(")
               }
               emit("(")
-              emitType(type)
+              emitExpression(type, .LOWEST)
               emit(")")
               emitExpression(value, .UNARY_POSTFIX)
               if Precedence.UNARY_POSTFIX as int < precedence as int {

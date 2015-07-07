@@ -15,40 +15,96 @@ namespace Terminal {
     }
   }
 
-  def setColor(color Color) {
-    if dynamic.process.stdout.isTTY {
-      write("\x1B[0;" + color.toEscapeCode.toString + "m")
+  def setColor(color Color)
+  def width int
+  def height int
+  def print(text string)
+  def flush
+  def write(text string)
+
+  if TARGET == .JAVASCRIPT {
+    def setColor(color Color) {
+      if dynamic.process.stdout.isTTY {
+        write("\x1B[0;" + color.toEscapeCode.toString + "m")
+      }
+    }
+
+    def width int {
+      return dynamic.process.stdout.columns
+    }
+
+    def height int {
+      return dynamic.process.stdout.rows
+    }
+
+    def print(text string) {
+      write(text + "\n")
+    }
+
+    def flush {
+    }
+
+    def write(text string) {
+      dynamic.process.stdout.write(text)
+    }
+
+    const colorToEscapeCode IntMap<int> = {
+      Color.DEFAULT: 0,
+      Color.BOLD: 1,
+      Color.GRAY: 90,
+      Color.RED: 91,
+      Color.GREEN: 92,
+      Color.YELLOW: 93,
+      Color.BLUE: 94,
+      Color.MAGENTA: 95,
+      Color.CYAN: 96,
     }
   }
 
-  def width int {
-    return dynamic.process.stdout.columns
-  }
+  else if TARGET == .CSHARP {
+    def setColor(color Color) {
+      switch color {
+        case .DEFAULT { dynamic.Console.ResetColor() }
+        case .BOLD { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.White }
+        case .GRAY { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Gray }
+        case .RED { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Red }
+        case .GREEN { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Green }
+        case .YELLOW { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Yellow }
+        case .BLUE { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Blue }
+        case .MAGENTA { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Magenta }
+        case .CYAN { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Cyan }
+      }
+    }
 
-  def height int {
-    return dynamic.process.stdout.rows
-  }
+    def width int {
+      return dynamic.Console.BufferWidth
+    }
 
-  def print(text string) {
-    write(text + "\n")
-  }
+    def height int {
+      return dynamic.Console.BufferHeight
+    }
 
-  def flush {
-  }
+    def print(text string) {
+      dynamic.Console.WriteLine(text)
+    }
 
-  def write(text string) {
-    dynamic.process.stdout.write(text)
-  }
+    def flush {
+    }
 
-  const colorToEscapeCode IntMap<int> = {
-    Color.DEFAULT: 0,
-    Color.BOLD: 1,
-    Color.GRAY: 90,
-    Color.RED: 91,
-    Color.GREEN: 92,
-    Color.YELLOW: 93,
-    Color.BLUE: 94,
-    Color.MAGENTA: 95,
-    Color.CYAN: 96,
+    def write(text string) {
+      dynamic.Console.Write(text)
+    }
+
+    const colorToEscapeCode IntMap<int> = {
+      Color.DEFAULT: 0,
+      Color.BOLD: 1,
+      Color.GRAY: 90,
+      Color.RED: 91,
+      Color.GREEN: 92,
+      Color.YELLOW: 93,
+      Color.BLUE: 94,
+      Color.MAGENTA: 95,
+      Color.CYAN: 96,
+    }
   }
 }

@@ -1,17 +1,40 @@
 namespace IO {
-  def readFile(path string) Box<string> {
-    try {
-      var contents string = dynamic.require("fs").readFileSync(path, "utf8")
-      return Box<string>.new(contents.replaceAll("\r\n", "\n"))
+  def readFile(path string) Box<string>
+  def writeFile(path string, contents string) bool
+
+  if TARGET == .JAVASCRIPT {
+    def readFile(path string) Box<string> {
+      try {
+        var contents string = dynamic.require("fs").readFileSync(path, "utf8")
+        return Box<string>.new(contents.replaceAll("\r\n", "\n"))
+      }
+      return null
     }
-    return null
+
+    def writeFile(path string, contents string) bool {
+      try {
+        dynamic.require("fs").writeFileSync(path, contents)
+        return true
+      }
+      return false
+    }
   }
 
-  def writeFile(path string, contents string) bool {
-    try {
-      dynamic.require("fs").writeFileSync(path, contents)
-      return true
+  else if TARGET == .CSHARP {
+    def readFile(path string) Box<string> {
+      try {
+        var contents string = dynamic.File.ReadAllText(path)
+        return Box<string>.new(contents.replaceAll("\r\n", "\n"))
+      }
+      return null
     }
-    return false
+
+    def writeFile(path string, contents string) bool {
+      try {
+        dynamic.File.WriteAllText(path, contents)
+        return true
+      }
+      return false
+    }
   }
 }

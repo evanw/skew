@@ -51,7 +51,7 @@ class string {
 
 namespace string {
   def fromCodeUnit(codeUnit int) string {
-    return dynamic.string.new(codeUnit, 1)
+    return dynamic.string.new(codeUnit as dynamic.char, 1)
   }
 }
 

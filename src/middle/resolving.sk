@@ -377,7 +377,14 @@ namespace Skew.Resolving {
       }
     }
 
-    class GuardMergingFailure {
+    if TARGET == .CSHARP {
+      class GuardMergingFailure : dynamic.System.Exception {
+      }
+    }
+
+    else {
+      class GuardMergingFailure {
+      }
     }
 
     def reportGuardMergingFailure(node Node) {

@@ -72,12 +72,12 @@ namespace Skew {
       while true {
         if find(name) == null && (used == null || !(name in used)) {
           reserveName(name, null)
-          return name
+          break
         }
         count++
         name = prefix + count.toString
       }
-      return prefix
+      return name
     }
 
     def reserveName(name string, symbol VariableSymbol) {
