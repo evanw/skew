@@ -12036,10 +12036,13 @@
     else {
       this.resolveAsParameterizedExpression(trueValue, scope);
       this.resolveAsParameterizedExpression(falseValue, scope);
-      var common = this.cache.commonImplicitType(trueValue.resolvedType, falseValue.resolvedType);
+      var commonType = this.cache.commonImplicitType(trueValue.resolvedType, falseValue.resolvedType);
 
-      if (common !== null) {
-        node.resolvedType = common;
+      // Insert casts if needed since some targets can't perform this type inference
+      if (commonType !== null) {
+        this.checkConversion(trueValue, commonType, Skew.Resolving.ConversionKind.IMPLICIT);
+        this.checkConversion(falseValue, commonType, Skew.Resolving.ConversionKind.IMPLICIT);
+        node.resolvedType = commonType;
       }
 
       else {

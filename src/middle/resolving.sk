@@ -1958,10 +1958,13 @@ namespace Skew.Resolving {
       else {
         resolveAsParameterizedExpression(trueValue, scope)
         resolveAsParameterizedExpression(falseValue, scope)
-        var common = cache.commonImplicitType(trueValue.resolvedType, falseValue.resolvedType)
+        var commonType = cache.commonImplicitType(trueValue.resolvedType, falseValue.resolvedType)
 
-        if common != null {
-          node.resolvedType = common
+        # Insert casts if needed since some targets can't perform this type inference
+        if commonType != null {
+          checkConversion(trueValue, commonType, .IMPLICIT)
+          checkConversion(falseValue, commonType, .IMPLICIT)
+          node.resolvedType = commonType
         } else {
           log.semanticErrorNoCommonType(Range.span(trueValue.range, falseValue.range), trueValue.resolvedType, falseValue.resolvedType)
         }
