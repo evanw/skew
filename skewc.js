@@ -12426,12 +12426,17 @@
       // The two types must be compatible
       var commonType = this.cache.commonImplicitType(left.resolvedType, right.resolvedType);
 
-      if (commonType !== null) {
-        node.resolvedType = this.cache.boolType;
+      if (commonType === null) {
+        this.log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType);
+      }
+
+      // Avoid "==" and "!=" on type parameters since target languages may have value type restrictions
+      else if (commonType.symbol !== null && Skew.SymbolKind.isParameter(commonType.symbol.kind)) {
+        this.log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), Skew.operatorInfo[kind].text, commonType);
       }
 
       else {
-        this.log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType);
+        node.resolvedType = this.cache.boolType;
       }
 
       return;
