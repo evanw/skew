@@ -11,16 +11,19 @@ namespace Skew {
       global.objects.append(globals)
 
       # Move global functions and variables into their own namespace
-      for function in global.functions {
+      global.functions.removeIf(function => {
         if function.kind != .FUNCTION_ANNOTATION {
           function.parent = globals
           globals.functions.append(function)
+          return true
         }
-      }
-      for variable in global.variables {
+        return false
+      })
+      global.variables.removeIf(variable => {
         variable.parent = globals
         globals.variables.append(variable)
-      }
+        return true
+      })
 
       # Avoid emitting unnecessary stuff
       shakingPass(global, cache.entryPointSymbol, .USE_TYPES)

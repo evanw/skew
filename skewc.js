@@ -603,7 +603,7 @@
   Skew.shakingPass = function(global, entryPoint, mode) {
     var graph = new Skew.UsageGraph(global, mode);
     var symbols = [];
-    Skew.Shaking.collectImportedOrExportedSymbols(global, symbols, entryPoint);
+    Skew.Shaking.collectExportedSymbols(global, symbols, entryPoint);
     var usages = graph.usagesForSymbols(symbols);
 
     if (usages !== null) {
@@ -959,20 +959,20 @@
     global.objects.push(globals);
 
     // Move global functions and variables into their own namespace
-    for (var i = 0, list = global.functions, count = list.length; i < count; ++i) {
-      var $function = list[i];
-
+    in_List.removeIf(global.functions, function($function) {
       if ($function.kind !== Skew.SymbolKind.FUNCTION_ANNOTATION) {
         $function.parent = globals;
         globals.functions.push($function);
+        return true;
       }
-    }
 
-    for (var i1 = 0, list1 = global.variables, count1 = list1.length; i1 < count1; ++i1) {
-      var variable = list1[i1];
+      return false;
+    });
+    in_List.removeIf(global.variables, function(variable) {
       variable.parent = globals;
       globals.variables.push(variable);
-    }
+      return true;
+    });
 
     // Avoid emitting unnecessary stuff
     Skew.shakingPass(global, this.cache.entryPointSymbol, Skew.ShakingMode.USE_TYPES);
@@ -992,8 +992,8 @@
     this.emit("using System;\n");
 
     // All code in C# is inside objects, so just emit objects recursively
-    for (var i2 = 0, list2 = global.objects, count2 = list2.length; i2 < count2; ++i2) {
-      var object = list2[i2];
+    for (var i = 0, list = global.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
       this.emitObject(object);
     }
 
@@ -13129,12 +13129,12 @@
 
   Skew.Shaking = {};
 
-  Skew.Shaking.collectImportedOrExportedSymbols = function(symbol, symbols, entryPoint) {
+  Skew.Shaking.collectExportedSymbols = function(symbol, symbols, entryPoint) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
-      Skew.Shaking.collectImportedOrExportedSymbols(object, symbols, entryPoint);
+      Skew.Shaking.collectExportedSymbols(object, symbols, entryPoint);
 
-      if (object.isImportedOrExported()) {
+      if (object.isExported()) {
         symbols.push(object);
       }
     }
@@ -13142,7 +13142,7 @@
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
       var $function = list1[i1];
 
-      if ($function.isImportedOrExported() || $function === entryPoint) {
+      if ($function.isExported() || $function === entryPoint) {
         symbols.push($function);
       }
     }
@@ -13150,7 +13150,7 @@
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
       var variable = list2[i2];
 
-      if (variable.isImportedOrExported()) {
+      if (variable.isExported()) {
         symbols.push(variable);
       }
     }

@@ -11,7 +11,7 @@ namespace Skew {
   def shakingPass(global ObjectSymbol, entryPoint FunctionSymbol, mode ShakingMode) {
     var graph = UsageGraph.new(global, mode)
     var symbols List<Symbol> = []
-    Shaking.collectImportedOrExportedSymbols(global, symbols, entryPoint)
+    Shaking.collectExportedSymbols(global, symbols, entryPoint)
     var usages = graph.usagesForSymbols(symbols)
     if usages != null {
       Shaking.removeUnusedSymbols(global, usages)
@@ -202,22 +202,22 @@ namespace Skew {
 }
 
 namespace Skew.Shaking {
-  def collectImportedOrExportedSymbols(symbol ObjectSymbol, symbols List<Symbol>, entryPoint FunctionSymbol) {
+  def collectExportedSymbols(symbol ObjectSymbol, symbols List<Symbol>, entryPoint FunctionSymbol) {
     for object in symbol.objects {
-      collectImportedOrExportedSymbols(object, symbols, entryPoint)
-      if object.isImportedOrExported {
+      collectExportedSymbols(object, symbols, entryPoint)
+      if object.isExported {
         symbols.append(object)
       }
     }
 
     for function in symbol.functions {
-      if function.isImportedOrExported || function == entryPoint {
+      if function.isExported || function == entryPoint {
         symbols.append(function)
       }
     }
 
     for variable in symbol.variables {
-      if variable.isImportedOrExported {
+      if variable.isExported {
         symbols.append(variable)
       }
     }
