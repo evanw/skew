@@ -2605,9 +2605,11 @@ namespace Skew.Resolving {
             var values = child.children
             for j in 1..values.count {
               var caseValue = values[j]
-              constantFolder.foldConstants(caseValue)
-              if !caseValue.isInt {
-                isAllInts = false
+              if caseValue.symbol == null || caseValue.symbol.kind != .VARIABLE_ENUM {
+                constantFolder.foldConstants(caseValue)
+                if !caseValue.isInt {
+                  isAllInts = false
+                }
               }
             }
           }

@@ -11710,10 +11710,13 @@
 
           for (var j = 1, count = values.length; j < count; ++j) {
             var caseValue = values[j];
-            this.constantFolder.foldConstants(caseValue);
 
-            if (!caseValue.isInt()) {
-              isAllInts = false;
+            if (caseValue.symbol === null || caseValue.symbol.kind !== Skew.SymbolKind.VARIABLE_ENUM) {
+              this.constantFolder.foldConstants(caseValue);
+
+              if (!caseValue.isInt()) {
+                isAllInts = false;
+              }
             }
           }
         }

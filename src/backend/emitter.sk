@@ -61,6 +61,19 @@ namespace Skew {
 
         return objects
       }
+
+      def markVirtualFunctions(symbol ObjectSymbol) {
+        for object in symbol.objects {
+          markVirtualFunctions(object)
+        }
+
+        for function in symbol.functions {
+          if function.overridden != null {
+            function.overridden.flags |= Symbol.IS_VIRTUAL
+            function.flags |= Symbol.IS_VIRTUAL
+          }
+        }
+      }
     }
 
     @private {

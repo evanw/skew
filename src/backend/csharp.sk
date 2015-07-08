@@ -50,6 +50,7 @@ namespace Skew {
 
       # Avoid emitting unnecessary stuff
       shakingPass(global, entryPoint, .USE_TYPES)
+      markVirtualFunctions(global)
 
       # TODO: Do this better
       emit("using System.Collections.Generic;\n") # List, Dictionary
@@ -237,6 +238,8 @@ namespace Skew {
             emit("abstract ")
           } else if symbol.overridden != null {
             emit("override ")
+          } else if symbol.isVirtual {
+            emit("virtual ")
           }
           emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType)
           emit(" ")

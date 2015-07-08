@@ -109,6 +109,7 @@ namespace Skew {
     const IS_MERGED = 1 << 17
     const IS_OBSOLETE = 1 << 18
     const IS_PRIMARY_CONSTRUCTOR = 1 << 19
+    const IS_VIRTUAL = 1 << 20
   }
 
   class Symbol {
@@ -149,6 +150,7 @@ namespace Skew {
     def isMerged bool             { return (flags & IS_MERGED) != 0 }
     def isObsolete bool           { return (flags & IS_OBSOLETE) != 0 }
     def isPrimaryConstructor bool { return (flags & IS_PRIMARY_CONSTRUCTOR) != 0 }
+    def isVirtual bool            { return (flags & IS_VIRTUAL) != 0 }
 
     # Combinations
     def isPrivateOrProtected bool { return (flags & (IS_PRIVATE | IS_PROTECTED)) != 0 }
