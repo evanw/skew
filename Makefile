@@ -20,20 +20,21 @@ SOURCES_TEST += src/lib/terminal.sk
 SOURCES_TEST += src/lib/unit.sk
 SOURCES_TEST += tests/simple.sk
 
-FLAGS += --inline-functions
+JS_FLAGS += --target=js
+JS_FLAGS += --inline-functions
 
 default: compile-node compile-browser
 
 compile-node: | build
-	node skewc.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node.js
+	node skewc.js $(SOURCES_NODE) $(JS_FLAGS) --output-file=build/node.js
 
 compile-browser: | build
-	node skewc.js $(SOURCES_BROWSER) $(FLAGS) --output-file=build/browser.js
+	node skewc.js $(SOURCES_BROWSER) $(JS_FLAGS) --output-file=build/browser.js
 
 replace: | build
-	node skewc.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node.js
-	node build/node.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node2.js
-	node build/node2.js $(SOURCES_NODE) $(FLAGS) --output-file=build/node3.js
+	node skewc.js $(SOURCES_NODE) $(JS_FLAGS) --output-file=build/node.js
+	node build/node.js $(SOURCES_NODE) $(JS_FLAGS) --output-file=build/node2.js
+	node build/node2.js $(SOURCES_NODE) $(JS_FLAGS) --output-file=build/node3.js
 	cmp -s build/node2.js build/node3.js
 	mv build/node3.js skewc.js
 	rm build/node2.js
@@ -48,5 +49,5 @@ flex:
 	cd src/frontend && python build.py && cd -
 
 test:
-	node skewc.js $(SOURCES_TEST) $(FLAGS) --output-file=build/test.js
+	node skewc.js $(SOURCES_TEST) $(JS_FLAGS) --output-file=build/test.js
 	mocha build/test.js

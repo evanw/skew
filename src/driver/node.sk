@@ -11,6 +11,7 @@ namespace Skew {
     OUTPUT_DIRECTORY
     OUTPUT_FILE
     RELEASE
+    TARGET
   }
 
   const DEFAULT_MESSAGE_LIMIT = 10
@@ -144,6 +145,7 @@ namespace Skew {
   def parseOptions(log Log, parser Options.Parser, arguments List<string>) CompilerOptions {
     # Configure the parser
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
+    parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + joinKeys(VALID_TARGETS.keys) + ".")
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
     parser.define(.BOOL, .RELEASE, "--release", "Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.")
@@ -197,6 +199,14 @@ namespace Skew {
       log.commandLineErrorNoInputFiles(trailingSpace)
     }
 
+    # Check the target format
+    var target = parser.rangeForOption(.TARGET)
+    if target != null {
+      options.target = parseEnum<CompilerTarget>(log, "target", VALID_TARGETS, target, null)
+    } else {
+      log.commandLineErrorMissingTarget(trailingSpace)
+    }
+
     # Parse the output location
     var outputFile = parser.rangeForOption(.OUTPUT_FILE)
     var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
@@ -237,5 +247,35 @@ namespace Skew {
     def commandLineErrorNoInputFiles(range Range) {
       error(range, "Missing input files")
     }
+
+    def commandLineErrorMissingTarget(range Range) {
+      error(range, "Specify the target format using \"--target\"")
+    }
+
+    def commandLineErrorInvalidEnum(range Range, name string, found string, expected List<string>) {
+      error(range, "Invalid " + name + " \"" + found + "\", must be either " + PrettyPrint.joinQuoted(expected, "or"))
+    }
+  }
+
+  def joinKeys(keys List<string>) string {
+    keys.sort((a, b) => a <=> b)
+    return PrettyPrint.joinQuoted(keys, "and")
+  }
+
+  def parseEnum<T>(log Log, name string, map StringMap<T>, range Range, defaultValue T) T {
+    var key = range.toString
+    if key in map {
+      return map[key]
+    }
+    var keys = map.keys
+    keys.sort((a, b) => a <=> b)
+    log.commandLineErrorInvalidEnum(range, name, key, keys)
+    return defaultValue
+  }
+
+  const VALID_TARGETS = {
+    "cpp": CSharpTarget.new,
+    "js": JavaScriptTarget.new,
+    "lisp-tree": LispTreeTarget.new,
   }
 }

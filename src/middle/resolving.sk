@@ -2506,26 +2506,38 @@ namespace Skew.Resolving {
       node.symbol = symbol
       checkAccess(node, node.internalRangeOrRange, scope)
 
-      # Special-case imported comparison operators to avoid call substitution
-      if isComparison && symbol.isImported {
-        resolveChildrenAsParameterizedExpressions(node, scope)
-        node.resolvedType = cache.boolType
-        node.symbol = null
-        return
-      }
-
-      # Don't replace the operator with a call if it's just used for type checking
-      if symbol.isImported && !symbol.isRenamed {
-        if reverseBinaryOrder {
-          node.children.reverse
-        }
-        if !resolveFunctionCall(node, scope, symbolType) {
+      # Special-case imported operators to avoid call substitution
+      if symbol.isImported {
+        # "<", ">", "<=", or ">="
+        if isComparison {
           resolveChildrenAsParameterizedExpressions(node, scope)
+          node.resolvedType = cache.boolType
+          node.symbol = null
+          return
         }
-        if reverseBinaryOrder {
-          node.children.reverse
+
+        # "<=>"
+        if kind == .COMPARE {
+          resolveChildrenAsParameterizedExpressions(node, scope)
+          node.kind = .SUBTRACT
+          node.resolvedType = type
+          node.symbol = null
+          return
         }
-        return
+
+        # Don't replace the operator with a call if it's just used for type checking
+        if !symbol.isRenamed {
+          if reverseBinaryOrder {
+            node.children.reverse
+          }
+          if !resolveFunctionCall(node, scope, symbolType) {
+            resolveChildrenAsParameterizedExpressions(node, scope)
+          }
+          if reverseBinaryOrder {
+            node.children.reverse
+          }
+          return
+        }
       }
 
       # Resolve the method call

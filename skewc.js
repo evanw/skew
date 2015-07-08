@@ -730,6 +730,7 @@
   Skew.parseOptions = function(log, parser, $arguments) {
     // Configure the parser
     parser.define(Skew.Options.Type.BOOL, Skew.Option.HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"]);
+    parser.define(Skew.Options.Type.STRING, Skew.Option.TARGET, "--target", "Sets the target format. Valid targets are " + Skew.joinKeys(Object.keys(Skew.VALID_TARGETS)) + ".");
     parser.define(Skew.Options.Type.STRING, Skew.Option.OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
     parser.define(Skew.Options.Type.STRING, Skew.Option.OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.RELEASE, "--release", "Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.");
@@ -789,6 +790,17 @@
       log.commandLineErrorNoInputFiles(trailingSpace);
     }
 
+    // Check the target format
+    var target = parser.rangeForOption(Skew.Option.TARGET);
+
+    if (target !== null) {
+      options.target = Skew.parseEnum(log, "target", Skew.VALID_TARGETS, target, null);
+    }
+
+    else {
+      log.commandLineErrorMissingTarget(trailingSpace);
+    }
+
     // Parse the output location
     var outputFile = parser.rangeForOption(Skew.Option.OUTPUT_FILE);
     var outputDirectory = parser.rangeForOption(Skew.Option.OUTPUT_DIRECTORY);
@@ -810,6 +822,28 @@
     }
 
     return options;
+  };
+
+  Skew.joinKeys = function(keys) {
+    keys.sort(function(a, b) {
+      return in_string.compare(a, b);
+    });
+    return Skew.PrettyPrint.joinQuoted(keys, "and");
+  };
+
+  Skew.parseEnum = function(log, name, map, range, defaultValue) {
+    var key = range.toString();
+
+    if (key in map) {
+      return map[key];
+    }
+
+    var keys = Object.keys(map);
+    keys.sort(function(a, b) {
+      return in_string.compare(a, b);
+    });
+    log.commandLineErrorInvalidEnum(range, name, key, keys);
+    return defaultValue;
   };
 
   Skew.Emitter = function() {
@@ -878,6 +912,22 @@
     return objects;
   };
 
+  Skew.Emitter.prototype.markVirtualFunctions = function(symbol) {
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      this.markVirtualFunctions(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
+      var $function = list1[i1];
+
+      if ($function.overridden !== null) {
+        $function.overridden.flags |= Skew.Symbol.IS_VIRTUAL;
+        $function.flags |= Skew.Symbol.IS_VIRTUAL;
+      }
+    }
+  };
+
   Skew.Emitter.prototype.findObjects = function(objects, object) {
     objects.push(object);
 
@@ -909,6 +959,1013 @@
     }
 
     return false;
+  };
+
+  Skew.CSharpEmitter = function(options, cache) {
+    Skew.Emitter.call(this);
+    this.options = options;
+    this.cache = cache;
+    this.previousNode = null;
+    this.previousSymbol = null;
+    this.isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "abstract", 0), "as", 0), "base", 0), "bool", 0), "break", 0), "byte", 0), "case", 0), "catch", 0), "char", 0), "checked", 0), "class", 0), "const", 0), "continue", 0), "decimal", 0), "default", 0), "delegate", 0), "do", 0), "double", 0), "else", 0), "enum", 0), "event", 0), "explicit", 0), "extern", 0), "false", 0), "finally", 0), "fixed", 0), "float", 0), "for", 0), "foreach", 0), "goto", 0), "if", 0), "implicit", 0), "in", 0), "in", 0), "int", 0), "interface", 0), "internal", 0), "is", 0), "lock", 0), "long", 0), "namespace", 0), "new", 0), "null", 0), "object", 0), "operator", 0), "out", 0), "out", 0), "override", 0), "params", 0), "private", 0), "protected", 0), "public", 0), "readonly", 0), "ref", 0), "return", 0), "sbyte", 0), "sealed", 0), "short", 0), "sizeof", 0), "stackalloc", 0), "static", 0), "string", 0), "struct", 0), "switch", 0), "this", 0), "throw", 0), "true", 0), "try", 0), "typeof", 0), "uint", 0), "ulong", 0), "unchecked", 0), "unsafe", 0), "ushort", 0), "using", 0), "virtual", 0), "void", 0), "volatile", 0), "while", 0);
+  };
+
+  __extends(Skew.CSharpEmitter, Skew.Emitter);
+
+  Skew.CSharpEmitter.prototype.visit = function(global) {
+    this.indentAmount = "    ";
+    var globals = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_NAMESPACE, global.scope.generateName("Globals"));
+    globals.parent = global;
+    global.objects.push(globals);
+
+    // Move global functions and variables into their own namespace
+    in_List.removeIf(global.functions, function($function) {
+      if ($function.kind !== Skew.SymbolKind.FUNCTION_ANNOTATION) {
+        $function.parent = globals;
+        globals.functions.push($function);
+        return true;
+      }
+
+      return false;
+    });
+    in_List.removeIf(global.variables, function(variable) {
+      variable.parent = globals;
+      globals.variables.push(variable);
+      return true;
+    });
+
+    // Generate the entry point
+    var entryPoint = this.cache.entryPointSymbol;
+
+    if (entryPoint !== null) {
+      entryPoint.name = "Main";
+
+      // The entry point in C# takes an array, not a list
+      if (entryPoint.$arguments.length === 1) {
+        var argument = entryPoint.$arguments[0];
+        var array = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, argument.name);
+        array.type = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent("string[]"));
+        array.resolvedType = Skew.Type.DYNAMIC;
+        entryPoint.$arguments = [array];
+
+        // Create the list from the array
+        if (entryPoint.block !== null) {
+          array.name = entryPoint.scope.generateName(array.name);
+          argument.kind = Skew.SymbolKind.VARIABLE_LOCAL;
+          argument.value = Skew.Node.createCall(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent("new")).withChildren([new Skew.Node(Skew.NodeKind.TYPE).withType(argument.resolvedType)]), [Skew.Node.createSymbolReference(array)]);
+          entryPoint.block.insertChild(0, Skew.Node.createVar(argument));
+        }
+      }
+    }
+
+    // Avoid emitting unnecessary stuff
+    Skew.shakingPass(global, entryPoint, Skew.ShakingMode.USE_TYPES);
+    this.markVirtualFunctions(global);
+
+    // TODO: Do this better
+    // List, Dictionary
+    this.emit("using System.Collections.Generic;\n");
+
+    // Debug.Assert
+    this.emit("using System.Diagnostics;\n");
+
+    // File
+    this.emit("using System.IO;\n");
+
+    // List extension methods
+    this.emit("using System.Linq;\n");
+
+    // StringBuilder
+    this.emit("using System.Text;\n");
+    this.emit("using System;\n");
+
+    // All code in C# is inside objects, so just emit objects recursively
+    for (var i = 0, list = global.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      this.emitObject(object);
+    }
+
+    // Emit a single file if requested
+    if (this.options.outputDirectory === "") {
+      this.createSource(this.options.outputFile);
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitNewlineBeforeSymbol = function(symbol) {
+    if (this.previousSymbol !== null && (!Skew.SymbolKind.isVariable(this.previousSymbol.kind) || !Skew.SymbolKind.isVariable(symbol.kind) || symbol.comments !== null)) {
+      this.emit("\n");
+    }
+
+    this.previousSymbol = null;
+  };
+
+  Skew.CSharpEmitter.prototype.emitNewlineAfterSymbol = function(symbol) {
+    this.previousSymbol = symbol;
+  };
+
+  Skew.CSharpEmitter.prototype.isCompactNodeKind = function(kind) {
+    return kind === Skew.NodeKind.EXPRESSION || kind === Skew.NodeKind.VAR || Skew.NodeKind.isJump(kind);
+  };
+
+  Skew.CSharpEmitter.prototype.emitNewlineBeforeStatement = function(node) {
+    if (this.previousNode !== null && (node.comments !== null || !this.isCompactNodeKind(this.previousNode.kind) || !this.isCompactNodeKind(node.kind))) {
+      this.emit("\n");
+    }
+
+    this.previousNode = null;
+  };
+
+  Skew.CSharpEmitter.prototype.emitNewlineAfterStatement = function(node) {
+    this.previousNode = node;
+  };
+
+  Skew.CSharpEmitter.prototype.emitComments = function(comments) {
+    if (comments !== null) {
+      for (var i = 0, list = comments, count = list.length; i < count; ++i) {
+        var comment = list[i];
+        this.emit(this.indent + "//" + comment);
+      }
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitObject = function(symbol) {
+    if (symbol.isImported()) {
+      return;
+    }
+
+    // Global functions and variables have to be in classes, not namespaces
+    if (symbol.kind === Skew.SymbolKind.OBJECT_NAMESPACE && (!(symbol.functions.length === 0) || !(symbol.variables.length === 0) || symbol.parent.kind === Skew.SymbolKind.OBJECT_CLASS)) {
+      symbol.kind = Skew.SymbolKind.OBJECT_CLASS;
+    }
+
+    this.emitNewlineBeforeSymbol(symbol);
+    this.emitComments(symbol.comments);
+
+    if (symbol.kind !== Skew.SymbolKind.OBJECT_NAMESPACE) {
+      this.emit(this.indent + "public ");
+    }
+
+    if (symbol.isAbstract()) {
+      this.emit("abstract ");
+    }
+
+    switch (symbol.kind) {
+      case Skew.SymbolKind.OBJECT_CLASS: {
+        this.emit("class ");
+        break;
+      }
+
+      case Skew.SymbolKind.OBJECT_ENUM: {
+        this.emit("enum ");
+        break;
+      }
+
+      case Skew.SymbolKind.OBJECT_INTERFACE: {
+        this.emit("interface ");
+        break;
+      }
+
+      case Skew.SymbolKind.OBJECT_NAMESPACE: {
+        this.emit("namespace ");
+        break;
+      }
+
+      default: {
+        assert(false);
+        break;
+      }
+    }
+
+    this.emit(this.mangleName(symbol));
+    this.emitTypeParameters(symbol.parameters);
+
+    if (symbol.base !== null) {
+      this.emit(" : ");
+      this.emitExpressionOrType(symbol.base, symbol.baseClass !== null ? symbol.baseClass.resolvedType : null);
+    }
+
+    this.emit("\n" + this.indent + "{\n");
+    this.increaseIndent();
+
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      this.emitObject(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.variables, count1 = list1.length; i1 < count1; ++i1) {
+      var variable = list1[i1];
+      this.emitVariable(variable);
+    }
+
+    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
+      var $function = list2[i2];
+      this.emitFunction($function);
+    }
+
+    this.decreaseIndent();
+    this.emit(this.indent + "}\n");
+    this.emitNewlineAfterSymbol(symbol);
+
+    // Emit each object into its own file if requested
+    if (this.options.outputDirectory !== "") {
+      this.createSource(this.options.outputDirectory + "/" + this.fullName(symbol) + ".cs");
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitTypeParameters = function(parameters) {
+    if (parameters !== null) {
+      this.emit("<");
+
+      for (var i = 0, list = parameters, count = list.length; i < count; ++i) {
+        var parameter = list[i];
+
+        if (parameter !== parameters[0]) {
+          this.emit(", ");
+        }
+
+        this.emit(this.mangleName(parameter));
+      }
+
+      this.emit(">");
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitArgumentList = function(symbol) {
+    this.emit("(");
+
+    for (var i = 0, list = symbol.$arguments, count = list.length; i < count; ++i) {
+      var argument = list[i];
+
+      if (argument !== symbol.$arguments[0]) {
+        this.emit(", ");
+      }
+
+      this.emitExpressionOrType(argument.type, argument.resolvedType);
+      this.emit(" " + this.mangleName(argument));
+    }
+
+    this.emit(")");
+  };
+
+  Skew.CSharpEmitter.prototype.emitVariable = function(symbol) {
+    if (symbol.isImported()) {
+      return;
+    }
+
+    this.emitNewlineBeforeSymbol(symbol);
+    this.emitComments(symbol.comments);
+
+    if (symbol.kind === Skew.SymbolKind.VARIABLE_ENUM) {
+      this.emit(this.indent + this.mangleName(symbol));
+
+      if (symbol.value !== null) {
+        this.emit(" = ");
+        this.emitExpression(symbol.value, Skew.Precedence.COMMA);
+      }
+
+      this.emit(",\n");
+    }
+
+    else {
+      this.emit(this.indent + "public ");
+
+      if (symbol.kind === Skew.SymbolKind.VARIABLE_GLOBAL) {
+        this.emit("static ");
+      }
+
+      this.emitExpressionOrType(symbol.type, symbol.resolvedType);
+      this.emit(" " + this.mangleName(symbol));
+
+      if (symbol.value !== null) {
+        this.emit(" = ");
+        this.emitExpression(symbol.value, Skew.Precedence.COMMA);
+      }
+
+      this.emit(";\n");
+    }
+
+    this.emitNewlineAfterSymbol(symbol);
+  };
+
+  Skew.CSharpEmitter.prototype.emitFunction = function(symbol) {
+    if (symbol.isImported()) {
+      return;
+    }
+
+    // C# has sane capture rules for "this" so no variable insertion is needed
+    if (symbol.self !== null) {
+      symbol.self.name = "this";
+      symbol.self.flags |= Skew.Symbol.IS_EXPORTED;
+    }
+
+    this.emitNewlineBeforeSymbol(symbol);
+    this.emitComments(symbol.comments);
+    this.emit(this.indent + "public ");
+
+    if (symbol.kind === Skew.SymbolKind.FUNCTION_GLOBAL) {
+      this.emit("static ");
+    }
+
+    if (symbol.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+      if (symbol.block === null) {
+        this.emit("abstract ");
+      }
+
+      else if (symbol.overridden !== null) {
+        this.emit("override ");
+      }
+
+      else if (symbol.isVirtual()) {
+        this.emit("virtual ");
+      }
+
+      this.emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType);
+      this.emit(" ");
+    }
+
+    this.emit(this.mangleName(symbol));
+    this.emitTypeParameters(symbol.parameters);
+    this.emitArgumentList(symbol);
+    var block = symbol.block;
+
+    if (block === null) {
+      this.emit(";\n");
+    }
+
+    else {
+      // Move the super constructor call out of the function body
+      if (symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR && !(block.children.length === 0)) {
+        var first = block.children[0];
+
+        if (first.kind === Skew.NodeKind.EXPRESSION) {
+          var call = first.expressionValue();
+
+          if (call.kind === Skew.NodeKind.CALL && call.callValue().kind === Skew.NodeKind.SUPER) {
+            this.emit(" : ");
+            first.remove();
+            this.emitExpression(call, Skew.Precedence.LOWEST);
+          }
+        }
+      }
+
+      this.emit("\n");
+      this.emitBlock(block);
+      this.emit("\n");
+    }
+
+    this.emitNewlineAfterSymbol(symbol);
+  };
+
+  Skew.CSharpEmitter.prototype.emitType = function(type) {
+    if (type === null) {
+      this.emit("void");
+    }
+
+    else if (type === Skew.Type.DYNAMIC) {
+      this.emit("dynamic");
+    }
+
+    else if (type.kind === Skew.TypeKind.LAMBDA) {
+      var returnType = type.returnType;
+      this.emit(returnType !== null ? "Func<" : "Action<");
+
+      for (var i1 = 0, list = type.argumentTypes, count = list.length; i1 < count; ++i1) {
+        var argumentType = list[i1];
+
+        if (argumentType !== type.argumentTypes[0]) {
+          this.emit(", ");
+        }
+
+        this.emitType(argumentType);
+      }
+
+      if (returnType !== null) {
+        if (!(type.argumentTypes.length === 0)) {
+          this.emit(", ");
+        }
+
+        this.emitType(returnType);
+      }
+
+      this.emit(">");
+    }
+
+    else {
+      assert(type.kind === Skew.TypeKind.SYMBOL);
+      this.emit(this.fullName(type.symbol));
+
+      if (type.isParameterized()) {
+        this.emit("<");
+
+        if (this.cache.isIntMap(type) || this.cache.isStringMap(type)) {
+          this.emit(this.cache.isIntMap(type) ? "int" : "string");
+          this.emit(", ");
+          this.emitType(type.substitutions[0]);
+        }
+
+        else {
+          for (var i = 0, count1 = type.substitutions.length; i < count1; ++i) {
+            if (i !== 0) {
+              this.emit(", ");
+            }
+
+            this.emitType(type.substitutions[i]);
+          }
+        }
+
+        this.emit(">");
+      }
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitExpressionOrType = function(node, type) {
+    if (node !== null) {
+      this.emitExpression(node, Skew.Precedence.LOWEST);
+    }
+
+    else {
+      this.emitType(type);
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitStatements = function(statements) {
+    this.previousNode = null;
+
+    for (var i = 0, list = statements, count = list.length; i < count; ++i) {
+      var statement = list[i];
+      this.emitNewlineBeforeStatement(statement);
+      this.emitComments(statement.comments);
+      this.emitStatement(statement);
+      this.emitNewlineAfterStatement(statement);
+    }
+
+    this.previousNode = null;
+  };
+
+  Skew.CSharpEmitter.prototype.emitBlock = function(node) {
+    assert(node.kind === Skew.NodeKind.BLOCK);
+    this.emit(this.indent + "{\n");
+    this.increaseIndent();
+    this.emitStatements(node.children);
+    this.decreaseIndent();
+    this.emit(this.indent + "}");
+  };
+
+  Skew.CSharpEmitter.prototype.emitIf = function(node) {
+    this.emit("if (");
+    this.emitExpression(node.ifTest(), Skew.Precedence.LOWEST);
+    this.emit(")\n");
+    this.emitBlock(node.ifTrue());
+    this.emit("\n");
+    var block = node.ifFalse();
+
+    if (block !== null) {
+      var singleIf = block.children.length === 1 && block.children[0].kind === Skew.NodeKind.IF ? block.children[0] : null;
+
+      if (block.comments !== null || singleIf !== null && singleIf.comments !== null) {
+        this.emit("\n");
+        this.emitComments(block.comments);
+
+        if (singleIf !== null) {
+          this.emitComments(singleIf.comments);
+        }
+      }
+
+      this.emit(this.indent + "else");
+
+      if (singleIf !== null) {
+        this.emit(" ");
+        this.emitIf(singleIf);
+      }
+
+      else {
+        this.emit("\n");
+        this.emitBlock(block);
+        this.emit("\n");
+      }
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitStatement = function(node) {
+    switch (node.kind) {
+      case Skew.NodeKind.VAR: {
+        var symbol = node.symbol.asVariableSymbol();
+        this.emit(this.indent);
+        this.emitExpressionOrType(symbol.type, symbol.resolvedType);
+        this.emit(" " + this.mangleName(symbol));
+
+        if (symbol.value !== null) {
+          this.emit(" = ");
+          this.emitExpression(symbol.value, Skew.Precedence.ASSIGN);
+        }
+
+        this.emit(";\n");
+        break;
+      }
+
+      case Skew.NodeKind.EXPRESSION: {
+        this.emit(this.indent);
+        this.emitExpression(node.expressionValue(), Skew.Precedence.LOWEST);
+        this.emit(";\n");
+        break;
+      }
+
+      case Skew.NodeKind.BREAK: {
+        this.emit(this.indent + "break;\n");
+        break;
+      }
+
+      case Skew.NodeKind.CONTINUE: {
+        this.emit(this.indent + "continue;\n");
+        break;
+      }
+
+      case Skew.NodeKind.IF: {
+        this.emit(this.indent);
+        this.emitIf(node);
+        break;
+      }
+
+      case Skew.NodeKind.SWITCH: {
+        var cases = node.children;
+        this.emit(this.indent + "switch (");
+        this.emitExpression(node.switchValue(), Skew.Precedence.LOWEST);
+        this.emit(")\n" + this.indent + "{\n");
+        this.increaseIndent();
+
+        for (var i = 1, count2 = cases.length; i < count2; ++i) {
+          var child = cases[i];
+          var values = child.children;
+          var block = child.caseBlock();
+
+          if (i !== 1) {
+            this.emit("\n");
+          }
+
+          if (values.length === 1) {
+            this.emit(this.indent + "default:");
+          }
+
+          else {
+            for (var j = 1, count1 = values.length; j < count1; ++j) {
+              if (j !== 1) {
+                this.emit("\n");
+              }
+
+              this.emit(this.indent + "case ");
+              this.emitExpression(values[j], Skew.Precedence.LOWEST);
+              this.emit(":");
+            }
+          }
+
+          this.emit("\n" + this.indent + "{\n");
+          this.increaseIndent();
+          this.emitStatements(block.children);
+
+          if (!block.blockAlwaysEndsWithReturn()) {
+            this.emit(this.indent + "break;\n");
+          }
+
+          this.decreaseIndent();
+          this.emit(this.indent + "}\n");
+        }
+
+        this.decreaseIndent();
+        this.emit(this.indent + "}\n");
+        break;
+      }
+
+      case Skew.NodeKind.RETURN: {
+        this.emit(this.indent + "return");
+        var value = node.returnValue();
+
+        if (value !== null) {
+          this.emit(" ");
+          this.emitExpression(value, Skew.Precedence.LOWEST);
+        }
+
+        this.emit(";\n");
+        break;
+      }
+
+      case Skew.NodeKind.THROW: {
+        this.emit(this.indent + "throw ");
+        this.emitExpression(node.throwValue(), Skew.Precedence.LOWEST);
+        this.emit(";\n");
+        break;
+      }
+
+      case Skew.NodeKind.FOREACH: {
+        this.emit(this.indent + "foreach (var " + this.mangleName(node.symbol) + " in ");
+        this.emitExpression(node.foreachValue(), Skew.Precedence.LOWEST);
+        this.emit(")\n");
+        this.emitBlock(node.foreachBlock());
+        this.emit("\n");
+        break;
+      }
+
+      case Skew.NodeKind.FOR: {
+        var test = node.forTest();
+        var update = node.forUpdate();
+        var children = node.children;
+        var count = children.length;
+        this.emit(this.indent + "for (");
+
+        if (count > 3) {
+          for (var i1 = 3, count3 = count; i1 < count3; ++i1) {
+            var child1 = children[i1];
+
+            if (i1 !== 3) {
+              this.emit(", ");
+            }
+
+            if (child1.kind === Skew.NodeKind.VAR) {
+              var symbol1 = child1.symbol.asVariableSymbol();
+
+              if (i1 === 3) {
+                this.emitExpressionOrType(symbol1.type, symbol1.resolvedType);
+                this.emit(" ");
+              }
+
+              this.emit(this.mangleName(symbol1) + " = ");
+              this.emitExpression(symbol1.value, Skew.Precedence.LOWEST);
+            }
+
+            else {
+              this.emitExpression(child1, Skew.Precedence.LOWEST);
+            }
+          }
+        }
+
+        this.emit("; ");
+
+        if (test !== null) {
+          this.emitExpression(test, Skew.Precedence.LOWEST);
+        }
+
+        this.emit("; ");
+
+        if (update !== null) {
+          this.emitExpression(update, Skew.Precedence.LOWEST);
+        }
+
+        this.emit(")\n");
+        this.emitBlock(node.forBlock());
+        this.emit("\n");
+        break;
+      }
+
+      case Skew.NodeKind.TRY: {
+        var children1 = node.children;
+        var finallyBlock = node.finallyBlock();
+        this.emit(this.indent + "try\n");
+        this.emitBlock(node.tryBlock());
+        this.emit("\n");
+
+        for (var i2 = 1, count4 = children1.length - 1 | 0; i2 < count4; ++i2) {
+          var child2 = children1[i2];
+          this.emit("\n");
+          this.emitComments(child2.comments);
+          this.emit(this.indent + "catch");
+
+          if (child2.symbol !== null) {
+            this.emit(" (");
+            this.emitExpressionOrType(child2.symbol.asVariableSymbol().type, child2.symbol.resolvedType);
+            this.emit(" " + this.mangleName(child2.symbol) + ")");
+          }
+
+          this.emit("\n");
+          this.emitBlock(child2.catchBlock());
+          this.emit("\n");
+        }
+
+        if (finallyBlock !== null) {
+          this.emit("\n");
+          this.emitComments(finallyBlock.comments);
+          this.emit(this.indent + "finally\n");
+          this.emitBlock(finallyBlock);
+          this.emit("\n");
+        }
+        break;
+      }
+
+      case Skew.NodeKind.WHILE: {
+        this.emit(this.indent + "while (");
+        this.emitExpression(node.whileTest(), Skew.Precedence.LOWEST);
+        this.emit(")\n");
+        this.emitBlock(node.whileBlock());
+        this.emit("\n");
+        break;
+      }
+
+      default: {
+        assert(false);
+        break;
+      }
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitContent = function(content) {
+    switch (content.kind()) {
+      case Skew.ContentKind.BOOL: {
+        this.emit(content.asBool().toString());
+        break;
+      }
+
+      case Skew.ContentKind.INT: {
+        this.emit(content.asInt().toString());
+        break;
+      }
+
+      case Skew.ContentKind.DOUBLE: {
+        this.emit(content.asDouble().toString());
+        break;
+      }
+
+      case Skew.ContentKind.STRING: {
+        this.emit(Skew.quoteString(content.asString(), 34));
+        break;
+      }
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.emitExpression = function(node, precedence) {
+    var kind = node.kind;
+
+    switch (kind) {
+      case Skew.NodeKind.TYPE:
+      case Skew.NodeKind.LAMBDA_TYPE: {
+        this.emitType(node.resolvedType);
+        break;
+      }
+
+      case Skew.NodeKind.NULL: {
+        this.emit("null");
+        break;
+      }
+
+      case Skew.NodeKind.NAME: {
+        var symbol = node.symbol;
+        this.emit(symbol !== null ? this.fullName(symbol) : node.asString());
+        break;
+      }
+
+      case Skew.NodeKind.DOT: {
+        this.emitExpression(node.dotTarget(), Skew.Precedence.MEMBER);
+        this.emit("." + (node.symbol !== null ? this.mangleName(node.symbol) : node.asString()));
+        break;
+      }
+
+      case Skew.NodeKind.CONSTANT: {
+        this.emitContent(node.content);
+        break;
+      }
+
+      case Skew.NodeKind.CALL: {
+        var value = node.callValue();
+        var symbol1 = node.symbol;
+
+        if (value.kind === Skew.NodeKind.SUPER) {
+          this.emit("base");
+
+          if (symbol1.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+            this.emit(".");
+            this.mangleName(symbol1);
+          }
+        }
+
+        else if (symbol1 !== null && symbol1.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+          this.emit("new ");
+          this.emitType(node.resolvedType);
+        }
+
+        else if (value.kind === Skew.NodeKind.DOT && value.asString() === "new") {
+          this.emit("new ");
+          this.emitExpression(value.dotTarget(), Skew.Precedence.MEMBER);
+        }
+
+        else {
+          this.emitExpression(value, Skew.Precedence.UNARY_POSTFIX);
+        }
+
+        this.emit("(");
+
+        for (var i = 1, count = node.children.length; i < count; ++i) {
+          if (i > 1) {
+            this.emit(", ");
+          }
+
+          this.emitExpression(node.children[i], Skew.Precedence.COMMA);
+        }
+
+        this.emit(")");
+        break;
+      }
+
+      case Skew.NodeKind.CAST: {
+        var resolvedType = node.resolvedType;
+        var type = node.castType();
+        var value1 = node.castValue();
+
+        if (type.kind === Skew.NodeKind.DYNAMIC) {
+          this.emitExpression(value1, precedence);
+        }
+
+        // C# doesn't have a cast from bool to int
+        else if (this.cache.isNumeric(resolvedType) && value1.resolvedType === this.cache.boolType) {
+          this.emitExpression(Skew.Node.createHook(value1.replaceWithNull(), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(1)), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0))), precedence);
+        }
+
+        // C# doesn't have a cast from int to bool
+        else if (resolvedType === this.cache.boolType && this.cache.isNumeric(value1.resolvedType)) {
+          this.emitExpression(Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, value1.replaceWithNull(), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0))), precedence);
+        }
+
+        else {
+          if (Skew.Precedence.UNARY_POSTFIX < precedence) {
+            this.emit("(");
+          }
+
+          this.emit("(");
+          this.emitExpression(type, Skew.Precedence.LOWEST);
+          this.emit(")");
+          this.emitExpression(value1, Skew.Precedence.UNARY_POSTFIX);
+
+          if (Skew.Precedence.UNARY_POSTFIX < precedence) {
+            this.emit(")");
+          }
+        }
+        break;
+      }
+
+      case Skew.NodeKind.INITIALIZER_LIST: {
+        this.emit("new ");
+        this.emitType(node.resolvedType);
+
+        if (node.hasChildren()) {
+          this.emit(" { ");
+
+          for (var i1 = 0, list = node.children, count1 = list.length; i1 < count1; ++i1) {
+            var child = list[i1];
+
+            if (child !== node.children[0]) {
+              this.emit(", ");
+            }
+
+            this.emitExpression(child, Skew.Precedence.COMMA);
+          }
+
+          this.emit(" }");
+        }
+
+        else {
+          this.emit("()");
+        }
+        break;
+      }
+
+      case Skew.NodeKind.INDEX: {
+        assert(node.children.length === 2);
+        this.emitExpression(node.children[0], Skew.Precedence.UNARY_POSTFIX);
+        this.emit("[");
+        this.emitExpression(node.children[1], Skew.Precedence.LOWEST);
+        this.emit("]");
+        break;
+      }
+
+      case Skew.NodeKind.ASSIGN_INDEX: {
+        if (Skew.Precedence.ASSIGN < precedence) {
+          this.emit("(");
+        }
+
+        assert(node.children.length === 3);
+        this.emitExpression(node.children[0], Skew.Precedence.UNARY_POSTFIX);
+        this.emit("[");
+        this.emitExpression(node.children[1], Skew.Precedence.LOWEST);
+        this.emit("] = ");
+        this.emitExpression(node.children[2], Skew.Precedence.ASSIGN);
+
+        if (Skew.Precedence.ASSIGN < precedence) {
+          this.emit(")");
+        }
+        break;
+      }
+
+      case Skew.NodeKind.PARAMETERIZE: {
+        if (node.parameterizeValue().isType()) {
+          this.emitType(node.resolvedType);
+        }
+
+        else {
+          this.emitExpression(node.parameterizeValue(), precedence);
+          this.emit("<");
+
+          for (var i2 = 1, count2 = node.children.length; i2 < count2; ++i2) {
+            if (i2 > 1) {
+              this.emit(", ");
+            }
+
+            this.emitExpression(node.children[i2], Skew.Precedence.COMMA);
+          }
+
+          this.emit(">");
+        }
+        break;
+      }
+
+      case Skew.NodeKind.HOOK: {
+        if (Skew.Precedence.ASSIGN < precedence) {
+          this.emit("(");
+        }
+
+        this.emitExpression(node.hookTest(), Skew.Precedence.LOGICAL_OR);
+        this.emit(" ? ");
+        this.emitExpression(node.hookTrue(), Skew.Precedence.ASSIGN);
+        this.emit(" : ");
+        this.emitExpression(node.hookFalse(), Skew.Precedence.ASSIGN);
+
+        if (Skew.Precedence.ASSIGN < precedence) {
+          this.emit(")");
+        }
+        break;
+      }
+
+      case Skew.NodeKind.LAMBDA: {
+        var $function = node.symbol.asFunctionSymbol();
+        this.emitArgumentList($function);
+        this.emit(" =>\n");
+        this.emitBlock($function.block);
+        break;
+      }
+
+      default: {
+        if (Skew.NodeKind.isUnary(kind)) {
+          var value2 = node.unaryValue();
+          var info = Skew.operatorInfo[kind];
+
+          if (info.precedence < precedence) {
+            this.emit("(");
+          }
+
+          this.emit(info.text);
+          this.emitExpression(value2, info.precedence);
+
+          if (info.precedence < precedence) {
+            this.emit(")");
+          }
+        }
+
+        else if (Skew.NodeKind.isBinary(kind)) {
+          var info1 = Skew.operatorInfo[kind];
+
+          if (info1.precedence < precedence) {
+            this.emit("(");
+          }
+
+          this.emitExpression(node.binaryLeft(), info1.precedence + (info1.associativity === Skew.Associativity.RIGHT | 0) | 0);
+          this.emit(" " + info1.text + " ");
+          this.emitExpression(node.binaryRight(), info1.precedence + (info1.associativity === Skew.Associativity.LEFT | 0) | 0);
+
+          if (info1.precedence < precedence) {
+            this.emit(")");
+          }
+        }
+
+        else {
+          assert(false);
+        }
+        break;
+      }
+    }
+  };
+
+  Skew.CSharpEmitter.prototype.fullName = function(symbol) {
+    var parent = symbol.parent;
+
+    if (parent !== null && parent.kind !== Skew.SymbolKind.OBJECT_GLOBAL && !Skew.SymbolKind.isParameter(symbol.kind)) {
+      var enclosingName = this.fullName(parent);
+
+      if (symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+        return enclosingName;
+      }
+
+      return enclosingName + "." + this.mangleName(symbol);
+    }
+
+    return this.mangleName(symbol);
+  };
+
+  Skew.CSharpEmitter.prototype.mangleName = function(symbol) {
+    if (symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+      symbol = symbol.parent;
+    }
+
+    if (!symbol.isImportedOrExported() && symbol.name in this.isKeyword) {
+      symbol.name = symbol.scope.generateName(symbol.name);
+      return symbol.name;
+    }
+
+    return symbol.nameWithRenaming();
   };
 
   Skew.Associativity = {
@@ -2910,6 +3967,134 @@
     CAN_OMIT_BRACES: 1
   };
 
+  // These dump() functions are helpful for debugging syntax trees
+  Skew.LispTreeEmitter = function(options) {
+    Skew.Emitter.call(this);
+    this.options = options;
+  };
+
+  __extends(Skew.LispTreeEmitter, Skew.Emitter);
+
+  Skew.LispTreeEmitter.prototype.visit = function(global) {
+    this.visitObject(global);
+    this.emit("\n");
+    this.createSource(this.options.outputDirectory !== "" ? this.options.outputDirectory + "/compiled.lisp" : this.options.outputFile);
+  };
+
+  Skew.LispTreeEmitter.prototype.visitObject = function(symbol) {
+    this.emit("(" + this.mangleKind(Skew.SymbolKind.strings[symbol.kind]) + " " + Skew.quoteString(symbol.name, 34));
+    this.increaseIndent();
+
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      this.emit("\n" + this.indent);
+      this.visitObject(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
+      var $function = list1[i1];
+      this.emit("\n" + this.indent);
+      this.visitFunction($function);
+    }
+
+    for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
+      var variable = list2[i2];
+      this.emit("\n" + this.indent);
+      this.visitVariable(variable);
+    }
+
+    this.decreaseIndent();
+    this.emit(")");
+  };
+
+  Skew.LispTreeEmitter.prototype.visitFunction = function(symbol) {
+    this.emit("(" + this.mangleKind(Skew.SymbolKind.strings[symbol.kind]) + " " + Skew.quoteString(symbol.name, 34));
+    this.increaseIndent();
+
+    for (var i = 0, list = symbol.$arguments, count = list.length; i < count; ++i) {
+      var argument = list[i];
+      this.emit("\n" + this.indent);
+      this.visitVariable(argument);
+    }
+
+    this.emit("\n" + this.indent);
+    this.visitNode(symbol.returnType);
+    this.emit("\n" + this.indent);
+    this.visitNode(symbol.block);
+    this.decreaseIndent();
+    this.emit(")");
+  };
+
+  Skew.LispTreeEmitter.prototype.visitVariable = function(symbol) {
+    this.emit("(" + this.mangleKind(Skew.SymbolKind.strings[symbol.kind]) + " " + Skew.quoteString(symbol.name, 34) + " ");
+    this.visitNode(symbol.type);
+    this.emit(" ");
+    this.visitNode(symbol.value);
+    this.emit(")");
+  };
+
+  Skew.LispTreeEmitter.prototype.visitNode = function(node) {
+    if (node === null) {
+      this.emit("nil");
+      return;
+    }
+
+    this.emit("(" + this.mangleKind(Skew.NodeKind.strings[node.kind]));
+    var content = node.content;
+
+    if (content !== null) {
+      switch (content.kind()) {
+        case Skew.ContentKind.INT: {
+          this.emit(" " + content.asInt().toString());
+          break;
+        }
+
+        case Skew.ContentKind.BOOL: {
+          this.emit(" " + content.asBool().toString());
+          break;
+        }
+
+        case Skew.ContentKind.DOUBLE: {
+          this.emit(" " + content.asDouble().toString());
+          break;
+        }
+
+        case Skew.ContentKind.STRING: {
+          this.emit(" " + Skew.quoteString(content.asString(), 34));
+          break;
+        }
+      }
+    }
+
+    if (node.kind === Skew.NodeKind.VAR) {
+      this.emit(" ");
+      this.visitVariable(node.symbol.asVariableSymbol());
+    }
+
+    else if (node.kind === Skew.NodeKind.LAMBDA) {
+      this.emit(" ");
+      this.visitFunction(node.symbol.asFunctionSymbol());
+    }
+
+    else if (node.children !== null) {
+      this.increaseIndent();
+
+      for (var i = 0, list = node.children, count = list.length; i < count; ++i) {
+        var child = list[i];
+        this.emit("\n" + this.indent);
+        this.visitNode(child);
+      }
+
+      this.decreaseIndent();
+    }
+
+    this.emit(")");
+  };
+
+  Skew.LispTreeEmitter.prototype.mangleKind = function(kind) {
+    return kind.toLowerCase().split("_").join("-");
+  };
+
   Skew.ContentKind = {
     BOOL: 0,
     INT: 1,
@@ -4001,6 +5186,12 @@
   };
 
   Skew.PrettyPrint = {};
+
+  Skew.PrettyPrint.joinQuoted = function(parts, trailing) {
+    return Skew.PrettyPrint.join(parts.map(function(part) {
+      return "\"" + part + "\"";
+    }), trailing);
+  };
 
   Skew.PrettyPrint.join = function(parts, trailing) {
     if (parts.length < 3) {
@@ -5774,6 +6965,10 @@
     return (this.flags & Skew.Symbol.IS_PRIMARY_CONSTRUCTOR) !== 0;
   };
 
+  Skew.Symbol.prototype.isVirtual = function() {
+    return (this.flags & Skew.Symbol.IS_VIRTUAL) !== 0;
+  };
+
   // Combinations
   Skew.Symbol.prototype.isPrivateOrProtected = function() {
     return (this.flags & (Skew.Symbol.IS_PRIVATE | Skew.Symbol.IS_PROTECTED)) !== 0;
@@ -6488,6 +7683,14 @@
     this.error(range, "Missing input files");
   };
 
+  Skew.Log.prototype.commandLineErrorMissingTarget = function(range) {
+    this.error(range, "Specify the target format using \"--target\"");
+  };
+
+  Skew.Log.prototype.commandLineErrorInvalidEnum = function(range, name, found, expected) {
+    this.error(range, "Invalid " + name + " \"" + found + "\", must be either " + Skew.PrettyPrint.joinQuoted(expected, "or"));
+  };
+
   Skew.Log.prototype.commandLineWarningDuplicateFlagValue = function(range, name, previous) {
     this.warning(range, "Multiple values are specified for \"" + name + "\", using the later value");
 
@@ -6979,6 +8182,54 @@
 
   Skew.JavaScriptTarget.prototype.createEmitter = function(options, cache) {
     return new Skew.JavaScriptEmitter(options, cache);
+  };
+
+  Skew.CSharpTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.CSharpTarget, Skew.CompilerTarget);
+
+  Skew.CSharpTarget.prototype.runPostResolvePasses = function() {
+    return true;
+  };
+
+  Skew.CSharpTarget.prototype.moveEverythingOffEnums = function() {
+    return true;
+  };
+
+  Skew.CSharpTarget.prototype.requiresIntegerSwitchStatements = function() {
+    return true;
+  };
+
+  Skew.CSharpTarget.prototype.supportsListForEach = function() {
+    return true;
+  };
+
+  Skew.CSharpTarget.prototype.editOptions = function(options) {
+    options.define("TARGET", "CSHARP");
+  };
+
+  Skew.CSharpTarget.prototype.includeSources = function(sources) {
+    sources.unshift(new Skew.Source("<native-cs>", Skew.NATIVE_LIBRARY_CS));
+  };
+
+  Skew.CSharpTarget.prototype.createEmitter = function(options, cache) {
+    return new Skew.CSharpEmitter(options, cache);
+  };
+
+  Skew.LispTreeTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.LispTreeTarget, Skew.CompilerTarget);
+
+  Skew.LispTreeTarget.prototype.runPostResolvePasses = function() {
+    return false;
+  };
+
+  Skew.LispTreeTarget.prototype.createEmitter = function(options, cache) {
+    return new Skew.LispTreeEmitter(options);
   };
 
   Skew.Define = function(name, value) {
@@ -7753,22 +9004,22 @@
           }
 
           case Skew.NodeKind.LESS_THAN: {
-            this.flattenBool(node, leftContent.asString() < rightContent.asString());
+            this.flattenBool(node, in_string.compare(leftContent.asString(), rightContent.asString()) < 0);
             break;
           }
 
           case Skew.NodeKind.GREATER_THAN: {
-            this.flattenBool(node, leftContent.asString() > rightContent.asString());
+            this.flattenBool(node, in_string.compare(leftContent.asString(), rightContent.asString()) > 0);
             break;
           }
 
           case Skew.NodeKind.LESS_THAN_OR_EQUAL: {
-            this.flattenBool(node, leftContent.asString() <= rightContent.asString());
+            this.flattenBool(node, in_string.compare(leftContent.asString(), rightContent.asString()) <= 0);
             break;
           }
 
           case Skew.NodeKind.GREATER_THAN_OR_EQUAL: {
-            this.flattenBool(node, leftContent.asString() >= rightContent.asString());
+            this.flattenBool(node, in_string.compare(leftContent.asString(), rightContent.asString()) >= 0);
             break;
           }
         }
@@ -11601,29 +12852,41 @@
     node.symbol = symbol;
     this.checkAccess(node, node.internalRangeOrRange(), scope);
 
-    // Special-case imported comparison operators to avoid call substitution
-    if (isComparison && symbol.isImported()) {
-      this.resolveChildrenAsParameterizedExpressions(node, scope);
-      node.resolvedType = this.cache.boolType;
-      node.symbol = null;
-      return;
-    }
-
-    // Don't replace the operator with a call if it's just used for type checking
-    if (symbol.isImported() && !symbol.isRenamed()) {
-      if (reverseBinaryOrder) {
-        node.children.reverse();
-      }
-
-      if (!this.resolveFunctionCall(node, scope, symbolType)) {
+    // Special-case imported operators to avoid call substitution
+    if (symbol.isImported()) {
+      // "<", ">", "<=", or ">="
+      if (isComparison) {
         this.resolveChildrenAsParameterizedExpressions(node, scope);
+        node.resolvedType = this.cache.boolType;
+        node.symbol = null;
+        return;
       }
 
-      if (reverseBinaryOrder) {
-        node.children.reverse();
+      // "<=>"
+      if (kind === Skew.NodeKind.COMPARE) {
+        this.resolveChildrenAsParameterizedExpressions(node, scope);
+        node.kind = Skew.NodeKind.SUBTRACT;
+        node.resolvedType = type;
+        node.symbol = null;
+        return;
       }
 
-      return;
+      // Don't replace the operator with a call if it's just used for type checking
+      if (!symbol.isRenamed()) {
+        if (reverseBinaryOrder) {
+          node.children.reverse();
+        }
+
+        if (!this.resolveFunctionCall(node, scope, symbolType)) {
+          this.resolveChildrenAsParameterizedExpressions(node, scope);
+        }
+
+        if (reverseBinaryOrder) {
+          node.children.reverse();
+        }
+
+        return;
+      }
     }
 
     // Resolve the method call
@@ -12471,6 +13734,14 @@
     return type.symbol === this.listType.symbol;
   };
 
+  Skew.TypeCache.prototype.isIntMap = function(type) {
+    return type.symbol === this.intMapType.symbol;
+  };
+
+  Skew.TypeCache.prototype.isStringMap = function(type) {
+    return type.symbol === this.stringMapType.symbol;
+  };
+
   Skew.TypeCache.prototype.canImplicitlyConvert = function(from, to) {
     if (from === to) {
       return true;
@@ -12855,7 +14126,8 @@
     MESSAGE_LIMIT: 7,
     OUTPUT_DIRECTORY: 8,
     OUTPUT_FILE: 9,
-    RELEASE: 10
+    RELEASE: 10,
+    TARGET: 11
   };
 
   Skew.Options = {};
@@ -13206,6 +14478,10 @@
 
   var in_string = {};
 
+  in_string.compare = function(self, x) {
+    return (x < self | 0) - (x > self | 0) | 0;
+  };
+
   in_string.startsWith = function(self, text) {
     return self.length >= text.length && self.slice(0, text.length) === text;
   };
@@ -13369,10 +14645,13 @@
   Skew.KEEP_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ANNOTATION, 0), Skew.TokenKind.CLASS, 0), Skew.TokenKind.COMMENT, 0), Skew.TokenKind.DEF, 0), Skew.TokenKind.INTERFACE, 0), Skew.TokenKind.NAMESPACE, 0), Skew.TokenKind.VAR, 0);
   Skew.REMOVE_NEWLINE_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ARROW, 0), Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.NEWLINE, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.LEFT_BRACE, 0), Skew.TokenKind.LEFT_BRACKET, 0), Skew.TokenKind.LEFT_PARENTHESIS, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.EQUAL, 0), Skew.TokenKind.GREATER_THAN, 0), Skew.TokenKind.GREATER_THAN_OR_EQUAL, 0), Skew.TokenKind.LESS_THAN, 0), Skew.TokenKind.LESS_THAN_OR_EQUAL, 0), Skew.TokenKind.LOGICAL_AND, 0), Skew.TokenKind.LOGICAL_OR, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT_EQUAL, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN_MINUS, 0);
   Skew.NATIVE_LIBRARY = "\nconst RELEASE = false\n\nenum Target {\n  NONE\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @prefer\ndef @private\ndef @protected\ndef @rename(name string)\ndef @skip\n\n@skip if RELEASE\ndef assert(truth bool)\n\n@import\nnamespace Math {\n  @rename(\"Abs\") if TARGET == .CSHARP\n  def abs(x double) double\n  @rename(\"Abs\") if TARGET == .CSHARP\n  def abs(x int) int\n  @rename(\"Acos\") if TARGET == .CSHARP\n  def acos(x double) double\n  @rename(\"Asin\") if TARGET == .CSHARP\n  def asin(x double) double\n  @rename(\"Atan\") if TARGET == .CSHARP\n  def atan(x double) double\n  @rename(\"Atan2\") if TARGET == .CSHARP\n  def atan2(x double, y double) double\n  @rename(\"Ceil\") if TARGET == .CSHARP\n  def ceil(x double) double\n  @rename(\"Cos\") if TARGET == .CSHARP\n  def cos(x double) double\n  @rename(\"Exp\") if TARGET == .CSHARP\n  def exp(x double) double\n  @rename(\"Floor\") if TARGET == .CSHARP\n  def floor(x double) double\n  @rename(\"Log\") if TARGET == .CSHARP\n  def log(x double) double\n  @rename(\"Pow\") if TARGET == .CSHARP\n  def pow(x double, y double) double\n  @rename(\"Random\") if TARGET == .CSHARP\n  def random double\n  @rename(\"Round\") if TARGET == .CSHARP\n  def round(x double) double\n  @rename(\"Sin\") if TARGET == .CSHARP\n  def sin(x double) double\n  @rename(\"Sqrt\") if TARGET == .CSHARP\n  def sqrt(x double) double\n  @rename(\"Tan\") if TARGET == .CSHARP\n  def tan(x double) double\n\n  @prefer\n  @rename(\"Max\") if TARGET == .CSHARP\n  def max(x double, y double) double\n  @rename(\"Max\") if TARGET == .CSHARP\n  def max(x int, y int) int\n\n  @prefer\n  @rename(\"Min\") if TARGET == .CSHARP\n  def min(x double, y double) double\n  @rename(\"Min\") if TARGET == .CSHARP\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const INFINITY = 1 / 0.0\n  const NAN = 0 / 0.0\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n\n  @rename(\"ToString\") if TARGET == .CSHARP\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n\n  @rename(\"ToString\") if TARGET == .CSHARP\n  def toString string\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def <=>(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n\n  def isFinite bool\n  def isNAN bool\n\n  @rename(\"ToString\") if TARGET == .CSHARP\n  def toString string\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  @rename(\"EndsWith\") if TARGET == .CSHARP\n  def endsWith(x string) bool\n  def get(x int) string\n  @rename(\"Contains\") if TARGET == .CSHARP\n  def in(x string) bool\n  @rename(\"IndexOf\") if TARGET == .CSHARP\n  def indexOf(x string) int\n  def join(x List<string>) string\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  @rename(\"Replace\") if TARGET == .CSHARP\n  def replaceAll(before string, after string) string\n  @rename(\"Substring\") if TARGET == .CSHARP\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  @rename(\"StartsWith\") if TARGET == .CSHARP\n  def startsWith(x string) bool\n  @rename(\"ToLower\") if TARGET == .CSHARP\n  def toLowerCase string\n  @rename(\"ToUpper\") if TARGET == .CSHARP\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .CSHARP\nclass StringBuilder {\n  @rename(\"Append\") if TARGET == .CSHARP\n  def append(x string)\n  def new\n  @rename(\"ToString\") if TARGET == .CSHARP\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  def [](x int) T\n  def []=(x int, y T)\n  @rename(\"TrueForAll\") if TARGET == .CSHARP\n  @rename(\"every\") if TARGET == .JAVASCRIPT\n  def all(x fn(T) bool) bool\n  def appendOne(x T)\n  @rename(\"slice\") if TARGET == .JAVASCRIPT\n  def clone List<T>\n  def count int\n  @rename(\"ForEach\") if TARGET == .CSHARP\n  @rename(\"forEach\") if TARGET == .JAVASCRIPT\n  def each(x fn(T))\n  @rename(\"FindAll\") if TARGET == .CSHARP\n  def filter(x fn(T) bool) List<T>\n  @rename(\"First\") if TARGET == .CSHARP\n  def first T\n  @rename(\"Contains\") if TARGET == .CSHARP\n  def in(x T) bool\n  @rename(\"IndexOf\") if TARGET == .CSHARP\n  def indexOf(x T) int\n  @rename(\"Insert\") if TARGET == .CSHARP\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n  def isEmpty bool\n  @rename(\"Last\") if TARGET == .CSHARP\n  def last T\n  @rename(\"LastIndexOf\") if TARGET == .CSHARP\n  def lastIndexOf(x T) int\n  @rename(\"ConvertAll\") if TARGET == .CSHARP\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  @rename(\"RemoveAt\") if TARGET == .CSHARP\n  def removeAt(x int)\n  def removeDuplicates\n  @rename(\"shift\") if TARGET == .JAVASCRIPT\n  def removeFirst\n  @rename(\"RemoveAll\") if TARGET == .CSHARP\n  def removeIf(x fn(T) bool)\n  @rename(\"pop\") if TARGET == .JAVASCRIPT\n  def removeLast\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  @rename(\"Reverse\") if TARGET == .CSHARP\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  @rename(\"Sort\") if TARGET == .CSHARP\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  @rename(\"shift\") if TARGET == .JAVASCRIPT\n  def takeFirst T\n  @rename(\"pop\") if TARGET == .JAVASCRIPT\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  @rename(\"Add\") if TARGET == .CSHARP\n  @rename(\"push\") if TARGET == .JAVASCRIPT\n  def append(x T)\n  @rename(\"AddRange\") if TARGET == .CSHARP\n  def append(x List<T>)\n\n  @prefer\n  @rename(\"unshift\") if TARGET == .JAVASCRIPT\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  # @prefer\n  # def +(x T) List<T>\n  # def +(x List<T>) List<T>\n\n  # @prefer\n  # def +=(x T)\n  # def +=(x List<T>)\n}\n\n@rename(\"Dictionary\") if TARGET == .CSHARP\n@import\nclass StringMap<T> {\n  def [](key string) T\n  def []=(key string, value T)\n  def clone StringMap<T>\n  @rename(\"Count\") if TARGET == .CSHARP\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  @rename(\"ContainsKey\") if TARGET == .CSHARP\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@rename(\"Dictionary\") if TARGET == .CSHARP\n@import\nclass IntMap<T> {\n  def [](key int) T\n  def []=(key int, value T)\n  def clone IntMap<T>\n  @rename(\"Count\") if TARGET == .CSHARP\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  @rename(\"ContainsKey\") if TARGET == .CSHARP\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  @rename(\"Remove\") if TARGET == .CSHARP\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\nclass Box<T> {\n  var value T\n}\n";
-  Skew.NATIVE_LIBRARY_JS = "\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = dynamic.Object.create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {\n  const ah dynamic = (a >> 16) & 65535\n  const bh dynamic = (b >> 16) & 65535\n  const al dynamic = a & 65535\n  const bl dynamic = b & 65535\n  return al * bl + ((ah * bl + al * bh) << 16) | 0\n}\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error(\"Assertion failed\")\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNAN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(x int) string {\n    return dynamic.String.fromCharCode(x)\n  }\n}\n\nclass StringBuilder {\n  var buffer = \"\"\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\nclass List {\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    return self[0]\n  }\n\n  def last T {\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n\n  def insert(index int, value T) {\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeAt(index int) {\n    (self as dynamic).splice(index, 1)\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n}\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete(self[key])\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in dynamic.Object.keys(self) as List<string> {\n      keys.append(key as dynamic as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete(self[key])\n  }\n}\n";
+  Skew.NATIVE_LIBRARY_CS = "\ndef assert(truth bool) {\n  dynamic.Debug.Assert(truth)\n}\n\nclass double {\n  def isFinite bool {\n    return !isNAN && dynamic.double.IsInfinity(self)\n  }\n\n  def isNAN bool {\n    return dynamic.double.IsNaN(self)\n  }\n}\n\nclass string {\n  def <=>(value string) int {\n    return (self as dynamic).CompareTo(value)\n  }\n\n  def count int {\n    return (self as dynamic).Length\n  }\n\n  def get(index int) string {\n    return fromCodeUnit(self[index])\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def split(separator string) List<string> {\n    var separators = [separator]\n    return (self as dynamic).Split((separators as dynamic).ToArray(), dynamic.StringSplitOptions.RemoveEmptyEntries).ToList()\n  }\n\n  def join(parts List<string>) string {\n    return dynamic.string.Join(self, parts)\n  }\n\n  def slice(start int, end int) string {\n    return (self as dynamic).Substring(start, end - start)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.string.new(codeUnit as dynamic.char, 1)\n  }\n}\n\nclass List {\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).Count\n  }\n\n  def prepend(value T) {\n    insert(0, value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def removeFirst {\n    removeAt(0)\n  }\n\n  def removeLast {\n    removeAt(count - 1)\n  }\n\n  def takeFirst T {\n    var value = first\n    removeFirst\n    return value\n  }\n\n  def takeLast T {\n    var value = last\n    removeLast\n    return value\n  }\n\n  def slice(start int) List<T> {\n    return slice(start, count)\n  }\n\n  def slice(start int, end int) List<T> {\n    return (self as dynamic).GetRange(start, end - start)\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n\n  def clone List<T> {\n    var clone = new\n    clone.append(self)\n    return clone\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    (self as dynamic).Add(key, value)\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return (self as dynamic).Keys.ToList()\n  }\n\n  def values List<T> {\n    return (self as dynamic).Values.ToList()\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    (self as dynamic).Add(key, value)\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    return (self as dynamic).Keys.ToList()\n  }\n\n  def values List<T> {\n    return (self as dynamic).Values.ToList()\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n}\n";
+  Skew.NATIVE_LIBRARY_JS = "\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = dynamic.Object.create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {\n  const ah dynamic = (a >> 16) & 65535\n  const bh dynamic = (b >> 16) & 65535\n  const al dynamic = a & 65535\n  const bl dynamic = b & 65535\n  return al * bl + ((ah * bl + al * bh) << 16) | 0\n}\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error(\"Assertion failed\")\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNAN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def <=>(x string) int {\n    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)\n  }\n\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = \"\"\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(x int) string {\n    return dynamic.String.fromCharCode(x)\n  }\n}\n\nclass StringBuilder {\n  var buffer = \"\"\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\nclass List {\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    return self[0]\n  }\n\n  def last T {\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n\n  def insert(index int, value T) {\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeAt(index int) {\n    (self as dynamic).splice(index, 1)\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n}\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete(self[key])\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in dynamic.Object.keys(self) as List<string> {\n      keys.append(key as dynamic as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete(self[key])\n  }\n}\n";
   Skew.DEFAULT_MESSAGE_LIMIT = 10;
+  Skew.VALID_TARGETS = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "cpp", new Skew.CSharpTarget()), "js", new Skew.JavaScriptTarget()), "lisp-tree", new Skew.LispTreeTarget());
   Skew.JavaScriptEmitter.isFunctionProperty = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "apply", 0), "call", 0), "length", 0), "name", 0);
   Skew.JavaScriptEmitter.isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "arguments", 0), "Boolean", 0), "break", 0), "case", 0), "catch", 0), "class", 0), "const", 0), "constructor", 0), "continue", 0), "Date", 0), "debugger", 0), "default", 0), "delete", 0), "do", 0), "double", 0), "else", 0), "export", 0), "extends", 0), "false", 0), "finally", 0), "float", 0), "for", 0), "Function", 0), "function", 0), "if", 0), "import", 0), "in", 0), "instanceof", 0), "int", 0), "let", 0), "new", 0), "null", 0), "Number", 0), "Object", 0), "return", 0), "String", 0), "super", 0), "this", 0), "throw", 0), "true", 0), "try", 0), "var", 0);
+  Skew.NodeKind.strings = ["ANNOTATION", "BLOCK", "CASE", "CATCH", "BREAK", "CONTINUE", "EXPRESSION", "FOR", "FOREACH", "IF", "RETURN", "SWITCH", "THROW", "TRY", "VAR", "WHILE", "ASSIGN_INDEX", "CALL", "CAST", "CONSTANT", "DOT", "DYNAMIC", "HOOK", "INDEX", "INITIALIZER_LIST", "INITIALIZER_MAP", "INITIALIZER_SET", "LAMBDA", "LAMBDA_TYPE", "NAME", "NULL", "PAIR", "PARAMETERIZE", "SEQUENCE", "SUPER", "TYPE", "COMPLEMENT", "DECREMENT", "INCREMENT", "NEGATIVE", "NOT", "POSITIVE", "ADD", "BITWISE_AND", "BITWISE_OR", "BITWISE_XOR", "COMPARE", "DIVIDE", "EQUAL", "IN", "IS", "LOGICAL_AND", "LOGICAL_OR", "MULTIPLY", "NOT_EQUAL", "POWER", "REMAINDER", "SHIFT_LEFT", "SHIFT_RIGHT", "SUBTRACT", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "LESS_THAN", "LESS_THAN_OR_EQUAL", "ASSIGN", "ASSIGN_ADD", "ASSIGN_BITWISE_AND", "ASSIGN_BITWISE_OR", "ASSIGN_BITWISE_XOR", "ASSIGN_DIVIDE", "ASSIGN_MULTIPLY", "ASSIGN_POWER", "ASSIGN_REMAINDER", "ASSIGN_SHIFT_LEFT", "ASSIGN_SHIFT_RIGHT", "ASSIGN_SUBTRACT"];
   Skew.Node.IS_IMPLICIT_RETURN = 1 << 0;
   Skew.Node.IS_INSIDE_PARENTHESES = 1 << 1;
   Skew.Parsing.operatorOverloadTokenKinds = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_INDEX, 0), Skew.TokenKind.ASSIGN_MINUS, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_POWER, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.COMPARE, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.IN, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INDEX, 0), Skew.TokenKind.LIST, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.POWER, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SET, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.TILDE, 0);
@@ -13479,6 +14758,7 @@
   };
   Skew.Parsing.pratt = Skew.Parsing.createExpressionParser();
   Skew.Parsing.typePratt = Skew.Parsing.createTypeParser();
+  Skew.SymbolKind.strings = ["PARAMETER_FUNCTION", "PARAMETER_OBJECT", "OBJECT_CLASS", "OBJECT_ENUM", "OBJECT_GLOBAL", "OBJECT_INTERFACE", "OBJECT_NAMESPACE", "FUNCTION_ANNOTATION", "FUNCTION_CONSTRUCTOR", "FUNCTION_GLOBAL", "FUNCTION_INSTANCE", "FUNCTION_LOCAL", "OVERLOADED_ANNOTATION", "OVERLOADED_GLOBAL", "OVERLOADED_INSTANCE", "VARIABLE_ARGUMENT", "VARIABLE_ENUM", "VARIABLE_GLOBAL", "VARIABLE_INSTANCE", "VARIABLE_LOCAL"];
 
   // Flags
   Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 0;
@@ -13505,6 +14785,7 @@
   Skew.Symbol.IS_MERGED = 1 << 17;
   Skew.Symbol.IS_OBSOLETE = 1 << 18;
   Skew.Symbol.IS_PRIMARY_CONSTRUCTOR = 1 << 19;
+  Skew.Symbol.IS_VIRTUAL = 1 << 20;
   Skew.Symbol.nextID = 0;
   Skew.TokenKind.strings = ["ANNOTATION", "ARROW", "AS", "ASSIGN", "ASSIGN_BITWISE_AND", "ASSIGN_BITWISE_OR", "ASSIGN_BITWISE_XOR", "ASSIGN_DIVIDE", "ASSIGN_INDEX", "ASSIGN_MINUS", "ASSIGN_MULTIPLY", "ASSIGN_PLUS", "ASSIGN_POWER", "ASSIGN_REMAINDER", "ASSIGN_SHIFT_LEFT", "ASSIGN_SHIFT_RIGHT", "BITWISE_AND", "BITWISE_OR", "BITWISE_XOR", "BREAK", "CASE", "CATCH", "CHARACTER", "CLASS", "COLON", "COMMA", "COMMENT", "COMPARE", "CONST", "CONTINUE", "DECREMENT", "DEF", "DEFAULT", "DIVIDE", "DOT", "DOT_DOT", "DOUBLE", "DYNAMIC", "ELSE", "END_OF_FILE", "ENUM", "EQUAL", "ERROR", "FALSE", "FINALLY", "FOR", "GREATER_THAN", "GREATER_THAN_OR_EQUAL", "IDENTIFIER", "IF", "IN", "INCREMENT", "INDEX", "INT", "INTERFACE", "INT_BINARY", "INT_HEX", "INT_OCTAL", "IS", "LEFT_BRACE", "LEFT_BRACKET", "LEFT_PARENTHESIS", "LESS_THAN", "LESS_THAN_OR_EQUAL", "LIST", "LIST_NEW", "LOGICAL_AND", "LOGICAL_OR", "MINUS", "MULTIPLY", "NAMESPACE", "NEWLINE", "NOT", "NOT_EQUAL", "NULL", "OVER", "PLUS", "POWER", "QUESTION_MARK", "REMAINDER", "RETURN", "RIGHT_BRACE", "RIGHT_BRACKET", "RIGHT_PARENTHESIS", "SET", "SET_NEW", "SHIFT_LEFT", "SHIFT_RIGHT", "STRING", "SUPER", "SWITCH", "THROW", "TILDE", "TRUE", "TRY", "VAR", "WHILE", "WHITESPACE", "YY_INVALID_ACTION", "START_PARAMETER_LIST", "END_PARAMETER_LIST"];
   Skew.Renaming.unaryPrefixes = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), "!", "not"), "+", "positive"), "++", "increment"), "-", "negative"), "--", "decrement"), "~", "complement");

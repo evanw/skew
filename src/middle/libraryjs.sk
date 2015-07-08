@@ -30,6 +30,10 @@ class double {
 }
 
 class string {
+  def <=>(x string) int {
+    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)
+  }
+
   def startsWith(text string) bool {
     return count >= text.count && slice(0, text.count) == text
   }

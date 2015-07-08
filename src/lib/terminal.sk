@@ -64,9 +64,8 @@ namespace Terminal {
   else if TARGET == .CSHARP {
     def setColor(color Color) {
       switch color {
-        case .DEFAULT { dynamic.Console.ResetColor() }
-        case .BOLD { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.White }
-        case .GRAY { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Gray }
+        case .BOLD, .DEFAULT { dynamic.Console.ResetColor() }
+        case .GRAY { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.DarkGray }
         case .RED { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Red }
         case .GREEN { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Green }
         case .YELLOW { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Yellow }

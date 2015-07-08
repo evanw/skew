@@ -40,6 +40,10 @@ namespace Skew.PrettyPrint {
     return value == 1 ? "" : "s"
   }
 
+  def joinQuoted(parts List<string>, trailing string) string {
+    return join(parts.map<string>(part => "\"" + part + "\""), trailing)
+  }
+
   def join(parts List<string>, trailing string) string {
     if parts.count < 3 {
       return (" " + trailing + " ").join(parts)
