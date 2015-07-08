@@ -25,8 +25,31 @@ namespace Skew {
         return true
       })
 
+      # Generate the entry point
+      var entryPoint = cache.entryPointSymbol
+      if entryPoint != null {
+        entryPoint.name = "Main"
+
+        # The entry point in C# takes an array, not a list
+        if entryPoint.arguments.count == 1 {
+          var argument = entryPoint.arguments.first
+          var array = VariableSymbol.new(.VARIABLE_ARGUMENT, argument.name)
+          array.type = Node.createName("string[]")
+          array.resolvedType = .DYNAMIC
+          entryPoint.arguments = [array]
+
+          # Create the list from the array
+          if entryPoint.block != null {
+            array.name = entryPoint.scope.generateName(array.name)
+            argument.kind = .VARIABLE_LOCAL
+            argument.value = Node.createCall(Node.createDot(Node.createType(argument.resolvedType), "new"), [Node.createSymbolReference(array)])
+            entryPoint.block.insertChild(0, Node.createVar(argument))
+          }
+        }
+      }
+
       # Avoid emitting unnecessary stuff
-      shakingPass(global, cache.entryPointSymbol, .USE_TYPES)
+      shakingPass(global, entryPoint, .USE_TYPES)
 
       # TODO: Do this better
       emit("using System.Collections.Generic;\n") # List, Dictionary
@@ -114,7 +137,7 @@ namespace Skew {
         emitTypeParameters(symbol.parameters)
         if symbol.base != null {
           emit(" : ")
-          emitExpression(symbol.base, .LOWEST)
+          emitExpressionOrType(symbol.base, symbol.baseClass != null ? symbol.baseClass.resolvedType : null)
         }
         emit("\n" + indent + "{\n")
         increaseIndent
@@ -156,7 +179,7 @@ namespace Skew {
           if argument != symbol.arguments.first {
             emit(", ")
           }
-          emitType(argument.resolvedType)
+          emitExpressionOrType(argument.type, argument.resolvedType)
           emit(" " + mangleName(argument))
         }
         emit(")")
@@ -181,7 +204,7 @@ namespace Skew {
           if symbol.kind == .VARIABLE_GLOBAL {
             emit("static ")
           }
-          emitType(symbol.resolvedType)
+          emitExpressionOrType(symbol.type, symbol.resolvedType)
           emit(" " + mangleName(symbol))
           if symbol.value != null {
             emit(" = ")
@@ -215,7 +238,7 @@ namespace Skew {
           } else if symbol.overridden != null {
             emit("override ")
           }
-          emitType(symbol.resolvedType.returnType)
+          emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType)
           emit(" ")
         }
         emit(mangleName(symbol))
@@ -303,6 +326,14 @@ namespace Skew {
         }
       }
 
+      def emitExpressionOrType(node Node, type Type) {
+        if node != null {
+          emitExpression(node, .LOWEST)
+        } else {
+          emitType(type)
+        }
+      }
+
       def emitStatements(statements List<Node>) {
         previousNode = null
 
@@ -360,7 +391,7 @@ namespace Skew {
           case .VAR {
             var symbol = node.symbol.asVariableSymbol
             emit(indent)
-            emitType(symbol.resolvedType)
+            emitExpressionOrType(symbol.type, symbol.resolvedType)
             emit(" " + mangleName(symbol))
             if symbol.value != null {
               emit(" = ")
@@ -463,7 +494,7 @@ namespace Skew {
                 if child.kind == .VAR {
                   var symbol = child.symbol.asVariableSymbol
                   if i == 3 {
-                    emitType(symbol.resolvedType)
+                    emitExpressionOrType(symbol.type, symbol.resolvedType)
                     emit(" ")
                   }
                   emit(mangleName(symbol) + " = ")
@@ -499,7 +530,7 @@ namespace Skew {
               emit(indent + "catch")
               if child.symbol != null {
                 emit(" (")
-                emitType(child.symbol.resolvedType)
+                emitExpressionOrType(child.symbol.asVariableSymbol.type, child.symbol.resolvedType)
                 emit(" " + mangleName(child.symbol) + ")")
               }
               emit("\n")
@@ -541,7 +572,7 @@ namespace Skew {
       def emitExpression(node Node, precedence Precedence) {
         var kind = node.kind
         switch kind {
-          case .TYPE {
+          case .TYPE, .LAMBDA_TYPE {
             emitType(node.resolvedType)
           }
 
@@ -675,7 +706,19 @@ namespace Skew {
           }
 
           case .PARAMETERIZE {
-            emitExpression(node.parameterizeValue, precedence)
+            if node.parameterizeValue.isType {
+              emitType(node.resolvedType)
+            } else {
+              emitExpression(node.parameterizeValue, precedence)
+              emit("<")
+              for i in 1..node.children.count {
+                if i > 1 {
+                  emit(", ")
+                }
+                emitExpression(node.children[i], .COMMA)
+              }
+              emit(">")
+            }
           }
 
           case .HOOK {

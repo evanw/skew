@@ -974,8 +974,32 @@
       return true;
     });
 
+    // Generate the entry point
+    var entryPoint = this.cache.entryPointSymbol;
+
+    if (entryPoint !== null) {
+      entryPoint.name = "Main";
+
+      // The entry point in C# takes an array, not a list
+      if (entryPoint.$arguments.length === 1) {
+        var argument = entryPoint.$arguments[0];
+        var array = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, argument.name);
+        array.type = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent("string[]"));
+        array.resolvedType = Skew.Type.DYNAMIC;
+        entryPoint.$arguments = [array];
+
+        // Create the list from the array
+        if (entryPoint.block !== null) {
+          array.name = entryPoint.scope.generateName(array.name);
+          argument.kind = Skew.SymbolKind.VARIABLE_LOCAL;
+          argument.value = Skew.Node.createCall(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent("new")).withChildren([new Skew.Node(Skew.NodeKind.TYPE).withType(argument.resolvedType)]), [Skew.Node.createSymbolReference(array)]);
+          entryPoint.block.insertChild(0, Skew.Node.createVar(argument));
+        }
+      }
+    }
+
     // Avoid emitting unnecessary stuff
-    Skew.shakingPass(global, this.cache.entryPointSymbol, Skew.ShakingMode.USE_TYPES);
+    Skew.shakingPass(global, entryPoint, Skew.ShakingMode.USE_TYPES);
 
     // TODO: Do this better
     // List, Dictionary
@@ -1096,7 +1120,7 @@
 
     if (symbol.base !== null) {
       this.emit(" : ");
-      this.emitExpression(symbol.base, Skew.Precedence.LOWEST);
+      this.emitExpressionOrType(symbol.base, symbol.baseClass !== null ? symbol.baseClass.resolvedType : null);
     }
 
     this.emit("\n" + this.indent + "{\n");
@@ -1155,7 +1179,7 @@
         this.emit(", ");
       }
 
-      this.emitType(argument.resolvedType);
+      this.emitExpressionOrType(argument.type, argument.resolvedType);
       this.emit(" " + this.mangleName(argument));
     }
 
@@ -1188,7 +1212,7 @@
         this.emit("static ");
       }
 
-      this.emitType(symbol.resolvedType);
+      this.emitExpressionOrType(symbol.type, symbol.resolvedType);
       this.emit(" " + this.mangleName(symbol));
 
       if (symbol.value !== null) {
@@ -1230,7 +1254,7 @@
         this.emit("override ");
       }
 
-      this.emitType(symbol.resolvedType.returnType);
+      this.emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType);
       this.emit(" ");
     }
 
@@ -1329,6 +1353,16 @@
     }
   };
 
+  Skew.CSharpEmitter.prototype.emitExpressionOrType = function(node, type) {
+    if (node !== null) {
+      this.emitExpression(node, Skew.Precedence.LOWEST);
+    }
+
+    else {
+      this.emitType(type);
+    }
+  };
+
   Skew.CSharpEmitter.prototype.emitStatements = function(statements) {
     this.previousNode = null;
 
@@ -1392,7 +1426,7 @@
       case Skew.NodeKind.VAR: {
         var symbol = node.symbol.asVariableSymbol();
         this.emit(this.indent);
-        this.emitType(symbol.resolvedType);
+        this.emitExpressionOrType(symbol.type, symbol.resolvedType);
         this.emit(" " + this.mangleName(symbol));
 
         if (symbol.value !== null) {
@@ -1524,7 +1558,7 @@
               var symbol1 = child1.symbol.asVariableSymbol();
 
               if (i1 === 3) {
-                this.emitType(symbol1.resolvedType);
+                this.emitExpressionOrType(symbol1.type, symbol1.resolvedType);
                 this.emit(" ");
               }
 
@@ -1571,7 +1605,7 @@
 
           if (child2.symbol !== null) {
             this.emit(" (");
-            this.emitType(child2.symbol.resolvedType);
+            this.emitExpressionOrType(child2.symbol.asVariableSymbol().type, child2.symbol.resolvedType);
             this.emit(" " + this.mangleName(child2.symbol) + ")");
           }
 
@@ -1634,7 +1668,8 @@
     var kind = node.kind;
 
     switch (kind) {
-      case Skew.NodeKind.TYPE: {
+      case Skew.NodeKind.TYPE:
+      case Skew.NodeKind.LAMBDA_TYPE: {
         this.emitType(node.resolvedType);
         break;
       }
@@ -1792,7 +1827,24 @@
       }
 
       case Skew.NodeKind.PARAMETERIZE: {
-        this.emitExpression(node.parameterizeValue(), precedence);
+        if (node.parameterizeValue().isType()) {
+          this.emitType(node.resolvedType);
+        }
+
+        else {
+          this.emitExpression(node.parameterizeValue(), precedence);
+          this.emit("<");
+
+          for (var i2 = 1, count2 = node.children.length; i2 < count2; ++i2) {
+            if (i2 > 1) {
+              this.emit(", ");
+            }
+
+            this.emitExpression(node.children[i2], Skew.Precedence.COMMA);
+          }
+
+          this.emit(">");
+        }
         break;
       }
 
