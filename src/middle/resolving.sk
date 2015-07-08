@@ -2073,13 +2073,14 @@ namespace Skew.Resolving {
       var isList = node.kind == .INITIALIZER_LIST
       var create = findMember(context, isList ? "[new]" : "{new}")
       var add = findMember(context, isList ? "[...]" : "{...}")
+      var children = node.children
 
       # Special-case imported literals to prevent an infinite loop for list literals
       if add != null && add.isImported {
         var function = add.asFunctionSymbol
         if function.arguments.count == (isList ? 1 : 2) {
           var functionType = cache.substitute(function.resolvedType, context.environment)
-          for child in node.children {
+          for child in children {
             if child.kind == .PAIR {
               resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, functionType.argumentTypes[0])
               resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, functionType.argumentTypes[1])
@@ -2095,7 +2096,8 @@ namespace Skew.Resolving {
       # Use simple call chaining when there's an add operator present
       if add != null {
         var chain = Node.createDot(Node.createType(context).withRange(node.range), create != null ? create.name : "new").withRange(node.range)
-        for child in node.children {
+        for i in 0..children.count {
+          var child = children[i]
           var dot = Node.createDot(chain, add.name).withRange(child.range)
           var arguments = child.kind == .PAIR ? [child.firstValue.replaceWithNull, child.secondValue.replaceWithNull] : [child.replaceWithNull]
           chain = Node.createCall(dot, arguments).withRange(child.range)
@@ -2114,7 +2116,7 @@ namespace Skew.Resolving {
       var dot = Node.createDot(Node.createType(context).withRange(node.range), create.name).withRange(node.range)
 
       # The literal "{}" is ambiguous and may be a map or a set
-      if node.children.isEmpty && !isList && shouldUseMapConstructor(create) {
+      if children.isEmpty && !isList && shouldUseMapConstructor(create) {
         node.become(Node.createCall(dot, [Node.createList([]).withRange(node.range), Node.createList([]).withRange(node.range)]).withRange(node.range))
         resolveAsParameterizedExpressionWithConversion(node, scope, context)
         return true
@@ -2124,7 +2126,7 @@ namespace Skew.Resolving {
       if node.kind == .INITIALIZER_MAP {
         var firstValues List<Node> = []
         var secondValues List<Node> = []
-        for child in node.children {
+        for child in children {
           firstValues.append(child.firstValue.replaceWithNull)
           secondValues.append(child.secondValue.replaceWithNull)
         }

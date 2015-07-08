@@ -26,7 +26,6 @@ namespace Skew {
 
     # Run the compilation
     if !log.hasErrors && options != null {
-      options.target = JavaScriptTarget.new
       var result = compile(log, options, inputs)
 
       # Write all outputs
@@ -274,7 +273,7 @@ namespace Skew {
   }
 
   const VALID_TARGETS = {
-    "cpp": CSharpTarget.new,
+    "cs": CSharpTarget.new,
     "js": JavaScriptTarget.new,
     "lisp-tree": LispTreeTarget.new,
   }

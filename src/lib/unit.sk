@@ -33,7 +33,7 @@ namespace Unit {
     def expectString(expected string, observed string) {
       if expected != observed {
         _failure = Failure.new(expected, observed)
-        throw _failure
+        throw null
       }
     }
 

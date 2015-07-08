@@ -23,6 +23,9 @@ SOURCES_TEST += tests/simple.sk
 JS_FLAGS += --target=js
 JS_FLAGS += --inline-functions
 
+CS_FLAGS += --target=cs
+CS_FLAGS += --inline-functions
+
 default: compile-node compile-browser
 
 compile-node: | build
@@ -48,6 +51,13 @@ build:
 flex:
 	cd src/frontend && python build.py && cd -
 
-test:
+test: test-js test-cs
+
+test-js:
 	node skewc.js $(SOURCES_TEST) $(JS_FLAGS) --output-file=build/test.js
-	mocha build/test.js
+	node build/test.js
+
+test-cs:
+	node skewc.js $(SOURCES_TEST) $(CS_FLAGS) --output-file=build/test.cs
+	mcs -debug build/test.cs
+	mono --debug build/test.exe
