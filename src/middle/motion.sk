@@ -30,8 +30,8 @@ namespace Skew.Motion {
       return false
     })
 
-    # Move stuff off of enums for C#
-    if options.target == .CSHARP && symbol.kind == .OBJECT_ENUM {
+    # Move stuff off of enums for certain targets
+    if options.target.moveEverythingOffEnums && symbol.kind == .OBJECT_ENUM {
       symbol.objects.each(object => moveSymbolIntoNewNamespace(object, namespaces).objects.append(object))
       symbol.functions.each(function => moveSymbolIntoNewNamespace(function, namespaces).functions.append(function))
       symbol.variables.removeIf(variable => {

@@ -25,7 +25,7 @@ namespace Skew {
 
     # Run the compilation
     if !log.hasErrors && options != null {
-      options.target = .JAVASCRIPT
+      options.target = JavaScriptTarget.new
       var result = compile(log, options, inputs)
 
       # Write all outputs

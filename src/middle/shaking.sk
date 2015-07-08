@@ -29,50 +29,63 @@ namespace Skew {
     }
 
     def usagesForSymbols(symbols List<Symbol>) IntMap<Symbol> {
+      var overridesToCheck IntMap<List<Symbol>> = {}
       var combinedUsages IntMap<Symbol> = {}
       var stack List<Symbol> = []
       stack.append(symbols)
 
       # Iterate until a fixed point is reached
       while !stack.isEmpty {
-        var overridesToCheck List<Symbol> = []
+        var symbol = stack.takeLast
 
-        # Follow immediate dependency links
-        while !stack.isEmpty {
-          var symbol = stack.takeLast
+        if !(symbol.id in combinedUsages) {
+          combinedUsages[symbol.id] = symbol
+          var symbolUsages = usages.get(symbol.id, null)
 
-          if !(symbol.id in combinedUsages) {
-            combinedUsages[symbol.id] = symbol
-            var symbolUsages = usages.get(symbol.id, null)
+          if symbolUsages != null {
+            stack.append(symbolUsages)
+          }
 
-            if symbolUsages != null {
-              stack.append(symbolUsages)
+          # Handle function overrides
+          if symbol.kind.isFunction {
+            var overridden = symbol.asFunctionSymbol.overridden
+            var symbolOverrides = overridesForSymbol.get(symbol.id, null)
+
+            # Automatically include all overridden functions in case the use
+            # of this type is polymorphic, which is a conservative estimate
+            if overridden != null {
+              stack.append(overridden)
             }
 
-            if symbol.kind.isFunction {
-              var overridden = symbol.asFunctionSymbol.overridden
-              var overrides = overridesForSymbol.get(symbol.id, null)
+            # Check function overrides too
+            if symbolOverrides != null {
+              for override in symbolOverrides {
+                var key = override.parent.id
 
-              # Automatically include all overridden functions in case the use
-              # of this type is polymorphic, which is a conservative estimate
-              if overridden != null {
-                stack.append(overridden)
-              }
+                # Queue this override immediately if the parent type is used
+                if key in combinedUsages {
+                  stack.append(override)
+                }
 
-              # Check function overrides after everything settles
-              if overrides != null {
-                overridesToCheck.append(overrides)
+                # Otherwise, remember this override for later if the parent type ends up being used
+                else {
+                  var overrides = overridesToCheck.get(key, null)
+                  if overrides == null {
+                    overrides = []
+                    overridesToCheck[key] = overrides
+                  }
+                  overrides.append(override)
+                }
               }
             }
           }
-        }
 
-        # Add overrides for all types that are currently included. Types that
-        # aren't included shouldn't ever be constructed and so encountering one
-        # should be impossible.
-        for override in overridesToCheck {
-          if override.parent.id in combinedUsages {
-            stack.append(override)
+          # Handle overrides dependent on this type
+          else if symbol.kind.isType {
+            var overrides = overridesToCheck.get(symbol.id, null)
+            if overrides != null {
+              stack.append(overrides)
+            }
           }
         }
       }

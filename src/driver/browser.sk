@@ -1,7 +1,7 @@
 
 namespace Skew {
-  var targetLabels List<string> = ["JavaScript", "C#"]
-  var targets List<CompilerTarget> = [.JAVASCRIPT, .CSHARP]
+  var targetLabels = ["JavaScript", "C#"]
+  var targets = [JavaScriptTarget.new, CSharpTarget.new]
 
   var compileTime = document.getElementById("compileTime")
   var input = document.getElementById("input")

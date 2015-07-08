@@ -1,13 +1,34 @@
 namespace Skew {
-  enum CompilerTarget {
-    NONE
-    CSHARP
-    JAVASCRIPT
-    LISP_TREE
+  class CompilerTarget {
+    def runPostResolvePasses bool { return false }
+    def moveEverythingOffEnums bool { return false }
+    def requiresIntegerSwitchStatements bool { return false }
+    def supportsListForEach bool { return false }
+    def editOptions(options CompilerOptions) {}
+    def includeSources(sources List<Source>) {}
+    def createEmitter(options CompilerOptions, cache TypeCache) Emitter { return null }
+  }
 
-    def isTree bool {
-      return self == LISP_TREE
-    }
+  class JavaScriptTarget : CompilerTarget {
+    over runPostResolvePasses bool { return true }
+    over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
+    over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
+    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return JavaScriptEmitter.new(options, cache) }
+  }
+
+  class CSharpTarget : CompilerTarget {
+    over runPostResolvePasses bool { return true }
+    over moveEverythingOffEnums bool { return true }
+    over requiresIntegerSwitchStatements bool { return true }
+    over supportsListForEach bool { return true }
+    over editOptions(options CompilerOptions) { options.define("TARGET", "CSHARP") }
+    over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-cs>", NATIVE_LIBRARY_CS)) }
+    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return CSharpEmitter.new(options, cache) }
+  }
+
+  class LispTreeTarget : CompilerTarget {
+    over runPostResolvePasses bool { return false }
+    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return LispTreeEmitter.new(options) }
   }
 
   class Define {
@@ -24,7 +45,7 @@ namespace Skew {
     var jsMinify = false
     var outputDirectory = ""
     var outputFile = ""
-    var target CompilerTarget = .NONE
+    var target CompilerTarget = CompilerTarget.new
 
     def define(name string, value string) {
       var range = Source.new("<internal>", "--define:" + name + "=" + value).entireRange
@@ -44,17 +65,8 @@ namespace Skew {
     var debug = !RELEASE
     var result = CompilerResult.new
 
-    switch options.target {
-      case .CSHARP {
-        sources.prepend(Source.new("<native-cs>", NATIVE_LIBRARY_CS))
-        options.define("TARGET", "CSHARP")
-      }
-      case .JAVASCRIPT {
-        sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS))
-        options.define("TARGET", "JAVASCRIPT")
-      }
-    }
-
+    options.target.includeSources(sources)
+    options.target.editOptions(options)
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
 
     for source in sources {
@@ -75,8 +87,8 @@ namespace Skew {
         }
 
         # Prepare for emission, code is error-free at this point
-        if !log.hasErrors && options.target != .NONE {
-          if !options.target.isTree {
+        if !log.hasErrors {
+          if options.target.runPostResolvePasses {
             var graph = CallGraph.new(result.global)
 
             # Make certain functions global
@@ -123,12 +135,7 @@ namespace Skew {
           }
 
           # Emit in the target language
-          var emitter Emitter = null
-          switch options.target {
-            case .CSHARP { emitter = CSharpEmitter.new(options, result.cache) }
-            case .JAVASCRIPT { emitter = JsEmitter.new(options, result.cache) }
-            case .LISP_TREE { emitter = LispTreeEmitter.new(options) }
-          }
+          var emitter = options.target.createEmitter(options, result.cache)
           if emitter != null {
             emitter.visit(result.global)
             result.outputs = emitter.sources

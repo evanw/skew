@@ -15,7 +15,7 @@ namespace Skew {
     const count int
   }
 
-  class JsEmitter : Emitter {
+  class JavaScriptEmitter : Emitter {
     over visit(global ObjectSymbol) {
       mangle = options.jsMangle
       minify = options.jsMinify
@@ -433,6 +433,7 @@ namespace Skew {
           }
 
           case .OBJECT_CLASS {
+            var foundPrimaryConstructor = false
             for function in symbol.functions {
               if function.isPrimaryConstructor {
                 if function.comments == null && symbol.comments != null {
@@ -447,7 +448,14 @@ namespace Skew {
                   emit(mangleName(extends) + "(" + fullName(symbol) + "," + space + fullName(symbol.baseClass) + ")")
                   emitSemicolonAfterStatement
                 }
+                foundPrimaryConstructor = true
+                break
               }
+            }
+
+            # Ignore this entire class if it's never constructed
+            if !foundPrimaryConstructor {
+              return
             }
           }
         }
@@ -1581,7 +1589,7 @@ namespace Skew {
     }
   }
 
-  namespace JsEmitter {
+  namespace JavaScriptEmitter {
     @private {
       def isCompactNodeKind(kind NodeKind) bool {
         return kind == .EXPRESSION || kind == .VAR || kind.isJump

@@ -512,7 +512,7 @@ namespace Skew.Resolving {
           resolveNode(update, symbol.scope, null)
         }
 
-        else if cache.isList(value.resolvedType) && options.target != .CSHARP {
+        else if cache.isList(value.resolvedType) && !options.target.supportsListForEach {
           # Create the index variable
           var index = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("i"))
           index.resolvedType = cache.intType
@@ -2594,7 +2594,7 @@ namespace Skew.Resolving {
     }
 
     def checkSwitchStatements(nodes List<Node>, scope Scope) {
-      if options.target == .CSHARP {
+      if options.target.requiresIntegerSwitchStatements {
         for node in nodes {
           var cases = node.children
           var isAllInts = true
