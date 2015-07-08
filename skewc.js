@@ -7610,6 +7610,10 @@
     }
   };
 
+  Skew.Log.prototype.semanticErrorDefaultCaseNotLast = function(range) {
+    this.error(range, "The default case in a switch statement must come last");
+  };
+
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
     this.error(range, "Use \"--define:" + name + "=___\" to provide a value");
   };
@@ -9812,6 +9816,7 @@
     this.log = log;
     this.foreachLoops = [];
     this.localVariableStatistics = Object.create(null);
+    this.collectedSwitchStatements = null;
     this.constantFolder = null;
     this.isMergingGuards = true;
   };
@@ -10779,7 +10784,15 @@
         }
       }
 
+      // Convert switch statements to if chains after each function since we know what the scope is
+      var old = this.collectedSwitchStatements;
       this.resolveNode(block, scope, null);
+
+      if (this.collectedSwitchStatements !== null) {
+        this.checkSwitchStatements(this.collectedSwitchStatements, symbol.scope);
+      }
+
+      this.collectedSwitchStatements = old;
 
       // Missing a return statement is an error
       if (symbol.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
@@ -11599,8 +11612,20 @@
         this.resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType);
       }
 
+      // The default case must be last, makes changing into an if chain easier later
+      if (values.length === 1 && (i + 1 | 0) !== cases.length) {
+        this.log.semanticErrorDefaultCaseNotLast(child.range);
+      }
+
       this.resolveBlock(child.caseBlock(), new Skew.LocalScope(scope, Skew.LocalType.NORMAL));
     }
+
+    // Collect switch statements until the end of the function
+    if (this.collectedSwitchStatements === null) {
+      this.collectedSwitchStatements = [];
+    }
+
+    this.collectedSwitchStatements.push(node);
   };
 
   Skew.Resolving.Resolver.prototype.resolveThrow = function(node, scope) {
@@ -12777,6 +12802,37 @@
     }
   };
 
+  Skew.Resolving.Resolver.prototype.checkSwitchStatements = function(nodes, scope) {
+    if (this.options.target === Skew.CompilerTarget.CSHARP) {
+      for (var i1 = 0, list = nodes, count2 = list.length; i1 < count2; ++i1) {
+        var node = list[i1];
+        var cases = node.children;
+        var isAllInts = true;
+
+        // Attempt to convert each case value to a constant
+        for (var i = 1, count1 = cases.length; i < count1; ++i) {
+          var child = cases[i];
+          var values = child.children;
+
+          for (var j = 1, count = values.length; j < count; ++j) {
+            var caseValue = values[j];
+            this.constantFolder.foldConstants(caseValue);
+
+            if (!caseValue.isInt()) {
+              isAllInts = false;
+            }
+          }
+        }
+
+        // Fall back to an if statement if the case values aren't compile-time
+        // integer constants, which is requried by many language targets
+        if (!isAllInts) {
+          Skew.Resolving.Resolver.convertSwitchToIfChain(node, scope);
+        }
+      }
+    }
+  };
+
   Skew.Resolving.Resolver.shouldCheckForSetter = function(node) {
     return node.parent !== null && node.parent.kind === Skew.NodeKind.ASSIGN && node === node.parent.binaryLeft();
   };
@@ -12811,6 +12867,45 @@
       overloaded.scope = overloaded.parent.scope;
       symbol.overloaded = overloaded;
       overloaded.scope.asObjectScope().symbol.members[symbol.name] = overloaded;
+    }
+  };
+
+  Skew.Resolving.Resolver.convertSwitchToIfChain = function(node, scope) {
+    var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName("value"));
+    var value = node.switchValue();
+
+    // Stash the variable being switched over so it's only evaluated once
+    variable.resolvedType = value.resolvedType;
+    variable.value = value.replaceWithNull();
+    variable.state = Skew.SymbolState.INITIALIZED;
+    node.parent.insertChild(node.indexInParent(), Skew.Node.createVar(variable));
+    var block = null;
+    var cases = node.children;
+
+    // Build the chain in reverse starting with the last case
+    for (var i = 1, count1 = cases.length; i < count1; ++i) {
+      var child = cases[cases.length - i | 0];
+      var caseBlock = child.caseBlock().replaceWithNull();
+      var test = null;
+      var values = child.children;
+
+      // Combine adjacent cases in a "||" chain
+      for (var j = 1, count = values.length; j < count; ++j) {
+        var caseValue = Skew.Node.createBinary(Skew.NodeKind.EQUAL, Skew.Node.createSymbolReference(variable), values[j].replaceWithNull());
+        test = test !== null ? Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test, caseValue) : caseValue;
+      }
+
+      // Chain if-else statements together
+      block = test !== null ? new Skew.Node(Skew.NodeKind.BLOCK).withChildren([Skew.Node.createIf(test, caseBlock, block)]) : caseBlock;
+    }
+
+    // Replace the switch statement with the if chain
+    if (block !== null) {
+      node.replaceWithNodes(block.removeChildren());
+    }
+
+    else {
+      node.remove();
     }
   };
 

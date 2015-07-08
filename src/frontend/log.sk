@@ -441,5 +441,9 @@ namespace Skew {
         note(reason, "The type \"" + type.toString + "\" is abstract due to member \"" + name + "\"")
       }
     }
+
+    def semanticErrorDefaultCaseNotLast(range Range) {
+      error(range, "The default case in a switch statement must come last")
+    }
   }
 }

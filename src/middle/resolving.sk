@@ -37,6 +37,7 @@ namespace Skew.Resolving {
     const log Log
     const foreachLoops List<Node> = []
     const localVariableStatistics IntMap<LocalVariableStatistics> = {}
+    var collectedSwitchStatements List<Node> = null
     var constantFolder Folding.ConstantFolder = null
     var isMergingGuards = true
 
@@ -898,7 +899,13 @@ namespace Skew.Resolving {
           }
         }
 
+        # Convert switch statements to if chains after each function since we know what the scope is
+        var old = collectedSwitchStatements
         resolveNode(block, scope, null)
+        if collectedSwitchStatements != null {
+          checkSwitchStatements(collectedSwitchStatements, symbol.scope)
+        }
+        collectedSwitchStatements = old
 
         # Missing a return statement is an error
         if symbol.kind != .FUNCTION_CONSTRUCTOR {
@@ -1526,12 +1533,25 @@ namespace Skew.Resolving {
       for i in 1..cases.count {
         var child = cases[i]
         var values = child.children
+
         for j in 1..values.count {
           var caseValue = values[j]
           resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType)
         }
+
+        # The default case must be last, makes changing into an if chain easier later
+        if values.count == 1 && i + 1 != cases.count {
+          log.semanticErrorDefaultCaseNotLast(child.range)
+        }
+
         resolveBlock(child.caseBlock, LocalScope.new(scope, .NORMAL))
       }
+
+      # Collect switch statements until the end of the function
+      if collectedSwitchStatements == null {
+        collectedSwitchStatements = []
+      }
+      collectedSwitchStatements.append(node)
     }
 
     def resolveThrow(node Node, scope Scope) {
@@ -2572,6 +2592,34 @@ namespace Skew.Resolving {
         node.resolvedType = .DYNAMIC
       }
     }
+
+    def checkSwitchStatements(nodes List<Node>, scope Scope) {
+      if options.target == .CSHARP {
+        for node in nodes {
+          var cases = node.children
+          var isAllInts = true
+
+          # Attempt to convert each case value to a constant
+          for i in 1..cases.count {
+            var child = cases[i]
+            var values = child.children
+            for j in 1..values.count {
+              var caseValue = values[j]
+              constantFolder.foldConstants(caseValue)
+              if !caseValue.isInt {
+                isAllInts = false
+              }
+            }
+          }
+
+          # Fall back to an if statement if the case values aren't compile-time
+          # integer constants, which is requried by many language targets
+          if !isAllInts {
+            convertSwitchToIfChain(node, scope)
+          }
+        }
+      }
+    }
   }
 
   namespace Resolver {
@@ -2627,6 +2675,44 @@ namespace Skew.Resolving {
         overloaded.scope = overloaded.parent.scope
         symbol.overloaded = overloaded
         overloaded.scope.asObjectScope.symbol.members[symbol.name] = overloaded
+      }
+    }
+
+    def convertSwitchToIfChain(node Node, scope Scope) {
+      var variable = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("value"))
+      var value = node.switchValue
+
+      # Stash the variable being switched over so it's only evaluated once
+      variable.resolvedType = value.resolvedType
+      variable.value = value.replaceWithNull
+      variable.state = .INITIALIZED
+      node.parent.insertChild(node.indexInParent, Node.createVar(variable))
+
+      var block Node = null
+      var cases = node.children
+
+      # Build the chain in reverse starting with the last case
+      for i in 1..cases.count {
+        var child = cases[cases.count - i]
+        var caseBlock = child.caseBlock.replaceWithNull
+        var test Node = null
+        var values = child.children
+
+        # Combine adjacent cases in a "||" chain
+        for j in 1..values.count {
+          var caseValue = Node.createBinary(.EQUAL, Node.createSymbolReference(variable), values[j].replaceWithNull)
+          test = test != null ? Node.createBinary(.LOGICAL_OR, test, caseValue) : caseValue
+        }
+
+        # Chain if-else statements together
+        block = test != null ? Node.createBlock([Node.createIf(test, caseBlock, block)]) : caseBlock
+      }
+
+      # Replace the switch statement with the if chain
+      if block != null {
+        node.replaceWithNodes(block.removeChildren)
+      } else {
+        node.remove
       }
     }
   }
