@@ -23,7 +23,7 @@ namespace IO {
   else if TARGET == .CSHARP {
     def readFile(path string) Box<string> {
       try {
-        var contents string = dynamic.File.ReadAllText(path)
+        var contents string = dynamic.System.IO.File.ReadAllText(path)
         return Box<string>.new(contents.replaceAll("\r\n", "\n"))
       }
       return null
@@ -31,7 +31,7 @@ namespace IO {
 
     def writeFile(path string, contents string) bool {
       try {
-        dynamic.File.WriteAllText(path, contents)
+        dynamic.System.IO.File.WriteAllText(path, contents)
         return true
       }
       return false

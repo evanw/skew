@@ -52,14 +52,6 @@ namespace Skew {
       shakingPass(global, entryPoint, .USE_TYPES)
       markVirtualFunctions(global)
 
-      # TODO: Do this better
-      emit("using System.Collections.Generic;\n") # List, Dictionary
-      emit("using System.Diagnostics;\n") # Debug.Assert
-      emit("using System.IO;\n") # File
-      emit("using System.Linq;\n") # List extension methods
-      emit("using System.Text;\n") # StringBuilder
-      emit("using System;\n")
-
       # All code in C# is inside objects, so just emit objects recursively
       for object in global.objects {
         emitObject(object)
@@ -286,7 +278,7 @@ namespace Skew {
 
         else if type.kind == .LAMBDA {
           var returnType = type.returnType
-          emit(returnType != null ? "Func<" : "Action<")
+          emit(returnType != null ? "System.Func<" : "System.Action<")
           for argumentType in type.argumentTypes {
             if argumentType != type.argumentTypes.first {
               emit(", ")

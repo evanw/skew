@@ -1,7 +1,11 @@
 namespace Skew {
   const NATIVE_LIBRARY_CS = "
 def assert(truth bool) {
-  dynamic.Debug.Assert(truth)
+  dynamic.System.Diagnostics.Debug.Assert(truth)
+}
+
+@rename(\"System.Math\")
+namespace Math {
 }
 
 class double {
@@ -12,6 +16,10 @@ class double {
   def isNAN bool {
     return dynamic.double.IsNaN(self)
   }
+}
+
+@rename(\"System.Text.StringBuilder\")
+class StringBuilder {
 }
 
 class string {
@@ -37,7 +45,7 @@ class string {
 
   def split(separator string) List<string> {
     var separators = [separator]
-    return (self as dynamic).Split((separators as dynamic).ToArray(), dynamic.StringSplitOptions.RemoveEmptyEntries).ToList()
+    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Split(dynamic.System.Linq.Enumerable.ToArray(separators as dynamic), dynamic.System.StringSplitOptions.RemoveEmptyEntries))
   }
 
   def join(parts List<string>) string {
@@ -55,6 +63,7 @@ namespace string {
   }
 }
 
+@rename(\"System.Collections.Generic.List\")
 class List {
   def isEmpty bool {
     return count == 0
@@ -73,6 +82,14 @@ class List {
     for i in 0..count {
       prepend(values[count - i - 1])
     }
+  }
+
+  def first T {
+    return self[0]
+  }
+
+  def last T {
+    return self[count - 1]
   }
 
   def removeFirst {
@@ -116,6 +133,7 @@ class List {
   }
 }
 
+@rename(\"System.Collections.Generic.Dictionary\")
 class StringMap {
   def {...}(key string, value T) StringMap<T> {
     (self as dynamic).Add(key, value)
@@ -127,11 +145,11 @@ class StringMap {
   }
 
   def keys List<string> {
-    return (self as dynamic).Keys.ToList()
+    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Keys)
   }
 
   def values List<T> {
-    return (self as dynamic).Values.ToList()
+    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Values)
   }
 
   def clone StringMap<T> {
@@ -143,6 +161,7 @@ class StringMap {
   }
 }
 
+@rename(\"System.Collections.Generic.Dictionary\")
 class IntMap {
   def {...}(key int, value T) IntMap<T> {
     (self as dynamic).Add(key, value)
@@ -154,11 +173,11 @@ class IntMap {
   }
 
   def keys List<int> {
-    return (self as dynamic).Keys.ToList()
+    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Keys)
   }
 
   def values List<T> {
-    return (self as dynamic).Values.ToList()
+    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Values)
   }
 
   def clone IntMap<T> {

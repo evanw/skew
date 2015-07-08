@@ -40,6 +40,42 @@ namespace Unit {
     @private {
       var _name = ""
       var _failure Failure = null
+
+      if TARGET == .JAVASCRIPT {
+        def tryRun {
+          try {
+            run
+          } catch error dynamic {
+            if _failure == null {
+              _failure = Failure.new("", (error && error.stack || error) + "")
+            }
+          }
+        }
+      }
+
+      else if TARGET == .CSHARP {
+        def tryRun {
+          try {
+            run
+          } catch error dynamic.System.Exception {
+            if _failure == null {
+              _failure = Failure.new("", error.ToString())
+            }
+          }
+        }
+      }
+
+      else {
+        def tryRun {
+          try {
+            run
+          } catch {
+            if _failure == null {
+              _failure = Failure.new("", "(runtime failure)")
+            }
+          }
+        }
+      }
     }
   }
 
@@ -52,13 +88,7 @@ namespace Unit {
 
       for test in tests {
         test.before
-        try {
-          test.run
-        } catch {
-          if test._failure == null {
-            test._failure = Failure.new("", "(runtime error)")
-          }
-        }
+        test.tryRun
         test.after
         report.completed(test, test._failure == null ? .SUCCESS : .FAILURE)
       }
