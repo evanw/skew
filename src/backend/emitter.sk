@@ -1,4 +1,9 @@
 namespace Skew {
+  enum EmitMode {
+    ALWAYS_EMIT
+    SKIP_IF_EMPTY
+  }
+
   class Emitter {
     def sources List<Source> {
       return _sources
@@ -26,16 +31,26 @@ namespace Skew {
         _prefix.append(text)
       }
 
-      def createSource(name string) {
-        _prefix.append(_code.toString)
-        _sources.append(Source.new(name, _prefix.toString))
+      def createSource(name string, mode EmitMode) {
+        var code = _code.toString
+
+        if mode == .ALWAYS_EMIT || code != "" {
+          _prefix.append(code)
+          _sources.append(Source.new(name, _prefix.toString))
+        }
+
         _prefix = StringBuilder.new
         _code = StringBuilder.new
       }
 
-      def sortedObjects(global ObjectSymbol) List<ObjectSymbol> {
+      def collectObjects(global ObjectSymbol) List<ObjectSymbol> {
         var objects List<ObjectSymbol> = []
         findObjects(objects, global)
+        return objects
+      }
+
+      def sortedObjects(global ObjectSymbol) List<ObjectSymbol> {
+        var objects = collectObjects(global)
 
         # Sort by inheritance and containment
         for i in 0..objects.count {

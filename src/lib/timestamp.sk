@@ -8,8 +8,9 @@ namespace Timestamp {
   }
 
   else if TARGET == .CSHARP {
+    @using("System")
     def seconds double {
-      return dynamic.System.DateTime.Now.Ticks / (dynamic.System.TimeSpan.TicksPerSecond as double)
+      return dynamic.DateTime.Now.Ticks / (dynamic.TimeSpan.TicksPerSecond as double)
     }
   }
 }

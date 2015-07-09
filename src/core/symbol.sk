@@ -57,6 +57,10 @@ namespace Skew {
       return self == VARIABLE_ARGUMENT || self == VARIABLE_LOCAL
     }
 
+    def isNamespaceOrGlobal bool {
+      return self == OBJECT_NAMESPACE || self == OBJECT_GLOBAL
+    }
+
     def isGlobalReference bool {
       return
         self == VARIABLE_ENUM || self == VARIABLE_GLOBAL ||

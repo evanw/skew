@@ -5,25 +5,7 @@ namespace Skew {
 
     over visit(global ObjectSymbol) {
       indentAmount = "    "
-
-      var globals = ObjectSymbol.new(.OBJECT_NAMESPACE, global.scope.generateName("Globals"))
-      globals.parent = global
-      global.objects.append(globals)
-
-      # Move global functions and variables into their own namespace
-      global.functions.removeIf(function => {
-        if function.kind != .FUNCTION_ANNOTATION {
-          function.parent = globals
-          globals.functions.append(function)
-          return true
-        }
-        return false
-      })
-      global.variables.removeIf(variable => {
-        variable.parent = globals
-        globals.variables.append(variable)
-        return true
-      })
+      moveGlobalsIntoClasses(global)
 
       # Generate the entry point
       var entryPoint = cache.entryPointSymbol
@@ -53,31 +35,131 @@ namespace Skew {
       markVirtualFunctions(global)
 
       # All code in C# is inside objects, so just emit objects recursively
-      for object in global.objects {
+      var emitIndividualFiles = options.outputDirectory != ""
+      for object in collectObjects(global) {
         emitObject(object)
-      }
 
-      # Emit using statements first
-      var usings = usingNames.keys
-      if !usings.isEmpty {
-        usings.sort((a, b) => a <=> b)
-        for using in usings {
-          emitPrefix("using " + using + ";\n")
+        # Emit each object into its own file if requested
+        if emitIndividualFiles {
+          finalizeEmittedFile
+          createSource(options.outputDirectory + "/" + fullName(object) + ".cs", .SKIP_IF_EMPTY)
         }
-        emitPrefix("\n")
       }
 
       # Emit a single file if requested
-      if options.outputDirectory == "" {
-        createSource(options.outputFile)
+      if !emitIndividualFiles {
+        finalizeEmittedFile
+        createSource(options.outputFile, .ALWAYS_EMIT)
       }
     }
 
     @private {
       var previousNode Node = null
       var previousSymbol Symbol = null
+      var namespaceStack List<Symbol> = []
       var symbolsCheckedForUsing IntMap<int> = {}
       var usingNames StringMap<int> = {}
+
+      def moveGlobalsIntoClasses(symbol ObjectSymbol) {
+        if !symbol.kind.isNamespaceOrGlobal {
+          return
+        }
+
+        # Just change namespaces into classes if there aren't nested objects
+        if symbol.kind == .OBJECT_NAMESPACE && symbol.objects.isEmpty && (!symbol.functions.isEmpty || !symbol.variables.isEmpty) {
+          symbol.kind = .OBJECT_CLASS
+          return
+        }
+
+        var globals ObjectSymbol = null
+        var lazilyCreateGlobals = => {
+          if globals == null {
+            globals = ObjectSymbol.new(.OBJECT_CLASS, symbol.scope.generateName(symbol.kind == .OBJECT_NAMESPACE ? symbol.name + "Globals" : "Globals"))
+            globals.parent = symbol
+            symbol.objects.append(globals)
+          }
+        }
+
+        for object in symbol.objects {
+          moveGlobalsIntoClasses(object)
+        }
+
+        symbol.functions.removeIf(function => {
+          if function.kind != .FUNCTION_ANNOTATION && !function.isImported {
+            lazilyCreateGlobals()
+            function.parent = globals
+            globals.functions.append(function)
+            return true
+          }
+          return false
+        })
+
+        symbol.variables.removeIf(variable => {
+          if variable.kind == .VARIABLE_GLOBAL && !variable.isImported {
+            lazilyCreateGlobals()
+            variable.parent = globals
+            globals.variables.append(variable)
+            return true
+          }
+          return false
+        })
+      }
+
+      def adjustNamespace(symbol Symbol) {
+        # Get the namespace chain for this symbol
+        var symbols List<Symbol> = []
+        while symbol != null && symbol.kind != .OBJECT_GLOBAL {
+          if symbol.kind == .OBJECT_NAMESPACE {
+            symbols.prepend(symbol)
+          }
+          symbol = symbol.parent
+        }
+
+        # Find the intersection
+        var limit = Math.min(namespaceStack.count, symbols.count)
+        var i = 0
+        while i < limit {
+          if namespaceStack[i] != symbols[i] {
+            break
+          }
+          i++
+        }
+
+        # Leave the old namespace
+        while namespaceStack.count > i {
+          var object = namespaceStack.takeLast
+          decreaseIndent
+          emit(indent + "}\n")
+          emitNewlineAfterSymbol(object)
+        }
+
+        # Enter the new namespace
+        while namespaceStack.count < symbols.count {
+          var object = symbols[namespaceStack.count]
+          emitNewlineBeforeSymbol(object)
+          emit(indent + "namespace " + mangleName(object) + "\n")
+          emit(indent + "{\n")
+          increaseIndent
+          namespaceStack.append(object)
+        }
+      }
+
+      def finalizeEmittedFile {
+        var usings = usingNames.keys
+
+        if !usings.isEmpty {
+          usings.sort((a, b) => a <=> b)
+          for using in usings {
+            emitPrefix("using " + using + ";\n")
+          }
+          emitPrefix("\n")
+        }
+
+        adjustNamespace(null)
+        previousSymbol = null
+        symbolsCheckedForUsing = {}
+        usingNames = {}
+      }
 
       def handleSymbol(symbol Symbol) {
         if !symbol.kind.isLocal && !(symbol.id in symbolsCheckedForUsing) {
@@ -136,28 +218,22 @@ namespace Skew {
 
       def emitObject(symbol ObjectSymbol) {
         handleSymbol(symbol)
-        if symbol.isImported {
+
+        if symbol.isImported || symbol.kind.isNamespaceOrGlobal {
           return
         }
 
-        # Global functions and variables have to be in classes, not namespaces
-        if symbol.kind == .OBJECT_NAMESPACE && (!symbol.functions.isEmpty || !symbol.variables.isEmpty || symbol.parent.kind == .OBJECT_CLASS) {
-          symbol.kind = .OBJECT_CLASS
-        }
-
+        adjustNamespace(symbol)
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol.comments)
-        if symbol.kind != .OBJECT_NAMESPACE {
-          emit(indent + "public ")
-        }
+        emit(indent + "public ")
         if symbol.isAbstract {
           emit("abstract ")
         }
         switch symbol.kind {
-          case .OBJECT_CLASS { emit("class ") }
+          case .OBJECT_CLASS, .OBJECT_NAMESPACE { emit("class ") }
           case .OBJECT_ENUM { emit("enum ") }
           case .OBJECT_INTERFACE { emit("interface ") }
-          case .OBJECT_NAMESPACE { emit("namespace ") }
           default { assert(false) }
         }
         emit(mangleName(symbol))
@@ -180,11 +256,6 @@ namespace Skew {
         decreaseIndent
         emit(indent + "}\n")
         emitNewlineAfterSymbol(symbol)
-
-        # Emit each object into its own file if requested
-        if options.outputDirectory != "" {
-          createSource(options.outputDirectory + "/" + fullName(symbol) + ".cs")
-        }
       }
 
       def emitTypeParameters(parameters List<ParameterSymbol>) {
@@ -214,6 +285,7 @@ namespace Skew {
 
       def emitVariable(symbol VariableSymbol) {
         handleSymbol(symbol)
+
         if symbol.isImported {
           return
         }
@@ -245,6 +317,7 @@ namespace Skew {
 
       def emitFunction(symbol FunctionSymbol) {
         handleSymbol(symbol)
+
         if symbol.isImported {
           return
         }
@@ -313,25 +386,30 @@ namespace Skew {
         }
 
         else if type.kind == .LAMBDA {
+          var argumentTypes = type.argumentTypes
           var returnType = type.returnType
-          emit(returnType != null ? "System.Func<" : "System.Action<")
-          for argumentType in type.argumentTypes {
-            if argumentType != type.argumentTypes.first {
-              emit(", ")
+          emit(returnType != null ? "System.Func" : "System.Action")
+          if !argumentTypes.isEmpty || returnType != null {
+            emit("<")
+            for argumentType in argumentTypes {
+              if argumentType != argumentTypes.first {
+                emit(", ")
+              }
+              emitType(argumentType)
             }
-            emitType(argumentType)
-          }
-          if returnType != null {
-            if !type.argumentTypes.isEmpty {
-              emit(", ")
+            if returnType != null {
+              if !argumentTypes.isEmpty {
+                emit(", ")
+              }
+              emitType(returnType)
             }
-            emitType(returnType)
+            emit(">")
           }
-          emit(">")
         }
 
         else {
           assert(type.kind == .SYMBOL)
+          handleSymbol(type.symbol)
           emit(fullName(type.symbol))
 
           if type.isParameterized {
@@ -556,8 +634,10 @@ namespace Skew {
             emit("\n")
             for i in 1..children.count - 1 {
               var child = children[i]
-              emit("\n")
-              emitComments(child.comments)
+              if child.comments != null {
+                emit("\n")
+                emitComments(child.comments)
+              }
               emit(indent + "catch")
               if child.symbol != null {
                 emit(" (")
@@ -569,8 +649,10 @@ namespace Skew {
               emit("\n")
             }
             if finallyBlock != null {
-              emit("\n")
-              emitComments(finallyBlock.comments)
+              if finallyBlock.comments != null {
+                emit("\n")
+                emitComments(finallyBlock.comments)
+              }
               emit(indent + "finally\n")
               emitBlock(finallyBlock)
               emit("\n")

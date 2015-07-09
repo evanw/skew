@@ -62,36 +62,41 @@ namespace Terminal {
   }
 
   else if TARGET == .CSHARP {
+    @using("System")
     def setColor(color Color) {
       switch color {
-        case .BOLD, .DEFAULT { dynamic.System.Console.ResetColor() }
-        case .GRAY { dynamic.System.Console.ForegroundColor = dynamic.System.ConsoleColor.DarkGray }
-        case .RED { dynamic.System.Console.ForegroundColor = dynamic.System.ConsoleColor.Red }
-        case .GREEN { dynamic.System.Console.ForegroundColor = dynamic.System.ConsoleColor.Green }
-        case .YELLOW { dynamic.System.Console.ForegroundColor = dynamic.System.ConsoleColor.Yellow }
-        case .BLUE { dynamic.System.Console.ForegroundColor = dynamic.System.ConsoleColor.Blue }
-        case .MAGENTA { dynamic.System.Console.ForegroundColor = dynamic.System.ConsoleColor.Magenta }
-        case .CYAN { dynamic.System.Console.ForegroundColor = dynamic.System.ConsoleColor.Cyan }
+        case .BOLD, .DEFAULT { dynamic.Console.ResetColor() }
+        case .GRAY { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.DarkGray }
+        case .RED { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Red }
+        case .GREEN { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Green }
+        case .YELLOW { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Yellow }
+        case .BLUE { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Blue }
+        case .MAGENTA { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Magenta }
+        case .CYAN { dynamic.Console.ForegroundColor = dynamic.ConsoleColor.Cyan }
       }
     }
 
+    @using("System")
     def width int {
-      return dynamic.System.Console.BufferWidth
+      return dynamic.Console.BufferWidth
     }
 
+    @using("System")
     def height int {
-      return dynamic.System.Console.BufferHeight
+      return dynamic.Console.BufferHeight
     }
 
+    @using("System")
     def print(text string) {
-      dynamic.System.Console.WriteLine(text)
+      dynamic.Console.WriteLine(text)
     }
 
     def flush {
     }
 
+    @using("System")
     def write(text string) {
-      dynamic.System.Console.Write(text)
+      dynamic.Console.Write(text)
     }
 
     const colorToEscapeCode IntMap<int> = {

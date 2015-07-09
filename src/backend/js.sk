@@ -73,7 +73,7 @@ namespace Skew {
       decreaseIndent
       emit(indent + "})();\n")
 
-      createSource(options.outputDirectory != "" ? options.outputDirectory + "/compiled.js" : options.outputFile)
+      createSource(options.outputDirectory != "" ? options.outputDirectory + "/compiled.js" : options.outputFile, .ALWAYS_EMIT)
     }
 
     @private {
