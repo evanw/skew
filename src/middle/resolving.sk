@@ -505,7 +505,7 @@ namespace Skew.Resolving {
           # Use a C-style for loop to implement this foreach loop
           symbol.flags &= ~Symbol.IS_CONST
           symbol.value = first
-          node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
+          node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments).withRange(node.range))
 
           # Make sure the new expressions are resolved
           resolveNode(test, symbol.scope, null)
@@ -542,7 +542,7 @@ namespace Skew.Resolving {
           var setup = [Node.createVar(index), Node.createVar(list), Node.createVar(count)]
           var test = Node.createBinary(.LESS_THAN, indexName.clone, countName)
           var update = Node.createUnary(.INCREMENT, indexName.clone)
-          node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments))
+          node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments).withRange(node.range))
 
           # Make sure the new expressions are resolved
           resolveNode(symbol.value, symbol.scope, null)
@@ -787,7 +787,8 @@ namespace Skew.Resolving {
           symbol.arguments.append(argument)
           values.append(Node.createSymbolReference(argument))
         }
-        statements.append(Node.createExpression(values.isEmpty ? Node.createSuper : Node.createCall(Node.createSuper, values)))
+        var base = Node.createSuper.withRange(symbol.overridden.range)
+        statements.append(Node.createExpression(values.isEmpty ? base : Node.createCall(base, values)))
       }
 
       # Add an argument for every uninitialized variable
@@ -800,14 +801,15 @@ namespace Skew.Resolving {
             var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
             argument.resolvedType = variable.resolvedType
             argument.state = .INITIALIZED
+            argument.range = variable.range
             symbol.arguments.append(argument)
             statements.append(Node.createExpression(Node.createBinary(.ASSIGN,
               Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
-              Node.createSymbolReference(argument))))
+              Node.createSymbolReference(argument)).withRange(variable.range)))
           } else {
             statements.append(Node.createExpression(Node.createBinary(.ASSIGN,
               Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
-              variable.value)))
+              variable.value).withRange(variable.range)))
             variable.value = null
           }
         }

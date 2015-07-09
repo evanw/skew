@@ -33,6 +33,18 @@ namespace Skew {
       return parent
     }
   }
+
+  class SplitPath {
+    const directory string
+    const entry string
+  }
+
+  def splitPath(path string) SplitPath {
+    var slashIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"))
+    return slashIndex == -1
+      ? SplitPath.new(".", path)
+      : SplitPath.new(path.slice(0, slashIndex), path.slice(slashIndex + 1))
+  }
 }
 
 namespace Skew.PrettyPrint {

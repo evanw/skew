@@ -32,7 +32,7 @@ compile-skewc: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js
 
 compile-browser: | build
-	node skewc.js $(SOURCES_BROWSER) $(JS_FLAGS) --output-file=build/browser.js
+	node skewc.js $(SOURCES_BROWSER) $(JS_FLAGS) --output-file=build/browser.js --js-source-map
 
 replace: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js

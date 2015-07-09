@@ -1,6 +1,5 @@
 
 namespace Skew {
-  var targetLabels = ["JavaScript", "C#"]
   var targets = [JavaScriptTarget.new, CSharpTarget.new]
 
   var compileTime = document.getElementById("compileTime")
@@ -16,15 +15,18 @@ namespace Skew {
     var source = Source.new("<stdin>", input.value)
     var options = CompilerOptions.new
     options.target = targets[getTargetIndex()]
+    options.outputFile = "compiled." + options.target.extension
     if Config.get(.CONSTANT_FOLDING) { options.foldAllConstants = true }
     if Config.get(.FUNCTION_INLINING) { options.inlineAllFunctions = true }
     if Config.get(.GLOBALIZE) { options.globalizeAllFunctions = true }
     if Config.get(.MANGLE) { options.jsMangle = true }
     if Config.get(.MINIFY) { options.jsMinify = true }
+    if Config.get(.SOURCE_MAP) { options.jsSourceMap = true }
     var result = compile(log, options, [source])
     outputLog.value = log.toString
     outputTree.value = Config.get(.SHOW_SYNTAX_TREE) ? LispTreeEmitter.dump(result.global) : ""
-    outputCode.value = log.hasErrors ? "" : result.outputs.first.contents
+    outputCode.value = log.hasErrors ? "" : result.outputs.count == 1 ? result.outputs.first.contents :
+      "\n".join(result.outputs.map<string>(source => "[" + source.name + "]\n" + source.contents))
     compileTime.textContent = ((result.totalTime * 1000) as dynamic).toFixed(1) + "ms"
   }
 
@@ -63,13 +65,14 @@ namespace Skew {
 
   @entry
   def main {
-    targetArea.appendChild(createSelect<CompilerTarget>(targetLabels, targets, getTargetIndex, setTargetIndex))
+    targetArea.appendChild(createSelect<CompilerTarget>(targets.map<string>(target => target.name), targets, getTargetIndex, setTargetIndex))
     optionArea.appendChild(createCheckbox("Constant folding", .CONSTANT_FOLDING))
     optionArea.appendChild(createCheckbox("Inlining", .FUNCTION_INLINING))
     optionArea.appendChild(createCheckbox("Mangle", .MANGLE))
     optionArea.appendChild(createCheckbox("Minify", .MINIFY))
     optionArea.appendChild(createCheckbox("Globalize", .GLOBALIZE))
     optionArea.appendChild(createCheckbox("Syntax tree", .SHOW_SYNTAX_TREE))
+    optionArea.appendChild(createCheckbox("Source map", .SOURCE_MAP))
     input.oninput = => update
     update
   }
@@ -81,6 +84,7 @@ namespace Skew {
     MANGLE
     MINIFY
     SHOW_SYNTAX_TREE
+    SOURCE_MAP
   }
 
   namespace Config {

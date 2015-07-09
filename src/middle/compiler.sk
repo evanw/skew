@@ -1,5 +1,7 @@
 namespace Skew {
   class CompilerTarget {
+    def name string { return "" }
+    def extension string { return "" }
     def runPostResolvePasses bool { return false }
     def moveEverythingOffEnums bool { return false }
     def requiresIntegerSwitchStatements bool { return false }
@@ -10,6 +12,8 @@ namespace Skew {
   }
 
   class JavaScriptTarget : CompilerTarget {
+    over name string { return "JavaScript" }
+    over extension string { return "js" }
     over runPostResolvePasses bool { return true }
     over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
@@ -17,6 +21,8 @@ namespace Skew {
   }
 
   class CSharpTarget : CompilerTarget {
+    over name string { return "C#" }
+    over extension string { return "cs" }
     over runPostResolvePasses bool { return true }
     over moveEverythingOffEnums bool { return true }
     over requiresIntegerSwitchStatements bool { return true }
@@ -27,6 +33,8 @@ namespace Skew {
   }
 
   class LispTreeTarget : CompilerTarget {
+    over name string { return "S-expression" }
+    over extension string { return "lisp" }
     over runPostResolvePasses bool { return false }
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return LispTreeEmitter.new(options) }
   }
@@ -43,6 +51,7 @@ namespace Skew {
     var inlineAllFunctions = false
     var jsMangle = false
     var jsMinify = false
+    var jsSourceMap = false
     var outputDirectory = ""
     var outputFile = ""
     var target CompilerTarget = CompilerTarget.new

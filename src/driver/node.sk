@@ -7,6 +7,7 @@ namespace Skew {
     INLINE_FUNCTIONS
     JS_MANGLE
     JS_MINIFY
+    JS_SOURCE_MAP
     MESSAGE_LIMIT
     OUTPUT_DIRECTORY
     OUTPUT_FILE
@@ -152,6 +153,7 @@ namespace Skew {
     parser.define(.STRING_LIST, .DEFINE, "--define", "Override variable values at compile time.")
     parser.define(.BOOL, .JS_MANGLE, "--js-mangle", "Transforms emitted JavaScript to be as small as possible. The \"@export\" annotation prevents renaming a symbol.")
     parser.define(.BOOL, .JS_MINIFY, "--js-minify", "Remove whitespace when compiling to JavaScript.")
+    parser.define(.BOOL, .JS_SOURCE_MAP, "--js-source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.")
     parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.")
     parser.define(.BOOL, .INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.")
     parser.define(.BOOL, .GLOBALIZE_FUNCTIONS, "--globalize-functions", "Convert instance functions to global functions for better inlining.")
@@ -176,6 +178,7 @@ namespace Skew {
     options.inlineAllFunctions = parser.boolForOption(.INLINE_FUNCTIONS, releaseFlag)
     options.jsMangle = parser.boolForOption(.JS_MANGLE, releaseFlag)
     options.jsMinify = parser.boolForOption(.JS_MINIFY, releaseFlag)
+    options.jsSourceMap = parser.boolForOption(.JS_SOURCE_MAP, false)
 
     # Prepare the defines
     if releaseFlag {

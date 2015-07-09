@@ -19,6 +19,8 @@ namespace Skew {
     over visit(global ObjectSymbol) {
       mangle = options.jsMangle
       minify = options.jsMinify
+      sourceMap = options.jsSourceMap
+
       if minify {
         indentAmount = ""
         newline = ""
@@ -73,7 +75,39 @@ namespace Skew {
       decreaseIndent
       emit(indent + "})();\n")
 
-      createSource(options.outputDirectory != "" ? options.outputDirectory + "/compiled.js" : options.outputFile, .ALWAYS_EMIT)
+      var codeName = options.outputDirectory != "" ? options.outputDirectory + "/compiled.js" : options.outputFile
+      var mapName = codeName + ".map"
+
+      # Obfuscate the sourceMappingURL so it's not incorrectly picked up as the
+      # sourceMappingURL for the compiled JavaScript compiler file
+      if sourceMap {
+        emit("/")
+        emit("/# sourceMappingURL=" + splitPath(mapName).entry + "\n")
+      }
+
+      createSource(codeName, .ALWAYS_EMIT)
+
+      # Create the source map
+      if sourceMap {
+        emit(generator.toString)
+        createSource(mapName, .ALWAYS_EMIT)
+      }
+    }
+
+    @protected
+    over emit(text string) {
+      if minify || sourceMap {
+        for i in 0..text.count {
+          var c = text[i]
+          if c == '\n' {
+            currentColumn = 0
+            currentLine++
+          } else {
+            currentColumn++
+          }
+        }
+      }
+      super(text)
     }
 
     @private {
@@ -96,6 +130,14 @@ namespace Skew {
       var enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
       var extends VariableSymbol = null
       var multiply VariableSymbol = null
+
+      # Source map support
+      var sourceMap = false
+      var generator = SourceMapGenerator.new
+      var currentLine = 0
+      var currentColumn = 0
+      var previousStart = 0
+      var previousSource Source = null
 
       # A union-find data structure is used to quickly merge symbols into
       # groups. All local variables inside a function are merged with that
@@ -338,6 +380,20 @@ namespace Skew {
         return labelToGroup.values
       }
 
+      def addMapping(range Range) {
+        if sourceMap && range != null {
+          var source = range.source
+          var start = range.start
+
+          if previousSource != source || previousStart != start {
+            var location = source.indexToLineColumn(start)
+            generator.addMapping(source, location.line, location.column, currentLine, currentColumn)
+            previousStart = start
+            previousSource = source
+          }
+        }
+      }
+
       def emitSemicolonAfterStatement {
         if !minify {
           emit(";\n")
@@ -350,6 +406,15 @@ namespace Skew {
         if needsSemicolon {
           emit(";")
           needsSemicolon = false
+        }
+        maybeEmitMinifedNewline
+      }
+
+      # Lots of text editors choke up on long lines, so add a newline every now
+      # and then for usability's sake
+      def maybeEmitMinifedNewline {
+        if minify && currentColumn > 1024 {
+          emit("\n")
         }
       }
 
@@ -370,6 +435,8 @@ namespace Skew {
       def emitNewlineBeforeStatement(node Node) {
         if !minify && previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind)) {
           emit("\n")
+        } else {
+          maybeEmitMinifedNewline
         }
         previousNode = null
       }
@@ -395,6 +462,7 @@ namespace Skew {
 
         switch symbol.kind {
           case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
+            addMapping(symbol.range)
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
             emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + space + "=" + space + "{}")
@@ -403,6 +471,7 @@ namespace Skew {
           }
 
           case .OBJECT_ENUM {
+            addMapping(symbol.range)
             emitNewlineBeforeSymbol(symbol)
             emitComments(symbol.comments)
             emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + space + "=" + space + "{")
@@ -416,6 +485,7 @@ namespace Skew {
                   emit(",")
                 }
                 emit(newline)
+                addMapping(variable.range)
                 emitNewlineBeforeSymbol(variable)
                 emitComments(variable.comments)
                 emit(indent + mangleName(variable) + ":" + space)
@@ -445,6 +515,7 @@ namespace Skew {
                     emit("\n" + indent)
                   }
                   emitSemicolonIfNeeded
+                  addMapping(extends.range)
                   emit(mangleName(extends) + "(" + fullName(symbol) + "," + space + fullName(symbol.baseClass) + ")")
                   emitSemicolonAfterStatement
                 }
@@ -472,11 +543,12 @@ namespace Skew {
       }
 
       def emitArgumentList(arguments List<VariableSymbol>) {
-        for i in 0..arguments.count {
-          if i > 0 {
+        for argument in arguments {
+          if argument != arguments.first {
             emit("," + space)
           }
-          emit(mangleName(arguments[i]))
+          addMapping(argument.range)
+          emit(mangleName(argument))
         }
       }
 
@@ -485,6 +557,7 @@ namespace Skew {
           return
         }
 
+        addMapping(symbol.range)
         emitNewlineBeforeSymbol(symbol)
         emitComments(symbol.comments)
 
@@ -526,6 +599,7 @@ namespace Skew {
         }
 
         if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || prefix == "" || symbol.kind.isLocalOrArgumentVariable) {
+          addMapping(symbol.range)
           emitNewlineBeforeSymbol(symbol)
           emitComments(symbol.comments)
           emit(indent + (prefix == "" && !symbol.isExported || symbol.kind.isLocalOrArgumentVariable ? "var " : prefix) + mangleName(symbol))
@@ -546,6 +620,7 @@ namespace Skew {
         for statement in statements {
           emitSemicolonIfNeeded
           emitNewlineBeforeStatement(statement)
+          addMapping(statement.range)
           emitComments(statement.comments)
           emitStatement(statement)
           emitNewlineAfterStatement(statement)
@@ -556,6 +631,7 @@ namespace Skew {
 
       def emitBlock(node Node, after AfterToken, mode BracesMode) {
         var shouldMinify = mode == .CAN_OMIT_BRACES && minify
+        addMapping(node.range)
         if shouldMinify && !node.hasChildren {
           emit(";")
         } else if shouldMinify && node.children.count == 1 {
@@ -786,6 +862,8 @@ namespace Skew {
 
       def emitExpression(node Node, precedence Precedence) {
         var kind = node.kind
+        addMapping(node.range)
+
         switch kind {
           case .TYPE {
             emit(fullName(node.resolvedType.symbol))

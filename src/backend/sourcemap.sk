@@ -1,0 +1,131 @@
+namespace Skew {
+  class SourceMapping {
+    const sourceIndex int
+    const originalLine int # 0-based
+    const originalColumn int # 0-based
+    const generatedLine int # 0-based
+    const generatedColumn int # 0-based
+  }
+
+  # Based on https://github.com/mozilla/source-map
+  class SourceMapGenerator {
+    @private {
+      var mappings List<SourceMapping> = []
+      var sources List<Source> = []
+    }
+
+    def addMapping(source Source, originalLine int, originalColumn int, generatedLine int, generatedColumn int) {
+      var sourceIndex = sources.indexOf(source)
+      if sourceIndex == -1 {
+        sourceIndex = sources.count
+        sources.append(source)
+      }
+      mappings.append(SourceMapping.new(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn))
+    }
+
+    def toString string {
+      var sourceNames List<string> = []
+      var sourceContents List<string> = []
+
+      for source in sources {
+        sourceNames.append(quoteString(source.name, '"'))
+        sourceContents.append(quoteString(source.contents, '"'))
+      }
+
+      var builder = StringBuilder.new
+      builder.append("{\"version\":3,\"sources\":[")
+      builder.append(",".join(sourceNames))
+      builder.append("],\"sourcesContent\":[")
+      builder.append(",".join(sourceContents))
+      builder.append("],\"names\":[],\"mappings\":\"")
+
+      # Sort the mappings in increasing order by generated location
+      mappings.sort((a, b) => {
+        var delta = a.generatedLine <=> b.generatedLine
+        return delta != 0 ? delta : a.generatedColumn <=> b.generatedColumn
+      })
+
+      var previousGeneratedColumn = 0
+      var previousGeneratedLine = 0
+      var previousOriginalColumn = 0
+      var previousOriginalLine = 0
+      var previousSourceIndex = 0
+
+      # Generate the base64 VLQ encoded mappings
+      for mapping in mappings {
+        var generatedLine = mapping.generatedLine
+
+        # Insert ',' for the same line and ';' for a line
+        if previousGeneratedLine == generatedLine {
+          if previousGeneratedColumn == mapping.generatedColumn && (previousGeneratedLine != 0 || previousGeneratedColumn != 0) {
+            continue
+          }
+          builder.append(",")
+        } else {
+          previousGeneratedColumn = 0
+          while previousGeneratedLine < generatedLine {
+            builder.append(";")
+            previousGeneratedLine++
+          }
+        }
+
+        # Record the generated column (the line is recorded using ';' above)
+        builder.append(encodeVLQ(mapping.generatedColumn - previousGeneratedColumn))
+        previousGeneratedColumn = mapping.generatedColumn
+
+        # Record the generated source
+        builder.append(encodeVLQ(mapping.sourceIndex - previousSourceIndex))
+        previousSourceIndex = mapping.sourceIndex
+
+        # Record the original line
+        builder.append(encodeVLQ(mapping.originalLine - previousOriginalLine))
+        previousOriginalLine = mapping.originalLine
+
+        # Record the original column
+        builder.append(encodeVLQ(mapping.originalColumn - previousOriginalColumn))
+        previousOriginalColumn = mapping.originalColumn
+      }
+
+      builder.append("\"}\n")
+      return builder.toString
+    }
+  }
+
+  # A single base 64 digit can contain 6 bits of data. For the base 64 variable
+  # length quantities we use in the source map spec, the first bit is the sign,
+  # the next four bits are the actual value, and the 6th bit is the continuation
+  # bit. The continuation bit tells us whether there are more digits in this
+  # value following this digit.
+  #
+  #   Continuation
+  #   |    Sign
+  #   |    |
+  #   V    V
+  #   101011
+  #
+  def encodeVLQ(value int) string {
+    var vlq = value < 0 ? -value << 1 | 1 : value << 1
+    var encoded = ""
+
+    while true {
+      var digit = vlq & 31
+      vlq >>= 5
+
+      # If there are still more digits in this value, we must make sure the
+      # continuation bit is marked
+      if vlq != 0 {
+        digit |= 32
+      }
+
+      encoded += BASE64.get(digit)
+
+      if vlq == 0 {
+        break
+      }
+    }
+
+    return encoded
+  }
+
+  const BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+}

@@ -91,6 +91,42 @@
     return builder.toString();
   };
 
+  // A single base 64 digit can contain 6 bits of data. For the base 64 variable
+  // length quantities we use in the source map spec, the first bit is the sign,
+  // the next four bits are the actual value, and the 6th bit is the continuation
+  // bit. The continuation bit tells us whether there are more digits in this
+  // value following this digit.
+  //
+  //   Continuation
+  //   |    Sign
+  //   |    |
+  //   V    V
+  //   101011
+  //
+  Skew.encodeVLQ = function(value) {
+    var vlq = value < 0 ? -value << 1 | 1 : value << 1;
+    var encoded = "";
+
+    while (true) {
+      var digit = vlq & 31;
+      vlq >>= 5;
+
+      // If there are still more digits in this value, we must make sure the
+      // continuation bit is marked
+      if (vlq !== 0) {
+        digit |= 32;
+      }
+
+      encoded += Skew.BASE64[digit];
+
+      if (vlq === 0) {
+        break;
+      }
+    }
+
+    return encoded;
+  };
+
   Skew.argumentCountForOperator = function(text) {
     if (Skew.argumentCounts === null) {
       Skew.argumentCounts = Object.create(null);
@@ -111,6 +147,11 @@
 
   Skew.hashCombine = function(left, right) {
     return left ^ ((right - 1640531527 | 0) + (left << 6) | 0) + (left >> 2);
+  };
+
+  Skew.splitPath = function(path) {
+    var slashIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+    return slashIndex === -1 ? new Skew.SplitPath(".", path) : new Skew.SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0));
   };
 
   Skew.areListsEqual1 = function(a, b) {
@@ -737,6 +778,7 @@
     parser.define(Skew.Options.Type.STRING_LIST, Skew.Option.DEFINE, "--define", "Override variable values at compile time.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_MANGLE, "--js-mangle", "Transforms emitted JavaScript to be as small as possible. The \"@export\" annotation prevents renaming a symbol.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_MINIFY, "--js-minify", "Remove whitespace when compiling to JavaScript.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_SOURCE_MAP, "--js-source-map", "Generates a source map when targeting JavaScript. The source map is saved with the \".map\" extension in the same directory as the main output file.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.GLOBALIZE_FUNCTIONS, "--globalize-functions", "Convert instance functions to global functions for better inlining.");
@@ -762,6 +804,7 @@
     options.inlineAllFunctions = parser.boolForOption(Skew.Option.INLINE_FUNCTIONS, releaseFlag);
     options.jsMangle = parser.boolForOption(Skew.Option.JS_MANGLE, releaseFlag);
     options.jsMinify = parser.boolForOption(Skew.Option.JS_MINIFY, releaseFlag);
+    options.jsSourceMap = parser.boolForOption(Skew.Option.JS_SOURCE_MAP, false);
 
     // Prepare the defines
     if (releaseFlag) {
@@ -2160,6 +2203,12 @@
     this.enclosingFunction = null;
     this.$extends = null;
     this.multiply = null;
+    this.sourceMap = false;
+    this.generator = new Skew.SourceMapGenerator();
+    this.currentLine = 0;
+    this.currentColumn = 0;
+    this.previousStart = 0;
+    this.previousSource = null;
     this.allSymbols = [];
     this.localVariableUnionFind = new Skew.UnionFind();
     this.namingGroupIndexForSymbol = Object.create(null);
@@ -2179,6 +2228,7 @@
   Skew.JavaScriptEmitter.prototype.visit = function(global) {
     this.mangle = this.options.jsMangle;
     this.minify = this.options.jsMinify;
+    this.sourceMap = this.options.jsSourceMap;
 
     if (this.minify) {
       this.indentAmount = "";
@@ -2245,7 +2295,42 @@
     // End the closure wrapping everything
     this.decreaseIndent();
     this.emit(this.indent + "})();\n");
-    this.createSource(this.options.outputDirectory !== "" ? this.options.outputDirectory + "/compiled.js" : this.options.outputFile, Skew.EmitMode.ALWAYS_EMIT);
+    var codeName = this.options.outputDirectory !== "" ? this.options.outputDirectory + "/compiled.js" : this.options.outputFile;
+    var mapName = codeName + ".map";
+
+    // Obfuscate the sourceMappingURL so it's not incorrectly picked up as the
+    // sourceMappingURL for the compiled JavaScript compiler file
+    if (this.sourceMap) {
+      this.emit("/");
+      this.emit("/# sourceMappingURL=" + Skew.splitPath(mapName).entry + "\n");
+    }
+
+    this.createSource(codeName, Skew.EmitMode.ALWAYS_EMIT);
+
+    // Create the source map
+    if (this.sourceMap) {
+      this.emit(this.generator.toString());
+      this.createSource(mapName, Skew.EmitMode.ALWAYS_EMIT);
+    }
+  };
+
+  Skew.JavaScriptEmitter.prototype.emit = function(text) {
+    if (this.minify || this.sourceMap) {
+      for (var i = 0, count = text.length; i < count; ++i) {
+        var c = text.charCodeAt(i);
+
+        if (c === 10) {
+          this.currentColumn = 0;
+          ++this.currentLine;
+        }
+
+        else {
+          ++this.currentColumn;
+        }
+      }
+    }
+
+    Skew.Emitter.prototype.emit.call(this, text);
   };
 
   Skew.JavaScriptEmitter.prototype.prepareGlobal = function(global) {
@@ -2538,6 +2623,20 @@
     return in_IntMap.values(labelToGroup);
   };
 
+  Skew.JavaScriptEmitter.prototype.addMapping = function(range) {
+    if (this.sourceMap && range !== null) {
+      var source = range.source;
+      var start = range.start;
+
+      if (this.previousSource !== source || this.previousStart !== start) {
+        var location = source.indexToLineColumn(start);
+        this.generator.addMapping(source, location.line, location.column, this.currentLine, this.currentColumn);
+        this.previousStart = start;
+        this.previousSource = source;
+      }
+    }
+  };
+
   Skew.JavaScriptEmitter.prototype.emitSemicolonAfterStatement = function() {
     if (!this.minify) {
       this.emit(";\n");
@@ -2552,6 +2651,16 @@
     if (this.needsSemicolon) {
       this.emit(";");
       this.needsSemicolon = false;
+    }
+
+    this.maybeEmitMinifedNewline();
+  };
+
+  // Lots of text editors choke up on long lines, so add a newline every now
+  // and then for usability's sake
+  Skew.JavaScriptEmitter.prototype.maybeEmitMinifedNewline = function() {
+    if (this.minify && this.currentColumn > 1024) {
+      this.emit("\n");
     }
   };
 
@@ -2572,6 +2681,10 @@
   Skew.JavaScriptEmitter.prototype.emitNewlineBeforeStatement = function(node) {
     if (!this.minify && this.previousNode !== null && (node.comments !== null || !Skew.JavaScriptEmitter.isCompactNodeKind(this.previousNode.kind) || !Skew.JavaScriptEmitter.isCompactNodeKind(node.kind))) {
       this.emit("\n");
+    }
+
+    else {
+      this.maybeEmitMinifedNewline();
     }
 
     this.previousNode = null;
@@ -2600,6 +2713,7 @@
     switch (symbol.kind) {
       case Skew.SymbolKind.OBJECT_NAMESPACE:
       case Skew.SymbolKind.OBJECT_INTERFACE: {
+        this.addMapping(symbol.range);
         this.emitNewlineBeforeSymbol(symbol);
         this.emitComments(symbol.comments);
         this.emit(this.indent + (this.prefix === "" && !symbol.isExported() ? "var " : this.prefix) + Skew.JavaScriptEmitter.mangleName(symbol) + this.space + "=" + this.space + "{}");
@@ -2609,6 +2723,7 @@
       }
 
       case Skew.SymbolKind.OBJECT_ENUM: {
+        this.addMapping(symbol.range);
         this.emitNewlineBeforeSymbol(symbol);
         this.emitComments(symbol.comments);
         this.emit(this.indent + (this.prefix === "" && !symbol.isExported() ? "var " : this.prefix) + Skew.JavaScriptEmitter.mangleName(symbol) + this.space + "=" + this.space + "{");
@@ -2628,6 +2743,7 @@
             }
 
             this.emit(this.newline);
+            this.addMapping(variable.range);
             this.emitNewlineBeforeSymbol(variable);
             this.emitComments(variable.comments);
             this.emit(this.indent + Skew.JavaScriptEmitter.mangleName(variable) + ":" + this.space);
@@ -2667,6 +2783,7 @@
               }
 
               this.emitSemicolonIfNeeded();
+              this.addMapping(this.$extends.range);
               this.emit(Skew.JavaScriptEmitter.mangleName(this.$extends) + "(" + Skew.JavaScriptEmitter.fullName(symbol) + "," + this.space + Skew.JavaScriptEmitter.fullName(symbol.baseClass) + ")");
               this.emitSemicolonAfterStatement();
             }
@@ -2698,12 +2815,15 @@
   };
 
   Skew.JavaScriptEmitter.prototype.emitArgumentList = function($arguments) {
-    for (var i = 0, count = $arguments.length; i < count; ++i) {
-      if (i > 0) {
+    for (var i = 0, list = $arguments, count = list.length; i < count; ++i) {
+      var argument = list[i];
+
+      if (argument !== $arguments[0]) {
         this.emit("," + this.space);
       }
 
-      this.emit(Skew.JavaScriptEmitter.mangleName($arguments[i]));
+      this.addMapping(argument.range);
+      this.emit(Skew.JavaScriptEmitter.mangleName(argument));
     }
   };
 
@@ -2712,6 +2832,7 @@
       return;
     }
 
+    this.addMapping(symbol.range);
     this.emitNewlineBeforeSymbol(symbol);
     this.emitComments(symbol.comments);
     var isExpression = this.prefix !== "" || symbol.isExported();
@@ -2758,6 +2879,7 @@
     }
 
     if (symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind !== Skew.SymbolKind.VARIABLE_ENUM && (symbol.value !== null || this.prefix === "" || Skew.SymbolKind.isLocalOrArgumentVariable(symbol.kind))) {
+      this.addMapping(symbol.range);
       this.emitNewlineBeforeSymbol(symbol);
       this.emitComments(symbol.comments);
       this.emit(this.indent + (this.prefix === "" && !symbol.isExported() || Skew.SymbolKind.isLocalOrArgumentVariable(symbol.kind) ? "var " : this.prefix) + Skew.JavaScriptEmitter.mangleName(symbol));
@@ -2779,6 +2901,7 @@
       var statement = list[i];
       this.emitSemicolonIfNeeded();
       this.emitNewlineBeforeStatement(statement);
+      this.addMapping(statement.range);
       this.emitComments(statement.comments);
       this.emitStatement(statement);
       this.emitNewlineAfterStatement(statement);
@@ -2789,6 +2912,7 @@
 
   Skew.JavaScriptEmitter.prototype.emitBlock = function(node, after, mode) {
     var shouldMinify = mode === Skew.JavaScriptEmitter.BracesMode.CAN_OMIT_BRACES && this.minify;
+    this.addMapping(node.range);
 
     if (shouldMinify && !node.hasChildren()) {
       this.emit(";");
@@ -3084,6 +3208,7 @@
 
   Skew.JavaScriptEmitter.prototype.emitExpression = function(node, precedence) {
     var kind = node.kind;
+    this.addMapping(node.range);
 
     switch (kind) {
       case Skew.NodeKind.TYPE: {
@@ -4234,6 +4359,103 @@
     return kind.toLowerCase().split("_").join("-");
   };
 
+  Skew.SourceMapping = function(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn) {
+    this.sourceIndex = sourceIndex;
+    this.originalLine = originalLine;
+    this.originalColumn = originalColumn;
+    this.generatedLine = generatedLine;
+    this.generatedColumn = generatedColumn;
+  };
+
+  // Based on https://github.com/mozilla/source-map
+  Skew.SourceMapGenerator = function() {
+    this.mappings = [];
+    this.sources = [];
+  };
+
+  Skew.SourceMapGenerator.prototype.addMapping = function(source, originalLine, originalColumn, generatedLine, generatedColumn) {
+    var sourceIndex = this.sources.indexOf(source);
+
+    if (sourceIndex === -1) {
+      sourceIndex = this.sources.length;
+      this.sources.push(source);
+    }
+
+    this.mappings.push(new Skew.SourceMapping(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn));
+  };
+
+  Skew.SourceMapGenerator.prototype.toString = function() {
+    var sourceNames = [];
+    var sourceContents = [];
+
+    for (var i = 0, list = this.sources, count = list.length; i < count; ++i) {
+      var source = list[i];
+      sourceNames.push(Skew.quoteString(source.name, 34));
+      sourceContents.push(Skew.quoteString(source.contents, 34));
+    }
+
+    var builder = new StringBuilder();
+    builder.append("{\"version\":3,\"sources\":[");
+    builder.append(sourceNames.join(","));
+    builder.append("],\"sourcesContent\":[");
+    builder.append(sourceContents.join(","));
+    builder.append("],\"names\":[],\"mappings\":\"");
+
+    // Sort the mappings in increasing order by generated location
+    this.mappings.sort(function(a, b) {
+      var delta = a.generatedLine - b.generatedLine | 0;
+      return delta !== 0 ? delta : a.generatedColumn - b.generatedColumn | 0;
+    });
+    var previousGeneratedColumn = 0;
+    var previousGeneratedLine = 0;
+    var previousOriginalColumn = 0;
+    var previousOriginalLine = 0;
+    var previousSourceIndex = 0;
+
+    // Generate the base64 VLQ encoded mappings
+    for (var i1 = 0, list1 = this.mappings, count1 = list1.length; i1 < count1; ++i1) {
+      var mapping = list1[i1];
+      var generatedLine = mapping.generatedLine;
+
+      // Insert ',' for the same line and ';' for a line
+      if (previousGeneratedLine === generatedLine) {
+        if (previousGeneratedColumn === mapping.generatedColumn && (previousGeneratedLine !== 0 || previousGeneratedColumn !== 0)) {
+          continue;
+        }
+
+        builder.append(",");
+      }
+
+      else {
+        previousGeneratedColumn = 0;
+
+        while (previousGeneratedLine < generatedLine) {
+          builder.append(";");
+          ++previousGeneratedLine;
+        }
+      }
+
+      // Record the generated column (the line is recorded using ';' above)
+      builder.append(Skew.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0));
+      previousGeneratedColumn = mapping.generatedColumn;
+
+      // Record the generated source
+      builder.append(Skew.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0));
+      previousSourceIndex = mapping.sourceIndex;
+
+      // Record the original line
+      builder.append(Skew.encodeVLQ(mapping.originalLine - previousOriginalLine | 0));
+      previousOriginalLine = mapping.originalLine;
+
+      // Record the original column
+      builder.append(Skew.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0));
+      previousOriginalColumn = mapping.originalColumn;
+    }
+
+    builder.append("\"}\n");
+    return builder.toString();
+  };
+
   Skew.ContentKind = {
     BOOL: 0,
     INT: 1,
@@ -5322,6 +5544,11 @@
     }
 
     return parent;
+  };
+
+  Skew.SplitPath = function(directory, entry) {
+    this.directory = directory;
+    this.entry = entry;
   };
 
   Skew.PrettyPrint = {};
@@ -8398,6 +8625,7 @@
     this.inlineAllFunctions = false;
     this.jsMangle = false;
     this.jsMinify = false;
+    this.jsSourceMap = false;
     this.outputDirectory = "";
     this.outputFile = "";
     this.target = new Skew.CompilerTarget();
@@ -10661,7 +10889,7 @@
         // Use a C-style for loop to implement this foreach loop
         symbol.flags &= ~Skew.Symbol.IS_CONST;
         symbol.value = first;
-        node.become(Skew.Node.createFor(setup, test, update, block.replaceWithNull()).withComments(node.comments));
+        node.become(Skew.Node.createFor(setup, test, update, block.replaceWithNull()).withComments(node.comments).withRange(node.range));
 
         // Make sure the new expressions are resolved
         this.resolveNode(test, symbol.scope, null);
@@ -10698,7 +10926,7 @@
         var setup1 = [Skew.Node.createVar(index), Skew.Node.createVar(list), Skew.Node.createVar(count2)];
         var test1 = Skew.Node.createBinary(Skew.NodeKind.LESS_THAN, indexName.clone(), countName);
         var update1 = Skew.Node.createUnary(Skew.NodeKind.INCREMENT, indexName.clone());
-        node.become(Skew.Node.createFor(setup1, test1, update1, block.replaceWithNull()).withComments(node.comments));
+        node.become(Skew.Node.createFor(setup1, test1, update1, block.replaceWithNull()).withComments(node.comments).withRange(node.range));
 
         // Make sure the new expressions are resolved
         this.resolveNode(symbol.value, symbol.scope, null);
@@ -10984,7 +11212,8 @@
         values.push(Skew.Node.createSymbolReference(argument));
       }
 
-      statements.push(Skew.Node.createExpression(values.length === 0 ? new Skew.Node(Skew.NodeKind.SUPER) : Skew.Node.createCall(new Skew.Node(Skew.NodeKind.SUPER), values)));
+      var base = new Skew.Node(Skew.NodeKind.SUPER).withRange(symbol.overridden.range);
+      statements.push(Skew.Node.createExpression(values.length === 0 ? base : Skew.Node.createCall(base, values)));
     }
 
     // Add an argument for every uninitialized variable
@@ -11001,12 +11230,13 @@
           var argument1 = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, variable1.name);
           argument1.resolvedType = variable1.resolvedType;
           argument1.state = Skew.SymbolState.INITIALIZED;
+          argument1.range = variable1.range;
           symbol.$arguments.push(argument1);
-          statements.push(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable1), Skew.Node.createSymbolReference(argument1))));
+          statements.push(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable1), Skew.Node.createSymbolReference(argument1)).withRange(variable1.range)));
         }
 
         else {
-          statements.push(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable1), variable1.value)));
+          statements.push(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable1), variable1.value).withRange(variable1.range)));
           variable1.value = null;
         }
       }
@@ -14307,11 +14537,12 @@
     INLINE_FUNCTIONS: 4,
     JS_MANGLE: 5,
     JS_MINIFY: 6,
-    MESSAGE_LIMIT: 7,
-    OUTPUT_DIRECTORY: 8,
-    OUTPUT_FILE: 9,
-    RELEASE: 10,
-    TARGET: 11
+    JS_SOURCE_MAP: 7,
+    MESSAGE_LIMIT: 8,
+    OUTPUT_DIRECTORY: 9,
+    OUTPUT_FILE: 10,
+    RELEASE: 11,
+    TARGET: 12
   };
 
   Skew.Options = {};
@@ -14816,6 +15047,7 @@
 
   var RELEASE = false;
   Skew.HEX = "0123456789ABCDEF";
+  Skew.BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   Skew.operatorInfo = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.NodeKind.COMPLEMENT, new Skew.OperatorInfo("~", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO)), Skew.NodeKind.DECREMENT, new Skew.OperatorInfo("--", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO)), Skew.NodeKind.INCREMENT, new Skew.OperatorInfo("++", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO)), Skew.NodeKind.NEGATIVE, new Skew.OperatorInfo("-", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO_OR_ONE)), Skew.NodeKind.NOT, new Skew.OperatorInfo("!", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO)), Skew.NodeKind.POSITIVE, new Skew.OperatorInfo("+", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO_OR_ONE)), Skew.NodeKind.ADD, new Skew.OperatorInfo("+", Skew.Precedence.ADD, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO_OR_ONE)), Skew.NodeKind.BITWISE_AND, new Skew.OperatorInfo("&", Skew.Precedence.BITWISE_AND, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.BITWISE_OR, new Skew.OperatorInfo("|", Skew.Precedence.BITWISE_OR, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.BITWISE_XOR, new Skew.OperatorInfo("^", Skew.Precedence.BITWISE_XOR, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.COMPARE, new Skew.OperatorInfo("<=>", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.DIVIDE, new Skew.OperatorInfo("/", Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.EQUAL, new Skew.OperatorInfo("==", Skew.Precedence.EQUAL, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.GREATER_THAN, new Skew.OperatorInfo(">", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.GREATER_THAN_OR_EQUAL, new Skew.OperatorInfo(">=", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.IN, new Skew.OperatorInfo("in", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.IS, new Skew.OperatorInfo("is", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.LESS_THAN, new Skew.OperatorInfo("<", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.LESS_THAN_OR_EQUAL, new Skew.OperatorInfo("<=", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.LOGICAL_AND, new Skew.OperatorInfo("&&", Skew.Precedence.LOGICAL_AND, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.LOGICAL_OR, new Skew.OperatorInfo("||", Skew.Precedence.LOGICAL_OR, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.MULTIPLY, new Skew.OperatorInfo("*", Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.NOT_EQUAL, new Skew.OperatorInfo("!=", Skew.Precedence.EQUAL, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.POWER, new Skew.OperatorInfo("**", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.REMAINDER, new Skew.OperatorInfo("%", Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.SHIFT_LEFT, new Skew.OperatorInfo("<<", Skew.Precedence.SHIFT, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.SHIFT_RIGHT, new Skew.OperatorInfo(">>", Skew.Precedence.SHIFT, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.SUBTRACT, new Skew.OperatorInfo("-", Skew.Precedence.ADD, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO_OR_ONE)), Skew.NodeKind.ASSIGN, new Skew.OperatorInfo("=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_ADD, new Skew.OperatorInfo("+=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_BITWISE_AND, new Skew.OperatorInfo("&=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_BITWISE_OR, new Skew.OperatorInfo("|=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_BITWISE_XOR, new Skew.OperatorInfo("^=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_DIVIDE, new Skew.OperatorInfo("/=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_MULTIPLY, new Skew.OperatorInfo("*=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_POWER, new Skew.OperatorInfo("**=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_REMAINDER, new Skew.OperatorInfo("%=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_SHIFT_LEFT, new Skew.OperatorInfo("<<=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_SHIFT_RIGHT, new Skew.OperatorInfo(">>=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_SUBTRACT, new Skew.OperatorInfo("-=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_INDEX, new Skew.OperatorInfo("[]=", Skew.Precedence.MEMBER, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.TWO_OR_MORE)), Skew.NodeKind.INDEX, new Skew.OperatorInfo("[]", Skew.Precedence.MEMBER, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE_OR_MORE));
   Skew.argumentCounts = null;
   Skew.yy_accept = [Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.END_OF_FILE, Skew.TokenKind.ERROR, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT, Skew.TokenKind.ERROR, Skew.TokenKind.COMMENT, Skew.TokenKind.REMAINDER, Skew.TokenKind.BITWISE_AND, Skew.TokenKind.ERROR, Skew.TokenKind.LEFT_PARENTHESIS, Skew.TokenKind.RIGHT_PARENTHESIS, Skew.TokenKind.MULTIPLY, Skew.TokenKind.PLUS, Skew.TokenKind.COMMA, Skew.TokenKind.MINUS, Skew.TokenKind.DOT, Skew.TokenKind.DIVIDE, Skew.TokenKind.INT, Skew.TokenKind.INT, Skew.TokenKind.COLON, Skew.TokenKind.LESS_THAN, Skew.TokenKind.ASSIGN, Skew.TokenKind.GREATER_THAN, Skew.TokenKind.QUESTION_MARK, Skew.TokenKind.ERROR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACKET, Skew.TokenKind.RIGHT_BRACKET, Skew.TokenKind.BITWISE_XOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACE, Skew.TokenKind.BITWISE_OR, Skew.TokenKind.RIGHT_BRACE, Skew.TokenKind.TILDE, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.STRING, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.COMMENT, Skew.TokenKind.COMMENT, Skew.TokenKind.ASSIGN_REMAINDER, Skew.TokenKind.LOGICAL_AND, Skew.TokenKind.ASSIGN_BITWISE_AND, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.CHARACTER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.POWER, Skew.TokenKind.ASSIGN_MULTIPLY, Skew.TokenKind.INCREMENT, Skew.TokenKind.ASSIGN_PLUS, Skew.TokenKind.DECREMENT, Skew.TokenKind.ASSIGN_MINUS, Skew.TokenKind.DOT_DOT, Skew.TokenKind.ASSIGN_DIVIDE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.SHIFT_LEFT, Skew.TokenKind.LESS_THAN_OR_EQUAL, Skew.TokenKind.EQUAL, Skew.TokenKind.ARROW, Skew.TokenKind.GREATER_THAN_OR_EQUAL, Skew.TokenKind.SHIFT_RIGHT, Skew.TokenKind.ANNOTATION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_XOR, Skew.TokenKind.AS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IF, Skew.TokenKind.IN, Skew.TokenKind.IS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_OR, Skew.TokenKind.LOGICAL_OR, Skew.TokenKind.ASSIGN_POWER, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.INT_BINARY, Skew.TokenKind.INT_OCTAL, Skew.TokenKind.INT_HEX, Skew.TokenKind.ASSIGN_SHIFT_LEFT, Skew.TokenKind.COMPARE, Skew.TokenKind.ASSIGN_SHIFT_RIGHT, Skew.TokenKind.ANNOTATION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.DEF, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRY, Skew.TokenKind.VAR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.CASE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.ELSE, Skew.TokenKind.ENUM, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.NULL, Skew.TokenKind.OVER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRUE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.LIST, Skew.TokenKind.LIST_NEW, Skew.TokenKind.BREAK, Skew.TokenKind.CATCH, Skew.TokenKind.CLASS, Skew.TokenKind.CONST, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FALSE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.SUPER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.THROW, Skew.TokenKind.WHILE, Skew.TokenKind.SET, Skew.TokenKind.SET_NEW, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.RETURN, Skew.TokenKind.SWITCH, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.DEFAULT, Skew.TokenKind.DYNAMIC, Skew.TokenKind.FINALLY, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.CONTINUE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.INTERFACE, Skew.TokenKind.NAMESPACE, Skew.TokenKind.YY_INVALID_ACTION];
