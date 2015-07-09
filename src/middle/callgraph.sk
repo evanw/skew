@@ -1,7 +1,7 @@
 namespace Skew {
   class CallSite {
     const callNode Node
-    const enclosingFunction FunctionSymbol
+    const enclosingSymbol Symbol
   }
 
   class CallInfo {
@@ -29,11 +29,11 @@ namespace Skew {
         }
 
         for variable in symbol.variables {
-          visitNode(variable.value, null)
+          visitNode(variable.value, variable)
         }
       }
 
-      def visitNode(node Node, context FunctionSymbol) {
+      def visitNode(node Node, context Symbol) {
         if node != null {
           if node.children != null {
             for child in node.children {
@@ -48,7 +48,7 @@ namespace Skew {
         }
       }
 
-      def recordCallSite(symbol FunctionSymbol, node Node, context FunctionSymbol) {
+      def recordCallSite(symbol FunctionSymbol, node Node, context Symbol) {
         var index = symbolToInfoIndex.get(symbol.id, -1)
         var info = index < 0 ? CallInfo.new(symbol) : callInfo[index]
         if index < 0 {

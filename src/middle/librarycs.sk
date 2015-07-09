@@ -1,10 +1,14 @@
 namespace Skew {
   const NATIVE_LIBRARY_CS = "
+@spreads
+def @using(name string)
+
+@using(\"System.Diagnostics\")
 def assert(truth bool) {
-  dynamic.System.Diagnostics.Debug.Assert(truth)
+  dynamic.Debug.Assert(truth)
 }
 
-@rename(\"System.Math\")
+@using(\"System\")
 namespace Math {
 }
 
@@ -18,7 +22,7 @@ class double {
   }
 }
 
-@rename(\"System.Text.StringBuilder\")
+@using(\"System.Text\")
 class StringBuilder {
 }
 
@@ -63,7 +67,7 @@ namespace string {
   }
 }
 
-@rename(\"System.Collections.Generic.List\")
+@using(\"System.Collections.Generic\")
 class List {
   def isEmpty bool {
     return count == 0
@@ -133,7 +137,8 @@ class List {
   }
 }
 
-@rename(\"System.Collections.Generic.Dictionary\")
+@using(\"System.Collections.Generic\")
+@rename(\"Dictionary\")
 class StringMap {
   def {...}(key string, value T) StringMap<T> {
     (self as dynamic).Add(key, value)
@@ -161,7 +166,8 @@ class StringMap {
   }
 }
 
-@rename(\"System.Collections.Generic.Dictionary\")
+@using(\"System.Collections.Generic\")
+@rename(\"Dictionary\")
 class IntMap {
   def {...}(key int, value T) IntMap<T> {
     (self as dynamic).Add(key, value)

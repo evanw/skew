@@ -1335,6 +1335,7 @@ namespace Skew.Resolving {
           case Symbol.IS_PROTECTED { isValid = !symbol.isPrivate && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case Symbol.IS_RENAMED {}
           case Symbol.IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
+          case Symbol.SHOULD_SPREAD { isValid = symbol.kind == .FUNCTION_ANNOTATION }
         }
         if !isValid {
           log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
@@ -1352,6 +1353,11 @@ namespace Skew.Resolving {
         }
 
         symbol.flags |= flag
+
+        # Store the new name for later
+        if flag == Symbol.IS_RENAMED && children.count == 2 {
+          symbol.rename = children.last.asString
+        }
       }
 
       return true
@@ -2649,6 +2655,7 @@ namespace Skew.Resolving {
       "@protected": Symbol.IS_PROTECTED,
       "@rename": Symbol.IS_RENAMED,
       "@skip": Symbol.IS_SKIPPED,
+      "@spreads": Symbol.SHOULD_SPREAD,
     }
 
     def shouldCheckForSetter(node Node) bool {

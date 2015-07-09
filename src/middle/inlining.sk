@@ -20,11 +20,26 @@ namespace Skew.Inlining {
       inlineSymbol(graph, bodyCall)
     }
 
+    var spreadingAnnotations = info.symbol.spreadingAnnotations
     for i in 0..info.callSites.count {
       var callSite = info.callSites[i]
       if callSite != null {
         var node = callSite.callNode
         assert(node.children.count == info.symbol.arguments.count + 1)
+
+        # Propagate spreading annotations that must be preserved through inlining
+        if spreadingAnnotations != null {
+          var annotations = callSite.enclosingSymbol.annotations
+          if annotations == null {
+            annotations = []
+            callSite.enclosingSymbol.annotations = annotations
+          }
+          for annotation in spreadingAnnotations {
+            if !(annotation in annotations) {
+              annotations.append(annotation)
+            }
+          }
+        }
 
         # Make sure each call site is inlined once by setting the call site to
         # null. The call site isn't removed from the list since we don't want
@@ -154,9 +169,8 @@ namespace Skew.Inlining {
       # Create the edges in the graph
       for info in inliningInfo {
         for callSite in graph.callInfo[graph.symbolToInfoIndex[info.symbol.id]].callSites {
-          var function = callSite.enclosingFunction
-          if function != null && function.kind == .FUNCTION_GLOBAL {
-            var index = symbolToInfoIndex.get(function.id, -1)
+          if callSite.enclosingSymbol.kind == .FUNCTION_GLOBAL {
+            var index = symbolToInfoIndex.get(callSite.enclosingSymbol.id, -1)
             if index != -1 {
               inliningInfo[index].bodyCalls.append(info)
             }

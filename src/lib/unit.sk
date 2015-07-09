@@ -47,7 +47,7 @@ namespace Unit {
             run
           } catch error dynamic {
             if _failure == null {
-              _failure = Failure.new("", (error && error.stack || error) + "")
+              _failure = Failure.new("", ((error && error.stack || error) as dynamic) + "")
             }
           }
         }

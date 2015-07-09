@@ -57,6 +57,16 @@ namespace Skew {
         emitObject(object)
       }
 
+      # Emit using statements first
+      var usings = usingNames.keys
+      if !usings.isEmpty {
+        usings.sort((a, b) => a <=> b)
+        for using in usings {
+          emitPrefix("using " + using + ";\n")
+        }
+        emitPrefix("\n")
+      }
+
       # Emit a single file if requested
       if options.outputDirectory == "" {
         createSource(options.outputFile)
@@ -66,6 +76,29 @@ namespace Skew {
     @private {
       var previousNode Node = null
       var previousSymbol Symbol = null
+      var symbolsCheckedForUsing IntMap<int> = {}
+      var usingNames StringMap<int> = {}
+
+      def handleSymbol(symbol Symbol) {
+        if !symbol.kind.isLocal && !(symbol.id in symbolsCheckedForUsing) {
+          symbolsCheckedForUsing[symbol.id] = 0
+
+          if symbol.annotations != null {
+            for annotation in symbol.annotations {
+              if annotation.symbol != null && annotation.symbol.fullName == "using" {
+                var children = annotation.annotationValue.children
+                if children.count == 2 {
+                  usingNames[children.last.asString] = 0
+                }
+              }
+            }
+          }
+
+          if symbol.parent != null {
+            handleSymbol(symbol.parent)
+          }
+        }
+      }
 
       def emitNewlineBeforeSymbol(symbol Symbol) {
         if previousSymbol != null && (!previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
@@ -102,6 +135,7 @@ namespace Skew {
       }
 
       def emitObject(symbol ObjectSymbol) {
+        handleSymbol(symbol)
         if symbol.isImported {
           return
         }
@@ -179,6 +213,7 @@ namespace Skew {
       }
 
       def emitVariable(symbol VariableSymbol) {
+        handleSymbol(symbol)
         if symbol.isImported {
           return
         }
@@ -209,6 +244,7 @@ namespace Skew {
       }
 
       def emitFunction(symbol FunctionSymbol) {
+        handleSymbol(symbol)
         if symbol.isImported {
           return
         }
@@ -566,6 +602,12 @@ namespace Skew {
 
       def emitExpression(node Node, precedence Precedence) {
         var kind = node.kind
+        var symbol = node.symbol
+
+        if symbol != null {
+          handleSymbol(symbol)
+        }
+
         switch kind {
           case .TYPE, .LAMBDA_TYPE {
             emitType(node.resolvedType)
@@ -576,13 +618,12 @@ namespace Skew {
           }
 
           case .NAME {
-            var symbol = node.symbol
             emit(symbol != null ? fullName(symbol) : node.asString)
           }
 
           case .DOT {
             emitExpression(node.dotTarget, .MEMBER)
-            emit("." + (node.symbol != null ? mangleName(node.symbol) : node.asString))
+            emit("." + (symbol != null ? mangleName(symbol) : node.asString))
           }
 
           case .CONSTANT {
@@ -591,7 +632,6 @@ namespace Skew {
 
           case .CALL {
             var value = node.callValue
-            var symbol = node.symbol
 
             if value.kind == .SUPER {
               emit("base")
@@ -731,10 +771,9 @@ namespace Skew {
           }
 
           case .LAMBDA {
-            var function = node.symbol.asFunctionSymbol
-            emitArgumentList(function)
+            emitArgumentList(symbol.asFunctionSymbol)
             emit(" =>\n")
-            emitBlock(function.block)
+            emitBlock(symbol.asFunctionSymbol.block)
           }
 
           default {

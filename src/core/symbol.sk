@@ -104,18 +104,20 @@ namespace Skew {
     const IS_PROTECTED = 1 << 14
     const IS_RENAMED = 1 << 15
     const IS_SKIPPED = 1 << 16
+    const SHOULD_SPREAD = 1 << 17
 
     # Pass-specific flags
-    const IS_MERGED = 1 << 17
-    const IS_OBSOLETE = 1 << 18
-    const IS_PRIMARY_CONSTRUCTOR = 1 << 19
-    const IS_VIRTUAL = 1 << 20
+    const IS_MERGED = 1 << 18
+    const IS_OBSOLETE = 1 << 19
+    const IS_PRIMARY_CONSTRUCTOR = 1 << 20
+    const IS_VIRTUAL = 1 << 21
   }
 
   class Symbol {
     const id = createID
     var kind SymbolKind
     var name string
+    var rename = ""
     var range Range = null # The location of the name in the source code
     var parent Symbol = null # Automatically set by the merging step
     var resolvedType Type = null # Automatically set by the resolving step
@@ -145,6 +147,7 @@ namespace Skew {
     def isProtected bool  { return (flags & IS_PROTECTED) != 0 }
     def isRenamed bool    { return (flags & IS_RENAMED) != 0 }
     def isSkipped bool    { return (flags & IS_SKIPPED) != 0 }
+    def shouldSpread bool { return (flags & SHOULD_SPREAD) != 0 }
 
     # Pass-specific flags
     def isMerged bool             { return (flags & IS_MERGED) != 0 }
@@ -188,6 +191,21 @@ namespace Skew {
       return name
     }
 
+    def spreadingAnnotations List<Node> {
+      var result List<Node> = null
+      if annotations != null {
+        for annotation in annotations {
+          if annotation.symbol != null && annotation.symbol.shouldSpread {
+            if result == null {
+              result = []
+            }
+            result.append(annotation)
+          }
+        }
+      }
+      return result
+    }
+
     def mergeAnnotationsAndCommentsFrom(symbol Symbol) {
       if annotations == null {
         annotations = symbol.annotations
@@ -202,17 +220,7 @@ namespace Skew {
     }
 
     def nameWithRenaming string {
-      if isRenamed {
-        for annotation in annotations {
-          if annotation.symbol != null && annotation.symbol.fullName == "rename" {
-            var children = annotation.annotationValue.children
-            if children.count == 2 {
-              return children.last.content.asString
-            }
-          }
-        }
-      }
-      return name
+      return isRenamed ? rename : name
     }
   }
 

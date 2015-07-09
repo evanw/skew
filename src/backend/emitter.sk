@@ -22,8 +22,12 @@ namespace Skew {
         _code += text
       }
 
+      def emitPrefix(text string) {
+        _prefixe += text
+      }
+
       def createSource(name string) {
-        _sources.append(Source.new(name, _code))
+        _sources.append(Source.new(name, _prefixe + _code))
         _code = ""
       }
 
@@ -85,6 +89,7 @@ namespace Skew {
       }
 
       var _sources List<Source> = []
+      var _prefixe = ""
       var _code = ""
     }
   }

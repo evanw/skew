@@ -20,6 +20,7 @@ def @private
 def @protected
 def @rename(name string)
 def @skip
+def @spreads
 
 @skip if RELEASE
 def assert(truth bool)
