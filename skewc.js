@@ -3061,7 +3061,7 @@
   Skew.JavaScriptEmitter.prototype.emitContent = function(content) {
     switch (content.kind()) {
       case Skew.ContentKind.BOOL: {
-        this.emit(content.asBool().toString());
+        this.emit(this.mangle ? content.asBool() ? "!0" : "!1" : content.asBool().toString());
         break;
       }
 
@@ -3725,7 +3725,7 @@
         }
       }
 
-      else if (left.resolvedType === this.cache.intType && right.resolvedType === this.cache.intType && (kind === Skew.NodeKind.NOT_EQUAL || kind === Skew.NodeKind.EQUAL && canSwap === Skew.BooleanSwap.SWAP)) {
+      else if (this.cache.isInteger(left.resolvedType) && this.cache.isInteger(right.resolvedType) && (kind === Skew.NodeKind.NOT_EQUAL || kind === Skew.NodeKind.EQUAL && canSwap === Skew.BooleanSwap.SWAP)) {
         // "if (a != -1) c;" => "if (~a) c;"
         // "if (a == -1) c; else d;" => "if (~a) d; else c;"
         if (right.isInt() && right.asInt() === -1) {

@@ -777,7 +777,7 @@ namespace Skew {
 
       def emitContent(content Content) {
         switch content.kind {
-          case .BOOL { emit(content.asBool.toString) }
+          case .BOOL { emit(mangle ? content.asBool ? "!0" : "!1" : content.asBool.toString) }
           case .INT { emit(content.asInt.toString) }
           case .DOUBLE { emit(content.asDouble.toString) }
           case .STRING { emit(quoteString(content.asString, '"')) }
@@ -1335,7 +1335,7 @@ namespace Skew {
             }
           }
 
-          else if left.resolvedType == cache.intType && right.resolvedType == cache.intType && (kind == .NOT_EQUAL || kind == .EQUAL && canSwap == .SWAP) {
+          else if cache.isInteger(left.resolvedType) && cache.isInteger(right.resolvedType) && (kind == .NOT_EQUAL || kind == .EQUAL && canSwap == .SWAP) {
 
             # "if (a != -1) c;" => "if (~a) c;"
             # "if (a == -1) c; else d;" => "if (~a) d; else c;"
