@@ -51,6 +51,11 @@ check-cs: | build
 	cmp -s build/skewc2.cs build/skewc3.cs
 	rm build/skewc2.cs build/skewc3.cs build/skewc2.exe
 
+release: | build
+	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.min.js
+	gzip -c build/skewc.min.js > build/skewc.min.js.gz
+	du -h skewc.js build/skewc.min.js build/skewc.min.js.gz
+
 watch:
 	node_modules/.bin/watch src 'clear && make compile-browser'
 
