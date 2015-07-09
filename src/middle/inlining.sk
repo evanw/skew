@@ -130,7 +130,8 @@ namespace Skew.Inlining {
     # Otherwise, recursively search for substitutions in all child nodes
     var children = node.children
     if children != null {
-      for child in children {
+      for i in 0..children.count {
+        var child = children[i]
         if child != null {
           recursivelySubstituteArguments(child, arguments, values)
         }

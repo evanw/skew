@@ -83,8 +83,6 @@ namespace Math {
 @import
 class bool {
   def ! bool
-
-  @rename(\"ToString\") if TARGET == .CSHARP
   def toString string
 }
 

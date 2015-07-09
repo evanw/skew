@@ -19,16 +19,18 @@ namespace Skew {
       }
 
       def emit(text string) {
-        _code += text
+        _code.append(text)
       }
 
       def emitPrefix(text string) {
-        _prefixe += text
+        _prefix.append(text)
       }
 
       def createSource(name string) {
-        _sources.append(Source.new(name, _prefixe + _code))
-        _code = ""
+        _prefix.append(_code.toString)
+        _sources.append(Source.new(name, _prefix.toString))
+        _prefix = StringBuilder.new
+        _code = StringBuilder.new
       }
 
       def sortedObjects(global ObjectSymbol) List<ObjectSymbol> {
@@ -89,8 +91,8 @@ namespace Skew {
       }
 
       var _sources List<Source> = []
-      var _prefixe = ""
-      var _code = ""
+      var _prefix = StringBuilder.new
+      var _code = StringBuilder.new
     }
   }
 

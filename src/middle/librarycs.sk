@@ -26,6 +26,12 @@ class double {
 class StringBuilder {
 }
 
+class bool {
+  def toString string {
+    return self ? \"true\" : \"false\"
+  }
+}
+
 class string {
   def <=>(value string) int {
     return (self as dynamic).CompareTo(value)
