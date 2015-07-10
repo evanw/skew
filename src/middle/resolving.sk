@@ -680,8 +680,8 @@ namespace Skew.Resolving {
       # The "<=>" operator must return a numeric value for comparison with zero
       var count = symbol.arguments.count
       if symbol.name == "<=>" {
-        if returnType == null || !cache.isNumeric(returnType) {
-          log.semanticErrorComparisonOperatorNotNumeric(symbol.returnType != null ? symbol.returnType.range : symbol.range)
+        if returnType == null || returnType != cache.intType {
+          log.semanticErrorComparisonOperatorNotInt(symbol.returnType != null ? symbol.returnType.range : symbol.range)
           returnType = .DYNAMIC
         } else if count != 1 {
           log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
@@ -2516,38 +2516,35 @@ namespace Skew.Resolving {
       node.symbol = symbol
       checkAccess(node, node.internalRangeOrRange, scope)
 
-      # Special-case imported operators to avoid call substitution
-      if symbol.isImported {
-        # "<", ">", "<=", or ">="
-        if isComparison {
-          resolveChildrenAsParameterizedExpressions(node, scope)
-          node.resolvedType = cache.boolType
-          node.symbol = null
-          return
-        }
+      # "<", ">", "<=", or ">="
+      if isComparison && (symbol.isImported || type == cache.doubleType) {
+        resolveChildrenAsParameterizedExpressions(node, scope)
+        node.resolvedType = cache.boolType
+        node.symbol = null
+        return
+      }
 
-        # "<=>"
-        if kind == .COMPARE {
-          resolveChildrenAsParameterizedExpressions(node, scope)
-          node.kind = .SUBTRACT
-          node.resolvedType = type
-          node.symbol = null
-          return
-        }
+      # "<=>"
+      if kind == .COMPARE && symbol.isImported {
+        resolveChildrenAsParameterizedExpressions(node, scope)
+        node.kind = .SUBTRACT
+        node.resolvedType = cache.intType
+        node.symbol = null
+        return
+      }
 
-        # Don't replace the operator with a call if it's just used for type checking
-        if !symbol.isRenamed {
-          if reverseBinaryOrder {
-            node.children.reverse
-          }
-          if !resolveFunctionCall(node, scope, symbolType) {
-            resolveChildrenAsParameterizedExpressions(node, scope)
-          }
-          if reverseBinaryOrder {
-            node.children.reverse
-          }
-          return
+      # Don't replace the operator with a call if it's just used for type checking
+      if symbol.isImported && !symbol.isRenamed {
+        if reverseBinaryOrder {
+          node.children.reverse
         }
+        if !resolveFunctionCall(node, scope, symbolType) {
+          resolveChildrenAsParameterizedExpressions(node, scope)
+        }
+        if reverseBinaryOrder {
+          node.children.reverse
+        }
+        return
       }
 
       # Resolve the method call

@@ -97,8 +97,8 @@ namespace Skew {
       error(range, "Functions without arguments do not use parentheses")
     }
 
-    def semanticErrorComparisonOperatorNotNumeric(range Range) {
-      error(range, "The comparison operator must have a numeric return type")
+    def semanticErrorComparisonOperatorNotInt(range Range) {
+      error(range, "The comparison operator must have a return type of \"int\"")
     }
 
     def syntaxErrorBadDeclarationInsideEnum(range Range) {

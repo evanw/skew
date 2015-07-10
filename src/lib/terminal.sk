@@ -15,6 +15,18 @@ namespace Terminal {
     }
   }
 
+  const colorToEscapeCode IntMap<int> = {
+    Color.DEFAULT: 0,
+    Color.BOLD: 1,
+    Color.GRAY: 90,
+    Color.RED: 91,
+    Color.GREEN: 92,
+    Color.YELLOW: 93,
+    Color.BLUE: 94,
+    Color.MAGENTA: 95,
+    Color.CYAN: 96,
+  }
+
   def setColor(color Color)
   def width int
   def height int
@@ -46,18 +58,6 @@ namespace Terminal {
 
     def write(text string) {
       dynamic.process.stdout.write(text)
-    }
-
-    const colorToEscapeCode IntMap<int> = {
-      Color.DEFAULT: 0,
-      Color.BOLD: 1,
-      Color.GRAY: 90,
-      Color.RED: 91,
-      Color.GREEN: 92,
-      Color.YELLOW: 93,
-      Color.BLUE: 94,
-      Color.MAGENTA: 95,
-      Color.CYAN: 96,
     }
   }
 
@@ -97,18 +97,6 @@ namespace Terminal {
     @using("System")
     def write(text string) {
       dynamic.Console.Write(text)
-    }
-
-    const colorToEscapeCode IntMap<int> = {
-      Color.DEFAULT: 0,
-      Color.BOLD: 1,
-      Color.GRAY: 90,
-      Color.RED: 91,
-      Color.GREEN: 92,
-      Color.YELLOW: 93,
-      Color.BLUE: 94,
-      Color.MAGENTA: 95,
-      Color.CYAN: 96,
     }
   }
 }

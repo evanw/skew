@@ -4,6 +4,7 @@ const RELEASE = false
 
 enum Target {
   NONE
+  CPLUSPLUS
   CSHARP
   JAVASCRIPT
 }
@@ -133,7 +134,6 @@ class double {
   def +(x double) double
   def -(x double) double
   def /(x double) double
-  def <=>(x double) double
 
   def **=(x double)
   def *=(x double)
@@ -146,6 +146,10 @@ class double {
 
   @rename(\"ToString\") if TARGET == .CSHARP
   def toString string
+
+  def <=>(x double) int {
+    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)
+  }
 }
 
 @import
@@ -189,7 +193,7 @@ namespace string {
   def fromCodeUnits(x List<int>) string
 }
 
-@import if TARGET == .CSHARP
+@import if TARGET != .JAVASCRIPT
 class StringBuilder {
   @rename(\"Append\") if TARGET == .CSHARP
   def append(x string)

@@ -11,34 +11,6 @@ namespace Skew {
     def createEmitter(options CompilerOptions, cache TypeCache) Emitter { return null }
   }
 
-  class JavaScriptTarget : CompilerTarget {
-    over name string { return "JavaScript" }
-    over extension string { return "js" }
-    over runPostResolvePasses bool { return true }
-    over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
-    over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
-    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return JavaScriptEmitter.new(options, cache) }
-  }
-
-  class CSharpTarget : CompilerTarget {
-    over name string { return "C#" }
-    over extension string { return "cs" }
-    over runPostResolvePasses bool { return true }
-    over moveEverythingOffEnums bool { return true }
-    over requiresIntegerSwitchStatements bool { return true }
-    over supportsListForeach bool { return true }
-    over editOptions(options CompilerOptions) { options.define("TARGET", "CSHARP") }
-    over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-cs>", NATIVE_LIBRARY_CS)) }
-    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return CSharpEmitter.new(options, cache) }
-  }
-
-  class LispTreeTarget : CompilerTarget {
-    over name string { return "S-expression" }
-    over extension string { return "lisp" }
-    over runPostResolvePasses bool { return false }
-    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return LispTreeEmitter.new(options) }
-  }
-
   class Define {
     const name Range
     const value Range
