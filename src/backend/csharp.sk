@@ -885,15 +885,32 @@ namespace Skew {
             }
 
             else if kind.isBinary {
-              var info = operatorInfo[kind]
-              if info.precedence as int < precedence as int {
-                emit("(")
-              }
-              emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
-              emit(" " + info.text + " ")
-              emitExpression(node.binaryRight, info.precedence.incrementIfLeftAssociative(info.associativity))
-              if info.precedence as int < precedence as int {
+              var left = node.binaryLeft
+              var right = node.binaryRight
+
+              # Some types stupidly don't implement operator "=="
+              if (kind == .EQUAL || kind == .NOT_EQUAL) && left.resolvedType.isParameter && right.resolvedType.isParameter {
+                emit("EqualityComparer<")
+                emitType(left.resolvedType)
+                emit(">.Default.Equals(")
+                emitExpression(left, .COMMA)
+                emit(", ")
+                emitExpression(right, .COMMA)
                 emit(")")
+                usingNames["System.Collections.Generic"] = 0
+              }
+
+              else {
+                var info = operatorInfo[kind]
+                if info.precedence as int < precedence as int {
+                  emit("(")
+                }
+                emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity))
+                emit(" " + info.text + " ")
+                emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
+                if info.precedence as int < precedence as int {
+                  emit(")")
+                }
               }
             }
 

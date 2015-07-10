@@ -1,8 +1,5 @@
 namespace Skew {
   const NATIVE_LIBRARY_CS = "
-@spreads
-def @using(name string)
-
 @using(\"System.Diagnostics\")
 def assert(truth bool) {
   dynamic.Debug.Assert(truth)
@@ -53,9 +50,11 @@ class string {
     return result
   }
 
+  @using(\"System.Linq\")
+  @using(\"System\")
   def split(separator string) List<string> {
     var separators = [separator]
-    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Split(dynamic.System.Linq.Enumerable.ToArray(separators as dynamic), dynamic.System.StringSplitOptions.RemoveEmptyEntries))
+    return dynamic.Enumerable.ToList((self as dynamic).Split(dynamic.Enumerable.ToArray(separators as dynamic), dynamic.StringSplitOptions.RemoveEmptyEntries))
   }
 
   def join(parts List<string>) string {
@@ -92,14 +91,6 @@ class List {
     for i in 0..count {
       prepend(values[count - i - 1])
     }
-  }
-
-  def first T {
-    return self[0]
-  }
-
-  def last T {
-    return self[count - 1]
   }
 
   def removeFirst {

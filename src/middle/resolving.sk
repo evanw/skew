@@ -2390,14 +2390,7 @@ namespace Skew.Resolving {
         var commonType = cache.commonImplicitType(left.resolvedType, right.resolvedType)
         if commonType == null {
           log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
-        }
-
-        # Avoid "==" and "!=" on type parameters since target languages may have value type restrictions
-        else if commonType.isParameter {
-          log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, operatorInfo[kind].text, commonType)
-        }
-
-        else {
+        } else {
           node.resolvedType = cache.boolType
         }
 

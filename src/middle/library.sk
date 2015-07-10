@@ -23,6 +23,9 @@ def @rename(name string)
 def @skip
 def @spreads
 
+@spreads
+def @using(name string)
+
 @skip if RELEASE
 def assert(truth bool)
 
@@ -217,9 +220,16 @@ class List<T> {
   @rename(\"ForEach\") if TARGET == .CSHARP
   @rename(\"forEach\") if TARGET == .JAVASCRIPT
   def each(x fn(T))
+  @using(\"System.Linq\") if TARGET == .CSHARP {
+    @rename(\"SequenceEqual\") if TARGET == .CSHARP
+    def equals(x List<T>) bool
+    @rename(\"First\") if TARGET == .CSHARP
+    def first T
+    @rename(\"Last\") if TARGET == .CSHARP
+    def last T
+  }
   @rename(\"FindAll\") if TARGET == .CSHARP
   def filter(x fn(T) bool) List<T>
-  def first T
   @rename(\"Contains\") if TARGET == .CSHARP
   def in(x T) bool
   @rename(\"IndexOf\") if TARGET == .CSHARP
@@ -228,7 +238,6 @@ class List<T> {
   def insert(x int, value T)
   def insert(x int, values List<T>)
   def isEmpty bool
-  def last T
   @rename(\"LastIndexOf\") if TARGET == .CSHARP
   def lastIndexOf(x T) int
   @rename(\"ConvertAll\") if TARGET == .CSHARP

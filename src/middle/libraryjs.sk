@@ -165,6 +165,18 @@ class List {
       removeLast
     }
   }
+
+  def equals(other List<T>) bool {
+    if count != other.count {
+      return false
+    }
+    for i in 0..count {
+      if self[i] != other[i] {
+        return false
+      }
+    }
+    return true
+  }
 }
 
 namespace StringMap {

@@ -254,7 +254,7 @@ namespace Skew {
       # Check existing environments in the bucket for a match
       if bucket != null {
         for existing in bucket {
-          if areListsEqual(parameters, existing.parameters) && areListsEqual(substitutions, existing.substitutions) {
+          if parameters.equals(existing.parameters) && substitutions.equals(existing.substitutions) {
             return existing
           }
         }
@@ -279,7 +279,7 @@ namespace Skew {
       # Check existing types in the bucket for a match
       if bucket != null {
         for existing in bucket {
-          if areListsEqual(argumentTypes, existing.argumentTypes) && returnType == existing.returnType {
+          if argumentTypes.equals(existing.argumentTypes) && returnType == existing.returnType {
             return existing
           }
         }
