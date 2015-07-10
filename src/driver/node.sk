@@ -13,6 +13,7 @@ namespace Skew {
     OUTPUT_FILE
     RELEASE
     TARGET
+    VERBOSE
   }
 
   const DEFAULT_MESSAGE_LIMIT = 10
@@ -38,6 +39,11 @@ namespace Skew {
             log.commandLineErrorUnwritableFile(outputFile != null ? outputFile : outputDirectory, output.name)
             break
           }
+        }
+
+        # Print compilation statistics
+        if !log.hasErrors && options.verbose {
+          printWithColor(.GRAY, result.statistics + "\n")
         }
       }
     }
@@ -149,6 +155,7 @@ namespace Skew {
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
     parser.define(.BOOL, .RELEASE, "--release", "Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.")
+    parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.")
     parser.define(.INT, .MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is " + DEFAULT_MESSAGE_LIMIT.toString + ".")
     parser.define(.STRING_LIST, .DEFINE, "--define", "Override variable values at compile time.")
     parser.define(.BOOL, .JS_MANGLE, "--js-mangle", "Transforms emitted JavaScript to be as small as possible. The \"@export\" annotation prevents renaming a symbol.")
@@ -173,6 +180,7 @@ namespace Skew {
     # Set up the options for the compiler
     var options = CompilerOptions.new
     var releaseFlag = parser.boolForOption(.RELEASE, false)
+    options.verbose = parser.boolForOption(.VERBOSE, false)
     options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag)
     options.globalizeAllFunctions = parser.boolForOption(.GLOBALIZE_FUNCTIONS, releaseFlag)
     options.inlineAllFunctions = parser.boolForOption(.INLINE_FUNCTIONS, releaseFlag)

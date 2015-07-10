@@ -52,6 +52,7 @@ namespace Skew {
     var jsMangle = false
     var jsMinify = false
     var jsSourceMap = false
+    var verbose = false
     var outputDirectory = ""
     var outputFile = ""
     var target CompilerTarget = CompilerTarget.new
@@ -62,26 +63,104 @@ namespace Skew {
     }
   }
 
+  class Timer {
+    def start {
+      assert(!isStarted)
+      isStarted = true
+      startTime = Timestamp.seconds
+    }
+
+    def stop {
+      assert(isStarted)
+      isStarted = false
+      totalSeconds += Timestamp.seconds - startTime
+    }
+
+    def elapsedMilliseconds string {
+      return formatNumber(totalSeconds * 1000) + "ms"
+    }
+
+    def isZero bool {
+      return totalSeconds == 0
+    }
+
+    @private {
+      var isStarted = false
+      var startTime = 0.0
+      var totalSeconds = 0.0
+    }
+  }
+
   class CompilerResult {
     var cache = TypeCache.new
     var global = ObjectSymbol.new(.OBJECT_GLOBAL, "<global>")
-    var outputs List<Source> = null
-    var totalTime = 0.0
+    var outputs List<Source> = []
+
+    # Timers for help tuning performance
+    var callGraphTimer = Timer.new
+    var emitTimer = Timer.new
+    var foldingTimer = Timer.new
+    var globalizeTimer = Timer.new
+    var inliningTimer = Timer.new
+    var motionTimer = Timer.new
+    var optimizingTimer = Timer.new
+    var parsingTimer = Timer.new
+    var renamingTimer = Timer.new
+    var resolvingTimer = Timer.new
+    var tokenizingTimer = Timer.new
+    var totalTimer = Timer.new
+
+    def statistics string {
+      var builder = StringBuilder.new
+
+      # Line count
+      var totalLines = 0
+      for source in outputs { totalLines += source.lineCount }
+      builder.append("Output line count: " + totalLines.toString)
+
+      # Compilation time
+      builder.append("\nTotal compile time: " + totalTimer.elapsedMilliseconds)
+      if !tokenizingTimer.isZero { builder.append("\n  Tokenizing: " + tokenizingTimer.elapsedMilliseconds) }
+      if !parsingTimer.isZero { builder.append("\n  Parsing: " + parsingTimer.elapsedMilliseconds) }
+      if !resolvingTimer.isZero { builder.append("\n  Resolving: " + resolvingTimer.elapsedMilliseconds) }
+      if !optimizingTimer.isZero {
+        builder.append("\n  Optimizing: " + optimizingTimer.elapsedMilliseconds)
+        builder.append("\n    Building call graph: " + callGraphTimer.elapsedMilliseconds)
+        builder.append("\n    Globalize: " + globalizeTimer.elapsedMilliseconds)
+        builder.append("\n    Motion: " + motionTimer.elapsedMilliseconds)
+        builder.append("\n    Renaming: " + renamingTimer.elapsedMilliseconds)
+        builder.append("\n    Folding: " + foldingTimer.elapsedMilliseconds)
+        builder.append("\n    Inlining: " + inliningTimer.elapsedMilliseconds)
+      }
+      if !emitTimer.isZero { builder.append("\n  Emit: " + emitTimer.elapsedMilliseconds) }
+
+      # Sources
+      var totalBytes = 0
+      for source in outputs { totalBytes += source.contents.count }
+      builder.append("\nOutputs: " + outputs.count.toString + " (" + bytesToString(totalBytes) + " total)")
+      for source in outputs { builder.append("\n  " + source.name + ": " + bytesToString(source.contents.count)) }
+
+      return builder.toString
+    }
   }
 
   def compile(log Log, options CompilerOptions, sources List<Source>) CompilerResult {
-    var start = Timestamp.seconds
-    var debug = !RELEASE
+    var debug = false
     var result = CompilerResult.new
+    result.totalTimer.start
 
     options.target.includeSources(sources)
     options.target.editOptions(options)
     sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
 
     for source in sources {
+      result.tokenizingTimer.start
       var tokens = tokenize(log, source)
       prepareTokens(tokens)
+      result.tokenizingTimer.stop
+      result.parsingTimer.start
       parseFile(log, tokens, result.global)
+      result.parsingTimer.stop
     }
 
     # Merging pass, errors stop compilation
@@ -90,70 +169,78 @@ namespace Skew {
 
       # Resolving pass, errors stop compilation
       if !log.hasErrors {
+        result.resolvingTimer.start
         resolvingPass(log, result.global, result.cache, options)
-        if debug {
-          verifyHierarchy(result.global)
-        }
+        result.resolvingTimer.stop
+        if debug { verifyHierarchy(result.global) }
 
         # Prepare for emission, code is error-free at this point
         if !log.hasErrors {
           if options.target.runPostResolvePasses {
+            result.optimizingTimer.start
+
+            result.callGraphTimer.start
             var graph = CallGraph.new(result.global)
+            result.callGraphTimer.stop
 
             # Make certain functions global
+            result.globalizeTimer.start
             globalizingPass(result.global, graph, options)
-            if debug {
-              verifyHierarchy(result.global)
-            }
+            result.globalizeTimer.stop
+            if debug { verifyHierarchy(result.global) }
 
             # Move symbols around
+            result.motionTimer.start
             motionPass(result.global, options)
-            if debug {
-              verifyHierarchy(result.global)
-            }
+            result.motionTimer.stop
+            if debug { verifyHierarchy(result.global) }
 
             # Give overloaded functions unique names, rename operator overloads
+            result.renamingTimer.start
             renamingPass(result.global)
-            if debug {
-              verifyHierarchy(result.global)
-            }
+            result.renamingTimer.stop
+            if debug { verifyHierarchy(result.global) }
 
             # Partial evaluation before inlining to make more functions inlineable by removing dead code
             if options.foldAllConstants {
+              result.foldingTimer.start
               foldingPass(result.global, result.cache)
-              if debug {
-                verifyHierarchy(result.global)
-              }
+              result.foldingTimer.stop
+              if debug { verifyHierarchy(result.global) }
             }
 
             # Function inlining
             if options.inlineAllFunctions {
+              result.inliningTimer.start
               inliningPass(graph)
-              if debug {
-                verifyHierarchy(result.global)
-              }
+              result.inliningTimer.stop
+              if debug { verifyHierarchy(result.global) }
 
               # Partial evaluation after inlining will simplify inlined expressions
               if options.foldAllConstants {
+                result.foldingTimer.start
                 foldingPass(result.global, result.cache)
-                if debug {
-                  verifyHierarchy(result.global)
-                }
+                result.foldingTimer.stop
+                if debug { verifyHierarchy(result.global) }
               }
             }
+
+            result.optimizingTimer.stop
           }
 
           # Emit in the target language
           var emitter = options.target.createEmitter(options, result.cache)
           if emitter != null {
+            result.emitTimer.start
             emitter.visit(result.global)
+            result.emitTimer.stop
             result.outputs = emitter.sources
           }
         }
       }
     }
 
-    result.totalTime = Timestamp.seconds - start
+    result.totalTimer.stop
     return result
   }
 

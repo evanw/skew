@@ -45,6 +45,21 @@ namespace Skew {
       ? SplitPath.new(".", path)
       : SplitPath.new(path.slice(0, slashIndex), path.slice(slashIndex + 1))
   }
+
+  def formatNumber(number double) string {
+    return (Math.round(number * 10) / 10).toString
+  }
+
+  def bytesToString(bytes int) string {
+    const KB = 1 << 10
+    const MB = 1 << 20
+    const GB = 1 << 30
+    if bytes == 1 { return "1 byte" }
+    if bytes < KB { return bytes.toString + " bytes" }
+    if bytes < MB { return formatNumber(bytes / (KB as double)) + "kb" }
+    if bytes < GB { return formatNumber(bytes / (MB as double)) + "mb" }
+    return formatNumber(bytes / (GB as double)) + "gb"
+  }
 }
 
 namespace Skew.PrettyPrint {

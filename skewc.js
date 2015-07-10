@@ -154,6 +154,30 @@
     return slashIndex === -1 ? new Skew.SplitPath(".", path) : new Skew.SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0));
   };
 
+  Skew.bytesToString = function(bytes) {
+    var KB = 1 << 10;
+    var MB = 1 << 20;
+    var GB = 1 << 30;
+
+    if (bytes === 1) {
+      return "1 byte";
+    }
+
+    if (bytes < KB) {
+      return bytes.toString() + " bytes";
+    }
+
+    if (bytes < MB) {
+      return (Math.round(bytes / KB * 10) / 10).toString() + "kb";
+    }
+
+    if (bytes < GB) {
+      return (Math.round(bytes / MB * 10) / 10).toString() + "mb";
+    }
+
+    return (Math.round(bytes / GB * 10) / 10).toString() + "gb";
+  };
+
   Skew.areListsEqual1 = function(a, b) {
     if (a.length !== b.length) {
       return false;
@@ -402,18 +426,22 @@
   };
 
   Skew.compile = function(log, options, sources) {
-    var start = (typeof(performance) !== "undefined" && performance.now ? performance.now() : Date.now()) / 1000;
-    var debug = !RELEASE;
+    var debug = false;
     var result = new Skew.CompilerResult();
+    result.totalTimer.start();
     options.target.includeSources(sources);
     options.target.editOptions(options);
     sources.unshift(new Skew.Source("<native>", Skew.NATIVE_LIBRARY));
 
     for (var i = 0, list = sources, count = list.length; i < count; ++i) {
       var source = list[i];
+      result.tokenizingTimer.start();
       var tokens = Skew.tokenize(log, source);
       Skew.prepareTokens(tokens);
+      result.tokenizingTimer.stop();
+      result.parsingTimer.start();
       Skew.parseFile(log, tokens, result.global);
+      result.parsingTimer.stop();
     }
 
     // Merging pass, errors stop compilation
@@ -422,7 +450,9 @@
 
       // Resolving pass, errors stop compilation
       if (!log.hasErrors()) {
+        result.resolvingTimer.start();
         Skew.resolvingPass(log, result.global, result.cache, options);
+        result.resolvingTimer.stop();
 
         if (debug) {
           Skew.verifyHierarchy1(result.global);
@@ -431,24 +461,33 @@
         // Prepare for emission, code is error-free at this point
         if (!log.hasErrors()) {
           if (options.target.runPostResolvePasses()) {
+            result.optimizingTimer.start();
+            result.callGraphTimer.start();
             var graph = new Skew.CallGraph(result.global);
+            result.callGraphTimer.stop();
 
             // Make certain functions global
+            result.globalizeTimer.start();
             Skew.globalizingPass(result.global, graph, options);
+            result.globalizeTimer.stop();
 
             if (debug) {
               Skew.verifyHierarchy1(result.global);
             }
 
             // Move symbols around
+            result.motionTimer.start();
             Skew.motionPass(result.global, options);
+            result.motionTimer.stop();
 
             if (debug) {
               Skew.verifyHierarchy1(result.global);
             }
 
             // Give overloaded functions unique names, rename operator overloads
+            result.renamingTimer.start();
             Skew.renamingPass(result.global);
+            result.renamingTimer.stop();
 
             if (debug) {
               Skew.verifyHierarchy1(result.global);
@@ -456,7 +495,9 @@
 
             // Partial evaluation before inlining to make more functions inlineable by removing dead code
             if (options.foldAllConstants) {
+              result.foldingTimer.start();
               new Skew.Folding.ConstantFolder(result.cache, new Skew.Folding.ConstantCache()).visitObject(result.global);
+              result.foldingTimer.stop();
 
               if (debug) {
                 Skew.verifyHierarchy1(result.global);
@@ -465,7 +506,9 @@
 
             // Function inlining
             if (options.inlineAllFunctions) {
+              result.inliningTimer.start();
               Skew.inliningPass(graph);
+              result.inliningTimer.stop();
 
               if (debug) {
                 Skew.verifyHierarchy1(result.global);
@@ -473,27 +516,33 @@
 
               // Partial evaluation after inlining will simplify inlined expressions
               if (options.foldAllConstants) {
+                result.foldingTimer.start();
                 new Skew.Folding.ConstantFolder(result.cache, new Skew.Folding.ConstantCache()).visitObject(result.global);
+                result.foldingTimer.stop();
 
                 if (debug) {
                   Skew.verifyHierarchy1(result.global);
                 }
               }
             }
+
+            result.optimizingTimer.stop();
           }
 
           // Emit in the target language
           var emitter = options.target.createEmitter(options, result.cache);
 
           if (emitter !== null) {
+            result.emitTimer.start();
             emitter.visit(result.global);
+            result.emitTimer.stop();
             result.outputs = emitter.sources();
           }
         }
       }
     }
 
-    result.totalTime = (typeof(performance) !== "undefined" && performance.now ? performance.now() : Date.now()) / 1000 - start;
+    result.totalTimer.stop();
     return result;
   };
 
@@ -645,6 +694,11 @@
             break;
           }
         }
+
+        // Print compilation statistics
+        if (!log.hasErrors() && options.verbose) {
+          Skew.printWithColor(Terminal.Color.GRAY, result.statistics() + "\n");
+        }
       }
     }
 
@@ -774,6 +828,7 @@
     parser.define(Skew.Options.Type.STRING, Skew.Option.OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.");
     parser.define(Skew.Options.Type.STRING, Skew.Option.OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.RELEASE, "--release", "Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.VERBOSE, "--verbose", "Prints out information about the compilation.");
     parser.define(Skew.Options.Type.INT, Skew.Option.MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is " + Skew.DEFAULT_MESSAGE_LIMIT.toString() + ".");
     parser.define(Skew.Options.Type.STRING_LIST, Skew.Option.DEFINE, "--define", "Override variable values at compile time.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_MANGLE, "--js-mangle", "Transforms emitted JavaScript to be as small as possible. The \"@export\" annotation prevents renaming a symbol.");
@@ -799,6 +854,7 @@
     // Set up the options for the compiler
     var options = new Skew.CompilerOptions();
     var releaseFlag = parser.boolForOption(Skew.Option.RELEASE, false);
+    options.verbose = parser.boolForOption(Skew.Option.VERBOSE, false);
     options.foldAllConstants = parser.boolForOption(Skew.Option.FOLD_CONSTANTS, releaseFlag);
     options.globalizeAllFunctions = parser.boolForOption(Skew.Option.GLOBALIZE_FUNCTIONS, releaseFlag);
     options.inlineAllFunctions = parser.boolForOption(Skew.Option.INLINE_FUNCTIONS, releaseFlag);
@@ -8386,6 +8442,13 @@
     return new Skew.Range(this, 0, this.contents.length);
   };
 
+  Skew.Source.prototype.lineCount = function() {
+    this.computeLineOffsets();
+
+    // Ignore the line offset at 0
+    return this.lineOffsets.length - 1 | 0;
+  };
+
   Skew.Source.prototype.contentsOfLine = function(line) {
     this.computeLineOffsets();
 
@@ -8626,6 +8689,7 @@
     this.jsMangle = false;
     this.jsMinify = false;
     this.jsSourceMap = false;
+    this.verbose = false;
     this.outputDirectory = "";
     this.outputFile = "";
     this.target = new Skew.CompilerTarget();
@@ -8636,11 +8700,108 @@
     this.defines[name] = new Skew.Define(range.slice(9, 9 + name.length | 0), range.fromEnd(value.length));
   };
 
+  Skew.Timer = function() {
+    this.isStarted = false;
+    this.startTime = 0;
+    this.totalSeconds = 0;
+  };
+
+  Skew.Timer.prototype.start = function() {
+    assert(!this.isStarted);
+    this.isStarted = true;
+    this.startTime = (typeof(performance) !== "undefined" && performance.now ? performance.now() : Date.now()) / 1000;
+  };
+
+  Skew.Timer.prototype.stop = function() {
+    assert(this.isStarted);
+    this.isStarted = false;
+    this.totalSeconds += (typeof(performance) !== "undefined" && performance.now ? performance.now() : Date.now()) / 1000 - this.startTime;
+  };
+
+  Skew.Timer.prototype.elapsedMilliseconds = function() {
+    return (Math.round(this.totalSeconds * 1000 * 10) / 10).toString() + "ms";
+  };
+
+  Skew.Timer.prototype.isZero = function() {
+    return this.totalSeconds === 0;
+  };
+
   Skew.CompilerResult = function() {
     this.cache = new Skew.TypeCache();
     this.global = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_GLOBAL, "<global>");
-    this.outputs = null;
-    this.totalTime = 0;
+    this.outputs = [];
+    this.callGraphTimer = new Skew.Timer();
+    this.emitTimer = new Skew.Timer();
+    this.foldingTimer = new Skew.Timer();
+    this.globalizeTimer = new Skew.Timer();
+    this.inliningTimer = new Skew.Timer();
+    this.motionTimer = new Skew.Timer();
+    this.optimizingTimer = new Skew.Timer();
+    this.parsingTimer = new Skew.Timer();
+    this.renamingTimer = new Skew.Timer();
+    this.resolvingTimer = new Skew.Timer();
+    this.tokenizingTimer = new Skew.Timer();
+    this.totalTimer = new Skew.Timer();
+  };
+
+  Skew.CompilerResult.prototype.statistics = function() {
+    var builder = new StringBuilder();
+
+    // Line count
+    var totalLines = 0;
+
+    for (var i = 0, list = this.outputs, count = list.length; i < count; ++i) {
+      var source = list[i];
+      totalLines += source.lineCount();
+    }
+
+    builder.append("Output line count: " + totalLines.toString());
+
+    // Compilation time
+    builder.append("\nTotal compile time: " + this.totalTimer.elapsedMilliseconds());
+
+    if (!this.tokenizingTimer.isZero()) {
+      builder.append("\n  Tokenizing: " + this.tokenizingTimer.elapsedMilliseconds());
+    }
+
+    if (!this.parsingTimer.isZero()) {
+      builder.append("\n  Parsing: " + this.parsingTimer.elapsedMilliseconds());
+    }
+
+    if (!this.resolvingTimer.isZero()) {
+      builder.append("\n  Resolving: " + this.resolvingTimer.elapsedMilliseconds());
+    }
+
+    if (!this.optimizingTimer.isZero()) {
+      builder.append("\n  Optimizing: " + this.optimizingTimer.elapsedMilliseconds());
+      builder.append("\n    Building call graph: " + this.callGraphTimer.elapsedMilliseconds());
+      builder.append("\n    Globalize: " + this.globalizeTimer.elapsedMilliseconds());
+      builder.append("\n    Motion: " + this.motionTimer.elapsedMilliseconds());
+      builder.append("\n    Renaming: " + this.renamingTimer.elapsedMilliseconds());
+      builder.append("\n    Folding: " + this.foldingTimer.elapsedMilliseconds());
+      builder.append("\n    Inlining: " + this.inliningTimer.elapsedMilliseconds());
+    }
+
+    if (!this.emitTimer.isZero()) {
+      builder.append("\n  Emit: " + this.emitTimer.elapsedMilliseconds());
+    }
+
+    // Sources
+    var totalBytes = 0;
+
+    for (var i1 = 0, list1 = this.outputs, count1 = list1.length; i1 < count1; ++i1) {
+      var source1 = list1[i1];
+      totalBytes += source1.contents.length;
+    }
+
+    builder.append("\nOutputs: " + this.outputs.length.toString() + " (" + Skew.bytesToString(totalBytes) + " total)");
+
+    for (var i2 = 0, list2 = this.outputs, count2 = list2.length; i2 < count2; ++i2) {
+      var source2 = list2[i2];
+      builder.append("\n  " + source2.name + ": " + Skew.bytesToString(source2.contents.length));
+    }
+
+    return builder.toString();
   };
 
   Skew.Folding = {};
@@ -14542,7 +14703,8 @@
     OUTPUT_DIRECTORY: 9,
     OUTPUT_FILE: 10,
     RELEASE: 11,
-    TARGET: 12
+    TARGET: 12,
+    VERBOSE: 13
   };
 
   Skew.Options = {};
@@ -15045,7 +15207,6 @@
     return values;
   };
 
-  var RELEASE = false;
   Skew.HEX = "0123456789ABCDEF";
   Skew.BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   Skew.operatorInfo = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.NodeKind.COMPLEMENT, new Skew.OperatorInfo("~", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO)), Skew.NodeKind.DECREMENT, new Skew.OperatorInfo("--", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO)), Skew.NodeKind.INCREMENT, new Skew.OperatorInfo("++", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO)), Skew.NodeKind.NEGATIVE, new Skew.OperatorInfo("-", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO_OR_ONE)), Skew.NodeKind.NOT, new Skew.OperatorInfo("!", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO)), Skew.NodeKind.POSITIVE, new Skew.OperatorInfo("+", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO_OR_ONE)), Skew.NodeKind.ADD, new Skew.OperatorInfo("+", Skew.Precedence.ADD, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO_OR_ONE)), Skew.NodeKind.BITWISE_AND, new Skew.OperatorInfo("&", Skew.Precedence.BITWISE_AND, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.BITWISE_OR, new Skew.OperatorInfo("|", Skew.Precedence.BITWISE_OR, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.BITWISE_XOR, new Skew.OperatorInfo("^", Skew.Precedence.BITWISE_XOR, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.COMPARE, new Skew.OperatorInfo("<=>", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.DIVIDE, new Skew.OperatorInfo("/", Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.EQUAL, new Skew.OperatorInfo("==", Skew.Precedence.EQUAL, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.GREATER_THAN, new Skew.OperatorInfo(">", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.GREATER_THAN_OR_EQUAL, new Skew.OperatorInfo(">=", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.IN, new Skew.OperatorInfo("in", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.IS, new Skew.OperatorInfo("is", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.LESS_THAN, new Skew.OperatorInfo("<", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.LESS_THAN_OR_EQUAL, new Skew.OperatorInfo("<=", Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.LOGICAL_AND, new Skew.OperatorInfo("&&", Skew.Precedence.LOGICAL_AND, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.LOGICAL_OR, new Skew.OperatorInfo("||", Skew.Precedence.LOGICAL_OR, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.MULTIPLY, new Skew.OperatorInfo("*", Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.NOT_EQUAL, new Skew.OperatorInfo("!=", Skew.Precedence.EQUAL, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.POWER, new Skew.OperatorInfo("**", Skew.Precedence.UNARY_PREFIX, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.REMAINDER, new Skew.OperatorInfo("%", Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.SHIFT_LEFT, new Skew.OperatorInfo("<<", Skew.Precedence.SHIFT, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.SHIFT_RIGHT, new Skew.OperatorInfo(">>", Skew.Precedence.SHIFT, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.SUBTRACT, new Skew.OperatorInfo("-", Skew.Precedence.ADD, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ZERO_OR_ONE)), Skew.NodeKind.ASSIGN, new Skew.OperatorInfo("=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.FIXED, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_ADD, new Skew.OperatorInfo("+=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_BITWISE_AND, new Skew.OperatorInfo("&=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_BITWISE_OR, new Skew.OperatorInfo("|=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_BITWISE_XOR, new Skew.OperatorInfo("^=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_DIVIDE, new Skew.OperatorInfo("/=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_MULTIPLY, new Skew.OperatorInfo("*=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_POWER, new Skew.OperatorInfo("**=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_REMAINDER, new Skew.OperatorInfo("%=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_SHIFT_LEFT, new Skew.OperatorInfo("<<=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_SHIFT_RIGHT, new Skew.OperatorInfo(">>=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_SUBTRACT, new Skew.OperatorInfo("-=", Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE)), Skew.NodeKind.ASSIGN_INDEX, new Skew.OperatorInfo("[]=", Skew.Precedence.MEMBER, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.TWO_OR_MORE)), Skew.NodeKind.INDEX, new Skew.OperatorInfo("[]", Skew.Precedence.MEMBER, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, Skew.ArgumentCount.ONE_OR_MORE));

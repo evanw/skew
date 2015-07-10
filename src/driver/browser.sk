@@ -27,7 +27,7 @@ namespace Skew {
     outputTree.value = Config.get(.SHOW_SYNTAX_TREE) ? LispTreeEmitter.dump(result.global) : ""
     outputCode.value = log.hasErrors ? "" : result.outputs.count == 1 ? result.outputs.first.contents :
       "\n".join(result.outputs.map<string>(source => "[" + source.name + "]\n" + source.contents))
-    compileTime.textContent = ((result.totalTime * 1000) as dynamic).toFixed(1) + "ms"
+    compileTime.textContent = result.totalTimer.elapsedMilliseconds
   }
 
   def createSelect<T>(names List<string>, values List<T>, get fn() int, set fn(int)) dynamic {

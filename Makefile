@@ -22,9 +22,11 @@ SOURCES_TEST += tests/simple.sk
 
 JS_FLAGS += --target=js
 JS_FLAGS += --inline-functions
+JS_FLAGS += --verbose
 
 CS_FLAGS += --target=cs
 CS_FLAGS += --inline-functions
+CS_FLAGS += --verbose
 
 default: compile-skewc compile-browser
 
@@ -75,3 +77,6 @@ test-cs:
 	node skewc.js $(SOURCES_TEST) $(CS_FLAGS) --output-file=build/test.cs
 	mcs -debug build/test.cs
 	mono --debug build/test.exe
+
+clean:
+	rm -fr build
