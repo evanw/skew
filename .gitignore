@@ -2,3 +2,4 @@
 *.pyc
 *.js
 node_modules
+/build

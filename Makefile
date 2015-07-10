@@ -58,10 +58,11 @@ check-cs: | build
 	mono build/skewc2.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc3.cs
 	cmp -s build/skewc2.cs build/skewc3.cs
 
-release: | build
+release: compile-browser | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.min.js
-	gzip -c build/skewc.min.js > build/skewc.min.js.gz
-	du -h skewc.js build/skewc.min.js build/skewc.min.js.gz
+	node skewc.js $(SOURCES_BROWSER) $(JS_FLAGS) --release --output-file=build/browser.min.js
+	gzip -c build/browser.min.js > build/browser.min.js.gz
+	du -h build/browser.js build/browser.min.js build/browser.min.js.gz
 
 watch:
 	node_modules/.bin/watch src 'clear && make compile-browser'
