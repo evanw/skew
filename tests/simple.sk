@@ -3599,5 +3599,18 @@ class Foo<T> {
         ~~~
 ")
 
+test("
+def main {
+  List<bool>.new.sort((a, b) => a <=> b)
+  List<int>.new.sort((a, b) => a <=> b)
+  List<double>.new.sort((a, b) => a <=> b)
+  List<string>.new.sort((a, b) => a <=> b)
+}
+", "
+<stdin>:2:35: error: \"<=>\" is not declared on type \"bool\"
+  List<bool>.new.sort((a, b) => a <=> b)
+                                  ~~~
+")
+
   }
 }

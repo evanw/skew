@@ -1,6 +1,6 @@
 
 namespace Skew {
-  var targets = [JavaScriptTarget.new, CSharpTarget.new]
+  var targets = [JavaScriptTarget.new, CSharpTarget.new, CPlusPlusTarget.new]
 
   var compileTime = document.getElementById("compileTime")
   var input = document.getElementById("input")
