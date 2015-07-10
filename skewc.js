@@ -2130,6 +2130,10 @@
 
           // Some types stupidly don't implement operator "=="
           if ((kind === Skew.NodeKind.EQUAL || kind === Skew.NodeKind.NOT_EQUAL) && left.resolvedType.isParameter() && right.resolvedType.isParameter()) {
+            if (kind === Skew.NodeKind.NOT_EQUAL) {
+              this.emit("!");
+            }
+
             this.emit("EqualityComparer<");
             this.emitType(left.resolvedType);
             this.emit(">.Default.Equals(");

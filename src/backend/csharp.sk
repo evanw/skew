@@ -890,6 +890,9 @@ namespace Skew {
 
               # Some types stupidly don't implement operator "=="
               if (kind == .EQUAL || kind == .NOT_EQUAL) && left.resolvedType.isParameter && right.resolvedType.isParameter {
+                if kind == .NOT_EQUAL {
+                  emit("!")
+                }
                 emit("EqualityComparer<")
                 emitType(left.resolvedType)
                 emit(">.Default.Equals(")
