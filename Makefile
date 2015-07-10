@@ -44,6 +44,12 @@ replace: | build
 	mv build/skewc3.js skewc.js
 	rm build/skewc2.js
 
+check-js: | build
+	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.min.js --release
+	node build/skewc.min.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc2.min.js --release
+	node build/skewc2.min.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc3.min.js --release
+	cmp -s build/skewc2.min.js build/skewc3.min.js
+
 check-cs: | build
 	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
 	mcs build/skewc.cs
@@ -51,7 +57,6 @@ check-cs: | build
 	mcs build/skewc2.cs
 	mono build/skewc2.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc3.cs
 	cmp -s build/skewc2.cs build/skewc3.cs
-	rm build/skewc2.cs build/skewc3.cs build/skewc2.exe
 
 release: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.min.js

@@ -512,7 +512,7 @@ namespace Skew.Resolving {
           resolveNode(update, symbol.scope, null)
         }
 
-        else if cache.isList(value.resolvedType) && !options.target.supportsListForEach {
+        else if cache.isList(value.resolvedType) && !options.target.supportsListForeach {
           # Create the index variable
           var index = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("i"))
           index.resolvedType = cache.intType

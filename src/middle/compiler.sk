@@ -5,7 +5,7 @@ namespace Skew {
     def runPostResolvePasses bool { return false }
     def moveEverythingOffEnums bool { return false }
     def requiresIntegerSwitchStatements bool { return false }
-    def supportsListForEach bool { return false }
+    def supportsListForeach bool { return false }
     def editOptions(options CompilerOptions) {}
     def includeSources(sources List<Source>) {}
     def createEmitter(options CompilerOptions, cache TypeCache) Emitter { return null }
@@ -26,7 +26,7 @@ namespace Skew {
     over runPostResolvePasses bool { return true }
     over moveEverythingOffEnums bool { return true }
     over requiresIntegerSwitchStatements bool { return true }
-    over supportsListForEach bool { return true }
+    over supportsListForeach bool { return true }
     over editOptions(options CompilerOptions) { options.define("TARGET", "CSHARP") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-cs>", NATIVE_LIBRARY_CS)) }
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return CSharpEmitter.new(options, cache) }
@@ -113,19 +113,14 @@ namespace Skew {
     def statistics string {
       var builder = StringBuilder.new
 
-      # Line count
-      var totalLines = 0
-      for source in outputs { totalLines += source.lineCount }
-      builder.append("Output line count: " + totalLines.toString)
-
       # Compilation time
-      builder.append("\nTotal compile time: " + totalTimer.elapsedMilliseconds)
+      builder.append("Total compile time: " + totalTimer.elapsedMilliseconds)
       if !tokenizingTimer.isZero { builder.append("\n  Tokenizing: " + tokenizingTimer.elapsedMilliseconds) }
       if !parsingTimer.isZero { builder.append("\n  Parsing: " + parsingTimer.elapsedMilliseconds) }
       if !resolvingTimer.isZero { builder.append("\n  Resolving: " + resolvingTimer.elapsedMilliseconds) }
       if !optimizingTimer.isZero {
         builder.append("\n  Optimizing: " + optimizingTimer.elapsedMilliseconds)
-        builder.append("\n    Building call graph: " + callGraphTimer.elapsedMilliseconds)
+        builder.append("\n    Call graph: " + callGraphTimer.elapsedMilliseconds)
         builder.append("\n    Globalize: " + globalizeTimer.elapsedMilliseconds)
         builder.append("\n    Motion: " + motionTimer.elapsedMilliseconds)
         builder.append("\n    Renaming: " + renamingTimer.elapsedMilliseconds)
@@ -136,9 +131,17 @@ namespace Skew {
 
       # Sources
       var totalBytes = 0
-      for source in outputs { totalBytes += source.contents.count }
-      builder.append("\nOutputs: " + outputs.count.toString + " (" + bytesToString(totalBytes) + " total)")
-      for source in outputs { builder.append("\n  " + source.name + ": " + bytesToString(source.contents.count)) }
+      var totalLines = 0
+      for source in outputs {
+        totalBytes += source.contents.count
+        totalLines += source.lineCount
+      }
+      builder.append("\nOutputs: " + outputs.count.toString + " file" + PrettyPrint.plural(outputs.count) +
+        " (" + bytesToString(totalBytes) + ", " + totalLines.toString + " line" + PrettyPrint.plural(totalLines) + ")")
+      for source in outputs {
+        var lines = source.lineCount
+        builder.append("\n  " + source.name + " (" + bytesToString(source.contents.count) + ", " + lines.toString + " line" + PrettyPrint.plural(lines) + ")")
+      }
 
       return builder.toString
     }

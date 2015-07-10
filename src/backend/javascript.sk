@@ -261,7 +261,7 @@ namespace Skew {
         }
 
         # Collect all reserved names together into one big set for querying
-        var reservedNames StringMap<int> = {}
+        var reservedNames StringMap<int> = isKeyword.clone
         for symbol in allSymbols {
           if !shouldRenameSymbol(symbol) {
             reservedNames[symbol.name] = 0

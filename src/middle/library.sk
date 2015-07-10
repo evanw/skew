@@ -165,6 +165,7 @@ class string {
   @rename(\"IndexOf\") if TARGET == .CSHARP
   def indexOf(x string) int
   def join(x List<string>) string
+  @rename(\"LastIndexOf\") if TARGET == .CSHARP
   def lastIndexOf(x string) int
   def repeat(x int) string
   @rename(\"Replace\") if TARGET == .CSHARP

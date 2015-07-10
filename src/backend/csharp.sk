@@ -719,7 +719,7 @@ namespace Skew {
               emit("base")
               if symbol.kind != .FUNCTION_CONSTRUCTOR {
                 emit(".")
-                mangleName(symbol)
+                emit(mangleName(symbol))
               }
             }
 
