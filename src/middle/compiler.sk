@@ -6,6 +6,7 @@ namespace Skew {
     def moveEverythingOffEnums bool { return false }
     def requiresIntegerSwitchStatements bool { return false }
     def supportsListForeach bool { return false }
+    def supportsNestedTypes bool { return false }
     def editOptions(options CompilerOptions) {}
     def includeSources(sources List<Source>) {}
     def createEmitter(options CompilerOptions, cache TypeCache) Emitter { return null }

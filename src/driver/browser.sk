@@ -22,6 +22,7 @@ namespace Skew {
     if Config.get(.MANGLE) { options.jsMangle = true }
     if Config.get(.MINIFY) { options.jsMinify = true }
     if Config.get(.SOURCE_MAP) { options.jsSourceMap = true }
+    if Config.get(.MULTIPLE_OUTPUTS) { options.outputDirectory = "output" }
     var result = compile(log, options, [source])
     outputLog.value = log.toString
     outputTree.value = Config.get(.SHOW_SYNTAX_TREE) ? LispTreeEmitter.dump(result.global) : ""
@@ -73,6 +74,7 @@ namespace Skew {
     optionArea.appendChild(createCheckbox("Globalize", .GLOBALIZE))
     optionArea.appendChild(createCheckbox("Syntax tree", .SHOW_SYNTAX_TREE))
     optionArea.appendChild(createCheckbox("Source map", .SOURCE_MAP))
+    optionArea.appendChild(createCheckbox("Multiple outputs", .MULTIPLE_OUTPUTS))
     input.oninput = => update
     update
   }
@@ -83,6 +85,7 @@ namespace Skew {
     GLOBALIZE
     MANGLE
     MINIFY
+    MULTIPLE_OUTPUTS
     SHOW_SYNTAX_TREE
     SOURCE_MAP
   }

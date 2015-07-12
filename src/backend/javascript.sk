@@ -3,6 +3,7 @@ namespace Skew {
     over name string { return "JavaScript" }
     over extension string { return "js" }
     over runPostResolvePasses bool { return true }
+    over supportsNestedTypes bool { return true }
     over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return JavaScriptEmitter.new(options, cache) }

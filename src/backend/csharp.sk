@@ -6,6 +6,7 @@ namespace Skew {
     over moveEverythingOffEnums bool { return true }
     over requiresIntegerSwitchStatements bool { return true }
     over supportsListForeach bool { return true }
+    over supportsNestedTypes bool { return true }
     over editOptions(options CompilerOptions) { options.define("TARGET", "CSHARP") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-cs>", NATIVE_LIBRARY_CS)) }
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return CSharpEmitter.new(options, cache) }
@@ -49,6 +50,11 @@ namespace Skew {
       # All code in C# is inside objects, so just emit objects recursively
       var emitIndividualFiles = options.outputDirectory != ""
       for object in collectObjects(global) {
+        # Nested objects will be emitted by their parent
+        if object.parent != null && object.parent.kind == .OBJECT_CLASS {
+          continue
+        }
+
         emitObject(object)
 
         # Emit each object into its own file if requested
@@ -403,11 +409,11 @@ namespace Skew {
           emit(returnType != null ? "System.Func" : "System.Action")
           if !argumentTypes.isEmpty || returnType != null {
             emit("<")
-            for argumentType in argumentTypes {
-              if argumentType != argumentTypes.first {
+            for i in 0..argumentTypes.count {
+              if i != 0 {
                 emit(", ")
               }
-              emitType(argumentType)
+              emitType(argumentTypes[i])
             }
             if returnType != null {
               if !argumentTypes.isEmpty {

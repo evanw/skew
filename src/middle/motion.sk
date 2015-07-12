@@ -1,7 +1,7 @@
 namespace Skew {
   def motionPass(global ObjectSymbol, options CompilerOptions) {
     var namespaces = IntMap<Motion.Namespace>.new
-    Motion.functionMotion(global, options, namespaces)
+    Motion.symbolMotion(global, options, namespaces)
 
     # Avoid mutation during the iteration above
     for pair in namespaces.values {
@@ -16,10 +16,16 @@ namespace Skew.Motion {
     const child ObjectSymbol
   }
 
-  def functionMotion(symbol ObjectSymbol, options CompilerOptions, namespaces IntMap<Namespace>) {
-    for object in symbol.objects {
-      functionMotion(object, options, namespaces)
-    }
+  def symbolMotion(symbol ObjectSymbol, options CompilerOptions, namespaces IntMap<Namespace>) {
+    # Move non-imported objects off imported objects
+    symbol.objects.removeIf(object => {
+      symbolMotion(object, options, namespaces)
+      if symbol.isImported && !object.isImported || !options.target.supportsNestedTypes && !symbol.kind.isNamespaceOrGlobal {
+        moveSymbolIntoNewNamespace(object, namespaces).objects.append(object)
+        return true
+      }
+      return false
+    })
 
     # Move global functions with implementations off imported objects
     symbol.functions.removeIf(function => {

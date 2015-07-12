@@ -15,16 +15,49 @@ namespace Skew {
     const cache TypeCache
 
     over visit(global ObjectSymbol) {
-      emitObject(global)
+      # Avoid emitting unnecessary stuff
+      shakingPass(global, cache.entryPointSymbol, .USE_TYPES)
+      markVirtualFunctions(global)
+      var sorted = sortedObjects(global)
+
+      # Nested types in C++ can't be forward declared
+      for symbol in sorted {
+        moveNestedObjectToEnclosingNamespace(symbol)
+      }
+
+      # Emit code in passes to deal with C++'s forward declarations
+      for symbol in sorted {
+        declareObject(symbol)
+      }
+      for symbol in sorted {
+        defineObject(symbol)
+      }
+      adjustNamespace(null)
+      for symbol in sorted {
+        implementObject(symbol)
+      }
+      finalizeEmittedFile
       createSource(options.outputFile, .ALWAYS_EMIT)
     }
 
     @private {
+      enum CodeMode {
+        DECLARE
+        DEFINE
+        IMPLEMENT
+      }
+
       var previousNode Node = null
       var previousSymbol Symbol = null
+      var namespaceStack List<Symbol> = []
+      var symbolsCheckedForInclude IntMap<int> = {}
+      var includeNames StringMap<int> = {}
 
-      def emitNewlineBeforeSymbol(symbol Symbol) {
-        if previousSymbol != null && (!previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
+      def emitNewlineBeforeSymbol(symbol Symbol, mode CodeMode) {
+        if previousSymbol != null &&
+            (!previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) &&
+            (mode != .DEFINE || !previousSymbol.kind.isFunction || !symbol.kind.isFunction || symbol.comments != null) &&
+            (mode != .DECLARE || previousSymbol.kind != .OBJECT_CLASS || symbol.kind != .OBJECT_CLASS) {
           emit("\n")
         }
         previousSymbol = null
@@ -49,6 +82,44 @@ namespace Skew {
         previousNode = node
       }
 
+      def adjustNamespace(symbol Symbol) {
+        # Get the namespace chain for this symbol
+        var symbols List<Symbol> = []
+        while symbol != null && symbol.kind != .OBJECT_GLOBAL {
+          if symbol.kind == .OBJECT_NAMESPACE {
+            symbols.prepend(symbol)
+          }
+          symbol = symbol.parent
+        }
+
+        # Find the intersection
+        var limit = Math.min(namespaceStack.count, symbols.count)
+        var i = 0
+        while i < limit {
+          if namespaceStack[i] != symbols[i] {
+            break
+          }
+          i++
+        }
+
+        # Leave the old namespace
+        while namespaceStack.count > i {
+          var object = namespaceStack.takeLast
+          decreaseIndent
+          emit(indent + "}\n")
+          emitNewlineAfterSymbol(object)
+        }
+
+        # Enter the new namespace
+        while namespaceStack.count < symbols.count {
+          var object = symbols[namespaceStack.count]
+          emitNewlineBeforeSymbol(object, .DEFINE)
+          emit(indent + "namespace " + mangleName(object) + " {\n")
+          increaseIndent
+          namespaceStack.append(object)
+        }
+      }
+
       def emitComments(comments List<string>) {
         if comments != null {
           for comment in comments {
@@ -57,21 +128,87 @@ namespace Skew {
         }
       }
 
-      def emitObject(symbol ObjectSymbol) {
-        for object in symbol.objects {
-          emitObject(object)
+      def moveNestedObjectToEnclosingNamespace(symbol ObjectSymbol) {
+        var parent = symbol.parent
+        while parent != null && parent.kind == .OBJECT_CLASS {
+          parent = parent.parent
+        }
+        symbol.parent = parent
+      }
+
+      def declareObject(symbol ObjectSymbol) {
+        if symbol.isImported {
+          return
         }
 
-        for function in symbol.functions {
-          emitFunction(function)
-        }
+        switch symbol.kind {
+          case .OBJECT_ENUM {
+            adjustNamespace(symbol)
+            emitNewlineBeforeSymbol(symbol, .DECLARE)
+            emit(indent + "enum struct " + mangleName(symbol) + " {\n")
+            increaseIndent
+            for variable in symbol.variables {
+              emitVariable(variable, .DECLARE)
+            }
+            decreaseIndent
+            emit(indent + "};\n")
+            emitNewlineAfterSymbol(symbol)
+          }
 
-        for variable in symbol.variables {
-          emitVariable(variable)
+          case .OBJECT_CLASS {
+            adjustNamespace(symbol)
+            emitNewlineBeforeSymbol(symbol, .DECLARE)
+            emitTypeParameters(symbol.parameters)
+            emit(indent + "struct " + mangleName(symbol) + ";\n")
+            emitNewlineAfterSymbol(symbol)
+          }
         }
       }
 
-      def emitFunction(symbol FunctionSymbol) {
+      def defineObject(symbol ObjectSymbol) {
+        if symbol.isImported {
+          return
+        }
+
+        switch symbol.kind {
+          case .OBJECT_CLASS {
+            adjustNamespace(symbol)
+            emitNewlineBeforeSymbol(symbol, .DEFINE)
+            emitComments(symbol.comments)
+            emitTypeParameters(symbol.parameters)
+            emit(indent + "struct " + mangleName(symbol))
+            if symbol.baseClass != null {
+              emit(" : ")
+              emitType(symbol.baseClass.resolvedType, .BARE)
+            }
+            emit(" {\n")
+            increaseIndent
+            for function in symbol.functions {
+              emitFunction(function, .DEFINE)
+            }
+            for variable in symbol.variables {
+              emitVariable(variable, .DEFINE)
+            }
+            decreaseIndent
+            emit(indent + "};\n")
+            emitNewlineAfterSymbol(symbol)
+          }
+        }
+      }
+
+      def implementObject(symbol ObjectSymbol) {
+        for function in symbol.functions {
+          emitFunction(function, .IMPLEMENT)
+        }
+
+        for variable in symbol.variables {
+          if variable.kind == .VARIABLE_GLOBAL {
+            emitVariable(variable, .IMPLEMENT)
+          }
+        }
+      }
+
+      def emitFunction(symbol FunctionSymbol, mode CodeMode) {
         var block = symbol.block
 
         if symbol.isImported || block == null {
@@ -84,44 +221,57 @@ namespace Skew {
           symbol.self.flags |= Symbol.IS_EXPORTED
         }
 
-        emitNewlineBeforeSymbol(symbol)
+        emitNewlineBeforeSymbol(symbol, mode)
         emitComments(symbol.comments)
+        emitTypeParameters(symbol.parameters)
         emit(indent)
         if symbol.kind != .FUNCTION_CONSTRUCTOR {
+          if mode == .DEFINE && symbol.isVirtual {
+            emit("virtual ")
+          }
           emitType(symbol.resolvedType.returnType, .DECLARATION)
         }
-        emit(fullName(symbol))
-        emitTypeParameters(symbol.parameters)
+        emit(mode == .DEFINE ? mangleName(symbol) : fullName(symbol))
         emitArgumentList(symbol)
 
-        # Move the super constructor call out of the function body
-        if symbol.kind == .FUNCTION_CONSTRUCTOR && !block.children.isEmpty {
-          var first = block.children.first
-          if first.kind == .EXPRESSION {
-            var call = first.expressionValue
-            if call.kind == .CALL && call.callValue.kind == .SUPER {
-              emit(" : ")
-              first.remove
-              emitExpression(call, .LOWEST)
+        if mode == .IMPLEMENT {
+          # Move the super constructor call out of the function body
+          if symbol.kind == .FUNCTION_CONSTRUCTOR && !block.children.isEmpty {
+            var first = block.children.first
+            if first.kind == .EXPRESSION {
+              var call = first.expressionValue
+              if call.kind == .CALL && call.callValue.kind == .SUPER {
+                emit(" : ")
+                first.remove
+                emitExpression(call, .LOWEST)
+              }
             }
           }
+
+          emitBlock(block)
+          emit("\n")
         }
 
-        emitBlock(block)
-        emit("\n")
+        else {
+          if symbol.overridden != null && symbol.kind != .FUNCTION_CONSTRUCTOR {
+            emit(" override")
+          }
+          emit(";\n")
+        }
+
         emitNewlineAfterSymbol(symbol)
       }
 
       def emitTypeParameters(parameters List<ParameterSymbol>) {
         if parameters != null {
-          emit("<")
+          emit(indent + "template <")
           for parameter in parameters {
             if parameter != parameters.first {
               emit(", ")
             }
-            emit(mangleName(parameter))
+            emit("typename " + mangleName(parameter))
           }
-          emit(">")
+          emit(">\n")
         }
       }
 
@@ -137,13 +287,37 @@ namespace Skew {
         emit(")")
       }
 
-      def emitVariable(symbol VariableSymbol) {
+      def emitVariable(symbol VariableSymbol, mode CodeMode) {
         if symbol.isImported {
           return
         }
 
-        # emitNewlineBeforeSymbol(symbol)
-        # emitNewlineAfterSymbol(symbol)
+        emitNewlineBeforeSymbol(symbol, mode)
+        if symbol.kind == .VARIABLE_ENUM {
+          emit(indent + mangleName(symbol))
+          if symbol.value != null {
+            emit(" = ")
+            emitExpression(symbol.value, .COMMA)
+          }
+          emit(",\n")
+        } else {
+          emit(indent)
+          if mode == .DEFINE && symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
+            emit("static ")
+          }
+          emitType(symbol.resolvedType, .DECLARATION)
+          if mode == .DEFINE {
+            emit(mangleName(symbol))
+          } else {
+            emit(fullName(symbol))
+            if symbol.value != null {
+              emit(" = ")
+              emitExpression(symbol.value, .ASSIGN)
+            }
+          }
+          emit(";\n")
+        }
+        emitNewlineAfterSymbol(symbol)
       }
 
       def emitStatements(statements List<Node>) {
@@ -170,15 +344,7 @@ namespace Skew {
       def emitStatement(node Node) {
         switch node.kind {
           case .VAR {
-            var symbol = node.symbol.asVariableSymbol
-            emit(indent)
-            emitType(symbol.resolvedType, .DECLARATION)
-            emit(mangleName(symbol))
-            if symbol.value != null {
-              emit(" = ")
-              emitExpression(symbol.value, .ASSIGN)
-            }
-            emit(";\n")
+            emitVariable(node.symbol.asVariableSymbol, .IMPLEMENT)
           }
 
           case .EXPRESSION {
@@ -351,16 +517,12 @@ namespace Skew {
         var block = node.ifFalse
         if block != null {
           var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
-          if block.comments != null || singleIf != null && singleIf.comments != null {
-            emit("\n\n")
-            emitComments(block.comments)
-            if singleIf != null {
-              emitComments(singleIf.comments)
-            }
-            emit(indent + "else")
-          } else {
-            emit(" else")
+          emit("\n\n")
+          emitComments(block.comments)
+          if singleIf != null {
+            emitComments(singleIf.comments)
           }
+          emit(indent + "else")
 
           if singleIf != null {
             emit(" ")
@@ -518,11 +680,37 @@ namespace Skew {
           }
 
           case .LAMBDA {
-            emit("TODO:LAMBDA")
+            var lambda = symbol.asFunctionSymbol
+            emit("[=]")
+            emitArgumentList(lambda)
+            emit(" -> ")
+            emitType(lambda.resolvedType.returnType, .NORMAL)
+            emitBlock(lambda.block)
           }
 
           case .INITIALIZER_LIST, .INITIALIZER_SET, .INITIALIZER_MAP {
-            emit("TODO:INITIALIZER_LIST")
+            var children = node.children
+            emit("{")
+            for child in children {
+              if child != children.first {
+                emit(", ")
+              }
+              emitExpression(child, .COMMA)
+            }
+            emit("}")
+          }
+
+          case .PAIR {
+            includeNames["<utility>"] = 0
+            emit("std::make_pair<")
+            emitType(node.firstValue.resolvedType, .NORMAL)
+            emit(", ")
+            emitType(node.secondValue.resolvedType, .NORMAL)
+            emit(">(")
+            emitExpression(node.firstValue, .COMMA)
+            emit(", ")
+            emitExpression(node.secondValue, .COMMA)
+            emit(")")
           }
 
           default {
@@ -575,7 +763,17 @@ namespace Skew {
         }
 
         else if type.kind == .LAMBDA {
-          emit("TODO:LAMBDA_TYPE")
+          includeNames["<functional>"] = 0
+          emit("std::function<")
+          emitType(type.returnType, .DECLARATION)
+          emit("(")
+          for i in 0..type.argumentTypes.count {
+            if i != 0 {
+              emit(", ")
+            }
+            emitType(type.argumentTypes[i], .NORMAL)
+          }
+          emit(mode == .DECLARATION ? ")> " : ")>")
         }
 
         else {
@@ -602,7 +800,42 @@ namespace Skew {
         }
       }
 
+      def finalizeEmittedFile {
+        var includes = includeNames.keys
+
+        if !includes.isEmpty {
+          includes.sort((a, b) => a <=> b)
+          for include in includes {
+            emitPrefix("#include " + (include.startsWith("<") && include.endsWith(">") ? include : "\"" + include + "\"") + "\n")
+          }
+          emitPrefix("\n")
+        }
+
+        adjustNamespace(null)
+        previousSymbol = null
+        symbolsCheckedForInclude = {}
+        includeNames = {}
+      }
+
       def handleSymbol(symbol Symbol) {
+        if !symbol.kind.isLocal && !(symbol.id in symbolsCheckedForInclude) {
+          symbolsCheckedForInclude[symbol.id] = 0
+
+          if symbol.annotations != null {
+            for annotation in symbol.annotations {
+              if annotation.symbol != null && annotation.symbol.fullName == "include" {
+                var children = annotation.annotationValue.children
+                if children.count == 2 {
+                  includeNames[children.last.asString] = 0
+                }
+              }
+            }
+          }
+
+          if symbol.parent != null {
+            handleSymbol(symbol.parent)
+          }
+        }
       }
     }
   }
@@ -611,7 +844,7 @@ namespace Skew {
     @private {
       def fullName(symbol Symbol) string {
         var parent = symbol.parent
-        if parent != null && parent.kind != .OBJECT_GLOBAL {
+        if parent != null && parent.kind != .OBJECT_GLOBAL && !symbol.kind.isParameter {
           return fullName(parent) + "::" + mangleName(symbol)
         }
         return mangleName(symbol)

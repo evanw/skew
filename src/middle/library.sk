@@ -23,8 +23,10 @@ def @rename(name string)
 def @skip
 def @spreads
 
-@spreads
-def @using(name string)
+@spreads {
+  def @using(name string) # For use with C#
+  def @include(name string) # For use with C++
+}
 
 @skip if RELEASE
 def assert(truth bool)
