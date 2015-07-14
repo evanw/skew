@@ -38,6 +38,10 @@ class string {
     return count >= text.count && slice(0, text.count) == text
   }
 
+  def endsWith(text string) bool {
+    return count >= text.count && slice(count - text.count) == text
+  }
+
   def replaceAll(before string, after string) string {
     return after.join(self.split(before))
   }

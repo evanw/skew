@@ -101,8 +101,6 @@ namespace Skew.Parsing {
   }
 
   def parseAnnotations(context ParserContext, annotations List<Node>) List<Node> {
-    annotations = annotations != null ? annotations.clone : []
-
     while context.peek(.ANNOTATION) {
       var range = context.next.range
       var value = Node.createName(range.toString).withRange(range)
@@ -687,7 +685,7 @@ namespace Skew.Parsing {
 
     # Parse annotations before the symbol declaration
     if context.peek(.ANNOTATION) {
-      annotations = parseAnnotations(context, annotations)
+      annotations = parseAnnotations(context, annotations != null ? annotations.clone : [])
       if annotations == null {
         return false
       }
@@ -891,7 +889,7 @@ namespace Skew.Parsing {
       }
     }
 
-    symbol.annotations = annotations
+    symbol.annotations = annotations != null ? annotations.clone : null
     symbol.comments = comments
 
     comments = parseTrailingComment(context, comments)

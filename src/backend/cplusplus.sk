@@ -225,6 +225,9 @@ namespace Skew {
         emitComments(symbol.comments)
         emitTypeParameters(symbol.parameters)
         emit(indent)
+        if mode == .DEFINE && symbol.kind == .FUNCTION_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
+          emit("static ")
+        }
         if symbol.kind != .FUNCTION_CONSTRUCTOR {
           if mode == .DEFINE && symbol.isVirtual {
             emit("virtual ")
