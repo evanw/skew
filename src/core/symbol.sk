@@ -104,21 +104,20 @@ namespace Skew {
     const IS_EXPORTED = 1 << 10
     const IS_IMPORTED = 1 << 11
     const IS_PREFERRED = 1 << 12
-    const IS_PRIVATE = 1 << 13
-    const IS_PROTECTED = 1 << 14
-    const IS_RENAMED = 1 << 15
-    const IS_SKIPPED = 1 << 16
-    const SHOULD_SPREAD = 1 << 17
+    const IS_PROTECTED = 1 << 13
+    const IS_RENAMED = 1 << 14
+    const IS_SKIPPED = 1 << 15
+    const SHOULD_SPREAD = 1 << 16
 
     # Pass-specific flags
-    const IS_MERGED = 1 << 18
-    const IS_OBSOLETE = 1 << 19
-    const IS_PRIMARY_CONSTRUCTOR = 1 << 20
-    const IS_VIRTUAL = 1 << 21
+    const IS_MERGED = 1 << 17
+    const IS_OBSOLETE = 1 << 18
+    const IS_PRIMARY_CONSTRUCTOR = 1 << 19
+    const IS_VIRTUAL = 1 << 20
   }
 
   class Symbol {
-    const id = createID
+    const id = _createID
     var kind SymbolKind
     var name string
     var rename = ""
@@ -147,7 +146,6 @@ namespace Skew {
     def isExported bool   { return (flags & IS_EXPORTED) != 0 }
     def isImported bool   { return (flags & IS_IMPORTED) != 0 }
     def isPreferred bool  { return (flags & IS_PREFERRED) != 0 }
-    def isPrivate bool    { return (flags & IS_PRIVATE) != 0 }
     def isProtected bool  { return (flags & IS_PROTECTED) != 0 }
     def isRenamed bool    { return (flags & IS_RENAMED) != 0 }
     def isSkipped bool    { return (flags & IS_SKIPPED) != 0 }
@@ -160,7 +158,6 @@ namespace Skew {
     def isVirtual bool            { return (flags & IS_VIRTUAL) != 0 }
 
     # Combinations
-    def isPrivateOrProtected bool { return (flags & (IS_PRIVATE | IS_PROTECTED)) != 0 }
     def isImportedOrExported bool { return (flags & (IS_IMPORTED | IS_EXPORTED)) != 0 }
 
     def asParameterSymbol ParameterSymbol {
@@ -229,14 +226,12 @@ namespace Skew {
   }
 
   namespace Symbol {
-    @private {
-      def createID int {
-        nextID++
-        return nextID
-      }
-
-      var nextID = 0
+    def _createID int {
+      _nextID++
+      return _nextID
     }
+
+    var _nextID = 0
   }
 
   class ParameterSymbol : Symbol {

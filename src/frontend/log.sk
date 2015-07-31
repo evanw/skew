@@ -107,21 +107,19 @@ namespace Skew {
   }
 
   namespace Log {
-    @private {
-      def expectedCountText(singular string, expected int, found int) string {
-        return "Expected " + expected.toString + " " + singular + PrettyPrint.plural(expected) + " but found " + found.toString + " " + singular + PrettyPrint.plural(found)
-      }
+    def _expectedCountText(singular string, expected int, found int) string {
+      return "Expected " + expected.toString + " " + singular + PrettyPrint.plural(expected) + " but found " + found.toString + " " + singular + PrettyPrint.plural(found)
+    }
 
-      def formatArgumentTypes(types List<Type>) string {
-        if types == null {
-          return ""
-        }
-        var names List<string> = []
-        for type in types {
-          names.append(type.toString)
-        }
-        return " of type" + PrettyPrint.plural(types.count) + " " + PrettyPrint.join(names, "and")
+    def _formatArgumentTypes(types List<Type>) string {
+      if types == null {
+        return ""
       }
+      var names List<string> = []
+      for type in types {
+        names.append(type.toString)
+      }
+      return " of type" + PrettyPrint.plural(types.count) + " " + PrettyPrint.join(names, "and")
     }
   }
 
@@ -196,11 +194,11 @@ namespace Skew {
     }
 
     def semanticErrorParameterCount(range Range, expected int, found int) {
-      error(range, expectedCountText("type parameter", expected, found))
+      error(range, _expectedCountText("type parameter", expected, found))
     }
 
     def semanticErrorArgumentCount(range Range, expected int, found int, name string, function Range) {
-      error(range, expectedCountText("argument", expected, found) + (name != "" ? " when calling \"" + name + "\"" : ""))
+      error(range, _expectedCountText("argument", expected, found) + (name != "" ? " when calling \"" + name + "\"" : ""))
       if function != null {
         note(function, "The function declaration is here")
       }
@@ -249,11 +247,11 @@ namespace Skew {
     }
 
     def semanticErrorNoMatchingOverload(range Range, name string, count int, types List<Type>) {
-      error(range, "No overload of \"" + name + "\" was found that takes " + count.toString + " argument" + PrettyPrint.plural(count) + formatArgumentTypes(types))
+      error(range, "No overload of \"" + name + "\" was found that takes " + count.toString + " argument" + PrettyPrint.plural(count) + _formatArgumentTypes(types))
     }
 
     def semanticErrorAmbiguousOverload(range Range, name string, count int, types List<Type>) {
-      error(range, "Multiple matching overloads of \"" + name + "\" were found that can take " + count.toString + " argument" + PrettyPrint.plural(count) + formatArgumentTypes(types))
+      error(range, "Multiple matching overloads of \"" + name + "\" were found that can take " + count.toString + " argument" + PrettyPrint.plural(count) + _formatArgumentTypes(types))
     }
 
     def semanticErrorUnexpectedExpression(range Range, type Type) {
@@ -318,8 +316,8 @@ namespace Skew {
       error(range, "Cannot store to constant symbol \"" + name + "\"")
     }
 
-    def semanticErrorAccessViolation(range Range, level string, name string) {
-      error(range, "Cannot access \"" + level + "\" symbol \"" + name + "\" here")
+    def semanticErrorAccessViolation(range Range, name string) {
+      error(range, "Cannot access protected symbol \"" + name + "\" here")
     }
 
     def semanticWarningDeprecatedUsage(range Range, name string) {

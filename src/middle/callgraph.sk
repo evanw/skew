@@ -14,50 +14,48 @@ namespace Skew {
     const symbolToInfoIndex IntMap<int> = {}
 
     def new(global ObjectSymbol) {
-      visitObject(global)
+      _visitObject(global)
     }
 
-    @private {
-      def visitObject(symbol ObjectSymbol) {
-        for object in symbol.objects {
-          visitObject(object)
-        }
-
-        for function in symbol.functions {
-          recordCallSite(function, null, null)
-          visitNode(function.block, function)
-        }
-
-        for variable in symbol.variables {
-          visitNode(variable.value, variable)
-        }
+    def _visitObject(symbol ObjectSymbol) {
+      for object in symbol.objects {
+        _visitObject(object)
       }
 
-      def visitNode(node Node, context Symbol) {
-        if node != null {
-          if node.children != null {
-            for child in node.children {
-              visitNode(child, context)
-            }
-          }
-
-          if node.kind == .CALL && node.symbol != null {
-            assert(node.symbol.kind.isFunction)
-            recordCallSite(node.symbol.asFunctionSymbol, node, context)
-          }
-        }
+      for function in symbol.functions {
+        _recordCallSite(function, null, null)
+        _visitNode(function.block, function)
       }
 
-      def recordCallSite(symbol FunctionSymbol, node Node, context Symbol) {
-        var index = symbolToInfoIndex.get(symbol.id, -1)
-        var info = index < 0 ? CallInfo.new(symbol) : callInfo[index]
-        if index < 0 {
-          symbolToInfoIndex[symbol.id] = callInfo.count
-          callInfo.append(info)
+      for variable in symbol.variables {
+        _visitNode(variable.value, variable)
+      }
+    }
+
+    def _visitNode(node Node, context Symbol) {
+      if node != null {
+        if node.children != null {
+          for child in node.children {
+            _visitNode(child, context)
+          }
         }
-        if node != null {
-          info.callSites.append(CallSite.new(node, context))
+
+        if node.kind == .CALL && node.symbol != null {
+          assert(node.symbol.kind.isFunction)
+          _recordCallSite(node.symbol.asFunctionSymbol, node, context)
         }
+      }
+    }
+
+    def _recordCallSite(symbol FunctionSymbol, node Node, context Symbol) {
+      var index = symbolToInfoIndex.get(symbol.id, -1)
+      var info = index < 0 ? CallInfo.new(symbol) : callInfo[index]
+      if index < 0 {
+        symbolToInfoIndex[symbol.id] = callInfo.count
+        callInfo.append(info)
+      }
+      if node != null {
+        info.callSites.append(CallSite.new(node, context))
       }
     }
   }

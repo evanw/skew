@@ -6,7 +6,7 @@ namespace Skew {
   }
 
   class Type {
-    const id = createID
+    const id = _createID
     var kind TypeKind
     var symbol Symbol
     var environment Environment = null
@@ -103,18 +103,16 @@ namespace Skew {
       }
     }
 
-    @private {
-      def createID int {
-        nextID++
-        return nextID
-      }
-
-      var nextID = 0
+    def _createID int {
+      _nextID++
+      return _nextID
     }
+
+    var _nextID = 0
   }
 
   class Environment {
-    const id = createID
+    const id = _createID
     const parameters List<ParameterSymbol>
     const substitutions List<Type>
     const mergeCache IntMap<Environment> = null
@@ -133,14 +131,12 @@ namespace Skew {
   }
 
   namespace Environment {
-    @private {
-      def createID int {
-        nextID++
-        return nextID
-      }
-
-      var nextID = 0
+    def _createID int {
+      _nextID++
+      return _nextID
     }
+
+    var _nextID = 0
   }
 
   class TypeCache {
@@ -153,17 +149,19 @@ namespace Skew {
     var stringMapType Type = null
     var stringType Type = null
     var entryPointSymbol FunctionSymbol = null
+    const _environments = IntMap<List<Environment>>.new
+    const _lambdaTypes = IntMap<List<Type>>.new
 
     def loadGlobals(log Log, global ObjectSymbol) {
       Type.initialize
-      boolType = loadGlobalClass(global, "bool", Symbol.IS_VALUE_TYPE)
-      boxType = loadGlobalClass(global, "Box", 0)
-      doubleType = loadGlobalClass(global, "double", Symbol.IS_VALUE_TYPE)
-      intMapType = loadGlobalClass(global, "IntMap", 0)
-      intType = loadGlobalClass(global, "int", Symbol.IS_VALUE_TYPE)
-      listType = loadGlobalClass(global, "List", 0)
-      stringMapType = loadGlobalClass(global, "StringMap", 0)
-      stringType = loadGlobalClass(global, "string", Symbol.IS_VALUE_TYPE)
+      boolType = _loadGlobalClass(global, "bool", Symbol.IS_VALUE_TYPE)
+      boxType = _loadGlobalClass(global, "Box", 0)
+      doubleType = _loadGlobalClass(global, "double", Symbol.IS_VALUE_TYPE)
+      intMapType = _loadGlobalClass(global, "IntMap", 0)
+      intType = _loadGlobalClass(global, "int", Symbol.IS_VALUE_TYPE)
+      listType = _loadGlobalClass(global, "List", 0)
+      stringMapType = _loadGlobalClass(global, "StringMap", 0)
+      stringType = _loadGlobalClass(global, "string", Symbol.IS_VALUE_TYPE)
     }
 
     def isInteger(type Type) bool {
@@ -202,7 +200,7 @@ namespace Skew {
 
     def canExplicitlyConvert(from Type, to Type) bool {
       if canImplicitlyConvert(from, to) { return true }
-      if canCastToNumeric(from) && canCastToNumeric(to) { return true }
+      if _canCastToNumeric(from) && _canCastToNumeric(to) { return true }
       if to.hasBaseType(from) { return true }
       if to.isEnum && isNumeric(from) { return true }
       return false
@@ -226,7 +224,7 @@ namespace Skew {
 
       # Check for a common base class
       if left.isClass && right.isClass {
-        return commonBaseClass(left, right)
+        return _commonBaseClass(left, right)
       }
 
       return null
@@ -248,8 +246,8 @@ namespace Skew {
       assert(parameters.count == substitutions.count)
 
       # Hash the inputs
-      var hash = hashTypes(hashParameters(parameters), substitutions)
-      var bucket = environments.get(hash, null)
+      var hash = _hashTypes(_hashParameters(parameters), substitutions)
+      var bucket = _environments.get(hash, null)
 
       # Check existing environments in the bucket for a match
       if bucket != null {
@@ -263,7 +261,7 @@ namespace Skew {
       # Make a new bucket
       else {
         bucket = []
-        environments[hash] = bucket
+        _environments[hash] = bucket
       }
 
       # Make a new environment
@@ -273,8 +271,8 @@ namespace Skew {
     }
 
     def createLambdaType(argumentTypes List<Type>, returnType Type) Type {
-      var hash = hashTypes(returnType != null ? returnType.id : -1, argumentTypes)
-      var bucket = lambdaTypes.get(hash, null)
+      var hash = _hashTypes(returnType != null ? returnType.id : -1, argumentTypes)
+      var bucket = _lambdaTypes.get(hash, null)
 
       # Check existing types in the bucket for a match
       if bucket != null {
@@ -288,7 +286,7 @@ namespace Skew {
       # Make a new bucket
       else {
         bucket = []
-        lambdaTypes[hash] = bucket
+        _lambdaTypes[hash] = bucket
       }
 
       # Make a new lambda type
@@ -435,57 +433,50 @@ namespace Skew {
       return substituted
     }
 
-    @private {
-      const environments = IntMap<List<Environment>>.new
-      const lambdaTypes = IntMap<List<Type>>.new
-
-      def canCastToNumeric(type Type) bool {
-        return type == intType || type == doubleType || type == boolType
-      }
+    def _canCastToNumeric(type Type) bool {
+      return type == intType || type == doubleType || type == boolType
     }
   }
 
   namespace TypeCache {
-    @private {
-      def loadGlobalClass(global ObjectSymbol, name string, flags int) Type {
-        var symbol = global.members.get(name, null)
-        assert(symbol != null)
-        assert(symbol.kind == .OBJECT_CLASS)
-        var type = Type.new(.SYMBOL, symbol.asObjectSymbol)
-        symbol.resolvedType = type
-        symbol.flags |= flags
-        return type
-      }
+    def _loadGlobalClass(global ObjectSymbol, name string, flags int) Type {
+      var symbol = global.members.get(name, null)
+      assert(symbol != null)
+      assert(symbol.kind == .OBJECT_CLASS)
+      var type = Type.new(.SYMBOL, symbol.asObjectSymbol)
+      symbol.resolvedType = type
+      symbol.flags |= flags
+      return type
+    }
 
-      def hashParameters(parameters List<ParameterSymbol>) int {
-        var hash = 0
-        for parameter in parameters {
-          hash = hashCombine(hash, parameter.id)
-        }
-        return hash
+    def _hashParameters(parameters List<ParameterSymbol>) int {
+      var hash = 0
+      for parameter in parameters {
+        hash = hashCombine(hash, parameter.id)
       }
+      return hash
+    }
 
-      def hashTypes(hash int, types List<Type>) int {
-        for type in types {
-          hash = hashCombine(hash, type.id)
-        }
-        return hash
+    def _hashTypes(hash int, types List<Type>) int {
+      for type in types {
+        hash = hashCombine(hash, type.id)
       }
+      return hash
+    }
 
-      def commonBaseClass(left Type, right Type) Type {
-        var a = left
-        while a != null {
-          var b = right
-          while b != null {
-            if a == b {
-              return a
-            }
-            b = b.baseClass
+    def _commonBaseClass(left Type, right Type) Type {
+      var a = left
+      while a != null {
+        var b = right
+        while b != null {
+          if a == b {
+            return a
           }
-          a = a.baseClass
+          b = b.baseClass
         }
-        return null
+        a = a.baseClass
       }
+      return null
     }
   }
 }

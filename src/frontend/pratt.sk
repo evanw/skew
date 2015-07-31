@@ -23,35 +23,32 @@ namespace Skew {
     var log Log
     var inNonVoidFunction = false
     var needsPreprocessor = false
+    var _tokens List<Token>
+    var _index = 0
 
-    @private {
-      var tokens List<Token>
-      var index = 0
-
-      # Keep track of the previous syntax error so only one syntax error is emitted
-      # per token when recovering from a parse error. For example:
-      #
-      #   int x = (1 + (2 +
-      #
-      # In the code above, the only syntax error should be about an unexpected
-      # end of file and not also about the two missing right parentheses.
-      var previousSyntaxError Token = null
-    }
+    # Keep track of the previous syntax error so only one syntax error is emitted
+    # per token when recovering from a parse error. For example:
+    #
+    #   int x = (1 + (2 +
+    #
+    # In the code above, the only syntax error should be about an unexpected
+    # end of file and not also about the two missing right parentheses.
+    var _previousSyntaxError Token = null
 
     def current Token {
-      return tokens[index]
+      return _tokens[_index]
     }
 
     def next Token {
       var token = current
-      if index + 1 < tokens.count {
-        index++
+      if _index + 1 < _tokens.count {
+        _index++
       }
       return token
     }
 
     def spanSince(range Range) Range {
-      var previous = tokens[index > 0 ? index - 1 : 0]
+      var previous = _tokens[_index > 0 ? _index - 1 : 0]
       return previous.range.end < range.start ? range : Range.span(range, previous.range)
     }
 
@@ -68,17 +65,17 @@ namespace Skew {
     }
 
     def undo {
-      assert(index > 0)
-      index--
+      assert(_index > 0)
+      _index--
     }
 
     def expect(kind TokenKind) bool {
       if !eat(kind) {
         var token = current
-        if previousSyntaxError != token {
+        if _previousSyntaxError != token {
           var range = token.range
           log.syntaxErrorExpectedToken(range, token.kind, kind)
-          previousSyntaxError = token
+          _previousSyntaxError = token
         }
         return false
       }
@@ -87,9 +84,9 @@ namespace Skew {
 
     def unexpectedToken {
       var token = current
-      if previousSyntaxError != token {
+      if _previousSyntaxError != token {
         log.syntaxErrorUnexpectedToken(token)
-        previousSyntaxError = token
+        _previousSyntaxError = token
       }
     }
   }
@@ -107,15 +104,14 @@ namespace Skew {
   #   http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
   #
   class Pratt {
-    @private
-    var table = IntMap<Parselet>.new
+    var _table = IntMap<Parselet>.new
 
     def parselet(kind TokenKind, precedence Precedence) Parselet {
-      var parselet = table.get(kind, null)
+      var parselet = _table.get(kind, null)
       if parselet == null {
         var created = Parselet.new(precedence)
         parselet = created
-        table[kind] = created
+        _table[kind] = created
       } else if precedence as int > parselet.precedence as int {
         parselet.precedence = precedence
       }
@@ -124,7 +120,7 @@ namespace Skew {
 
     def parse(context ParserContext, precedence Precedence) Node {
       var token = context.current
-      var parselet = table.get(token.kind, null)
+      var parselet = _table.get(token.kind, null)
       if parselet == null || parselet.prefix == null {
         context.unexpectedToken
         return null
@@ -137,7 +133,7 @@ namespace Skew {
     def resume(context ParserContext, precedence Precedence, left Node) Node {
       while left != null {
         var kind = context.current.kind
-        var parselet = table.get(kind, null)
+        var parselet = _table.get(kind, null)
         if parselet == null || parselet.infix == null || parselet.precedence as int <= precedence as int {
           break
         }
@@ -148,7 +144,7 @@ namespace Skew {
     }
 
     def hasPrefixParselet(context ParserContext) bool {
-      var parselet = table.get(context.current.kind, null)
+      var parselet = _table.get(context.current.kind, null)
       return parselet != null && parselet.prefix != null
     }
 

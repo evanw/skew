@@ -17,8 +17,6 @@ def @entry
 def @export
 def @import
 def @prefer
-def @private
-def @protected
 def @rename(name string)
 def @skip
 def @spreads
@@ -210,7 +208,9 @@ class StringBuilder {
 @import
 class List<T> {
   def [...](x T) List<T>
+  @rename(\"get\") if TARGET == .CPLUSPLUS
   def [](x int) T
+  @rename(\"set\") if TARGET == .CPLUSPLUS
   def []=(x int, y T)
   @rename(\"TrueForAll\") if TARGET == .CSHARP
   @rename(\"every\") if TARGET == .JAVASCRIPT
@@ -233,6 +233,7 @@ class List<T> {
   @rename(\"FindAll\") if TARGET == .CSHARP
   def filter(x fn(T) bool) List<T>
   @rename(\"Contains\") if TARGET == .CSHARP
+  @rename(\"contains\") if TARGET == .CPLUSPLUS
   def in(x T) bool
   @rename(\"IndexOf\") if TARGET == .CSHARP
   def indexOf(x T) int
@@ -296,7 +297,9 @@ class List<T> {
 
 @import
 class StringMap<T> {
+  @rename(\"get\") if TARGET == .CPLUSPLUS
   def [](key string) T
+  @rename(\"set\") if TARGET == .CPLUSPLUS
   def []=(key string, value T)
   def clone StringMap<T>
   @rename(\"Count\") if TARGET == .CSHARP
@@ -316,7 +319,9 @@ class StringMap<T> {
 
 @import
 class IntMap<T> {
+  @rename(\"get\") if TARGET == .CPLUSPLUS
   def [](key int) T
+  @rename(\"set\") if TARGET == .CPLUSPLUS
   def []=(key int, value T)
   def clone IntMap<T>
   @rename(\"Count\") if TARGET == .CSHARP

@@ -1,16 +1,14 @@
 namespace Skew.Tests {
   class CompilerTest : Unit.Test {
-    over run {
-      rename(compactWhitespace(input))
-      var log = Log.new
-      compile(log, CompilerOptions.new, [Source.new("<stdin>", input)])
-      var output = log.toString
-      expectString(trim(expected), trim(output))
-    }
+    var _input string
+    var _expected string
 
-    @private {
-      var input string
-      var expected string
+    over run {
+      rename(compactWhitespace(_input))
+      var log = Log.new
+      compile(log, CompilerOptions.new, [Source.new("<stdin>", _input)])
+      var output = log.toString
+      expectString(trim(_expected), trim(output))
     }
   }
 

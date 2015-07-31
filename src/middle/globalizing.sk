@@ -38,32 +38,30 @@ namespace Skew {
   }
 
   class VirtualLookup {
+    const _map IntMap<bool> = {}
+
     def new(global ObjectSymbol) {
-      visitObject(global)
+      _visitObject(global)
     }
 
     def isVirtual(symbol FunctionSymbol) bool {
-      return map.get(symbol.id, false)
+      return _map.get(symbol.id, false)
     }
 
-    @private {
-      const map IntMap<bool> = {}
-
-      def visitObject(symbol ObjectSymbol) {
-        for object in symbol.objects {
-          visitObject(object)
-        }
-
-        for function in symbol.functions {
-          visitFunction(function)
-        }
+    def _visitObject(symbol ObjectSymbol) {
+      for object in symbol.objects {
+        _visitObject(object)
       }
 
-      def visitFunction(symbol FunctionSymbol) {
-        if symbol.overridden != null {
-          map[symbol.overridden.id] = true
-          map[symbol.id] = true
-        }
+      for function in symbol.functions {
+        _visitFunction(function)
+      }
+    }
+
+    def _visitFunction(symbol FunctionSymbol) {
+      if symbol.overridden != null {
+        _map[symbol.overridden.id] = true
+        _map[symbol.id] = true
       }
     }
   }

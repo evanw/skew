@@ -9,38 +9,36 @@ namespace Skew {
 
   # Based on https://github.com/mozilla/source-map
   class SourceMapGenerator {
-    @private {
-      var mappings List<SourceMapping> = []
-      var sources List<Source> = []
-    }
+    var _mappings List<SourceMapping> = []
+    var _sources List<Source> = []
 
     def addMapping(source Source, originalLine int, originalColumn int, generatedLine int, generatedColumn int) {
-      var sourceIndex = sources.indexOf(source)
+      var sourceIndex = _sources.indexOf(source)
       if sourceIndex == -1 {
-        sourceIndex = sources.count
-        sources.append(source)
+        sourceIndex = _sources.count
+        _sources.append(source)
       }
-      mappings.append(SourceMapping.new(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn))
+      _mappings.append(SourceMapping.new(sourceIndex, originalLine, originalColumn, generatedLine, generatedColumn))
     }
 
     def toString string {
       var sourceNames List<string> = []
       var sourceContents List<string> = []
 
-      for source in sources {
+      for source in _sources {
         sourceNames.append(quoteString(source.name, '"'))
         sourceContents.append(quoteString(source.contents, '"'))
       }
 
       var builder = StringBuilder.new
-      builder.append("{\"version\":3,\"sources\":[")
+      builder.append("{\"version\":3,\"_sources\":[")
       builder.append(",".join(sourceNames))
       builder.append("],\"sourcesContent\":[")
       builder.append(",".join(sourceContents))
-      builder.append("],\"names\":[],\"mappings\":\"")
+      builder.append("],\"names\":[],\"_mappings\":\"")
 
       # Sort the mappings in increasing order by generated location
-      mappings.sort((a, b) => {
+      _mappings.sort((a, b) => {
         var delta = a.generatedLine <=> b.generatedLine
         return delta != 0 ? delta : a.generatedColumn <=> b.generatedColumn
       })
@@ -52,7 +50,7 @@ namespace Skew {
       var previousSourceIndex = 0
 
       # Generate the base64 VLQ encoded mappings
-      for mapping in mappings {
+      for mapping in _mappings {
         var generatedLine = mapping.generatedLine
 
         # Insert ',' for the same line and ';' for a line

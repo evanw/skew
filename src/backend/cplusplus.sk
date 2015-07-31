@@ -11,947 +11,955 @@ namespace Skew {
   }
 
   class CPlusPlusEmitter : Emitter {
-    const options CompilerOptions
-    const cache TypeCache
+    const _options CompilerOptions
+    const _cache TypeCache
+    var _previousNode Node = null
+    var _previousSymbol Symbol = null
+    var _namespaceStack List<Symbol> = []
+    var _symbolsCheckedForInclude IntMap<int> = {}
+    var _includeNames StringMap<int> = {}
 
     over visit(global ObjectSymbol) {
       # Avoid emitting unnecessary stuff
-      shakingPass(global, cache.entryPointSymbol, .USE_TYPES)
-      markVirtualFunctions(global)
-      var sorted = sortedObjects(global)
+      # shakingPass(global, _cache.entryPointSymbol, .USE_TYPES)
+      _markVirtualFunctions(global)
+      var sorted = _sortedObjects(global)
 
       # Nested types in C++ can't be forward declared
       for symbol in sorted {
-        moveNestedObjectToEnclosingNamespace(symbol)
+        _moveNestedObjectToEnclosingNamespace(symbol)
       }
 
       # Emit code in passes to deal with C++'s forward declarations
       for symbol in sorted {
-        declareObject(symbol)
+        _declareObject(symbol)
       }
       for symbol in sorted {
-        defineObject(symbol)
+        _defineObject(symbol)
       }
-      adjustNamespace(null)
+      _adjustNamespace(null)
       for symbol in sorted {
-        implementObject(symbol)
+        if !symbol.isImported {
+          for variable in symbol.variables {
+            if variable.kind == .VARIABLE_GLOBAL {
+              _emitVariable(variable, .IMPLEMENT)
+            }
+          }
+        }
       }
-      finalizeEmittedFile
-      createSource(options.outputFile, .ALWAYS_EMIT)
+      _adjustNamespace(null)
+      for symbol in sorted {
+        if !symbol.isImported {
+          for function in symbol.functions {
+            _emitFunction(function, .IMPLEMENT)
+          }
+        }
+      }
+      _finalizeEmittedFile
+      _createSource(_options.outputFile, .ALWAYS_EMIT)
     }
 
-    @private {
-      enum CodeMode {
-        DECLARE
-        DEFINE
-        IMPLEMENT
+    enum CodeMode {
+      DECLARE
+      DEFINE
+      IMPLEMENT
+    }
+
+    def _emitNewlineBeforeSymbol(symbol Symbol, mode CodeMode) {
+      if _previousSymbol != null &&
+          (!_previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) &&
+          (mode != .DEFINE || !_previousSymbol.kind.isFunction || !symbol.kind.isFunction || symbol.comments != null) &&
+          (mode != .DECLARE || _previousSymbol.kind != .OBJECT_CLASS || symbol.kind != .OBJECT_CLASS) {
+        _emit("\n")
       }
+      _previousSymbol = null
+    }
 
-      var previousNode Node = null
-      var previousSymbol Symbol = null
-      var namespaceStack List<Symbol> = []
-      var symbolsCheckedForInclude IntMap<int> = {}
-      var includeNames StringMap<int> = {}
+    def _emitNewlineAfterSymbol(symbol Symbol) {
+      _previousSymbol = symbol
+    }
 
-      def emitNewlineBeforeSymbol(symbol Symbol, mode CodeMode) {
-        if previousSymbol != null &&
-            (!previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) &&
-            (mode != .DEFINE || !previousSymbol.kind.isFunction || !symbol.kind.isFunction || symbol.comments != null) &&
-            (mode != .DECLARE || previousSymbol.kind != .OBJECT_CLASS || symbol.kind != .OBJECT_CLASS) {
-          emit("\n")
+    def _isCompactNodeKind(kind NodeKind) bool {
+      return kind == .EXPRESSION || kind == .VAR || kind.isJump
+    }
+
+    def _emitNewlineBeforeStatement(node Node) {
+      if _previousNode != null && (node.comments != null || !_isCompactNodeKind(_previousNode.kind) || !_isCompactNodeKind(node.kind)) {
+        _emit("\n")
+      }
+      _previousNode = null
+    }
+
+    def _emitNewlineAfterStatement(node Node) {
+      _previousNode = node
+    }
+
+    def _adjustNamespace(symbol Symbol) {
+      # Get the namespace chain for this symbol
+      var symbols List<Symbol> = []
+      while symbol != null && symbol.kind != .OBJECT_GLOBAL {
+        if symbol.kind == .OBJECT_NAMESPACE {
+          symbols.prepend(symbol)
         }
-        previousSymbol = null
+        symbol = symbol.parent
       }
 
-      def emitNewlineAfterSymbol(symbol Symbol) {
-        previousSymbol = symbol
-      }
-
-      def isCompactNodeKind(kind NodeKind) bool {
-        return kind == .EXPRESSION || kind == .VAR || kind.isJump
-      }
-
-      def emitNewlineBeforeStatement(node Node) {
-        if previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind)) {
-          emit("\n")
+      # Find the intersection
+      var limit = Math.min(_namespaceStack.count, symbols.count)
+      var i = 0
+      while i < limit {
+        if _namespaceStack[i] != symbols[i] {
+          break
         }
-        previousNode = null
+        i++
       }
 
-      def emitNewlineAfterStatement(node Node) {
-        previousNode = node
+      # Leave the old namespace
+      while _namespaceStack.count > i {
+        var object = _namespaceStack.takeLast
+        _decreaseIndent
+        _emit(_indent + "}\n")
+        _emitNewlineAfterSymbol(object)
       }
 
-      def adjustNamespace(symbol Symbol) {
-        # Get the namespace chain for this symbol
-        var symbols List<Symbol> = []
-        while symbol != null && symbol.kind != .OBJECT_GLOBAL {
-          if symbol.kind == .OBJECT_NAMESPACE {
-            symbols.prepend(symbol)
+      # Enter the new namespace
+      while _namespaceStack.count < symbols.count {
+        var object = symbols[_namespaceStack.count]
+        _emitNewlineBeforeSymbol(object, .DEFINE)
+        _emit(_indent + "namespace " + _mangleName(object) + " {\n")
+        _increaseIndent
+        _namespaceStack.append(object)
+      }
+    }
+
+    def _emitComments(comments List<string>) {
+      if comments != null {
+        for comment in comments {
+          _emit(_indent + "//" + comment)
+        }
+      }
+    }
+
+    def _moveNestedObjectToEnclosingNamespace(symbol ObjectSymbol) {
+      var parent = symbol.parent
+      while parent != null && parent.kind == .OBJECT_CLASS {
+        parent = parent.parent
+      }
+      symbol.parent = parent
+    }
+
+    def _declareObject(symbol ObjectSymbol) {
+      if symbol.isImported {
+        return
+      }
+
+      switch symbol.kind {
+        case .OBJECT_ENUM {
+          _adjustNamespace(symbol)
+          _emitNewlineBeforeSymbol(symbol, .DECLARE)
+          _emit(_indent + "enum struct " + _mangleName(symbol) + " {\n")
+          _increaseIndent
+          for variable in symbol.variables {
+            _emitVariable(variable, .DECLARE)
           }
-          symbol = symbol.parent
+          _decreaseIndent
+          _emit(_indent + "};\n")
+          _emitNewlineAfterSymbol(symbol)
         }
 
-        # Find the intersection
-        var limit = Math.min(namespaceStack.count, symbols.count)
-        var i = 0
-        while i < limit {
-          if namespaceStack[i] != symbols[i] {
-            break
-          }
-          i++
-        }
-
-        # Leave the old namespace
-        while namespaceStack.count > i {
-          var object = namespaceStack.takeLast
-          decreaseIndent
-          emit(indent + "}\n")
-          emitNewlineAfterSymbol(object)
-        }
-
-        # Enter the new namespace
-        while namespaceStack.count < symbols.count {
-          var object = symbols[namespaceStack.count]
-          emitNewlineBeforeSymbol(object, .DEFINE)
-          emit(indent + "namespace " + mangleName(object) + " {\n")
-          increaseIndent
-          namespaceStack.append(object)
+        case .OBJECT_CLASS {
+          _adjustNamespace(symbol)
+          _emitNewlineBeforeSymbol(symbol, .DECLARE)
+          _emitTypeParameters(symbol.parameters)
+          _emit(_indent + "struct " + _mangleName(symbol) + ";\n")
+          _emitNewlineAfterSymbol(symbol)
         }
       }
+    }
 
-      def emitComments(comments List<string>) {
-        if comments != null {
-          for comment in comments {
-            emit(indent + "//" + comment)
-          }
-        }
+    def _defineObject(symbol ObjectSymbol) {
+      if symbol.isImported {
+        return
       }
 
-      def moveNestedObjectToEnclosingNamespace(symbol ObjectSymbol) {
-        var parent = symbol.parent
-        while parent != null && parent.kind == .OBJECT_CLASS {
-          parent = parent.parent
-        }
-        symbol.parent = parent
-      }
-
-      def declareObject(symbol ObjectSymbol) {
-        if symbol.isImported {
-          return
-        }
-
-        switch symbol.kind {
-          case .OBJECT_ENUM {
-            adjustNamespace(symbol)
-            emitNewlineBeforeSymbol(symbol, .DECLARE)
-            emit(indent + "enum struct " + mangleName(symbol) + " {\n")
-            increaseIndent
-            for variable in symbol.variables {
-              emitVariable(variable, .DECLARE)
-            }
-            decreaseIndent
-            emit(indent + "};\n")
-            emitNewlineAfterSymbol(symbol)
+      switch symbol.kind {
+        case .OBJECT_CLASS {
+          _adjustNamespace(symbol)
+          _emitNewlineBeforeSymbol(symbol, .DEFINE)
+          _emitComments(symbol.comments)
+          _emitTypeParameters(symbol.parameters)
+          _emit(_indent + "struct " + _mangleName(symbol))
+          if symbol.baseClass != null {
+            _emit(" : ")
+            _emitType(symbol.baseClass.resolvedType, .BARE)
           }
-
-          case .OBJECT_CLASS {
-            adjustNamespace(symbol)
-            emitNewlineBeforeSymbol(symbol, .DECLARE)
-            emitTypeParameters(symbol.parameters)
-            emit(indent + "struct " + mangleName(symbol) + ";\n")
-            emitNewlineAfterSymbol(symbol)
+          _emit(" {\n")
+          _increaseIndent
+          for function in symbol.functions {
+            _emitFunction(function, .DEFINE)
           }
-        }
-      }
-
-      def defineObject(symbol ObjectSymbol) {
-        if symbol.isImported {
-          return
-        }
-
-        switch symbol.kind {
-          case .OBJECT_CLASS {
-            adjustNamespace(symbol)
-            emitNewlineBeforeSymbol(symbol, .DEFINE)
-            emitComments(symbol.comments)
-            emitTypeParameters(symbol.parameters)
-            emit(indent + "struct " + mangleName(symbol))
-            if symbol.baseClass != null {
-              emit(" : ")
-              emitType(symbol.baseClass.resolvedType, .BARE)
-            }
-            emit(" {\n")
-            increaseIndent
-            for function in symbol.functions {
-              emitFunction(function, .DEFINE)
-            }
-            for variable in symbol.variables {
-              emitVariable(variable, .DEFINE)
-            }
-            decreaseIndent
-            emit(indent + "};\n")
-            emitNewlineAfterSymbol(symbol)
+          for variable in symbol.variables {
+            _emitVariable(variable, .DEFINE)
           }
-        }
-      }
-
-      def implementObject(symbol ObjectSymbol) {
-        for function in symbol.functions {
-          emitFunction(function, .IMPLEMENT)
+          _decreaseIndent
+          _emit(_indent + "};\n")
+          _emitNewlineAfterSymbol(symbol)
         }
 
-        for variable in symbol.variables {
-          if variable.kind == .VARIABLE_GLOBAL {
-            emitVariable(variable, .IMPLEMENT)
+        case .OBJECT_NAMESPACE {
+          _adjustNamespace(symbol)
+          for function in symbol.functions {
+            _emitFunction(function, .DEFINE)
           }
         }
       }
+    }
 
-      def emitFunction(symbol FunctionSymbol, mode CodeMode) {
-        var block = symbol.block
+    def _emitFunction(symbol FunctionSymbol, mode CodeMode) {
+      var block = symbol.block
 
-        if symbol.isImported || block == null {
-          return
+      if symbol.isImported || block == null {
+        return
+      }
+
+      # We can't use lambdas in C++ since they don't have the right semantics so no variable insertion is needed
+      if symbol.self != null {
+        symbol.self.name = "this"
+        symbol.self.flags |= Symbol.IS_EXPORTED
+      }
+
+      _emitNewlineBeforeSymbol(symbol, mode)
+      _emitComments(symbol.comments)
+      if mode == .IMPLEMENT {
+        _emitTypeParameters(symbol.parent.asObjectSymbol.parameters) # TODO: Merge these with the ones on the symbol when symbols have both
+      }
+      _emitTypeParameters(symbol.parameters)
+      _emit(_indent)
+      if mode == .DEFINE && symbol.kind == .FUNCTION_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
+        _emit("static ")
+      }
+      if symbol.kind != .FUNCTION_CONSTRUCTOR {
+        if mode == .DEFINE && symbol.isVirtual {
+          _emit("virtual ")
         }
+        _emitType(symbol.resolvedType.returnType, .DECLARATION)
+      }
+      _emit(mode == .DEFINE ? _mangleName(symbol) : _fullName(symbol))
+      _emitArgumentList(symbol)
 
-        # We can't use lambdas in C++ since they don't have the right semantics so no variable insertion is needed
-        if symbol.self != null {
-          symbol.self.name = "this"
-          symbol.self.flags |= Symbol.IS_EXPORTED
-        }
-
-        emitNewlineBeforeSymbol(symbol, mode)
-        emitComments(symbol.comments)
-        emitTypeParameters(symbol.parameters)
-        emit(indent)
-        if mode == .DEFINE && symbol.kind == .FUNCTION_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
-          emit("static ")
-        }
-        if symbol.kind != .FUNCTION_CONSTRUCTOR {
-          if mode == .DEFINE && symbol.isVirtual {
-            emit("virtual ")
-          }
-          emitType(symbol.resolvedType.returnType, .DECLARATION)
-        }
-        emit(mode == .DEFINE ? mangleName(symbol) : fullName(symbol))
-        emitArgumentList(symbol)
-
-        if mode == .IMPLEMENT {
-          # Move the super constructor call out of the function body
-          if symbol.kind == .FUNCTION_CONSTRUCTOR && !block.children.isEmpty {
-            var first = block.children.first
-            if first.kind == .EXPRESSION {
-              var call = first.expressionValue
-              if call.kind == .CALL && call.callValue.kind == .SUPER {
-                emit(" : ")
-                first.remove
-                emitExpression(call, .LOWEST)
-              }
+      if mode == .IMPLEMENT {
+        # Move the super constructor call out of the function body
+        if symbol.kind == .FUNCTION_CONSTRUCTOR && !block.children.isEmpty {
+          var first = block.children.first
+          if first.kind == .EXPRESSION {
+            var call = first.expressionValue
+            if call.kind == .CALL && call.callValue.kind == .SUPER {
+              _emit(" : ")
+              first.remove
+              _emitExpression(call, .LOWEST)
             }
           }
-
-          emitBlock(block)
-          emit("\n")
         }
 
-        else {
-          if symbol.overridden != null && symbol.kind != .FUNCTION_CONSTRUCTOR {
-            emit(" override")
-          }
-          emit(";\n")
-        }
-
-        emitNewlineAfterSymbol(symbol)
+        _emitBlock(block)
+        _emit("\n")
       }
 
-      def emitTypeParameters(parameters List<ParameterSymbol>) {
-        if parameters != null {
-          emit(indent + "template <")
-          for parameter in parameters {
-            if parameter != parameters.first {
-              emit(", ")
-            }
-            emit("typename " + mangleName(parameter))
-          }
-          emit(">\n")
+      else {
+        if symbol.overridden != null && symbol.kind != .FUNCTION_CONSTRUCTOR {
+          _emit(" override")
         }
+        _emit(";\n")
       }
 
-      def emitArgumentList(symbol FunctionSymbol) {
-        emit("(")
-        for argument in symbol.arguments {
-          if argument != symbol.arguments.first {
-            emit(", ")
+      _emitNewlineAfterSymbol(symbol)
+    }
+
+    def _emitTypeParameters(parameters List<ParameterSymbol>) {
+      if parameters != null {
+        _emit(_indent + "template <")
+        for parameter in parameters {
+          if parameter != parameters.first {
+            _emit(", ")
           }
-          emitType(argument.resolvedType, .DECLARATION)
-          emit(mangleName(argument))
+          _emit("typename " + _mangleName(parameter))
         }
-        emit(")")
+        _emit(">\n")
+      }
+    }
+
+    def _emitArgumentList(symbol FunctionSymbol) {
+      _emit("(")
+      for argument in symbol.arguments {
+        if argument != symbol.arguments.first {
+          _emit(", ")
+        }
+        _emitType(argument.resolvedType, .DECLARATION)
+        _emit(_mangleName(argument))
+      }
+      _emit(")")
+    }
+
+    def _emitVariable(symbol VariableSymbol, mode CodeMode) {
+      if symbol.isImported {
+        return
       }
 
-      def emitVariable(symbol VariableSymbol, mode CodeMode) {
-        if symbol.isImported {
-          return
-        }
+      # C++ can't forward-declare variables without also giving them external linkage
+      var avoidFullName = symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind != .OBJECT_CLASS
+      if mode == .IMPLEMENT {
+        _adjustNamespace(avoidFullName ? symbol.parent : null)
+      }
 
-        emitNewlineBeforeSymbol(symbol, mode)
-        if symbol.kind == .VARIABLE_ENUM {
-          emit(indent + mangleName(symbol))
-          if symbol.value != null {
-            emit(" = ")
-            emitExpression(symbol.value, .COMMA)
-          }
-          emit(",\n")
+      _emitNewlineBeforeSymbol(symbol, mode)
+      if symbol.kind == .VARIABLE_ENUM {
+        _emit(_indent + _mangleName(symbol) + ",\n")
+      } else {
+        _emit(_indent)
+        if mode == .DEFINE && symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
+          _emit("static ")
+        }
+        _emitType(symbol.resolvedType, .DECLARATION)
+        if mode == .DEFINE {
+          _emit(_mangleName(symbol))
         } else {
-          emit(indent)
-          if mode == .DEFINE && symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
-            emit("static ")
+          _emit(avoidFullName ? _mangleName(symbol) : _fullName(symbol))
+          if symbol.value != null {
+            _emit(" = ")
+            _emitExpression(symbol.value, .ASSIGN)
           }
-          emitType(symbol.resolvedType, .DECLARATION)
-          if mode == .DEFINE {
-            emit(mangleName(symbol))
-          } else {
-            emit(fullName(symbol))
-            if symbol.value != null {
-              emit(" = ")
-              emitExpression(symbol.value, .ASSIGN)
-            }
-          }
-          emit(";\n")
         }
-        emitNewlineAfterSymbol(symbol)
+        _emit(";\n")
+      }
+      _emitNewlineAfterSymbol(symbol)
+    }
+
+    def _emitStatements(statements List<Node>) {
+      _previousNode = null
+
+      for statement in statements {
+        _emitNewlineBeforeStatement(statement)
+        _emitComments(statement.comments)
+        _emitStatement(statement)
+        _emitNewlineAfterStatement(statement)
       }
 
-      def emitStatements(statements List<Node>) {
-        previousNode = null
+      _previousNode = null
+    }
 
-        for statement in statements {
-          emitNewlineBeforeStatement(statement)
-          emitComments(statement.comments)
-          emitStatement(statement)
-          emitNewlineAfterStatement(statement)
+    def _emitBlock(node Node) {
+      _emit(" {\n")
+      _increaseIndent
+      _emitStatements(node.children)
+      _decreaseIndent
+      _emit(_indent + "}")
+    }
+
+    def _emitStatement(node Node) {
+      switch node.kind {
+        case .VAR {
+          _emitVariable(node.symbol.asVariableSymbol, .IMPLEMENT)
         }
 
-        previousNode = null
-      }
+        case .EXPRESSION {
+          _emit(_indent)
+          _emitExpression(node.expressionValue, .LOWEST)
+          _emit(";\n")
+        }
 
-      def emitBlock(node Node) {
-        emit(" {\n")
-        increaseIndent
-        emitStatements(node.children)
-        decreaseIndent
-        emit(indent + "}")
-      }
+        case .BREAK {
+          _emit(_indent + "break;\n")
+        }
 
-      def emitStatement(node Node) {
-        switch node.kind {
-          case .VAR {
-            emitVariable(node.symbol.asVariableSymbol, .IMPLEMENT)
-          }
+        case .CONTINUE {
+          _emit(_indent + "continue;\n")
+        }
 
-          case .EXPRESSION {
-            emit(indent)
-            emitExpression(node.expressionValue, .LOWEST)
-            emit(";\n")
-          }
+        case .IF {
+          _emit(_indent)
+          _emitIf(node)
+          _emit("\n")
+        }
 
-          case .BREAK {
-            emit(indent + "break;\n")
-          }
-
-          case .CONTINUE {
-            emit(indent + "continue;\n")
-          }
-
-          case .IF {
-            emit(indent)
-            emitIf(node)
-            emit("\n")
-          }
-
-          case .SWITCH {
-            var cases = node.children
-            emit(indent + "switch (")
-            emitExpression(node.switchValue, .LOWEST)
-            emit(") {\n")
-            increaseIndent
-            for i in 1..cases.count {
-              var child = cases[i]
-              var values = child.children
-              var block = child.caseBlock
-              if i != 1 {
-                emit("\n")
-              }
-              if values.count == 1 {
-                emit(indent + "default:")
-              } else {
-                for j in 1..values.count {
-                  if j != 1 { emit("\n") }
-                  emit(indent + "case ")
-                  emitExpression(values[j], .LOWEST)
-                  emit(":")
-                }
-              }
-              emit(" {\n")
-              increaseIndent
-              emitStatements(block.children)
-              if !block.blockAlwaysEndsWithReturn {
-                emit(indent + "break;\n")
-              }
-              decreaseIndent
-              emit(indent + "}\n")
+        case .SWITCH {
+          var cases = node.children
+          _emit(_indent + "switch (")
+          _emitExpression(node.switchValue, .LOWEST)
+          _emit(") {\n")
+          _increaseIndent
+          for i in 1..cases.count {
+            var child = cases[i]
+            var values = child.children
+            var block = child.caseBlock
+            if i != 1 {
+              _emit("\n")
             }
-            decreaseIndent
-            emit(indent + "}\n")
-          }
-
-          case .RETURN {
-            emit(indent + "return")
-            var value = node.returnValue
-            if value != null {
-              emit(" ")
-              emitExpression(value, .LOWEST)
-            }
-            emit(";\n")
-          }
-
-          case .THROW {
-            emit(indent + "throw ")
-            emitExpression(node.throwValue, .LOWEST)
-            emit(";\n")
-          }
-
-          case .FOR {
-            var test = node.forTest
-            var update = node.forUpdate
-            var children = node.children
-            var count = children.count
-            emit(indent + "for (")
-            if count > 3 {
-              for i in 3..count {
-                var child = children[i]
-                if i != 3 {
-                  emit(", ")
-                }
-                if child.kind == .VAR {
-                  var symbol = child.symbol.asVariableSymbol
-                  if i == 3 {
-                    emitType(symbol.resolvedType, .DECLARATION)
-                  }
-                  emit(mangleName(symbol) + " = ")
-                  emitExpression(symbol.value, .LOWEST)
-                } else {
-                  emitExpression(child, .LOWEST)
-                }
+            if values.count == 1 {
+              _emit(_indent + "default:")
+            } else {
+              for j in 1..values.count {
+                if j != 1 { _emit("\n") }
+                _emit(_indent + "case ")
+                _emitExpression(values[j], .LOWEST)
+                _emit(":")
               }
             }
-            emit("; ")
-            if test != null {
-              emitExpression(test, .LOWEST)
+            _emit(" {\n")
+            _increaseIndent
+            _emitStatements(block.children)
+            if !block.blockAlwaysEndsWithReturn {
+              _emit(_indent + "break;\n")
             }
-            emit("; ")
-            if update != null {
-              emitExpression(update, .LOWEST)
-            }
-            emit(")")
-            emitBlock(node.forBlock)
-            emit("\n")
+            _decreaseIndent
+            _emit(_indent + "}\n")
           }
+          _decreaseIndent
+          _emit(_indent + "}\n")
+        }
 
-          case .TRY {
-            var children = node.children
-            var finallyBlock = node.finallyBlock
-            emit(indent + "try")
-            emitBlock(node.tryBlock)
-            emit("\n")
-            for i in 1..children.count - 1 {
+        case .RETURN {
+          _emit(_indent + "return")
+          var value = node.returnValue
+          if value != null {
+            _emit(" ")
+            _emitExpression(value, .LOWEST)
+          }
+          _emit(";\n")
+        }
+
+        case .THROW {
+          _emit(_indent + "throw ")
+          _emitExpression(node.throwValue, .LOWEST)
+          _emit(";\n")
+        }
+
+        case .FOR {
+          var test = node.forTest
+          var update = node.forUpdate
+          var children = node.children
+          var count = children.count
+          _emit(_indent + "for (")
+          if count > 3 {
+            for i in 3..count {
               var child = children[i]
-              if child.comments != null {
-                emit("\n")
-                emitComments(child.comments)
+              if i != 3 {
+                _emit(", ")
               }
-              emit(indent + "catch")
-              if child.symbol != null {
-                emit(" (")
-                emitType(child.symbol.resolvedType, .DECLARATION)
-                emit(mangleName(child.symbol) + ")")
+              if child.kind == .VAR {
+                var symbol = child.symbol.asVariableSymbol
+                if i == 3 {
+                  _emitType(symbol.resolvedType, .DECLARATION)
+                }
+                _emit(_mangleName(symbol) + " = ")
+                _emitExpression(symbol.value, .LOWEST)
               } else {
-                emit(" (...)")
+                _emitExpression(child, .LOWEST)
               }
-              emitBlock(child.catchBlock)
-              emit("\n")
-            }
-            if finallyBlock != null {
-              if finallyBlock.comments != null {
-                emit("\n")
-                emitComments(finallyBlock.comments)
-              }
-              emit(indent + "finally")
-              emitBlock(finallyBlock)
-              emit("\n")
             }
           }
+          _emit("; ")
+          if test != null {
+            _emitExpression(test, .LOWEST)
+          }
+          _emit("; ")
+          if update != null {
+            _emitExpression(update, .LOWEST)
+          }
+          _emit(")")
+          _emitBlock(node.forBlock)
+          _emit("\n")
+        }
 
-          case .WHILE {
-            emit(indent + "while (")
-            emitExpression(node.whileTest, .LOWEST)
-            emit(")")
-            emitBlock(node.whileBlock)
-            emit("\n")
+        case .TRY {
+          var children = node.children
+          var finallyBlock = node.finallyBlock
+          _emit(_indent + "try")
+          _emitBlock(node.tryBlock)
+          _emit("\n")
+          for i in 1..children.count - 1 {
+            var child = children[i]
+            if child.comments != null {
+              _emit("\n")
+              _emitComments(child.comments)
+            }
+            _emit(_indent + "catch")
+            if child.symbol != null {
+              _emit(" (")
+              _emitType(child.symbol.resolvedType, .DECLARATION)
+              _emit(_mangleName(child.symbol) + ")")
+            } else {
+              _emit(" (...)")
+            }
+            _emitBlock(child.catchBlock)
+            _emit("\n")
+          }
+          if finallyBlock != null {
+            if finallyBlock.comments != null {
+              _emit("\n")
+              _emitComments(finallyBlock.comments)
+            }
+            _emit(_indent + "finally")
+            _emitBlock(finallyBlock)
+            _emit("\n")
+          }
+        }
+
+        case .WHILE {
+          _emit(_indent + "while (")
+          _emitExpression(node.whileTest, .LOWEST)
+          _emit(")")
+          _emitBlock(node.whileBlock)
+          _emit("\n")
+        }
+
+        case .FOREACH {
+          _emit("TODO:FOREACH")
+        }
+
+        default {
+          assert(false)
+        }
+      }
+    }
+
+    def _emitIf(node Node) {
+      _emit("if (")
+      _emitExpression(node.ifTest, .LOWEST)
+      _emit(")")
+      _emitBlock(node.ifTrue)
+
+      var block = node.ifFalse
+      if block != null {
+        var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
+        _emit("\n\n")
+        _emitComments(block.comments)
+        if singleIf != null {
+          _emitComments(singleIf.comments)
+        }
+        _emit(_indent + "else")
+
+        if singleIf != null {
+          _emit(" ")
+          _emitIf(singleIf)
+        } else {
+          _emitBlock(block)
+        }
+      }
+    }
+
+    def _emitContent(content Content) {
+      switch content.kind {
+        case .BOOL { _emit(content.asBool.toString) }
+        case .INT { _emit(content.asInt.toString) }
+        case .DOUBLE { _emit(content.asDouble.toString) }
+        case .STRING { _emit(quoteString(content.asString, '"')) }
+      }
+    }
+
+    def _emitExpression(node Node, precedence Precedence) {
+      var kind = node.kind
+      var symbol = node.symbol
+
+      if symbol != null {
+        _handleSymbol(symbol)
+      }
+
+      switch kind {
+        case .TYPE, .LAMBDA_TYPE {
+          _emitType(node.resolvedType, .BARE)
+        }
+
+        case .NULL {
+          _emit("nullptr")
+        }
+
+        case .NAME {
+          _emit(symbol != null ? _fullName(symbol) : node.asString)
+        }
+
+        case .DOT {
+          var target = node.dotTarget
+          var type = target.resolvedType
+          _emitExpression(target, .MEMBER)
+          _emit((type != null && type.isReference ? "->" : ".") + (symbol != null ? _mangleName(symbol) : node.asString))
+        }
+
+        case .CONSTANT {
+          _emitContent(node.content)
+        }
+
+        case .CALL {
+          var value = node.callValue
+
+          if value.kind == .SUPER {
+            _emit(_fullName(symbol))
           }
 
-          case .FOREACH {
-            emit("TODO:FOREACH")
+          else if symbol != null && symbol.kind == .FUNCTION_CONSTRUCTOR {
+            _emit("new ")
+            _emitType(node.resolvedType, .BARE)
           }
 
-          default {
+          else if value.kind == .DOT && value.asString == "new" {
+            _emit("new ")
+            _emitExpression(value.dotTarget, .MEMBER)
+          }
+
+          else {
+            _emitExpression(value, .UNARY_POSTFIX)
+          }
+
+          _emit("(")
+
+          for i in 1..node.children.count {
+            if i > 1 {
+              _emit(", ")
+            }
+            _emitExpression(node.children[i], .COMMA)
+          }
+
+          _emit(")")
+        }
+
+        case .CAST {
+          var value = node.castValue
+
+          if node.castType.kind == .DYNAMIC {
+            _emitExpression(value, precedence)
+          } else {
+            if Precedence.UNARY_POSTFIX as int < precedence as int {
+              _emit("(")
+            }
+            _emit("(")
+            _emitType(node.resolvedType, .NORMAL)
+            _emit(")")
+            _emitExpression(value, .UNARY_POSTFIX)
+            if Precedence.UNARY_POSTFIX as int < precedence as int {
+              _emit(")")
+            }
+          }
+        }
+
+        case .INDEX {
+          assert(node.children.count == 2)
+          _emitExpression(node.children[0], .UNARY_POSTFIX)
+          _emit("[")
+          _emitExpression(node.children[1], .LOWEST)
+          _emit("]")
+        }
+
+        case .ASSIGN_INDEX {
+          if Precedence.ASSIGN as int < precedence as int {
+            _emit("(")
+          }
+          assert(node.children.count == 3)
+          _emitExpression(node.children[0], .UNARY_POSTFIX)
+          _emit("[")
+          _emitExpression(node.children[1], .LOWEST)
+          _emit("] = ")
+          _emitExpression(node.children[2], .ASSIGN)
+          if Precedence.ASSIGN as int < precedence as int {
+            _emit(")")
+          }
+        }
+
+        case .PARAMETERIZE {
+          if node.parameterizeValue.isType {
+            _emitType(node.resolvedType, .NORMAL)
+          } else {
+            _emitExpression(node.parameterizeValue, precedence)
+            _emit("<")
+            for i in 1..node.children.count {
+              if i > 1 {
+                _emit(", ")
+              }
+              _emitExpression(node.children[i], .COMMA)
+            }
+            _emit(">")
+          }
+        }
+
+        case .HOOK {
+          if Precedence.ASSIGN as int < precedence as int {
+            _emit("(")
+          }
+          _emitExpression(node.hookTest, .LOGICAL_OR)
+          _emit(" ? ")
+          _emitExpression(node.hookTrue, .ASSIGN)
+          _emit(" : ")
+          _emitExpression(node.hookFalse, .ASSIGN)
+          if Precedence.ASSIGN as int < precedence as int {
+            _emit(")")
+          }
+        }
+
+        case .LAMBDA {
+          var lambda = symbol.asFunctionSymbol
+          _emit("[=]")
+          _emitArgumentList(lambda)
+          _emit(" -> ")
+          _emitType(lambda.resolvedType.returnType, .NORMAL)
+          _emitBlock(lambda.block)
+        }
+
+        case .INITIALIZER_LIST, .INITIALIZER_SET, .INITIALIZER_MAP {
+          var children = node.children
+          _emit("{")
+          for child in children {
+            if child != children.first {
+              _emit(", ")
+            }
+            _emitExpression(child, .COMMA)
+          }
+          _emit("}")
+        }
+
+        case .PAIR {
+          _includeNames["<utility>"] = 0
+          _emit("std::make_pair<")
+          _emitType(node.firstValue.resolvedType, .NORMAL)
+          _emit(", ")
+          _emitType(node.secondValue.resolvedType, .NORMAL)
+          _emit(">(")
+          _emitExpression(node.firstValue, .COMMA)
+          _emit(", ")
+          _emitExpression(node.secondValue, .COMMA)
+          _emit(")")
+        }
+
+        default {
+          if kind.isUnary {
+            var value = node.unaryValue
+            var info = operatorInfo[kind]
+            if info.precedence as int < precedence as int {
+              _emit("(")
+            }
+            _emit(info.text)
+            _emitExpression(value, info.precedence)
+            if info.precedence as int < precedence as int {
+              _emit(")")
+            }
+          }
+
+          else if kind.isBinary {
+            var info = operatorInfo[kind]
+            if info.precedence as int < precedence as int {
+              _emit("(")
+            }
+            _emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
+            _emit(" " + info.text + " ")
+            _emitExpression(node.binaryRight, info.precedence.incrementIfLeftAssociative(info.associativity))
+            if info.precedence as int < precedence as int {
+              _emit(")")
+            }
+          }
+
+          else {
             assert(false)
           }
         }
       }
+    }
 
-      def emitIf(node Node) {
-        emit("if (")
-        emitExpression(node.ifTest, .LOWEST)
-        emit(")")
-        emitBlock(node.ifTrue)
+    enum CppEmitType {
+      BARE
+      NORMAL
+      DECLARATION
+    }
 
-        var block = node.ifFalse
-        if block != null {
-          var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
-          emit("\n\n")
-          emitComments(block.comments)
-          if singleIf != null {
-            emitComments(singleIf.comments)
-          }
-          emit(indent + "else")
-
-          if singleIf != null {
-            emit(" ")
-            emitIf(singleIf)
-          } else {
-            emitBlock(block)
-          }
-        }
+    def _emitType(type Type, mode CppEmitType) {
+      if type == null {
+        _emit(mode == .DECLARATION ? "void " : "void")
       }
 
-      def emitContent(content Content) {
-        switch content.kind {
-          case .BOOL { emit(content.asBool.toString) }
-          case .INT { emit(content.asInt.toString) }
-          case .DOUBLE { emit(content.asDouble.toString) }
-          case .STRING { emit(quoteString(content.asString, '"')) }
-        }
+      else if type == .DYNAMIC {
+        _emit("void *")
       }
 
-      def emitExpression(node Node, precedence Precedence) {
-        var kind = node.kind
-        var symbol = node.symbol
-
-        if symbol != null {
-          handleSymbol(symbol)
+      else if type.kind == .LAMBDA {
+        _includeNames["<functional>"] = 0
+        _emit("std::function<")
+        _emitType(type.returnType, .DECLARATION)
+        _emit("(")
+        for i in 0..type.argumentTypes.count {
+          if i != 0 {
+            _emit(", ")
+          }
+          _emitType(type.argumentTypes[i], .NORMAL)
         }
-
-        switch kind {
-          case .TYPE, .LAMBDA_TYPE {
-            emitType(node.resolvedType, .BARE)
-          }
-
-          case .NULL {
-            emit("nullptr")
-          }
-
-          case .NAME {
-            emit(symbol != null ? fullName(symbol) : node.asString)
-          }
-
-          case .DOT {
-            var target = node.dotTarget
-            var type = target.resolvedType
-            emitExpression(target, .MEMBER)
-            emit((type != null && type.isReference ? "->" : ".") + (symbol != null ? mangleName(symbol) : node.asString))
-          }
-
-          case .CONSTANT {
-            emitContent(node.content)
-          }
-
-          case .CALL {
-            var value = node.callValue
-
-            if value.kind == .SUPER {
-              emit(fullName(symbol))
-            }
-
-            else if symbol != null && symbol.kind == .FUNCTION_CONSTRUCTOR {
-              emit("new ")
-              emitType(node.resolvedType, .BARE)
-            }
-
-            else if value.kind == .DOT && value.asString == "new" {
-              emit("new ")
-              emitExpression(value.dotTarget, .MEMBER)
-            }
-
-            else {
-              emitExpression(value, .UNARY_POSTFIX)
-            }
-
-            emit("(")
-
-            for i in 1..node.children.count {
-              if i > 1 {
-                emit(", ")
-              }
-              emitExpression(node.children[i], .COMMA)
-            }
-
-            emit(")")
-          }
-
-          case .CAST {
-            var value = node.castValue
-
-            if node.castType.kind == .DYNAMIC {
-              emitExpression(value, precedence)
-            } else {
-              if Precedence.UNARY_POSTFIX as int < precedence as int {
-                emit("(")
-              }
-              emit("(")
-              emitType(node.resolvedType, .NORMAL)
-              emit(")")
-              emitExpression(value, .UNARY_POSTFIX)
-              if Precedence.UNARY_POSTFIX as int < precedence as int {
-                emit(")")
-              }
-            }
-          }
-
-          case .INDEX {
-            assert(node.children.count == 2)
-            emitExpression(node.children[0], .UNARY_POSTFIX)
-            emit("[")
-            emitExpression(node.children[1], .LOWEST)
-            emit("]")
-          }
-
-          case .ASSIGN_INDEX {
-            if Precedence.ASSIGN as int < precedence as int {
-              emit("(")
-            }
-            assert(node.children.count == 3)
-            emitExpression(node.children[0], .UNARY_POSTFIX)
-            emit("[")
-            emitExpression(node.children[1], .LOWEST)
-            emit("] = ")
-            emitExpression(node.children[2], .ASSIGN)
-            if Precedence.ASSIGN as int < precedence as int {
-              emit(")")
-            }
-          }
-
-          case .PARAMETERIZE {
-            if node.parameterizeValue.isType {
-              emitType(node.resolvedType, .NORMAL)
-            } else {
-              emitExpression(node.parameterizeValue, precedence)
-              emit("<")
-              for i in 1..node.children.count {
-                if i > 1 {
-                  emit(", ")
-                }
-                emitExpression(node.children[i], .COMMA)
-              }
-              emit(">")
-            }
-          }
-
-          case .HOOK {
-            if Precedence.ASSIGN as int < precedence as int {
-              emit("(")
-            }
-            emitExpression(node.hookTest, .LOGICAL_OR)
-            emit(" ? ")
-            emitExpression(node.hookTrue, .ASSIGN)
-            emit(" : ")
-            emitExpression(node.hookFalse, .ASSIGN)
-            if Precedence.ASSIGN as int < precedence as int {
-              emit(")")
-            }
-          }
-
-          case .LAMBDA {
-            var lambda = symbol.asFunctionSymbol
-            emit("[=]")
-            emitArgumentList(lambda)
-            emit(" -> ")
-            emitType(lambda.resolvedType.returnType, .NORMAL)
-            emitBlock(lambda.block)
-          }
-
-          case .INITIALIZER_LIST, .INITIALIZER_SET, .INITIALIZER_MAP {
-            var children = node.children
-            emit("{")
-            for child in children {
-              if child != children.first {
-                emit(", ")
-              }
-              emitExpression(child, .COMMA)
-            }
-            emit("}")
-          }
-
-          case .PAIR {
-            includeNames["<utility>"] = 0
-            emit("std::make_pair<")
-            emitType(node.firstValue.resolvedType, .NORMAL)
-            emit(", ")
-            emitType(node.secondValue.resolvedType, .NORMAL)
-            emit(">(")
-            emitExpression(node.firstValue, .COMMA)
-            emit(", ")
-            emitExpression(node.secondValue, .COMMA)
-            emit(")")
-          }
-
-          default {
-            if kind.isUnary {
-              var value = node.unaryValue
-              var info = operatorInfo[kind]
-              if info.precedence as int < precedence as int {
-                emit("(")
-              }
-              emit(info.text)
-              emitExpression(value, info.precedence)
-              if info.precedence as int < precedence as int {
-                emit(")")
-              }
-            }
-
-            else if kind.isBinary {
-              var info = operatorInfo[kind]
-              if info.precedence as int < precedence as int {
-                emit("(")
-              }
-              emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
-              emit(" " + info.text + " ")
-              emitExpression(node.binaryRight, info.precedence.incrementIfLeftAssociative(info.associativity))
-              if info.precedence as int < precedence as int {
-                emit(")")
-              }
-            }
-
-            else {
-              assert(false)
-            }
-          }
-        }
+        _emit(mode == .DECLARATION ? ")> " : ")>")
       }
 
-      enum CppEmitType {
-        BARE
-        NORMAL
-        DECLARATION
-      }
+      else {
+        assert(type.kind == .SYMBOL)
+        _handleSymbol(type.symbol)
+        _emit(_fullName(type.symbol))
 
-      def emitType(type Type, mode CppEmitType) {
-        if type == null {
-          emit(mode == .DECLARATION ? "void " : "void")
-        }
-
-        else if type == .DYNAMIC {
-          emit("void *")
-        }
-
-        else if type.kind == .LAMBDA {
-          includeNames["<functional>"] = 0
-          emit("std::function<")
-          emitType(type.returnType, .DECLARATION)
-          emit("(")
-          for i in 0..type.argumentTypes.count {
+        if type.isParameterized {
+          _emit("<")
+          for i in 0..type.substitutions.count {
             if i != 0 {
-              emit(", ")
+              _emit(", ")
             }
-            emitType(type.argumentTypes[i], .NORMAL)
+            _emitType(type.substitutions[i], .NORMAL)
           }
-          emit(mode == .DECLARATION ? ")> " : ")>")
+          _emit(">")
         }
 
-        else {
-          assert(type.kind == .SYMBOL)
-          handleSymbol(type.symbol)
-          emit(fullName(type.symbol))
-
-          if type.isParameterized {
-            emit("<")
-            for i in 0..type.substitutions.count {
-              if i != 0 {
-                emit(", ")
-              }
-              emitType(type.substitutions[i], .NORMAL)
-            }
-            emit(">")
-          }
-
-          if type.isReference && mode != .BARE {
-            emit(" *")
-          } else if mode == .DECLARATION {
-            emit(" ")
-          }
+        if type.isReference && mode != .BARE {
+          _emit(" *")
+        } else if mode == .DECLARATION {
+          _emit(" ")
         }
       }
+    }
 
-      def finalizeEmittedFile {
-        var includes = includeNames.keys
+    def _finalizeEmittedFile {
+      var includes = _includeNames.keys
 
-        if !includes.isEmpty {
-          includes.sort((a, b) => a <=> b)
-          for include in includes {
-            emitPrefix("#include " + (include.startsWith("<") && include.endsWith(">") ? include : "\"" + include + "\"") + "\n")
-          }
-          emitPrefix("\n")
+      if !includes.isEmpty {
+        includes.sort((a, b) => a <=> b)
+        for include in includes {
+          _emitPrefix("#include " + (include.startsWith("<") && include.endsWith(">") ? include : "\"" + include + "\"") + "\n")
         }
-
-        adjustNamespace(null)
-        previousSymbol = null
-        symbolsCheckedForInclude = {}
-        includeNames = {}
+        _emitPrefix("\n")
       }
 
-      def handleSymbol(symbol Symbol) {
-        if !symbol.kind.isLocal && !(symbol.id in symbolsCheckedForInclude) {
-          symbolsCheckedForInclude[symbol.id] = 0
+      _adjustNamespace(null)
+      _previousSymbol = null
+      _symbolsCheckedForInclude = {}
+      _includeNames = {}
+    }
 
-          if symbol.annotations != null {
-            for annotation in symbol.annotations {
-              if annotation.symbol != null && annotation.symbol.fullName == "include" {
-                var children = annotation.annotationValue.children
-                if children.count == 2 {
-                  includeNames[children.last.asString] = 0
-                }
+    def _handleSymbol(symbol Symbol) {
+      if !symbol.kind.isLocal && !(symbol.id in _symbolsCheckedForInclude) {
+        _symbolsCheckedForInclude[symbol.id] = 0
+
+        if symbol.annotations != null {
+          for annotation in symbol.annotations {
+            if annotation.symbol != null && annotation.symbol.fullName == "include" {
+              var children = annotation.annotationValue.children
+              if children.count == 2 {
+                _includeNames[children.last.asString] = 0
               }
             }
           }
+        }
 
-          if symbol.parent != null {
-            handleSymbol(symbol.parent)
-          }
+        if symbol.parent != null {
+          _handleSymbol(symbol.parent)
         }
       }
     }
   }
 
   namespace CPlusPlusEmitter {
-    @private {
-      def fullName(symbol Symbol) string {
-        var parent = symbol.parent
-        if parent != null && parent.kind != .OBJECT_GLOBAL && !symbol.kind.isParameter {
-          return fullName(parent) + "::" + mangleName(symbol)
-        }
-        return mangleName(symbol)
+    def _fullName(symbol Symbol) string {
+      var parent = symbol.parent
+      if parent != null && parent.kind != .OBJECT_GLOBAL && !symbol.kind.isParameter {
+        return _fullName(parent) + "::" + _mangleName(symbol)
       }
+      return _mangleName(symbol)
+    }
 
-      def mangleName(symbol Symbol) string {
-        if symbol.kind == .FUNCTION_CONSTRUCTOR {
-          return mangleName(symbol.parent)
-        }
-        if !symbol.isImportedOrExported && symbol.name in isKeyword {
-          return "_" + symbol.name
-        }
-        return symbol.nameWithRenaming
+    def _mangleName(symbol Symbol) string {
+      if symbol.kind == .FUNCTION_CONSTRUCTOR {
+        return _mangleName(symbol.parent)
       }
+      if !symbol.isImportedOrExported && symbol.name in _isKeyword {
+        return "_" + symbol.name
+      }
+      return symbol.nameWithRenaming
+    }
 
-      var isKeyword = {
-        "alignas": 0,
-        "alignof": 0,
-        "and": 0,
-        "and_eq": 0,
-        "asm": 0,
-        "auto": 0,
-        "bitand": 0,
-        "bitor": 0,
-        "bool": 0,
-        "break": 0,
-        "case": 0,
-        "catch": 0,
-        "char": 0,
-        "char16_t": 0,
-        "char32_t": 0,
-        "class": 0,
-        "compl": 0,
-        "const": 0,
-        "const_cast": 0,
-        "constexpr": 0,
-        "continue": 0,
-        "decltype": 0,
-        "default": 0,
-        "delete": 0,
-        "do": 0,
-        "double": 0,
-        "dynamic_cast": 0,
-        "else": 0,
-        "enum": 0,
-        "explicit": 0,
-        "export": 0,
-        "extern": 0,
-        "false": 0,
-        "float": 0,
-        "for": 0,
-        "friend": 0,
-        "goto": 0,
-        "if": 0,
-        "INFINITY": 0,
-        "inline": 0,
-        "int": 0,
-        "long": 0,
-        "mutable": 0,
-        "namespace": 0,
-        "NAN": 0,
-        "new": 0,
-        "noexcept": 0,
-        "not": 0,
-        "not_eq": 0,
-        "NULL": 0,
-        "nullptr": 0,
-        "operator": 0,
-        "or": 0,
-        "or_eq": 0,
-        "private": 0,
-        "protected": 0,
-        "public": 0,
-        "register": 0,
-        "reinterpret_cast": 0,
-        "return": 0,
-        "short": 0,
-        "signed": 0,
-        "sizeof": 0,
-        "static": 0,
-        "static_assert": 0,
-        "static_cast": 0,
-        "struct": 0,
-        "switch": 0,
-        "template": 0,
-        "this": 0,
-        "thread_local": 0,
-        "throw": 0,
-        "true": 0,
-        "try": 0,
-        "typedef": 0,
-        "typeid": 0,
-        "typename": 0,
-        "union": 0,
-        "unsigned": 0,
-        "using": 0,
-        "virtual": 0,
-        "void": 0,
-        "volatile": 0,
-        "wchar_t": 0,
-        "while": 0,
-        "xor": 0,
-        "xor_eq": 0,
-      }
+    var _isKeyword = {
+      "alignas": 0,
+      "alignof": 0,
+      "and": 0,
+      "and_eq": 0,
+      "asm": 0,
+      "auto": 0,
+      "bitand": 0,
+      "bitor": 0,
+      "bool": 0,
+      "break": 0,
+      "case": 0,
+      "catch": 0,
+      "char": 0,
+      "char16_t": 0,
+      "char32_t": 0,
+      "class": 0,
+      "compl": 0,
+      "const": 0,
+      "const_cast": 0,
+      "constexpr": 0,
+      "continue": 0,
+      "decltype": 0,
+      "default": 0,
+      "delete": 0,
+      "do": 0,
+      "double": 0,
+      "dynamic_cast": 0,
+      "else": 0,
+      "enum": 0,
+      "explicit": 0,
+      "export": 0,
+      "extern": 0,
+      "false": 0,
+      "float": 0,
+      "for": 0,
+      "friend": 0,
+      "goto": 0,
+      "if": 0,
+      "INFINITY": 0,
+      "inline": 0,
+      "int": 0,
+      "long": 0,
+      "mutable": 0,
+      "namespace": 0,
+      "NAN": 0,
+      "new": 0,
+      "noexcept": 0,
+      "not": 0,
+      "not_eq": 0,
+      "NULL": 0,
+      "nullptr": 0,
+      "operator": 0,
+      "or": 0,
+      "or_eq": 0,
+      "private": 0,
+      "protected": 0,
+      "public": 0,
+      "register": 0,
+      "reinterpret_cast": 0,
+      "return": 0,
+      "short": 0,
+      "signed": 0,
+      "sizeof": 0,
+      "static": 0,
+      "static_assert": 0,
+      "static_cast": 0,
+      "struct": 0,
+      "switch": 0,
+      "template": 0,
+      "this": 0,
+      "thread_local": 0,
+      "throw": 0,
+      "true": 0,
+      "try": 0,
+      "typedef": 0,
+      "typeid": 0,
+      "typename": 0,
+      "union": 0,
+      "unsigned": 0,
+      "using": 0,
+      "virtual": 0,
+      "void": 0,
+      "volatile": 0,
+      "wchar_t": 0,
+      "while": 0,
+      "xor": 0,
+      "xor_eq": 0,
     }
   }
 }

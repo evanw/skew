@@ -7,106 +7,104 @@ namespace Skew {
   }
 
   class LispTreeEmitter : Emitter {
+    const _options CompilerOptions
+
     over visit(global ObjectSymbol) {
-      visitObject(global)
-      emit("\n")
-      createSource(options.outputDirectory != "" ? options.outputDirectory + "/compiled.lisp" : options.outputFile, .ALWAYS_EMIT)
+      _visitObject(global)
+      _emit("\n")
+      _createSource(_options.outputDirectory != "" ? _options.outputDirectory + "/compiled.lisp" : _options.outputFile, .ALWAYS_EMIT)
     }
 
-    @private {
-      const options CompilerOptions
+    def _visitObject(symbol ObjectSymbol) {
+      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"'))
+      _increaseIndent
 
-      def visitObject(symbol ObjectSymbol) {
-        emit("(" + mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"'))
-        increaseIndent
-
-        for object in symbol.objects {
-          emit("\n" + indent)
-          visitObject(object)
-        }
-
-        for function in symbol.functions {
-          emit("\n" + indent)
-          visitFunction(function)
-        }
-
-        for variable in symbol.variables {
-          emit("\n" + indent)
-          visitVariable(variable)
-        }
-
-        decreaseIndent
-        emit(")")
+      for object in symbol.objects {
+        _emit("\n" + _indent)
+        _visitObject(object)
       }
 
-      def visitFunction(symbol FunctionSymbol) {
-        emit("(" + mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"'))
-        increaseIndent
-
-        for argument in symbol.arguments {
-          emit("\n" + indent)
-          visitVariable(argument)
-        }
-
-        emit("\n" + indent)
-        visitNode(symbol.returnType)
-        emit("\n" + indent)
-        visitNode(symbol.block)
-        decreaseIndent
-        emit(")")
+      for function in symbol.functions {
+        _emit("\n" + _indent)
+        _visitFunction(function)
       }
 
-      def visitVariable(symbol VariableSymbol) {
-        emit("(" + mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"') + " ")
-        visitNode(symbol.type)
-        emit(" ")
-        visitNode(symbol.value)
-        emit(")")
+      for variable in symbol.variables {
+        _emit("\n" + _indent)
+        _visitVariable(variable)
       }
 
-      def visitNode(node Node) {
-        if node == null {
-          emit("nil")
-          return
-        }
+      _decreaseIndent
+      _emit(")")
+    }
 
-        emit("(" + mangleKind(node.kind.toString))
+    def _visitFunction(symbol FunctionSymbol) {
+      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"'))
+      _increaseIndent
 
-        var content = node.content
-        if content != null {
-          switch content.kind {
-            case .INT { emit(" " + content.asInt.toString) }
-            case .BOOL { emit(" " + content.asBool.toString) }
-            case .DOUBLE { emit(" " + content.asDouble.toString) }
-            case .STRING { emit(" " + quoteString(content.asString, '"')) }
-          }
-        }
-
-        if node.kind == .VAR {
-          emit(" ")
-          visitVariable(node.symbol.asVariableSymbol)
-        }
-
-        else if node.kind == .LAMBDA {
-          emit(" ")
-          visitFunction(node.symbol.asFunctionSymbol)
-        }
-
-        else if node.children != null {
-          increaseIndent
-          for child in node.children {
-            emit("\n" + indent)
-            visitNode(child)
-          }
-          decreaseIndent
-        }
-
-        emit(")")
+      for argument in symbol.arguments {
+        _emit("\n" + _indent)
+        _visitVariable(argument)
       }
 
-      def mangleKind(kind string) string {
-        return kind.toLowerCase.replaceAll("_", "-")
+      _emit("\n" + _indent)
+      _visitNode(symbol.returnType)
+      _emit("\n" + _indent)
+      _visitNode(symbol.block)
+      _decreaseIndent
+      _emit(")")
+    }
+
+    def _visitVariable(symbol VariableSymbol) {
+      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, '"') + " ")
+      _visitNode(symbol.type)
+      _emit(" ")
+      _visitNode(symbol.value)
+      _emit(")")
+    }
+
+    def _visitNode(node Node) {
+      if node == null {
+        _emit("nil")
+        return
       }
+
+      _emit("(" + _mangleKind(node.kind.toString))
+
+      var content = node.content
+      if content != null {
+        switch content.kind {
+          case .INT { _emit(" " + content.asInt.toString) }
+          case .BOOL { _emit(" " + content.asBool.toString) }
+          case .DOUBLE { _emit(" " + content.asDouble.toString) }
+          case .STRING { _emit(" " + quoteString(content.asString, '"')) }
+        }
+      }
+
+      if node.kind == .VAR {
+        _emit(" ")
+        _visitVariable(node.symbol.asVariableSymbol)
+      }
+
+      else if node.kind == .LAMBDA {
+        _emit(" ")
+        _visitFunction(node.symbol.asFunctionSymbol)
+      }
+
+      else if node.children != null {
+        _increaseIndent
+        for child in node.children {
+          _emit("\n" + _indent)
+          _visitNode(child)
+        }
+        _decreaseIndent
+      }
+
+      _emit(")")
+    }
+
+    def _mangleKind(kind string) string {
+      return kind.toLowerCase.replaceAll("_", "-")
     }
   }
 
@@ -115,14 +113,14 @@ namespace Skew {
     def dump(global ObjectSymbol) string {
       var emitter = LispTreeEmitter.new(CompilerOptions.new)
       emitter.visit(global)
-      emitter.createSource("", .ALWAYS_EMIT)
+      emitter._createSource("", .ALWAYS_EMIT)
       return emitter.sources.first.contents
     }
 
     def dump(node Node) string {
       var emitter = LispTreeEmitter.new(CompilerOptions.new)
-      emitter.visitNode(node)
-      emitter.createSource("", .ALWAYS_EMIT)
+      emitter._visitNode(node)
+      emitter._createSource("", .ALWAYS_EMIT)
       return emitter.sources.first.contents
     }
   }

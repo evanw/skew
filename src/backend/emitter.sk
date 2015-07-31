@@ -5,133 +5,126 @@ namespace Skew {
   }
 
   class Emitter {
+    var _sources List<Source> = []
+    var _prefix = StringBuilder.new
+    var _code = StringBuilder.new
+    var _indentAmount = "  "
+    var _indent = ""
+
     def sources List<Source> {
       return _sources
     }
 
     def visit(global ObjectSymbol)
 
-    @protected {
-      var indentAmount = "  "
-      var indent = ""
+    def _increaseIndent {
+      _indent += _indentAmount
+    }
 
-      def increaseIndent {
-        indent += indentAmount
+    def _decreaseIndent {
+      _indent = _indent.slice(_indentAmount.count)
+    }
+
+    def _emit(text string) {
+      _code.append(text)
+    }
+
+    def _emitPrefix(text string) {
+      _prefix.append(text)
+    }
+
+    def _createSource(name string, mode EmitMode) {
+      var code = _code.toString
+
+      if mode == .ALWAYS_EMIT || code != "" {
+        _prefix.append(code)
+        _sources.append(Source.new(name, _prefix.toString))
       }
 
-      def decreaseIndent {
-        indent = indent.slice(indentAmount.count)
-      }
+      _prefix = StringBuilder.new
+      _code = StringBuilder.new
+    }
 
-      def emit(text string) {
-        _code.append(text)
-      }
+    def _collectObjects(global ObjectSymbol) List<ObjectSymbol> {
+      var objects List<ObjectSymbol> = []
+      _findObjects(objects, global)
+      return objects
+    }
 
-      def emitPrefix(text string) {
-        _prefix.append(text)
-      }
+    def _sortedObjects(global ObjectSymbol) List<ObjectSymbol> {
+      var objects = _collectObjects(global)
 
-      def createSource(name string, mode EmitMode) {
-        var code = _code.toString
+      # Sort by inheritance and containment
+      for i in 0..objects.count {
+        var j = i
 
-        if mode == .ALWAYS_EMIT || code != "" {
-          _prefix.append(code)
-          _sources.append(Source.new(name, _prefix.toString))
-        }
+        # Select an object that comes before all other types
+        while j < objects.count {
+          var object = objects[j]
+          var k = i
 
-        _prefix = StringBuilder.new
-        _code = StringBuilder.new
-      }
-
-      def collectObjects(global ObjectSymbol) List<ObjectSymbol> {
-        var objects List<ObjectSymbol> = []
-        findObjects(objects, global)
-        return objects
-      }
-
-      def sortedObjects(global ObjectSymbol) List<ObjectSymbol> {
-        var objects = collectObjects(global)
-
-        # Sort by inheritance and containment
-        for i in 0..objects.count {
-          var j = i
-
-          # Select an object that comes before all other types
-          while j < objects.count {
-            var object = objects[j]
-            var k = i
-
-            # Check to see if this comes before all other types
-            while k < objects.count {
-              if j != k && objectComesBefore(objects[k], object) {
-                break
-              }
-              k++
-            }
-            if k == objects.count {
+          # Check to see if this comes before all other types
+          while k < objects.count {
+            if j != k && _objectComesBefore(objects[k], object) {
               break
             }
-            j++
+            k++
           }
-
-          # Swap the object into the correct order
-          if j < objects.count {
-            objects.swap(i, j)
+          if k == objects.count {
+            break
           }
+          j++
         }
 
-        return objects
+        # Swap the object into the correct order
+        if j < objects.count {
+          objects.swap(i, j)
+        }
       }
 
-      def markVirtualFunctions(symbol ObjectSymbol) {
-        for object in symbol.objects {
-          markVirtualFunctions(object)
-        }
+      return objects
+    }
 
-        for function in symbol.functions {
-          if function.overridden != null {
-            function.overridden.flags |= Symbol.IS_VIRTUAL
-            function.flags |= Symbol.IS_VIRTUAL
-          }
+    def _markVirtualFunctions(symbol ObjectSymbol) {
+      for object in symbol.objects {
+        _markVirtualFunctions(object)
+      }
+
+      for function in symbol.functions {
+        if function.overridden != null {
+          function.overridden.flags |= Symbol.IS_VIRTUAL
+          function.flags |= Symbol.IS_VIRTUAL
         }
       }
     }
 
-    @private {
-      def findObjects(objects List<ObjectSymbol>, object ObjectSymbol) {
-        objects.append(object)
-        for o in object.objects {
-          findObjects(objects, o)
-        }
+    def _findObjects(objects List<ObjectSymbol>, object ObjectSymbol) {
+      objects.append(object)
+      for o in object.objects {
+        _findObjects(objects, o)
       }
-
-      var _sources List<Source> = []
-      var _prefix = StringBuilder.new
-      var _code = StringBuilder.new
     }
   }
 
   namespace Emitter {
-    @private {
-      def isContainedBy(inner ObjectSymbol, outer ObjectSymbol) bool {
-        if inner.parent == null {
-          return false
-        }
-        if inner.parent == outer {
-          return true
-        }
-        return isContainedBy(inner.parent.asObjectSymbol, outer)
-      }
-
-      def objectComesBefore(before ObjectSymbol, after ObjectSymbol) bool {
-        if after.hasBaseClass(before) {
-          return true
-        }
-        if isContainedBy(after, before) {
-          return true
-        }
+    def _isContainedBy(inner ObjectSymbol, outer ObjectSymbol) bool {
+      if inner.parent == null {
         return false
       }
+      if inner.parent == outer {
+        return true
+      }
+      return _isContainedBy(inner.parent.asObjectSymbol, outer)
+    }
+
+    def _objectComesBefore(before ObjectSymbol, after ObjectSymbol) bool {
+      if after.hasBaseClass(before) {
+        return true
+      }
+      if _isContainedBy(after, before) {
+        return true
+      }
+      return false
     }
   }
 

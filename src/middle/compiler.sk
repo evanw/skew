@@ -37,30 +37,28 @@ namespace Skew {
   }
 
   class Timer {
+    var _isStarted = false
+    var _startTime = 0.0
+    var _totalSeconds = 0.0
+
     def start {
-      assert(!isStarted)
-      isStarted = true
-      startTime = Timestamp.seconds
+      assert(!_isStarted)
+      _isStarted = true
+      _startTime = Timestamp.seconds
     }
 
     def stop {
-      assert(isStarted)
-      isStarted = false
-      totalSeconds += Timestamp.seconds - startTime
+      assert(_isStarted)
+      _isStarted = false
+      _totalSeconds += Timestamp.seconds - _startTime
     }
 
     def elapsedMilliseconds string {
-      return formatNumber(totalSeconds * 1000) + "ms"
+      return formatNumber(_totalSeconds * 1000) + "ms"
     }
 
     def isZero bool {
-      return totalSeconds == 0
-    }
-
-    @private {
-      var isStarted = false
-      var startTime = 0.0
-      var totalSeconds = 0.0
+      return _totalSeconds == 0
     }
   }
 
@@ -148,7 +146,7 @@ namespace Skew {
         result.resolvingTimer.start
         resolvingPass(log, result.global, result.cache, options)
         result.resolvingTimer.stop
-        if debug { verifyHierarchy(result.global) }
+        if debug { _verifyHierarchy(result.global) }
 
         # Prepare for emission, code is error-free at this point
         if !log.hasErrors {
@@ -163,26 +161,26 @@ namespace Skew {
             result.globalizeTimer.start
             globalizingPass(result.global, graph, options)
             result.globalizeTimer.stop
-            if debug { verifyHierarchy(result.global) }
+            if debug { _verifyHierarchy(result.global) }
 
             # Move symbols around
             result.motionTimer.start
             motionPass(result.global, options)
             result.motionTimer.stop
-            if debug { verifyHierarchy(result.global) }
+            if debug { _verifyHierarchy(result.global) }
 
             # Give overloaded functions unique names, rename operator overloads
             result.renamingTimer.start
             renamingPass(result.global)
             result.renamingTimer.stop
-            if debug { verifyHierarchy(result.global) }
+            if debug { _verifyHierarchy(result.global) }
 
             # Partial evaluation before inlining to make more functions inlineable by removing dead code
             if options.foldAllConstants {
               result.foldingTimer.start
               foldingPass(result.global, result.cache)
               result.foldingTimer.stop
-              if debug { verifyHierarchy(result.global) }
+              if debug { _verifyHierarchy(result.global) }
             }
 
             # Function inlining
@@ -190,14 +188,14 @@ namespace Skew {
               result.inliningTimer.start
               inliningPass(graph)
               result.inliningTimer.stop
-              if debug { verifyHierarchy(result.global) }
+              if debug { _verifyHierarchy(result.global) }
 
               # Partial evaluation after inlining will simplify inlined expressions
               if options.foldAllConstants {
                 result.foldingTimer.start
                 foldingPass(result.global, result.cache)
                 result.foldingTimer.stop
-                if debug { verifyHierarchy(result.global) }
+                if debug { _verifyHierarchy(result.global) }
               }
             }
 
@@ -220,26 +218,26 @@ namespace Skew {
     return result
   }
 
-  def verifyHierarchy(symbol ObjectSymbol) {
+  def _verifyHierarchy(symbol ObjectSymbol) {
     for object in symbol.objects {
-      verifyHierarchy(object)
+      _verifyHierarchy(object)
     }
 
     for function in symbol.functions {
-      verifyHierarchy(function.block, null)
+      _verifyHierarchy(function.block, null)
     }
 
     for variable in symbol.variables {
-      verifyHierarchy(variable.value, null)
+      _verifyHierarchy(variable.value, null)
     }
   }
 
-  def verifyHierarchy(node Node, parent Node) {
+  def _verifyHierarchy(node Node, parent Node) {
     if node != null {
       assert(node.parent == parent)
       if node.children != null {
         for child in node.children {
-          verifyHierarchy(child, node)
+          _verifyHierarchy(child, node)
         }
       }
     }

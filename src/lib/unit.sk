@@ -18,6 +18,9 @@ namespace Unit {
   ################################################################################
 
   class Test {
+    var _name = ""
+    var _failure Failure = null
+
     def new {
       _all.append(self)
     }
@@ -37,42 +40,37 @@ namespace Unit {
       }
     }
 
-    @private {
-      var _name = ""
-      var _failure Failure = null
-
-      if TARGET == .JAVASCRIPT {
-        def tryRun {
-          try {
-            run
-          } catch error dynamic {
-            if _failure == null {
-              _failure = Failure.new("", ((error && error.stack || error) as dynamic) + "")
-            }
+    if TARGET == .JAVASCRIPT {
+      def _tryRun {
+        try {
+          run
+        } catch error dynamic {
+          if _failure == null {
+            _failure = Failure.new("", ((error && error.stack || error) as dynamic) + "")
           }
         }
       }
+    }
 
-      else if TARGET == .CSHARP {
-        def tryRun {
-          try {
-            run
-          } catch error dynamic.System.Exception {
-            if _failure == null {
-              _failure = Failure.new("", error.ToString())
-            }
+    else if TARGET == .CSHARP {
+      def _tryRun {
+        try {
+          run
+        } catch error dynamic.System.Exception {
+          if _failure == null {
+            _failure = Failure.new("", error.ToString())
           }
         }
       }
+    }
 
-      else {
-        def tryRun {
-          try {
-            run
-          } catch {
-            if _failure == null {
-              _failure = Failure.new("", "(runtime failure)")
-            }
+    else {
+      def _tryRun {
+        try {
+          run
+        } catch {
+          if _failure == null {
+            _failure = Failure.new("", "(runtime failure)")
           }
         }
       }
@@ -88,7 +86,7 @@ namespace Unit {
 
       for test in tests {
         test.before
-        test.tryRun
+        test._tryRun
         test.after
         report.completed(test, test._failure == null ? .SUCCESS : .FAILURE)
       }
@@ -96,13 +94,18 @@ namespace Unit {
       report.end
     }
 
-    @private
     var _all List<Test> = []
   }
 
   ################################################################################
 
   class TerminalReport : Report {
+    var _failed List<Test> = []
+    var _wrapWidth = 0
+    var _startTime = 0.0
+    var _completed = 0
+    var _count = 0
+
     def failedCount int {
       return _failed.count
     }
@@ -156,26 +159,17 @@ namespace Unit {
         var failure = test.failure
         Terminal.setColor(.BOLD)
         Terminal.print(text + " ".repeat(indent.count - text.count) + test.name + "\n")
-        printDiff(indent,
+        _printDiff(indent,
           failure.expected == "" ? [] : failure.expected.split("\n"),
           failure.observed == "" ? [] : failure.observed.split("\n"))
         Terminal.setColor(.DEFAULT)
         Terminal.print("")
       }
     }
-
-    @private {
-      var _failed List<Test> = []
-      var _wrapWidth = 0
-      var _startTime = 0.0
-      var _completed = 0
-      var _count = 0
-    }
   }
 
   namespace TerminalReport {
-    @private
-    def printDiff(indent string, expected List<string>, observed List<string>) {
+    def _printDiff(indent string, expected List<string>, observed List<string>) {
       var m = expected.count
       var n = observed.count
       var matrix List<int> = []

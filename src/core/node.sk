@@ -233,7 +233,7 @@ namespace Skew {
       assert(children == null)
       if nodes != null {
         for node in nodes {
-          updateParent(node, self)
+          _updateParent(node, self)
         }
       }
       children = nodes
@@ -260,7 +260,7 @@ namespace Skew {
         children = []
       }
       assert(index >= 0 && index <= children.count)
-      updateParent(node, self)
+      _updateParent(node, self)
       children.insert(index, node)
     }
 
@@ -270,7 +270,7 @@ namespace Skew {
       }
       assert(index >= 0 && index <= children.count)
       for node in nodes {
-        updateParent(node, self)
+        _updateParent(node, self)
         children.insert(index, node)
         index++
       }
@@ -287,7 +287,7 @@ namespace Skew {
     def removeChildAtIndex(index int) Node {
       assert(index >= 0 && index < children.count)
       var child = children[index]
-      updateParent(child, null)
+      _updateParent(child, null)
       children.removeAt(index)
       return child
     }
@@ -301,7 +301,7 @@ namespace Skew {
       var result = children
       if result != null {
         for child in result {
-          updateParent(child, null)
+          _updateParent(child, null)
         }
         children = null
       }
@@ -319,9 +319,9 @@ namespace Skew {
 
     def replaceChild(index int, node Node) Node {
       assert(index >= 0 && index < children.count)
-      updateParent(node, self)
+      _updateParent(node, self)
       var child = children[index]
-      updateParent(child, null)
+      _updateParent(child, null)
       children[index] = node
       return child
     }
@@ -349,8 +349,7 @@ namespace Skew {
   }
 
   namespace Node {
-    @private
-    def updateParent(node Node, parent Node) {
+    def _updateParent(node Node, parent Node) {
       if node != null {
         assert((node.parent == null) != (parent == null))
         node.parent = parent

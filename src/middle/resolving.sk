@@ -199,6 +199,12 @@ namespace Skew.Resolving {
       if annotations != null {
         symbol.annotations = annotations.filter(annotation => resolveAnnotation(annotation, symbol))
       }
+
+      # Protected access used to be an annotation. It's now indicated with just
+      # a leading underscore.
+      if symbol.name.startsWith("_") && !symbol.kind.isLocal {
+        symbol.flags |= Symbol.IS_PROTECTED
+      }
     }
 
     def resolveParameters(parameters List<ParameterSymbol>) {
@@ -838,7 +844,7 @@ namespace Skew.Resolving {
 
       var strings = VariableSymbol.new(.VARIABLE_GLOBAL, parent.scope.generateName("strings"))
       strings.value = Node.createInitializer(.INITIALIZER_LIST, names)
-      strings.flags |= Symbol.IS_PRIVATE | Symbol.IS_CONST
+      strings.flags |= Symbol.IS_PROTECTED | Symbol.IS_CONST
       strings.state = .INITIALIZED
       strings.parent = parent
       strings.scope = parent.scope
@@ -1228,18 +1234,17 @@ namespace Skew.Resolving {
       }
 
       # Check access control
-      if symbol.isPrivateOrProtected {
-        var isPrivate = symbol.isPrivate
+      if symbol.isProtected {
         while scope != null {
           if scope.kind == .OBJECT {
             var object = scope.asObjectScope.symbol
-            if object == symbol.parent || !isPrivate && object.hasBaseClass(symbol.parent) {
+            if object == symbol.parent || object.hasBaseClass(symbol.parent) {
               return
             }
           }
           scope = scope.parent
         }
-        log.semanticErrorAccessViolation(range, isPrivate ? "@private" : "@protected", symbol.name)
+        log.semanticErrorAccessViolation(range, symbol.name)
       }
 
       # Deprecation annotations optionally provide a warning message
@@ -1333,8 +1338,6 @@ namespace Skew.Resolving {
           case Symbol.IS_EXPORTED { isValid = !symbol.isImported }
           case Symbol.IS_IMPORTED { isValid = !symbol.isExported && (!symbol.kind.isFunction || symbol.asFunctionSymbol.block == null) }
           case Symbol.IS_PREFERRED { isValid = symbol.kind.isFunction }
-          case Symbol.IS_PRIVATE { isValid = !symbol.isProtected && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
-          case Symbol.IS_PROTECTED { isValid = !symbol.isPrivate && symbol.parent != null && symbol.parent.kind != .OBJECT_GLOBAL }
           case Symbol.IS_RENAMED {}
           case Symbol.IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
           case Symbol.SHOULD_SPREAD { isValid = symbol.kind == .FUNCTION_ANNOTATION }
@@ -1850,7 +1853,8 @@ namespace Skew.Resolving {
       node.resolvedType = type.resolvedType
 
       # Warn about unnecessary casts
-      if type.resolvedType != .DYNAMIC && (value.resolvedType == type.resolvedType || context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
+      if type.resolvedType != .DYNAMIC && (value.resolvedType == type.resolvedType ||
+          context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
         log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }
     }
@@ -2643,8 +2647,6 @@ namespace Skew.Resolving {
       "@export": Symbol.IS_EXPORTED,
       "@import": Symbol.IS_IMPORTED,
       "@prefer": Symbol.IS_PREFERRED,
-      "@private": Symbol.IS_PRIVATE,
-      "@protected": Symbol.IS_PROTECTED,
       "@rename": Symbol.IS_RENAMED,
       "@skip": Symbol.IS_SKIPPED,
       "@spreads": Symbol.SHOULD_SPREAD,

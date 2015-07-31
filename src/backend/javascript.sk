@@ -9,1806 +9,1801 @@ namespace Skew {
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return JavaScriptEmitter.new(options, cache) }
   }
 
-  enum BooleanSwap {
-    SWAP
-    NO_SWAP
-  }
-
-  enum ExtractGroupsMode {
-    ALL_SYMBOLS
-    ONLY_LOCAL_VARIABLES
-    ONLY_INSTANCE_VARIABLES
-  }
-
-  class SymbolGroup {
-    const symbols List<Symbol>
-    const count int
-  }
-
   class JavaScriptEmitter : Emitter {
-    over visit(global ObjectSymbol) {
-      mangle = options.jsMangle
-      minify = options.jsMinify
-      sourceMap = options.jsSourceMap
+    enum BooleanSwap {
+      SWAP
+      NO_SWAP
+    }
 
-      if minify {
-        indentAmount = ""
-        newline = ""
-        space = ""
+    enum ExtractGroupsMode {
+      ALL_SYMBOLS
+      ONLY_LOCAL_VARIABLES
+      ONLY_INSTANCE_VARIABLES
+    }
+
+    class SymbolGroup {
+      const symbols List<Symbol>
+      const count int
+    }
+
+    enum AfterToken {
+      AFTER_KEYWORD
+      AFTER_PARENTHESIS
+    }
+
+    enum BracesMode {
+      MUST_KEEP_BRACES
+      CAN_OMIT_BRACES
+    }
+
+    const _options CompilerOptions
+    const _cache TypeCache
+    var _needsMultiply = false
+    var _namespacePrefix = ""
+    var _previousNode Node = null
+    var _previousSymbol Symbol = null
+    var _enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
+    var _extends VariableSymbol = null
+    var _multiply VariableSymbol = null
+
+    # Source map support
+    var _sourceMap = false
+    var _generator = SourceMapGenerator.new
+    var _currentLine = 0
+    var _currentColumn = 0
+    var _previousStart = 0
+    var _previousSource Source = null
+
+    # A union-find data structure is used to quickly merge symbols into
+    # groups. All local variables inside a function are merged with that
+    # function. The map create a quick way of getting from a symbol to its
+    # union/find index.
+    var _allSymbols List<Symbol> = []
+    var _localVariableUnionFind = UnionFind.new
+    var _namingGroupIndexForSymbol IntMap<int> = {}
+    var _nextSymbolName = 0
+    var _symbolCounts IntMap<int> = {}
+
+    # For minification
+    var _mangle = false
+    var _minify = false
+    var _needsSemicolon = false
+    var _newline = "\n"
+    var _space = " "
+
+    # For tracking "this" vs "self"
+    var _currentSelf VariableSymbol = null
+    var _needsSelf = false
+
+    over visit(global ObjectSymbol) {
+      _mangle = _options.jsMangle
+      _minify = _options.jsMinify
+      _sourceMap = _options.jsSourceMap
+
+      if _minify {
+        _indentAmount = ""
+        _newline = ""
+        _space = ""
       }
 
       # Preprocess the code
-      prepareGlobal(global)
-      shakingPass(global, cache.entryPointSymbol, .IGNORE_TYPES)
-      convertLambdasToFunctions(global)
-      var objects = sortedObjects(global)
+      _prepareGlobal(global)
+      shakingPass(global, _cache.entryPointSymbol, .IGNORE_TYPES)
+      _convertLambdasToFunctions(global)
+      var objects = _sortedObjects(global)
 
       # The entire body of code is wrapped in a closure for safety
-      emit(indent + "(function()" + space + "{" + newline)
-      increaseIndent
+      _emit(_indent + "(function()" + _space + "{" + _newline)
+      _increaseIndent
 
       # Emit special-cased variables that must come first
-      if needsExtends(objects) { emitFunction(convertLambdaToFunction(extends)) }
-      if needsMultiply { emitVariable(multiply) }
+      if _needsExtends(objects) { _emitFunction(_convertLambdaToFunction(_extends)) }
+      if _needsMultiply { emitVariable(_multiply) }
 
       # Emit objects and functions
       for object in objects {
-        emitObject(object)
+        _emitObject(object)
       }
 
       # Emit variables
       for object in objects {
         var o = object
-        prefix = ""
+        _namespacePrefix = ""
         while o.kind != .OBJECT_GLOBAL {
-          prefix = mangleName(o) + "." + prefix
+          _namespacePrefix = _mangleName(o) + "." + _namespacePrefix
           o = o.parent.asObjectSymbol
         }
         for variable in object.variables {
-          if variable != extends && variable != multiply {
+          if variable != _extends && variable != _multiply {
             emitVariable(variable)
           }
         }
       }
 
       # Emit entry point
-      var entryPointSymbol = cache.entryPointSymbol
+      var entryPointSymbol = _cache.entryPointSymbol
       if entryPointSymbol != null {
         var type = entryPointSymbol.resolvedType
-        var callText = fullName(entryPointSymbol) + (type.argumentTypes.isEmpty ? "()" : "(process.argv.slice(2))")
-        emitSemicolonIfNeeded
-        emit(newline + indent + (type.returnType == cache.intType ? "process.exit(" + callText + ")" : callText))
-        emitSemicolonAfterStatement
+        var callText = _fullName(entryPointSymbol) + (type.argumentTypes.isEmpty ? "()" : "(process.argv.slice(2))")
+        _emitSemicolonIfNeeded
+        _emit(_newline + _indent + (type.returnType == _cache.intType ? "process.exit(" + callText + ")" : callText))
+        _emitSemicolonAfterStatement
       }
 
       # End the closure wrapping everything
-      decreaseIndent
-      emit(indent + "})();\n")
+      _decreaseIndent
+      _emit(_indent + "})();\n")
 
-      var codeName = options.outputDirectory != "" ? options.outputDirectory + "/compiled.js" : options.outputFile
+      var codeName = _options.outputDirectory != "" ? _options.outputDirectory + "/compiled.js" : _options.outputFile
       var mapName = codeName + ".map"
 
       # Obfuscate the sourceMappingURL so it's not incorrectly picked up as the
       # sourceMappingURL for the compiled JavaScript compiler file
-      if sourceMap {
-        emit("/")
-        emit("/# sourceMappingURL=" + splitPath(mapName).entry + "\n")
+      if _sourceMap {
+        _emit("/")
+        _emit("/# sourceMappingURL=" + splitPath(mapName).entry + "\n")
       }
 
-      createSource(codeName, .ALWAYS_EMIT)
+      _createSource(codeName, .ALWAYS_EMIT)
 
       # Create the source map
-      if sourceMap {
-        emit(generator.toString)
-        createSource(mapName, .ALWAYS_EMIT)
+      if _sourceMap {
+        _emit(_generator.toString)
+        _createSource(mapName, .ALWAYS_EMIT)
       }
     }
 
-    @protected
-    over emit(text string) {
-      if minify || sourceMap {
+    over _emit(text string) {
+      if _minify || _sourceMap {
         for i in 0..text.count {
           var c = text[i]
           if c == '\n' {
-            currentColumn = 0
-            currentLine++
+            _currentColumn = 0
+            _currentLine++
           } else {
-            currentColumn++
+            _currentColumn++
           }
         }
       }
       super(text)
     }
 
-    @private {
-      enum AfterToken {
-        AFTER_KEYWORD
-        AFTER_PARENTHESIS
+    def _prepareGlobal(global ObjectSymbol) {
+      var globalObjects List<ObjectSymbol> = []
+      var globalFunctions List<FunctionSymbol> = []
+      var globalVariables List<VariableSymbol> = []
+
+      # Load special-cased variables
+      for variable in global.variables {
+        if variable.name == "__extends" {
+          _extends = variable
+          if _multiply != null { break }
+        } else if variable.name == "__imul" {
+          _multiply = variable
+          if _extends != null { break }
+        }
+      }
+      assert(_extends != null)
+      assert(_multiply != null)
+
+      # Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
+      _patchObject(global, globalObjects, globalFunctions, globalVariables)
+
+      # Skip everything below if we aren't mangling
+      if !_mangle {
+        return
       }
 
-      enum BracesMode {
-        MUST_KEEP_BRACES
-        CAN_OMIT_BRACES
+      # Move internal global symbols up to the global namespace
+      for object in globalObjects { object.parent = global }
+      for function in globalFunctions { function.parent = global }
+      for variable in globalVariables { variable.parent = global }
+      global.objects.append(globalObjects)
+      global.functions.append(globalFunctions)
+      global.variables.append(globalVariables)
+
+      # Rename symbols based on frequency for better compression
+      _renameSymbols
+    }
+
+    def _convertLambdaToFunction(variable VariableSymbol) FunctionSymbol {
+      var function = variable.value.symbol.asFunctionSymbol
+      function.kind = .FUNCTION_GLOBAL
+      function.parent = variable.parent
+      function.name = variable.name
+      return function
+    }
+
+    def _convertLambdasToFunctions(symbol ObjectSymbol) {
+      for object in symbol.objects {
+        _convertLambdasToFunctions(object)
       }
 
-      const options CompilerOptions
-      const cache TypeCache
-      var needsMultiply = false
-      var prefix = ""
-      var previousNode Node = null
-      var previousSymbol Symbol = null
-      var enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
-      var extends VariableSymbol = null
-      var multiply VariableSymbol = null
+      symbol.variables.removeIf(variable => {
+        if variable.kind == .VARIABLE_GLOBAL && variable.isConst && !variable.isExported && variable.value != null && variable.value.kind == .LAMBDA {
+          symbol.functions.append(_convertLambdaToFunction(variable))
+          return true
+        }
+        return false
+      })
+    }
 
-      # Source map support
-      var sourceMap = false
-      var generator = SourceMapGenerator.new
-      var currentLine = 0
-      var currentColumn = 0
-      var previousStart = 0
-      var previousSource Source = null
+    def _allocateNamingGroupIndex(symbol Symbol) {
+      if _mangle && !(symbol.id in _namingGroupIndexForSymbol) {
+        var index = _localVariableUnionFind.allocate
+        _namingGroupIndexForSymbol[symbol.id] = index
+        _allSymbols.append(symbol)
 
-      # A union-find data structure is used to quickly merge symbols into
-      # groups. All local variables inside a function are merged with that
-      # function. The map create a quick way of getting from a symbol to its
-      # union/find index.
-      var allSymbols List<Symbol> = []
-      var localVariableUnionFind UnionFind = UnionFind.new
-      var namingGroupIndexForSymbol IntMap<int> = {}
-      var nextSymbolName = 0
-      var symbolCounts IntMap<int> = {}
-
-      # For minification
-      var mangle = false
-      var minify = false
-      var needsSemicolon = false
-      var newline = "\n"
-      var space = " "
-
-      # For tracking "this" vs "self"
-      var currentSelf VariableSymbol = null
-      var needsSelf = false
-
-      def prepareGlobal(global ObjectSymbol) {
-        var globalObjects List<ObjectSymbol> = []
-        var globalFunctions List<FunctionSymbol> = []
-        var globalVariables List<VariableSymbol> = []
-
-        # Load special-cased variables
-        for variable in global.variables {
-          if variable.name == "__extends" {
-            extends = variable
-            if multiply != null { break }
-          } else if variable.name == "__imul" {
-            multiply = variable
-            if extends != null { break }
+        # Explicitly add function arguments since they won't be reached by
+        # normal tree traversal
+        if symbol.kind.isFunction {
+          var context = symbol.asFunctionSymbol.self
+          if context != null {
+            _allocateNamingGroupIndex(context)
           }
-        }
-        assert(extends != null)
-        assert(multiply != null)
-
-        # Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
-        patchObject(global, globalObjects, globalFunctions, globalVariables)
-
-        # Skip everything below if we aren't mangling
-        if !mangle {
-          return
-        }
-
-        # Move internal global symbols up to the global namespace
-        for object in globalObjects { object.parent = global }
-        for function in globalFunctions { function.parent = global }
-        for variable in globalVariables { variable.parent = global }
-        global.objects.append(globalObjects)
-        global.functions.append(globalFunctions)
-        global.variables.append(globalVariables)
-
-        # Rename symbols based on frequency for better compression
-        renameSymbols
-      }
-
-      def convertLambdaToFunction(variable VariableSymbol) FunctionSymbol {
-        var function = variable.value.symbol.asFunctionSymbol
-        function.kind = .FUNCTION_GLOBAL
-        function.parent = variable.parent
-        function.name = variable.name
-        return function
-      }
-
-      def convertLambdasToFunctions(symbol ObjectSymbol) {
-        for object in symbol.objects {
-          convertLambdasToFunctions(object)
-        }
-
-        symbol.variables.removeIf(variable => {
-          if variable.kind == .VARIABLE_GLOBAL && variable.isConst && !variable.isExported && variable.value != null && variable.value.kind == .LAMBDA {
-            symbol.functions.append(convertLambdaToFunction(variable))
-            return true
-          }
-          return false
-        })
-      }
-
-      def allocateNamingGroupIndex(symbol Symbol) {
-        if mangle && !(symbol.id in namingGroupIndexForSymbol) {
-          var index = localVariableUnionFind.allocate
-          namingGroupIndexForSymbol[symbol.id] = index
-          allSymbols.append(symbol)
-
-          # Explicitly add function arguments since they won't be reached by
-          # normal tree traversal
-          if symbol.kind.isFunction {
-            var context = symbol.asFunctionSymbol.self
-            if context != null {
-              allocateNamingGroupIndex(context)
-            }
-            for argument in symbol.asFunctionSymbol.arguments {
-              allocateNamingGroupIndex(argument)
-            }
+          for argument in symbol.asFunctionSymbol.arguments {
+            _allocateNamingGroupIndex(argument)
           }
         }
       }
+    }
 
-      def renameSymbols {
-        # This holds the groups used for naming. Unioning two labels using
-        # this object will cause both groups of symbols to have the same name.
-        var namingGroupsUnionFind = UnionFind.new.allocate(allSymbols.count)
+    def _renameSymbols {
+      # This holds the groups used for naming. Unioning two labels using
+      # this object will cause both groups of symbols to have the same name.
+      var namingGroupsUnionFind = UnionFind.new.allocate(_allSymbols.count)
 
-        # These are optional and only reduce the number of generated names
-        var order List<int> = []
-        aliasLocalVariables(namingGroupsUnionFind, order)
-        aliasUnrelatedProperties(namingGroupsUnionFind, order)
+      # These are optional and only reduce the number of generated names
+      var order List<int> = []
+      _aliasLocalVariables(namingGroupsUnionFind, order)
+      _aliasUnrelatedProperties(namingGroupsUnionFind, order)
 
-        # Ensure all overridden symbols have the same generated name. This is
-        # manditory for correctness, otherwise virtual functions break.
-        for symbol in allSymbols {
-          if symbol.kind.isFunction && symbol.asFunctionSymbol.overridden != null {
-            assert(symbol.id in namingGroupIndexForSymbol)
-            assert(symbol.asFunctionSymbol.overridden.id in namingGroupIndexForSymbol)
-            namingGroupsUnionFind.union(namingGroupIndexForSymbol[symbol.id], namingGroupIndexForSymbol[symbol.asFunctionSymbol.overridden.id])
-          }
-        }
-
-        # Collect all reserved names together into one big set for querying
-        var reservedNames StringMap<int> = isKeyword.clone
-        for symbol in allSymbols {
-          if !shouldRenameSymbol(symbol) {
-            reservedNames[symbol.name] = 0
-          }
-        }
-
-        # Everything that should have the same name is now grouped together.
-        # Generate and assign names to all internal symbols, but use shorter
-        # names for more frequently used symbols.
-        var sortedGroups List<SymbolGroup> = []
-        for group in extractGroups(namingGroupsUnionFind, .ALL_SYMBOLS) {
-          var count = 0
-          for symbol in group {
-            if shouldRenameSymbol(symbol) {
-              count += symbolCounts.get(symbol.id, 0)
-            }
-          }
-          sortedGroups.append(SymbolGroup.new(group, count))
-        }
-        sortedGroups.sort((a, b) => b.count - a.count)
-        for group in sortedGroups {
-          var name = ""
-          for symbol in group.symbols {
-            if shouldRenameSymbol(symbol) {
-              if name == "" {
-                name = generateSymbolName(reservedNames)
-              }
-              symbol.name = name
-            }
-          }
+      # Ensure all overridden symbols have the same generated name. This is
+      # manditory for correctness, otherwise virtual functions break.
+      for symbol in _allSymbols {
+        if symbol.kind.isFunction && symbol.asFunctionSymbol.overridden != null {
+          assert(symbol.id in _namingGroupIndexForSymbol)
+          assert(symbol.asFunctionSymbol.overridden.id in _namingGroupIndexForSymbol)
+          namingGroupsUnionFind.union(_namingGroupIndexForSymbol[symbol.id], _namingGroupIndexForSymbol[symbol.asFunctionSymbol.overridden.id])
         }
       }
 
-      # Merge local variables from different functions together in the order
-      # they were declared. This will cause every argument list to use the same
-      # variables in the same order, which should offer better gzip:
-      #
-      #   function d(a, b) {}
-      #   function e(a, b, c) {}
-      #
-      def aliasLocalVariables(unionFind UnionFind, order List<int>) {
-        zipTogetherInOrder(unionFind, order, extractGroups(localVariableUnionFind, .ONLY_LOCAL_VARIABLES))
-      }
-
-      # Merge all related types together into naming groups. This ensures names
-      # will be unique within a subclass hierarchy allowing names to be
-      # duplicated in separate subclass hierarchies.
-      def aliasUnrelatedProperties(unionFind UnionFind, order List<int>) {
-        var relatedTypesUnionFind = UnionFind.new.allocate(allSymbols.count)
-        for i in 0..allSymbols.count {
-          var symbol = allSymbols[i]
-          if symbol.kind == .OBJECT_CLASS {
-            var baseClass = symbol.asObjectSymbol.baseClass
-            if baseClass != null {
-              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol[baseClass.id])
-            }
-            for variable in symbol.asObjectSymbol.variables {
-              relatedTypesUnionFind.union(i, namingGroupIndexForSymbol[variable.id])
-            }
-          }
-        }
-        zipTogetherInOrder(unionFind, order, extractGroups(relatedTypesUnionFind, .ONLY_INSTANCE_VARIABLES))
-      }
-
-      def zipTogetherInOrder(unionFind UnionFind, order List<int>, groups List<List<Symbol>>) {
-        for group in groups {
-          for i in 0..group.count {
-            var symbol = group[i]
-            var index = namingGroupIndexForSymbol[symbol.id]
-            if i >= order.count {
-              order.append(index)
-            } else {
-              unionFind.union(index, order[i])
-            }
-          }
+      # Collect all reserved names together into one big set for querying
+      var reservedNames StringMap<int> = _isKeyword.clone
+      for symbol in _allSymbols {
+        if !_shouldRenameSymbol(symbol) {
+          reservedNames[symbol.name] = 0
         }
       }
 
-      def numberToName(number int) string {
-        const WRAP = 26 * 2
+      # Everything that should have the same name is now grouped together.
+      # Generate and assign names to all internal symbols, but use shorter
+      # names for more frequently used symbols.
+      var sortedGroups List<SymbolGroup> = []
+      for group in extractGroups(namingGroupsUnionFind, .ALL_SYMBOLS) {
+        var count = 0
+        for symbol in group {
+          if _shouldRenameSymbol(symbol) {
+            count += _symbolCounts.get(symbol.id, 0)
+          }
+        }
+        sortedGroups.append(SymbolGroup.new(group, count))
+      }
+      sortedGroups.sort((a, b) => b.count - a.count)
+      for group in sortedGroups {
         var name = ""
-        if number >= WRAP {
-          name = numberToName(number / WRAP - 1)
-          number = number % WRAP
-        }
-        name += string.fromCodeUnit(number + (number < 26 ? 'a' : 'A' - 26))
-        return name
-      }
-
-      def generateSymbolName(reservedNames StringMap<int>) string {
-        while true {
-          var name = numberToName(nextSymbolName)
-          nextSymbolName++
-          if !(name in reservedNames) {
-            return name
-          }
-        }
-      }
-
-      def extractGroups(unionFind UnionFind, mode ExtractGroupsMode) List<List<Symbol>> {
-        var labelToGroup IntMap<List<Symbol>> = {}
-        for symbol in allSymbols {
-          if mode == .ONLY_LOCAL_VARIABLES && !symbol.kind.isLocalOrArgumentVariable ||
-              mode == .ONLY_INSTANCE_VARIABLES && symbol.kind != .VARIABLE_INSTANCE {
-            continue
-          }
-          assert(symbol.id in namingGroupIndexForSymbol)
-          var label = unionFind.find(namingGroupIndexForSymbol[symbol.id])
-          var group = labelToGroup.get(label, null)
-          if group == null {
-            group = []
-            labelToGroup[label] = group
-          }
-          group.append(symbol)
-        }
-        return labelToGroup.values
-      }
-
-      def addMapping(range Range) {
-        if sourceMap && range != null {
-          var source = range.source
-          var start = range.start
-
-          if previousSource != source || previousStart != start {
-            var location = source.indexToLineColumn(start)
-            generator.addMapping(source, location.line, location.column, currentLine, currentColumn)
-            previousStart = start
-            previousSource = source
-          }
-        }
-      }
-
-      def emitSemicolonAfterStatement {
-        if !minify {
-          emit(";\n")
-        } else {
-          needsSemicolon = true
-        }
-      }
-
-      def emitSemicolonIfNeeded {
-        if needsSemicolon {
-          emit(";")
-          needsSemicolon = false
-        }
-        maybeEmitMinifedNewline
-      }
-
-      # Lots of text editors choke up on long lines, so add a newline every now
-      # and then for usability's sake
-      def maybeEmitMinifedNewline {
-        if minify && currentColumn > 1024 {
-          emit("\n")
-        }
-      }
-
-      def emitNewlineBeforeSymbol(symbol Symbol) {
-        emitSemicolonIfNeeded
-        if !minify && previousSymbol != null &&
-            (!previousSymbol.kind.isObject || !symbol.kind.isObject || symbol.comments != null || previousSymbol.kind == .OBJECT_ENUM || symbol.kind == .OBJECT_ENUM) &&
-            (!previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
-          emit("\n")
-        }
-        previousSymbol = null
-      }
-
-      def emitNewlineAfterSymbol(symbol Symbol) {
-        previousSymbol = symbol
-      }
-
-      def emitNewlineBeforeStatement(node Node) {
-        if !minify && previousNode != null && (node.comments != null || !isCompactNodeKind(previousNode.kind) || !isCompactNodeKind(node.kind)) {
-          emit("\n")
-        } else {
-          maybeEmitMinifedNewline
-        }
-        previousNode = null
-      }
-
-      def emitNewlineAfterStatement(node Node) {
-        previousNode = node
-      }
-
-      def emitComments(comments List<string>) {
-        if comments != null && !minify {
-          for comment in comments {
-            emit(indent + "//" + comment)
-          }
-        }
-      }
-
-      def emitObject(symbol ObjectSymbol) {
-        if symbol.isImported {
-          return
-        }
-
-        prefix = symbol.parent != null ? computePrefix(symbol.parent.asObjectSymbol) : ""
-
-        switch symbol.kind {
-          case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
-            addMapping(symbol.range)
-            emitNewlineBeforeSymbol(symbol)
-            emitComments(symbol.comments)
-            emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + space + "=" + space + "{}")
-            emitSemicolonAfterStatement
-            emitNewlineAfterSymbol(symbol)
-          }
-
-          case .OBJECT_ENUM {
-            addMapping(symbol.range)
-            emitNewlineBeforeSymbol(symbol)
-            emitComments(symbol.comments)
-            emit(indent + (prefix == "" && !symbol.isExported ? "var " : prefix) + mangleName(symbol) + space + "=" + space + "{")
-            increaseIndent
-            var isFirst = true
-            for variable in symbol.variables {
-              if variable.kind == .VARIABLE_ENUM {
-                if isFirst {
-                  isFirst = false
-                } else {
-                  emit(",")
-                }
-                emit(newline)
-                addMapping(variable.range)
-                emitNewlineBeforeSymbol(variable)
-                emitComments(variable.comments)
-                emit(indent + mangleName(variable) + ":" + space)
-                emitContent(variable.value.content)
-                emitNewlineAfterSymbol(variable)
-              }
+        for symbol in group.symbols {
+          if _shouldRenameSymbol(symbol) {
+            if name == "" {
+              name = generateSymbolName(reservedNames)
             }
-            decreaseIndent
-            if !isFirst && !minify {
-              emit("\n" + indent)
-            }
-            emit("}")
-            emitSemicolonAfterStatement
-            emitNewlineAfterSymbol(symbol)
-          }
-
-          case .OBJECT_CLASS {
-            var foundPrimaryConstructor = false
-            for function in symbol.functions {
-              if function.isPrimaryConstructor {
-                if function.comments == null && symbol.comments != null {
-                  function.comments = symbol.comments
-                }
-                emitFunction(function)
-                if symbol.baseClass != null {
-                  if !minify {
-                    emit("\n" + indent)
-                  }
-                  emitSemicolonIfNeeded
-                  addMapping(extends.range)
-                  emit(mangleName(extends) + "(" + fullName(symbol) + "," + space + fullName(symbol.baseClass) + ")")
-                  emitSemicolonAfterStatement
-                }
-                foundPrimaryConstructor = true
-                break
-              }
-            }
-
-            # Ignore this entire class if it's never constructed
-            if !foundPrimaryConstructor {
-              return
-            }
-          }
-        }
-
-        if symbol.kind != .OBJECT_GLOBAL {
-          prefix += mangleName(symbol) + "."
-        }
-
-        for function in symbol.functions {
-          if !function.isPrimaryConstructor {
-            emitFunction(function)
+            symbol.name = name
           }
         }
       }
+    }
 
-      def emitArgumentList(arguments List<VariableSymbol>) {
-        for argument in arguments {
-          if argument != arguments.first {
-            emit("," + space)
+    # Merge local variables from different functions together in the order
+    # they were declared. This will cause every argument list to use the same
+    # variables in the same order, which should offer better gzip:
+    #
+    #   function d(a, b) {}
+    #   function e(a, b, c) {}
+    #
+    def _aliasLocalVariables(unionFind UnionFind, order List<int>) {
+      _zipTogetherInOrder(unionFind, order, extractGroups(_localVariableUnionFind, .ONLY_LOCAL_VARIABLES))
+    }
+
+    # Merge all related types together into naming groups. This ensures names
+    # will be unique within a subclass hierarchy allowing names to be
+    # duplicated in separate subclass hierarchies.
+    def _aliasUnrelatedProperties(unionFind UnionFind, order List<int>) {
+      var relatedTypesUnionFind = UnionFind.new.allocate(_allSymbols.count)
+      for i in 0.._allSymbols.count {
+        var symbol = _allSymbols[i]
+        if symbol.kind == .OBJECT_CLASS {
+          var baseClass = symbol.asObjectSymbol.baseClass
+          if baseClass != null {
+            relatedTypesUnionFind.union(i, _namingGroupIndexForSymbol[baseClass.id])
           }
-          addMapping(argument.range)
-          emit(mangleName(argument))
+          for variable in symbol.asObjectSymbol.variables {
+            relatedTypesUnionFind.union(i, _namingGroupIndexForSymbol[variable.id])
+          }
         }
       }
+      _zipTogetherInOrder(unionFind, order, extractGroups(relatedTypesUnionFind, .ONLY_INSTANCE_VARIABLES))
+    }
 
-      def emitFunction(symbol FunctionSymbol) {
-        if symbol.block == null {
-          return
-        }
-
-        addMapping(symbol.range)
-        emitNewlineBeforeSymbol(symbol)
-        emitComments(symbol.comments)
-
-        var isExpression = prefix != "" || symbol.isExported
-        var name = mangleName(symbol.isPrimaryConstructor ? symbol.parent : symbol)
-
-        if isExpression {
-          emit(indent + prefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + space + "=" + space + "function(")
-        } else {
-          emit(indent + "function " + name + "(")
-        }
-
-        emitArgumentList(symbol.arguments)
-        emit(")" + space + "{" + newline)
-        increaseIndent
-        enclosingFunction = symbol
-        emitStatements(symbol.block.children)
-        enclosingFunction = null
-        decreaseIndent
-        emit(indent + "}")
-        if isExpression {
-          emitSemicolonAfterStatement
-        } else {
-          needsSemicolon = false
-          emit(newline)
-        }
-        emitNewlineAfterSymbol(symbol)
-
-        if symbol.kind == .FUNCTION_CONSTRUCTOR && !symbol.isPrimaryConstructor {
-          emitSemicolonIfNeeded
-          emit(newline + indent + fullName(symbol) + ".prototype" + space + "=" + space + fullName(symbol.parent) + ".prototype")
-          emitSemicolonAfterStatement
+    def _zipTogetherInOrder(unionFind UnionFind, order List<int>, groups List<List<Symbol>>) {
+      for group in groups {
+        for i in 0..group.count {
+          var symbol = group[i]
+          var index = _namingGroupIndexForSymbol[symbol.id]
+          if i >= order.count {
+            order.append(index)
+          } else {
+            unionFind.union(index, order[i])
+          }
         }
       }
+    }
 
-      def emitVariable(symbol VariableSymbol) {
-        if symbol.isImported {
-          return
+    def generateSymbolName(reservedNames StringMap<int>) string {
+      while true {
+        var name = _numberToName(_nextSymbolName)
+        _nextSymbolName++
+        if !(name in reservedNames) {
+          return name
         }
+      }
+    }
 
-        if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || prefix == "" || symbol.kind.isLocalOrArgumentVariable) {
+    def extractGroups(unionFind UnionFind, mode ExtractGroupsMode) List<List<Symbol>> {
+      var labelToGroup IntMap<List<Symbol>> = {}
+      for symbol in _allSymbols {
+        if mode == .ONLY_LOCAL_VARIABLES && !symbol.kind.isLocalOrArgumentVariable ||
+            mode == .ONLY_INSTANCE_VARIABLES && symbol.kind != .VARIABLE_INSTANCE {
+          continue
+        }
+        assert(symbol.id in _namingGroupIndexForSymbol)
+        var label = unionFind.find(_namingGroupIndexForSymbol[symbol.id])
+        var group = labelToGroup.get(label, null)
+        if group == null {
+          group = []
+          labelToGroup[label] = group
+        }
+        group.append(symbol)
+      }
+      return labelToGroup.values
+    }
+
+    def addMapping(range Range) {
+      if _sourceMap && range != null {
+        var source = range.source
+        var start = range.start
+
+        if _previousSource != source || _previousStart != start {
+          var location = source.indexToLineColumn(start)
+          _generator.addMapping(source, location.line, location.column, _currentLine, _currentColumn)
+          _previousStart = start
+          _previousSource = source
+        }
+      }
+    }
+
+    def _emitSemicolonAfterStatement {
+      if !_minify {
+        _emit(";\n")
+      } else {
+        _needsSemicolon = true
+      }
+    }
+
+    def _emitSemicolonIfNeeded {
+      if _needsSemicolon {
+        _emit(";")
+        _needsSemicolon = false
+      }
+      _maybeEmitMinifedNewline
+    }
+
+    # Lots of text editors choke up on long lines, so add a newline every now
+    # and then for usability's sake
+    def _maybeEmitMinifedNewline {
+      if _minify && _currentColumn > 1024 {
+        _emit("\n")
+      }
+    }
+
+    def _emitNewlineBeforeSymbol(symbol Symbol) {
+      _emitSemicolonIfNeeded
+      if !_minify && _previousSymbol != null &&
+          (!_previousSymbol.kind.isObject || !symbol.kind.isObject || symbol.comments != null || _previousSymbol.kind == .OBJECT_ENUM || symbol.kind == .OBJECT_ENUM) &&
+          (!_previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
+        _emit("\n")
+      }
+      _previousSymbol = null
+    }
+
+    def _emitNewlineAfterSymbol(symbol Symbol) {
+      _previousSymbol = symbol
+    }
+
+    def _emitNewlineBeforeStatement(node Node) {
+      if !_minify && _previousNode != null && (node.comments != null || !_isCompactNodeKind(_previousNode.kind) || !_isCompactNodeKind(node.kind)) {
+        _emit("\n")
+      } else {
+        _maybeEmitMinifedNewline
+      }
+      _previousNode = null
+    }
+
+    def _emitNewlineAfterStatement(node Node) {
+      _previousNode = node
+    }
+
+    def _emitComments(comments List<string>) {
+      if comments != null && !_minify {
+        for comment in comments {
+          _emit(_indent + "//" + comment)
+        }
+      }
+    }
+
+    def _emitObject(symbol ObjectSymbol) {
+      if symbol.isImported {
+        return
+      }
+
+      _namespacePrefix = symbol.parent != null ? _computeNamespacePrefix(symbol.parent.asObjectSymbol) : ""
+
+      switch symbol.kind {
+        case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
           addMapping(symbol.range)
-          emitNewlineBeforeSymbol(symbol)
-          emitComments(symbol.comments)
-          emit(indent + (prefix == "" && !symbol.isExported || symbol.kind.isLocalOrArgumentVariable ? "var " : prefix) + mangleName(symbol))
-
-          if symbol.value != null {
-            emit(space + "=" + space)
-            emitExpression(symbol.value, .COMMA)
-          }
-
-          emitSemicolonAfterStatement
-          emitNewlineAfterSymbol(symbol)
-        }
-      }
-
-      def emitStatements(statements List<Node>) {
-        previousNode = null
-
-        for statement in statements {
-          emitSemicolonIfNeeded
-          emitNewlineBeforeStatement(statement)
-          addMapping(statement.range)
-          emitComments(statement.comments)
-          emitStatement(statement)
-          emitNewlineAfterStatement(statement)
+          _emitNewlineBeforeSymbol(symbol)
+          _emitComments(symbol.comments)
+          _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
+          _emitSemicolonAfterStatement
+          _emitNewlineAfterSymbol(symbol)
         }
 
-        previousNode = null
-      }
-
-      def emitBlock(node Node, after AfterToken, mode BracesMode) {
-        var shouldMinify = mode == .CAN_OMIT_BRACES && minify
-        addMapping(node.range)
-        if shouldMinify && !node.hasChildren {
-          emit(";")
-        } else if shouldMinify && node.children.count == 1 {
-          if after == .AFTER_KEYWORD {
-            emit(" ")
-          }
-          emitStatement(node.children.first)
-        } else {
-          emit(space + "{" + newline)
-          if node.hasChildren {
-            increaseIndent
-            emitStatements(node.children)
-            decreaseIndent
-          }
-          emit(indent + "}")
-          needsSemicolon = false
-        }
-      }
-
-      def emitStatement(node Node) {
-        switch node.kind {
-          case .VAR {
-            emitVariable(node.symbol.asVariableSymbol)
-          }
-
-          case .EXPRESSION {
-            emit(indent)
-            emitExpression(node.expressionValue, .LOWEST)
-            emitSemicolonAfterStatement
-          }
-
-          case .BREAK {
-            emit(indent + "break")
-            emitSemicolonAfterStatement
-          }
-
-          case .CONTINUE {
-            emit(indent + "continue")
-            emitSemicolonAfterStatement
-          }
-
-          case .RETURN {
-            emit(indent + "return")
-            var value = node.returnValue
-            if value != null {
-              emit(" ")
-              emitExpression(value, .LOWEST)
-            }
-            emitSemicolonAfterStatement
-          }
-
-          case .THROW {
-            emit(indent + "throw ")
-            emitExpression(node.throwValue, .LOWEST)
-            emitSemicolonAfterStatement
-          }
-
-          case .FOR {
-            var test = node.forTest
-            var update = node.forUpdate
-            var children = node.children
-            var count = children.count
-            emit(indent + "for" + space + "(")
-            if count > 3 {
-              for i in 3..count {
-                var child = children[i]
-                assert(child.kind == .VAR)
-                if i != 3 {
-                  emit("," + space)
-                }
-                var symbol = child.symbol.asVariableSymbol
-                if i == 3 {
-                  emit("var ")
-                }
-                emit(mangleName(symbol) + space + "=" + space)
-                emitExpression(symbol.value, .COMMA)
-              }
-            }
-            emit(";" + space)
-            if test != null {
-              emitExpression(test, .LOWEST)
-            }
-            emit(";" + space)
-            if update != null {
-              emitExpression(update, .LOWEST)
-            }
-            emit(")")
-            emitBlock(node.forBlock, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
-            emit(newline)
-          }
-
-          case .FOREACH {
-            emit(indent + "for" + space + "(var " + mangleName(node.symbol) + " in ")
-            emitExpression(node.foreachValue, .LOWEST)
-            emit(")")
-            emitBlock(node.foreachBlock, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
-            emit(newline)
-          }
-
-          case .IF {
-            emit(indent)
-            emitIf(node)
-            emit(newline)
-          }
-
-          case .SWITCH {
-            var cases = node.children
-            emit(indent + "switch" + space + "(")
-            emitExpression(node.switchValue, .LOWEST)
-            emit(")" + space + "{" + newline)
-            increaseIndent
-            for i in 1..cases.count {
-              var child = cases[i]
-              var values = child.children
-              var block = child.caseBlock
-              emitSemicolonIfNeeded
-              if i != 1 {
-                emit(newline)
-              }
-              if values.count == 1 {
-                emit(indent + "default:")
+        case .OBJECT_ENUM {
+          addMapping(symbol.range)
+          _emitNewlineBeforeSymbol(symbol)
+          _emitComments(symbol.comments)
+          _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{")
+          _increaseIndent
+          var isFirst = true
+          for variable in symbol.variables {
+            if variable.kind == .VARIABLE_ENUM {
+              if isFirst {
+                isFirst = false
               } else {
-                for j in 1..values.count {
-                  if j != 1 {
-                    emit(newline)
-                  }
-                  emit(indent + "case ")
-                  emitExpression(values[j], .LOWEST)
-                  emit(":")
+                _emit(",")
+              }
+              _emit(_newline)
+              addMapping(variable.range)
+              _emitNewlineBeforeSymbol(variable)
+              _emitComments(variable.comments)
+              _emit(_indent + _mangleName(variable) + ":" + _space)
+              _emitContent(variable.value.content)
+              _emitNewlineAfterSymbol(variable)
+            }
+          }
+          _decreaseIndent
+          if !isFirst && !_minify {
+            _emit("\n" + _indent)
+          }
+          _emit("}")
+          _emitSemicolonAfterStatement
+          _emitNewlineAfterSymbol(symbol)
+        }
+
+        case .OBJECT_CLASS {
+          var foundPrimaryConstructor = false
+          for function in symbol.functions {
+            if function.isPrimaryConstructor {
+              if function.comments == null && symbol.comments != null {
+                function.comments = symbol.comments
+              }
+              _emitFunction(function)
+              if symbol.baseClass != null {
+                if !_minify {
+                  _emit("\n" + _indent)
                 }
+                _emitSemicolonIfNeeded
+                addMapping(_extends.range)
+                _emit(_mangleName(_extends) + "(" + _fullName(symbol) + "," + _space + _fullName(symbol.baseClass) + ")")
+                _emitSemicolonAfterStatement
               }
-              if !minify {
-                emit(" {\n")
-                increaseIndent
-              }
-              emitStatements(block.children)
-              if !block.blockAlwaysEndsWithReturn {
-                emitSemicolonIfNeeded
-                emit(indent + "break")
-                emitSemicolonAfterStatement
-              }
-              if !minify {
-                decreaseIndent
-                emit(indent + "}\n")
-              }
+              foundPrimaryConstructor = true
+              break
             }
-            decreaseIndent
-            emit(indent + "}" + newline)
-            needsSemicolon = false
           }
 
-          case .TRY {
-            var children = node.children
-            var finallyBlock = node.finallyBlock
-            emit(indent + "try")
-            emitBlock(node.tryBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
-            emit(newline)
-            for i in 1..children.count - 1 {
+          # Ignore this entire class if it's never constructed
+          if !foundPrimaryConstructor {
+            return
+          }
+        }
+      }
+
+      if symbol.kind != .OBJECT_GLOBAL {
+        _namespacePrefix += _mangleName(symbol) + "."
+      }
+
+      for function in symbol.functions {
+        if !function.isPrimaryConstructor {
+          _emitFunction(function)
+        }
+      }
+    }
+
+    def _emitArgumentList(arguments List<VariableSymbol>) {
+      for argument in arguments {
+        if argument != arguments.first {
+          _emit("," + _space)
+        }
+        addMapping(argument.range)
+        _emit(_mangleName(argument))
+      }
+    }
+
+    def _emitFunction(symbol FunctionSymbol) {
+      if symbol.block == null {
+        return
+      }
+
+      addMapping(symbol.range)
+      _emitNewlineBeforeSymbol(symbol)
+      _emitComments(symbol.comments)
+
+      var isExpression = _namespacePrefix != "" || symbol.isExported
+      var name = _mangleName(symbol.isPrimaryConstructor ? symbol.parent : symbol)
+
+      if isExpression {
+        _emit(_indent + _namespacePrefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + _space + "=" + _space + "function(")
+      } else {
+        _emit(_indent + "function " + name + "(")
+      }
+
+      _emitArgumentList(symbol.arguments)
+      _emit(")" + _space + "{" + _newline)
+      _increaseIndent
+      _enclosingFunction = symbol
+      _emitStatements(symbol.block.children)
+      _enclosingFunction = null
+      _decreaseIndent
+      _emit(_indent + "}")
+      if isExpression {
+        _emitSemicolonAfterStatement
+      } else {
+        _needsSemicolon = false
+        _emit(_newline)
+      }
+      _emitNewlineAfterSymbol(symbol)
+
+      if symbol.kind == .FUNCTION_CONSTRUCTOR && !symbol.isPrimaryConstructor {
+        _emitSemicolonIfNeeded
+        _emit(_newline + _indent + _fullName(symbol) + ".prototype" + _space + "=" + _space + _fullName(symbol.parent) + ".prototype")
+        _emitSemicolonAfterStatement
+      }
+    }
+
+    def emitVariable(symbol VariableSymbol) {
+      if symbol.isImported {
+        return
+      }
+
+      if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || _namespacePrefix == "" || symbol.kind.isLocalOrArgumentVariable) {
+        addMapping(symbol.range)
+        _emitNewlineBeforeSymbol(symbol)
+        _emitComments(symbol.comments)
+        _emit(_indent + (_namespacePrefix == "" && !symbol.isExported || symbol.kind.isLocalOrArgumentVariable ? "var " : _namespacePrefix) + _mangleName(symbol))
+
+        if symbol.value != null {
+          _emit(_space + "=" + _space)
+          _emitExpression(symbol.value, .COMMA)
+        }
+
+        _emitSemicolonAfterStatement
+        _emitNewlineAfterSymbol(symbol)
+      }
+    }
+
+    def _emitStatements(statements List<Node>) {
+      _previousNode = null
+
+      for statement in statements {
+        _emitSemicolonIfNeeded
+        _emitNewlineBeforeStatement(statement)
+        addMapping(statement.range)
+        _emitComments(statement.comments)
+        _emitStatement(statement)
+        _emitNewlineAfterStatement(statement)
+      }
+
+      _previousNode = null
+    }
+
+    def _emitBlock(node Node, after AfterToken, mode BracesMode) {
+      var shouldMinify = mode == .CAN_OMIT_BRACES && _minify
+      addMapping(node.range)
+      if shouldMinify && !node.hasChildren {
+        _emit(";")
+      } else if shouldMinify && node.children.count == 1 {
+        if after == .AFTER_KEYWORD {
+          _emit(" ")
+        }
+        _emitStatement(node.children.first)
+      } else {
+        _emit(_space + "{" + _newline)
+        if node.hasChildren {
+          _increaseIndent
+          _emitStatements(node.children)
+          _decreaseIndent
+        }
+        _emit(_indent + "}")
+        _needsSemicolon = false
+      }
+    }
+
+    def _emitStatement(node Node) {
+      switch node.kind {
+        case .VAR {
+          emitVariable(node.symbol.asVariableSymbol)
+        }
+
+        case .EXPRESSION {
+          _emit(_indent)
+          _emitExpression(node.expressionValue, .LOWEST)
+          _emitSemicolonAfterStatement
+        }
+
+        case .BREAK {
+          _emit(_indent + "break")
+          _emitSemicolonAfterStatement
+        }
+
+        case .CONTINUE {
+          _emit(_indent + "continue")
+          _emitSemicolonAfterStatement
+        }
+
+        case .RETURN {
+          _emit(_indent + "return")
+          var value = node.returnValue
+          if value != null {
+            _emit(" ")
+            _emitExpression(value, .LOWEST)
+          }
+          _emitSemicolonAfterStatement
+        }
+
+        case .THROW {
+          _emit(_indent + "throw ")
+          _emitExpression(node.throwValue, .LOWEST)
+          _emitSemicolonAfterStatement
+        }
+
+        case .FOR {
+          var test = node.forTest
+          var update = node.forUpdate
+          var children = node.children
+          var count = children.count
+          _emit(_indent + "for" + _space + "(")
+          if count > 3 {
+            for i in 3..count {
               var child = children[i]
-              emit(newline)
-              emitComments(child.comments)
-              emit(indent + "catch" + space + "(" + mangleName(child.symbol) + ")")
-              emitBlock(child.catchBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
-              emit(newline)
+              assert(child.kind == .VAR)
+              if i != 3 {
+                _emit("," + _space)
+              }
+              var symbol = child.symbol.asVariableSymbol
+              if i == 3 {
+                _emit("var ")
+              }
+              _emit(_mangleName(symbol) + _space + "=" + _space)
+              _emitExpression(symbol.value, .COMMA)
             }
-            if finallyBlock != null {
-              emit(newline)
-              emitComments(finallyBlock.comments)
-              emit(indent + "finally")
-              emitBlock(finallyBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
-              emit(newline)
+          }
+          _emit(";" + _space)
+          if test != null {
+            _emitExpression(test, .LOWEST)
+          }
+          _emit(";" + _space)
+          if update != null {
+            _emitExpression(update, .LOWEST)
+          }
+          _emit(")")
+          _emitBlock(node.forBlock, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+          _emit(_newline)
+        }
+
+        case .FOREACH {
+          _emit(_indent + "for" + _space + "(var " + _mangleName(node.symbol) + " in ")
+          _emitExpression(node.foreachValue, .LOWEST)
+          _emit(")")
+          _emitBlock(node.foreachBlock, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+          _emit(_newline)
+        }
+
+        case .IF {
+          _emit(_indent)
+          _emitIf(node)
+          _emit(_newline)
+        }
+
+        case .SWITCH {
+          var cases = node.children
+          _emit(_indent + "switch" + _space + "(")
+          _emitExpression(node.switchValue, .LOWEST)
+          _emit(")" + _space + "{" + _newline)
+          _increaseIndent
+          for i in 1..cases.count {
+            var child = cases[i]
+            var values = child.children
+            var block = child.caseBlock
+            _emitSemicolonIfNeeded
+            if i != 1 {
+              _emit(_newline)
+            }
+            if values.count == 1 {
+              _emit(_indent + "default:")
+            } else {
+              for j in 1..values.count {
+                if j != 1 {
+                  _emit(_newline)
+                }
+                _emit(_indent + "case ")
+                _emitExpression(values[j], .LOWEST)
+                _emit(":")
+              }
+            }
+            if !_minify {
+              _emit(" {\n")
+              _increaseIndent
+            }
+            _emitStatements(block.children)
+            if !block.blockAlwaysEndsWithReturn {
+              _emitSemicolonIfNeeded
+              _emit(_indent + "break")
+              _emitSemicolonAfterStatement
+            }
+            if !_minify {
+              _decreaseIndent
+              _emit(_indent + "}\n")
+            }
+          }
+          _decreaseIndent
+          _emit(_indent + "}" + _newline)
+          _needsSemicolon = false
+        }
+
+        case .TRY {
+          var children = node.children
+          var finallyBlock = node.finallyBlock
+          _emit(_indent + "try")
+          _emitBlock(node.tryBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+          _emit(_newline)
+          for i in 1..children.count - 1 {
+            var child = children[i]
+            _emit(_newline)
+            _emitComments(child.comments)
+            _emit(_indent + "catch" + _space + "(" + _mangleName(child.symbol) + ")")
+            _emitBlock(child.catchBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+            _emit(_newline)
+          }
+          if finallyBlock != null {
+            _emit(_newline)
+            _emitComments(finallyBlock.comments)
+            _emit(_indent + "finally")
+            _emitBlock(finallyBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+            _emit(_newline)
+          }
+        }
+
+        case .WHILE {
+          _emit(_indent + "while" + _space + "(")
+          _emitExpression(node.whileTest, .LOWEST)
+          _emit(")")
+          _emitBlock(node.whileBlock, .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
+          _emit(_newline)
+        }
+
+        default {
+          assert(false)
+        }
+      }
+    }
+
+    def _emitIf(node Node) {
+      var trueBlock = node.ifTrue
+      var falseBlock = node.ifFalse
+      _emit("if" + _space + "(")
+      _emitExpression(node.ifTest, .LOWEST)
+      _emit(")")
+
+      # Make sure to always keep braces to avoid the dangling "else" case
+      var trueStatement = trueBlock.blockStatement
+      _emitBlock(node.ifTrue, .AFTER_PARENTHESIS, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES)
+
+      if falseBlock != null {
+        var falseStatement = falseBlock.blockStatement
+        var singleIf = falseStatement != null && falseStatement.kind == .IF ? falseStatement : null
+        _emitSemicolonIfNeeded
+        _emit(_newline + _newline)
+        _emitComments(falseBlock.comments)
+        if singleIf != null {
+          _emitComments(singleIf.comments)
+        }
+        _emit(_indent + "else")
+
+        if singleIf != null {
+          _emit(" ")
+          _emitIf(singleIf)
+        } else {
+          _emitBlock(falseBlock, .AFTER_KEYWORD, .CAN_OMIT_BRACES)
+        }
+      }
+    }
+
+    def _emitContent(content Content) {
+      switch content.kind {
+        case .BOOL { _emit(_mangle ? content.asBool ? "!0" : "!1" : content.asBool.toString) }
+        case .INT { _emit(content.asInt.toString) }
+        case .DOUBLE { _emit(content.asDouble.toString) }
+        case .STRING { _emit(quoteString(content.asString, '"')) }
+      }
+    }
+
+    def _emitExpression(node Node, precedence Precedence) {
+      var kind = node.kind
+      addMapping(node.range)
+
+      switch kind {
+        case .TYPE {
+          _emit(_fullName(node.resolvedType.symbol))
+        }
+
+        case .NULL {
+          _emit("null")
+        }
+
+        case .NAME {
+          var symbol = node.symbol
+          _emit(symbol != null ? _fullName(symbol) : node.asString)
+        }
+
+        case .DOT {
+          _emitExpression(node.dotTarget, .MEMBER)
+          _emit("." + (node.symbol != null ? _mangleName(node.symbol) : node.asString))
+        }
+
+        case .CONSTANT {
+          _emitContent(node.content)
+        }
+
+        case .CALL {
+          var value = node.callValue
+          var call = value.kind == .SUPER
+          var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
+
+          if wrap {
+            _emit("(")
+          }
+
+          if !call && node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR {
+            _emit("new " + _fullName(node.symbol))
+          } else if !call && value.kind == .DOT && value.asString == "new" {
+            _emit("new ")
+            _emitExpression(value.dotTarget, .MEMBER)
+          } else {
+            _emitExpression(value, .UNARY_POSTFIX)
+            if call {
+              _emit(".call")
             }
           }
 
-          case .WHILE {
-            emit(indent + "while" + space + "(")
-            emitExpression(node.whileTest, .LOWEST)
-            emit(")")
-            emitBlock(node.whileBlock, .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
-            emit(newline)
+          if wrap {
+            _emit(")")
           }
 
-          default {
+          _emit("(")
+
+          if call {
+            _emit(_mangleName(_enclosingFunction.self))
+          }
+
+          for i in 1..node.children.count {
+            if call || i > 1 {
+              _emit("," + _space)
+            }
+            _emitExpression(node.children[i], .COMMA)
+          }
+
+          _emit(")")
+        }
+
+        case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
+          var children = node.children
+          var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && children.isEmpty
+          var isIndented = !_minify && !children.all(child => child.comments == null)
+
+          _emit(useBraces ? "{" : "[")
+          if isIndented {
+            _increaseIndent
+          }
+
+          for child in children {
+            if child != children.first {
+              _emit("," + (isIndented ? "" : _space))
+            }
+            if isIndented {
+              _emit("\n")
+              _emitComments(child.comments)
+              _emit(_indent)
+            }
+            _emitExpression(child, .COMMA)
+          }
+
+          if isIndented {
+            _decreaseIndent
+            _emit("\n" + _indent)
+          }
+          _emit(useBraces ? "}" : "]")
+        }
+
+        case .PAIR {
+          _emitExpression(node.firstValue, .LOWEST)
+          _emit(":" + _space)
+          _emitExpression(node.secondValue, .LOWEST)
+        }
+
+        case .INDEX {
+          assert(node.children.count == 2)
+          _emitExpression(node.children[0], .UNARY_POSTFIX)
+          _emit("[")
+          _emitExpression(node.children[1], .LOWEST)
+          _emit("]")
+        }
+
+        case .ASSIGN_INDEX {
+          if Precedence.ASSIGN as int < precedence as int {
+            _emit("(")
+          }
+
+          assert(node.children.count == 3)
+          _emitExpression(node.children[0], .UNARY_POSTFIX)
+          _emit("[")
+          _emitExpression(node.children[1], .LOWEST)
+          _emit("]" + _space + "=" + _space + "")
+          _emitExpression(node.children[2], .ASSIGN)
+
+          if Precedence.ASSIGN as int < precedence as int {
+            _emit(")")
+          }
+        }
+
+        case .CAST {
+          _emitExpression(node.castValue, precedence)
+        }
+
+        case .PARAMETERIZE {
+          _emitExpression(node.parameterizeValue, precedence)
+        }
+
+        case .SEQUENCE {
+          if Precedence.COMMA as int <= precedence as int {
+            _emit("(")
+          }
+          for i in 0..node.children.count {
+            if i != 0 {
+              _emit("," + _space)
+            }
+            _emitExpression(node.children[i], .COMMA)
+          }
+          if Precedence.COMMA as int <= precedence as int {
+            _emit(")")
+          }
+        }
+
+        case .SUPER {
+          _emit(_fullName(node.symbol))
+        }
+
+        case .HOOK {
+          if Precedence.ASSIGN as int < precedence as int {
+            _emit("(")
+          }
+          _emitExpression(node.hookTest, .LOGICAL_OR)
+          _emit(_space + "?" + _space)
+          _emitExpression(node.hookTrue, .ASSIGN)
+          _emit(_space + ":" + _space)
+          _emitExpression(node.hookFalse, .ASSIGN)
+          if Precedence.ASSIGN as int < precedence as int {
+            _emit(")")
+          }
+        }
+
+        case .LAMBDA {
+          var symbol = node.symbol.asFunctionSymbol
+          _emit("function(")
+          _emitArgumentList(symbol.arguments)
+          _emit(")")
+          _emitBlock(symbol.block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+        }
+
+        default {
+          if kind.isUnary {
+            var value = node.unaryValue
+            var info = operatorInfo[kind]
+            if info.precedence as int < precedence as int {
+              _emit("(")
+            }
+            _emit(info.text)
+            _emitExpression(value, info.precedence)
+            if info.precedence as int < precedence as int {
+              _emit(")")
+            }
+          }
+
+          else if kind.isBinary {
+            var info = operatorInfo[kind]
+            var right = node.binaryRight
+
+            if info.precedence as int < precedence as int {
+              _emit("(")
+            }
+            _emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
+
+            # Always emit spaces around keyword operators, even when minifying
+            _emit(kind == .IN ? " in " : kind == .IS ? " instanceof " : _space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + _space)
+
+            # Prevent "x - -1" from becoming "x--1"
+            if _minify && (
+                kind == .ADD && (right.kind == .POSITIVE || right.kind == .INCREMENT) ||
+                kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .DECREMENT || right.isNumberLessThanZero)) {
+              _emit(" ")
+            }
+
+            _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
+            if info.precedence as int < precedence as int {
+              _emit(")")
+            }
+          }
+
+          else {
             assert(false)
           }
         }
       }
+    }
 
-      def emitIf(node Node) {
-        var trueBlock = node.ifTrue
-        var falseBlock = node.ifFalse
-        emit("if" + space + "(")
-        emitExpression(node.ifTest, .LOWEST)
-        emit(")")
+    def _patchObject(symbol ObjectSymbol, globalObjects List<ObjectSymbol>, globalFunctions List<FunctionSymbol>, globalVariables List<VariableSymbol>) {
+      var shouldLiftGlobals = _mangle && symbol.parent != null
+      _allocateNamingGroupIndex(symbol)
 
-        # Make sure to always keep braces to avoid the dangling "else" case
-        var trueStatement = trueBlock.blockStatement
-        emitBlock(node.ifTrue, .AFTER_PARENTHESIS, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES)
+      # Scan over child objects
+      symbol.objects.removeIf(object => {
+        _patchObject(object, globalObjects, globalFunctions, globalVariables)
 
-        if falseBlock != null {
-          var falseStatement = falseBlock.blockStatement
-          var singleIf = falseStatement != null && falseStatement.kind == .IF ? falseStatement : null
-          emitSemicolonIfNeeded
-          emit(newline + newline)
-          emitComments(falseBlock.comments)
-          if singleIf != null {
-            emitComments(singleIf.comments)
-          }
-          emit(indent + "else")
-
-          if singleIf != null {
-            emit(" ")
-            emitIf(singleIf)
-          } else {
-            emitBlock(falseBlock, .AFTER_KEYWORD, .CAN_OMIT_BRACES)
-          }
-        }
-      }
-
-      def emitContent(content Content) {
-        switch content.kind {
-          case .BOOL { emit(mangle ? content.asBool ? "!0" : "!1" : content.asBool.toString) }
-          case .INT { emit(content.asInt.toString) }
-          case .DOUBLE { emit(content.asDouble.toString) }
-          case .STRING { emit(quoteString(content.asString, '"')) }
-        }
-      }
-
-      def emitExpression(node Node, precedence Precedence) {
-        var kind = node.kind
-        addMapping(node.range)
-
-        switch kind {
-          case .TYPE {
-            emit(fullName(node.resolvedType.symbol))
-          }
-
-          case .NULL {
-            emit("null")
-          }
-
-          case .NAME {
-            var symbol = node.symbol
-            emit(symbol != null ? fullName(symbol) : node.asString)
-          }
-
-          case .DOT {
-            emitExpression(node.dotTarget, .MEMBER)
-            emit("." + (node.symbol != null ? mangleName(node.symbol) : node.asString))
-          }
-
-          case .CONSTANT {
-            emitContent(node.content)
-          }
-
-          case .CALL {
-            var value = node.callValue
-            var call = value.kind == .SUPER
-            var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
-
-            if wrap {
-              emit("(")
-            }
-
-            if !call && node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR {
-              emit("new " + fullName(node.symbol))
-            } else if !call && value.kind == .DOT && value.asString == "new" {
-              emit("new ")
-              emitExpression(value.dotTarget, .MEMBER)
-            } else {
-              emitExpression(value, .UNARY_POSTFIX)
-              if call {
-                emit(".call")
-              }
-            }
-
-            if wrap {
-              emit(")")
-            }
-
-            emit("(")
-
-            if call {
-              emit(mangleName(enclosingFunction.self))
-            }
-
-            for i in 1..node.children.count {
-              if call || i > 1 {
-                emit("," + space)
-              }
-              emitExpression(node.children[i], .COMMA)
-            }
-
-            emit(")")
-          }
-
-          case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
-            var children = node.children
-            var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && children.isEmpty
-            var isIndented = !minify && !children.all(child => child.comments == null)
-
-            emit(useBraces ? "{" : "[")
-            if isIndented {
-              increaseIndent
-            }
-
-            for child in children {
-              if child != children.first {
-                emit("," + (isIndented ? "" : space))
-              }
-              if isIndented {
-                emit("\n")
-                emitComments(child.comments)
-                emit(indent)
-              }
-              emitExpression(child, .COMMA)
-            }
-
-            if isIndented {
-              decreaseIndent
-              emit("\n" + indent)
-            }
-            emit(useBraces ? "}" : "]")
-          }
-
-          case .PAIR {
-            emitExpression(node.firstValue, .LOWEST)
-            emit(":" + space)
-            emitExpression(node.secondValue, .LOWEST)
-          }
-
-          case .INDEX {
-            assert(node.children.count == 2)
-            emitExpression(node.children[0], .UNARY_POSTFIX)
-            emit("[")
-            emitExpression(node.children[1], .LOWEST)
-            emit("]")
-          }
-
-          case .ASSIGN_INDEX {
-            if Precedence.ASSIGN as int < precedence as int {
-              emit("(")
-            }
-
-            assert(node.children.count == 3)
-            emitExpression(node.children[0], .UNARY_POSTFIX)
-            emit("[")
-            emitExpression(node.children[1], .LOWEST)
-            emit("]" + space + "=" + space + "")
-            emitExpression(node.children[2], .ASSIGN)
-
-            if Precedence.ASSIGN as int < precedence as int {
-              emit(")")
-            }
-          }
-
-          case .CAST {
-            emitExpression(node.castValue, precedence)
-          }
-
-          case .PARAMETERIZE {
-            emitExpression(node.parameterizeValue, precedence)
-          }
-
-          case .SEQUENCE {
-            if Precedence.COMMA as int <= precedence as int {
-              emit("(")
-            }
-            for i in 0..node.children.count {
-              if i != 0 {
-                emit("," + space)
-              }
-              emitExpression(node.children[i], .COMMA)
-            }
-            if Precedence.COMMA as int <= precedence as int {
-              emit(")")
-            }
-          }
-
-          case .SUPER {
-            emit(fullName(node.symbol))
-          }
-
-          case .HOOK {
-            if Precedence.ASSIGN as int < precedence as int {
-              emit("(")
-            }
-            emitExpression(node.hookTest, .LOGICAL_OR)
-            emit(space + "?" + space)
-            emitExpression(node.hookTrue, .ASSIGN)
-            emit(space + ":" + space)
-            emitExpression(node.hookFalse, .ASSIGN)
-            if Precedence.ASSIGN as int < precedence as int {
-              emit(")")
-            }
-          }
-
-          case .LAMBDA {
-            var symbol = node.symbol.asFunctionSymbol
-            emit("function(")
-            emitArgumentList(symbol.arguments)
-            emit(")")
-            emitBlock(symbol.block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
-          }
-
-          default {
-            if kind.isUnary {
-              var value = node.unaryValue
-              var info = operatorInfo[kind]
-              if info.precedence as int < precedence as int {
-                emit("(")
-              }
-              emit(info.text)
-              emitExpression(value, info.precedence)
-              if info.precedence as int < precedence as int {
-                emit(")")
-              }
-            }
-
-            else if kind.isBinary {
-              var info = operatorInfo[kind]
-              var right = node.binaryRight
-
-              if info.precedence as int < precedence as int {
-                emit("(")
-              }
-              emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
-
-              # Always emit spaces around keyword operators, even when minifying
-              emit(kind == .IN ? " in " : kind == .IS ? " instanceof " : space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + space)
-
-              # Prevent "x - -1" from becoming "x--1"
-              if minify && (
-                  kind == .ADD && (right.kind == .POSITIVE || right.kind == .INCREMENT) ||
-                  kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .DECREMENT || right.isNumberLessThanZero)) {
-                emit(" ")
-              }
-
-              emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
-              if info.precedence as int < precedence as int {
-                emit(")")
-              }
-            }
-
-            else {
-              assert(false)
-            }
-          }
-        }
-      }
-
-      def patchObject(symbol ObjectSymbol, globalObjects List<ObjectSymbol>, globalFunctions List<FunctionSymbol>, globalVariables List<VariableSymbol>) {
-        var shouldLiftGlobals = mangle && symbol.parent != null
-        allocateNamingGroupIndex(symbol)
-
-        # Scan over child objects
-        symbol.objects.removeIf(object => {
-          patchObject(object, globalObjects, globalFunctions, globalVariables)
-
-          # When mangling, filter out all internal objects and move them to the global namespace
-          if shouldLiftGlobals && !object.isImportedOrExported {
-            globalObjects.append(object)
-            return true
-          }
-
-          return false
-        })
-
-        # Scan over child functions
-        var isPrimaryConstructor = true
-        symbol.functions.removeIf(function => {
-          allocateNamingGroupIndex(function)
-
-          # Check to see if we need an explicit "self" parameter while patching the block
-          needsSelf = false
-          currentSelf = function.self
-          enclosingFunction = function
-          patchNode(function.block)
-          enclosingFunction = null
-
-          # Only insert the "self" variable if required to handle capture inside lambdas
-          if needsSelf {
-            unionVariableWithFunction(function.self, function)
-            if function.block != null {
-              function.self.value = Node.createName("this")
-              function.block.children.prepend(Node.createVar(function.self))
-            }
-          } else if function.self != null {
-            function.self.name = "this"
-            function.self.flags |= Symbol.IS_EXPORTED
-          }
-
-          for argument in function.arguments {
-            allocateNamingGroupIndex(argument)
-            unionVariableWithFunction(argument, function)
-          }
-
-          # When mangling, filter out all internal global functions and move them to the global namespace
-          if shouldLiftGlobals && function.kind == .FUNCTION_GLOBAL && !function.isImportedOrExported {
-            globalFunctions.append(function)
-            return true
-          }
-
-          # Rename extra constructors overloads so they don't conflict
-          if function.kind == .FUNCTION_CONSTRUCTOR {
-            if isPrimaryConstructor {
-              function.flags |= Symbol.IS_PRIMARY_CONSTRUCTOR
-              isPrimaryConstructor = false
-            }
-          }
-
-          return false
-        })
-
-        # Scan over child variables
-        symbol.variables.removeIf(variable => {
-          allocateNamingGroupIndex(variable)
-          patchNode(variable.value)
-
-          # When mangling, filter out all internal global variables and move them to the global namespace
-          if shouldLiftGlobals && variable.kind == .VARIABLE_GLOBAL && !variable.isImportedOrExported {
-            globalVariables.append(variable)
-            return true
-          }
-
-          return false
-        })
-      }
-
-      def createIntBinary(kind NodeKind, left Node, right Node) Node {
-        if kind == .MULTIPLY {
-          needsMultiply = true
-          return Node.createCall(Node.createName(multiply.name).withSymbol(multiply), [left, right]).withType(cache.intType)
-        }
-        return wrapWithIntCast(Node.createBinary(kind, left, right).withType(cache.intType))
-      }
-
-      def wrapWithNot(node Node) Node {
-        return Node.createUnary(.NOT, node).withType(cache.boolType).withRange(node.range)
-      }
-
-      def wrapWithIntCast(node Node) Node {
-        return Node.createBinary(.BITWISE_OR, node, Node.createInt(0).withType(cache.intType)).withType(cache.intType).withRange(node.range)
-      }
-
-      def wrapWithTypeIndex(node Node, index Type, type Type) Node {
-        return Node.createIndex(Node.createType(index), [node]).withType(type).withRange(node.range)
-      }
-
-      def patchBinaryArithmetic(node Node) {
-        # Make sure arithmetic integer operators don't emit doubles outside the
-        # integer range. Allowing this causes JIT slowdowns due to extra checks
-        # during compilation and potential deoptimizations during execution.
-        if node.resolvedType == cache.intType && !alwaysConvertsOperandsToInt(node.parent) {
-          var left = node.binaryLeft
-          var right = node.binaryRight
-          if left.resolvedType == cache.intType && right.resolvedType == cache.intType {
-            node.become(createIntBinary(node.kind, left.replaceWithNull, right.replaceWithNull).withRange(node.range))
-          }
-        }
-      }
-
-      # Group each variable inside the function with the function itself so that
-      # they can be renamed together and won't cause any collisions inside the
-      # function
-      def unionVariableWithFunction(symbol Symbol, function Symbol) {
-        if mangle && function != null {
-          assert(symbol.id in namingGroupIndexForSymbol)
-          assert(function.id in namingGroupIndexForSymbol)
-          localVariableUnionFind.union(
-            namingGroupIndexForSymbol[symbol.id],
-            namingGroupIndexForSymbol[function.id])
-        }
-      }
-
-      def patchNode(node Node) {
-        if node == null {
-          return
+        # When mangling, filter out all internal objects and move them to the global namespace
+        if shouldLiftGlobals && !object.isImportedOrExported {
+          globalObjects.append(object)
+          return true
         }
 
-        var oldEnclosingFunction = enclosingFunction
-        var children = node.children
-        var symbol = node.symbol
-        var kind = node.kind
-
-        if mangle && symbol != null {
-          allocateNamingGroupIndex(symbol)
-          if node.kind != .TYPE {
-            symbolCounts[symbol.id] = symbolCounts.get(symbol.id, 0) + 1
-          }
-        }
-
-        if children != null {
-          if kind == .LAMBDA {
-            enclosingFunction = symbol.asFunctionSymbol
-          }
-
-          for child in children {
-            patchNode(child)
-          }
-
-          if kind == .LAMBDA {
-            enclosingFunction = oldEnclosingFunction
-          }
-        }
-
-        switch kind {
-          case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
-            patchBinaryArithmetic(node)
-          }
-
-          case .BLOCK {
-            if mangle {
-              peepholeMangleBlock(node)
-            }
-          }
-
-          case .CAST {
-            patchCast(node)
-          }
-
-          case .FOREACH {
-            unionVariableWithFunction(symbol, enclosingFunction)
-          }
-
-          case .IF {
-            if mangle {
-              peepholeMangleIf(node)
-            }
-          }
-
-          case .HOOK {
-            if mangle {
-              peepholeMangleHook(node)
-            }
-          }
-
-          case .LAMBDA {
-            var function = symbol.asFunctionSymbol
-            for argument in function.arguments {
-              allocateNamingGroupIndex(argument)
-              unionVariableWithFunction(argument, function)
-            }
-            unionVariableWithFunction(function, enclosingFunction)
-          }
-
-          case .NAME {
-            if symbol != null && symbol == currentSelf && enclosingFunction != null && enclosingFunction.kind == .FUNCTION_LOCAL {
-              needsSelf = true
-            }
-          }
-
-          case .TRY {
-            patchTry(node)
-          }
-
-          case .VAR {
-            unionVariableWithFunction(symbol, enclosingFunction)
-          }
-        }
-      }
-
-      def patchTry(node Node) {
-        if node.children.count > 2 {
-          var children = node.removeChildren
-          var tryNode = children.first
-          var finallyNode = children.last
-          var variable = VariableSymbol.new(.VARIABLE_LOCAL, children.count == 3 && children[1].symbol != null ? children[1].symbol.name : enclosingFunction.scope.generateName("e"))
-          var block Node = Node.createBlock([Node.createThrow(Node.createSymbolReference(variable))])
-
-          for i in 1..children.count - 1 {
-            var child = children[children.count - i - 1]
-            var catchBlock = child.catchBlock.replaceWithNull
-
-            # Just rename all catch symbols to the same name instead of substituting the variable
-            if child.symbol != null {
-              child.symbol.name = variable.name
-            }
-
-            # Build up the chain of tests in reverse
-            if child.symbol != null && child.symbol.resolvedType != .DYNAMIC {
-              var test = Node.createBinary(.IS, Node.createSymbolReference(variable), Node.createType(child.symbol.resolvedType))
-              block = Node.createBlock([catchBlock.children.isEmpty
-                ? Node.createIf(Node.createUnary(.NOT, test), block, null)
-                : Node.createIf(test, catchBlock, block)])
-            } else {
-              block = catchBlock
-            }
-          }
-
-          node.withChildren([tryNode, Node.createCatch(variable, block), finallyNode])
-        }
-      }
-
-      def assignSourceIfNoSideEffects(node Node) Node {
-        if node.kind == .ASSIGN {
-          var right = node.binaryRight
-          return node.binaryLeft.hasNoSideEffects && right.hasNoSideEffects ? right : null
-        }
-
-        if node.kind == .ASSIGN_INDEX {
-          var children = node.children
-          return children.count == 3 && children[0].hasNoSideEffects && children[1].hasNoSideEffects && children[2].hasNoSideEffects ? children[2] : null
-        }
-
-        return null
-      }
-
-      def peepholeMangleSequence(node Node) {
-        assert(node.kind == .SEQUENCE)
-
-        # "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
-        var i = node.children.count - 1
-        while i > 0 {
-          var current = node.children[i]
-          var currentRight = assignSourceIfNoSideEffects(current)
-          if currentRight != null {
-            while i != 0 {
-              var previous = node.children[i - 1]
-              var previousRight = assignSourceIfNoSideEffects(previous)
-              if previousRight == null || !looksTheSame(previousRight, currentRight) {
-                break
-              }
-              previousRight.replaceWith(current.remove)
-              current = previous
-              i--
-            }
-          }
-          i--
-        }
-      }
-
-      def joinExpressions(left Node, right Node) Node {
-        var sequence = Node.createSequence(left.kind == .SEQUENCE ? left.removeChildren : [left])
-        sequence.appendChildren(right.kind == .SEQUENCE ? right.removeChildren : [right])
-        return sequence
-      }
-
-      def looksTheSame(left Node, right Node) bool {
-        if left.kind == right.kind {
-          switch left.kind {
-            case .NULL { return true }
-            case .CONSTANT {
-              switch left.content.kind {
-                case .INT { return right.isInt && left.asInt == right.asInt }
-                case .BOOL { return right.isBool && left.asBool == right.asBool }
-                case .DOUBLE { return right.isDouble && left.asDouble == right.asDouble }
-                case .STRING { return right.isString && left.asString == right.asString }
-              }
-            }
-            case .NAME { return left.symbol != null && left.symbol == right.symbol || left.symbol == null && right.symbol == null && left.asString == right.asString }
-            case .DOT { return left.symbol == right.symbol && looksTheSame(left.dotTarget, right.dotTarget) }
-          }
-        }
-
-        # Null literals are always implicitly casted, so unwrap implicit casts
-        if left.kind == .CAST { return looksTheSame(left.castValue, right) }
-        if right.kind == .CAST { return looksTheSame(left, right.castValue) }
         return false
+      })
+
+      # Scan over child functions
+      var isPrimaryConstructor = true
+      symbol.functions.removeIf(function => {
+        _allocateNamingGroupIndex(function)
+
+        # Check to see if we need an explicit "self" parameter while patching the block
+        _needsSelf = false
+        _currentSelf = function.self
+        _enclosingFunction = function
+        _patchNode(function.block)
+        _enclosingFunction = null
+
+        # Only insert the "self" variable if required to handle capture inside lambdas
+        if _needsSelf {
+          _unionVariableWithFunction(function.self, function)
+          if function.block != null {
+            function.self.value = Node.createName("this")
+            function.block.children.prepend(Node.createVar(function.self))
+          }
+        } else if function.self != null {
+          function.self.name = "this"
+          function.self.flags |= Symbol.IS_EXPORTED
+        }
+
+        for argument in function.arguments {
+          _allocateNamingGroupIndex(argument)
+          _unionVariableWithFunction(argument, function)
+        }
+
+        # When mangling, filter out all internal global functions and move them to the global namespace
+        if shouldLiftGlobals && function.kind == .FUNCTION_GLOBAL && !function.isImportedOrExported {
+          globalFunctions.append(function)
+          return true
+        }
+
+        # Rename extra constructors overloads so they don't conflict
+        if function.kind == .FUNCTION_CONSTRUCTOR {
+          if isPrimaryConstructor {
+            function.flags |= Symbol.IS_PRIMARY_CONSTRUCTOR
+            isPrimaryConstructor = false
+          }
+        }
+
+        return false
+      })
+
+      # Scan over child variables
+      symbol.variables.removeIf(variable => {
+        _allocateNamingGroupIndex(variable)
+        _patchNode(variable.value)
+
+        # When mangling, filter out all internal global variables and move them to the global namespace
+        if shouldLiftGlobals && variable.kind == .VARIABLE_GLOBAL && !variable.isImportedOrExported {
+          globalVariables.append(variable)
+          return true
+        }
+
+        return false
+      })
+    }
+
+    def _createIntBinary(kind NodeKind, left Node, right Node) Node {
+      if kind == .MULTIPLY {
+        _needsMultiply = true
+        return Node.createCall(Node.createName(_multiply.name).withSymbol(_multiply), [left, right]).withType(_cache.intType)
+      }
+      return _wrapWithIntCast(Node.createBinary(kind, left, right).withType(_cache.intType))
+    }
+
+    def _wrapWithNot(node Node) Node {
+      return Node.createUnary(.NOT, node).withType(_cache.boolType).withRange(node.range)
+    }
+
+    def _wrapWithIntCast(node Node) Node {
+      return Node.createBinary(.BITWISE_OR, node, Node.createInt(0).withType(_cache.intType)).withType(_cache.intType).withRange(node.range)
+    }
+
+    def _wrapWithTypeIndex(node Node, index Type, type Type) Node {
+      return Node.createIndex(Node.createType(index), [node]).withType(type).withRange(node.range)
+    }
+
+    def _patchBinaryArithmetic(node Node) {
+      # Make sure arithmetic integer operators don't emit doubles outside the
+      # integer range. Allowing this causes JIT slowdowns due to extra checks
+      # during compilation and potential deoptimizations during execution.
+      if node.resolvedType == _cache.intType && !_alwaysConvertsOperandsToInt(node.parent) {
+        var left = node.binaryLeft
+        var right = node.binaryRight
+        if left.resolvedType == _cache.intType && right.resolvedType == _cache.intType {
+          node.become(_createIntBinary(node.kind, left.replaceWithNull, right.replaceWithNull).withRange(node.range))
+        }
+      }
+    }
+
+    # Group each variable inside the function with the function itself so that
+    # they can be renamed together and won't cause any collisions inside the
+    # function
+    def _unionVariableWithFunction(symbol Symbol, function Symbol) {
+      if _mangle && function != null {
+        assert(symbol.id in _namingGroupIndexForSymbol)
+        assert(function.id in _namingGroupIndexForSymbol)
+        _localVariableUnionFind.union(
+          _namingGroupIndexForSymbol[symbol.id],
+          _namingGroupIndexForSymbol[function.id])
+      }
+    }
+
+    def _patchNode(node Node) {
+      if node == null {
+        return
       }
 
-      # Simplifies the node assuming it's used in a boolean context
-      def peepholeMangleBoolean(node Node, canSwap BooleanSwap) BooleanSwap {
-        var kind = node.kind
+      var oldEnclosingFunction = _enclosingFunction
+      var children = node.children
+      var symbol = node.symbol
+      var kind = node.kind
 
-        if kind == .EQUAL || kind == .NOT_EQUAL {
-          var left = node.binaryLeft
-          var right = node.binaryRight
-          var replacement = isFalsy(right) ? left : isFalsy(left) ? right : null
+      if _mangle && symbol != null {
+        _allocateNamingGroupIndex(symbol)
+        if node.kind != .TYPE {
+          _symbolCounts[symbol.id] = _symbolCounts.get(symbol.id, 0) + 1
+        }
+      }
 
-          # "if (a != 0) b;" => "if (a) b;"
-          if replacement != null {
+      if children != null {
+        if kind == .LAMBDA {
+          _enclosingFunction = symbol.asFunctionSymbol
+        }
 
-            # This minification is not valid for floating-point values because
-            # of NaN, since NaN != 0 but NaN is falsy in JavaScript
-            if left.resolvedType != null && left.resolvedType != cache.doubleType && right.resolvedType != null && right.resolvedType != cache.doubleType {
-              replacement.replaceWithNull
-              node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement)
-            }
-          }
+        for child in children {
+          _patchNode(child)
+        }
 
-          else if cache.isInteger(left.resolvedType) && cache.isInteger(right.resolvedType) && (kind == .NOT_EQUAL || kind == .EQUAL && canSwap == .SWAP) {
+        if kind == .LAMBDA {
+          _enclosingFunction = oldEnclosingFunction
+        }
+      }
 
-            # "if (a != -1) c;" => "if (~a) c;"
-            # "if (a == -1) c; else d;" => "if (~a) d; else c;"
-            if right.isInt && right.asInt == -1 {
-              node.become(Node.createUnary(.COMPLEMENT, left.replaceWithNull))
-            }
+      switch kind {
+        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
+          _patchBinaryArithmetic(node)
+        }
 
-            # "if (-1 != b) c;" => "if (~b) c;"
-            # "if (-1 == b) c; else d;" => "if (~b) d; else c;"
-            else if left.isInt && left.asInt == -1 {
-              node.become(Node.createUnary(.COMPLEMENT, right.replaceWithNull))
-            }
-
-            # "if (a != b) c;" => "if (a ^ b) c;"
-            # "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
-            else {
-              node.kind = .BITWISE_XOR
-            }
-
-            return kind == .EQUAL ? .SWAP : .NO_SWAP
+        case .BLOCK {
+          if _mangle {
+            _peepholeMangleBlock(node)
           }
         }
 
-        # "if (a != 0 || b != 0) c;" => "if (a || b) c;"
-        else if kind == .LOGICAL_AND || kind == .LOGICAL_OR {
-          peepholeMangleBoolean(node.binaryLeft, .NO_SWAP)
-          peepholeMangleBoolean(node.binaryRight, .NO_SWAP)
+        case .CAST {
+          _patchCast(node)
         }
+
+        case .FOREACH {
+          _unionVariableWithFunction(symbol, _enclosingFunction)
+        }
+
+        case .IF {
+          if _mangle {
+            _peepholeMangleIf(node)
+          }
+        }
+
+        case .HOOK {
+          if _mangle {
+            _peepholeMangleHook(node)
+          }
+        }
+
+        case .LAMBDA {
+          var function = symbol.asFunctionSymbol
+          for argument in function.arguments {
+            _allocateNamingGroupIndex(argument)
+            _unionVariableWithFunction(argument, function)
+          }
+          _unionVariableWithFunction(function, _enclosingFunction)
+        }
+
+        case .NAME {
+          if symbol != null && symbol == _currentSelf && _enclosingFunction != null && _enclosingFunction.kind == .FUNCTION_LOCAL {
+            _needsSelf = true
+          }
+        }
+
+        case .TRY {
+          _patchTry(node)
+        }
+
+        case .VAR {
+          _unionVariableWithFunction(symbol, _enclosingFunction)
+        }
+      }
+    }
+
+    def _patchTry(node Node) {
+      if node.children.count > 2 {
+        var children = node.removeChildren
+        var tryNode = children.first
+        var finallyNode = children.last
+        var variable = VariableSymbol.new(.VARIABLE_LOCAL, children.count == 3 && children[1].symbol != null ? children[1].symbol.name : _enclosingFunction.scope.generateName("e"))
+        var block Node = Node.createBlock([Node.createThrow(Node.createSymbolReference(variable))])
+
+        for i in 1..children.count - 1 {
+          var child = children[children.count - i - 1]
+          var catchBlock = child.catchBlock.replaceWithNull
+
+          # Just rename all catch symbols to the same name instead of substituting the variable
+          if child.symbol != null {
+            child.symbol.name = variable.name
+          }
+
+          # Build up the chain of tests in reverse
+          if child.symbol != null && child.symbol.resolvedType != .DYNAMIC {
+            var test = Node.createBinary(.IS, Node.createSymbolReference(variable), Node.createType(child.symbol.resolvedType))
+            block = Node.createBlock([catchBlock.children.isEmpty
+              ? Node.createIf(Node.createUnary(.NOT, test), block, null)
+              : Node.createIf(test, catchBlock, block)])
+          } else {
+            block = catchBlock
+          }
+        }
+
+        node.withChildren([tryNode, Node.createCatch(variable, block), finallyNode])
+      }
+    }
+
+    def _assignSourceIfNoSideEffects(node Node) Node {
+      if node.kind == .ASSIGN {
+        var right = node.binaryRight
+        return node.binaryLeft.hasNoSideEffects && right.hasNoSideEffects ? right : null
+      }
+
+      if node.kind == .ASSIGN_INDEX {
+        var children = node.children
+        return children.count == 3 && children[0].hasNoSideEffects && children[1].hasNoSideEffects && children[2].hasNoSideEffects ? children[2] : null
+      }
+
+      return null
+    }
+
+    def _peepholeMangleSequence(node Node) {
+      assert(node.kind == .SEQUENCE)
+
+      # "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
+      var i = node.children.count - 1
+      while i > 0 {
+        var current = node.children[i]
+        var currentRight = _assignSourceIfNoSideEffects(current)
+        if currentRight != null {
+          while i != 0 {
+            var previous = node.children[i - 1]
+            var previousRight = _assignSourceIfNoSideEffects(previous)
+            if previousRight == null || !_looksTheSame(previousRight, currentRight) {
+              break
+            }
+            previousRight.replaceWith(current.remove)
+            current = previous
+            i--
+          }
+        }
+        i--
+      }
+    }
+
+    # Simplifies the node assuming it's used in a boolean context
+    def _peepholeMangleBoolean(node Node, canSwap BooleanSwap) BooleanSwap {
+      var kind = node.kind
+
+      if kind == .EQUAL || kind == .NOT_EQUAL {
+        var left = node.binaryLeft
+        var right = node.binaryRight
+        var replacement = _isFalsy(right) ? left : _isFalsy(left) ? right : null
+
+        # "if (a != 0) b;" => "if (a) b;"
+        if replacement != null {
+
+          # This minification is not valid for floating-point values because
+          # of NaN, since NaN != 0 but NaN is falsy in JavaScript
+          if left.resolvedType != null && left.resolvedType != _cache.doubleType && right.resolvedType != null && right.resolvedType != _cache.doubleType {
+            replacement.replaceWithNull
+            node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement)
+          }
+        }
+
+        else if _cache.isInteger(left.resolvedType) && _cache.isInteger(right.resolvedType) && (kind == .NOT_EQUAL || kind == .EQUAL && canSwap == .SWAP) {
+
+          # "if (a != -1) c;" => "if (~a) c;"
+          # "if (a == -1) c; else d;" => "if (~a) d; else c;"
+          if right.isInt && right.asInt == -1 {
+            node.become(Node.createUnary(.COMPLEMENT, left.replaceWithNull))
+          }
+
+          # "if (-1 != b) c;" => "if (~b) c;"
+          # "if (-1 == b) c; else d;" => "if (~b) d; else c;"
+          else if left.isInt && left.asInt == -1 {
+            node.become(Node.createUnary(.COMPLEMENT, right.replaceWithNull))
+          }
+
+          # "if (a != b) c;" => "if (a ^ b) c;"
+          # "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
+          else {
+            node.kind = .BITWISE_XOR
+          }
+
+          return kind == .EQUAL ? .SWAP : .NO_SWAP
+        }
+      }
+
+      # "if (a != 0 || b != 0) c;" => "if (a || b) c;"
+      else if kind == .LOGICAL_AND || kind == .LOGICAL_OR {
+        _peepholeMangleBoolean(node.binaryLeft, .NO_SWAP)
+        _peepholeMangleBoolean(node.binaryRight, .NO_SWAP)
+      }
+
+      # "if (!a) b; else c;" => "if (a) c; else b;"
+      # "a == 0 ? b : c;" => "a ? c : b;"
+      # This is not an "else if" check since EQUAL may be turned into NOT above
+      if node.kind == .NOT && canSwap == .SWAP {
+        node.become(node.unaryValue.replaceWithNull)
+        return .SWAP
+      }
+
+      return .NO_SWAP
+    }
+
+    def _peepholeMangleIf(node Node) {
+      var test = node.ifTest
+      var trueBlock = node.ifTrue
+      var falseBlock = node.ifFalse
+      var trueStatement = trueBlock.blockStatement
+      var swapped = _peepholeMangleBoolean(test, falseBlock != null || trueStatement != null && trueStatement.kind == .EXPRESSION ? .SWAP : .NO_SWAP)
+
+      if falseBlock != null {
+        var falseStatement = falseBlock.blockStatement
 
         # "if (!a) b; else c;" => "if (a) c; else b;"
-        # "a == 0 ? b : c;" => "a ? c : b;"
-        # This is not an "else if" check since EQUAL may be turned into NOT above
-        if node.kind == .NOT && canSwap == .SWAP {
-          node.become(node.unaryValue.replaceWithNull)
-          return .SWAP
-        }
-
-        return .NO_SWAP
-      }
-
-      def peepholeMangleIf(node Node) {
-        var test = node.ifTest
-        var trueBlock = node.ifTrue
-        var falseBlock = node.ifFalse
-        var trueStatement = trueBlock.blockStatement
-        var swapped = peepholeMangleBoolean(test, falseBlock != null || trueStatement != null && trueStatement.kind == .EXPRESSION ? .SWAP : .NO_SWAP)
-
-        if falseBlock != null {
-          var falseStatement = falseBlock.blockStatement
-
-          # "if (!a) b; else c;" => "if (a) c; else b;"
-          if swapped == .SWAP {
-            var block = trueBlock
-            trueBlock = falseBlock
-            falseBlock = block
-            var statement = trueStatement
-            trueStatement = falseStatement
-            falseStatement = statement
-            trueBlock.swapWith(falseBlock)
-          }
-
-          if trueStatement != null && falseStatement != null {
-
-            # "if (a) b; else c;" => "a ? b : c;"
-            if trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION {
-              var hook = Node.createHook(test.replaceWithNull, trueStatement.expressionValue.replaceWithNull, falseStatement.expressionValue.replaceWithNull)
-              peepholeMangleHook(hook)
-              node.become(Node.createExpression(hook))
-            }
-
-            # "if (a) return b; else return c;" => "return a ? b : c;"
-            else if trueStatement.kind == .RETURN && falseStatement.kind == .RETURN {
-              var trueValue = trueStatement.returnValue
-              var falseValue = falseStatement.returnValue
-              if trueValue != null && falseValue != null {
-                var hook = Node.createHook(test.replaceWithNull, trueValue.replaceWithNull, falseValue.replaceWithNull)
-                peepholeMangleHook(hook)
-                node.become(Node.createReturn(hook))
-              }
-            }
-          }
-        }
-
-        # "if (a) b;" => "a && b;"
-        # "if (!a) b;" => "a || b;"
-        else if trueStatement != null && trueStatement.kind == .EXPRESSION {
-          var value = trueStatement.expressionValue.replaceWithNull
-          node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.replaceWithNull, value)))
-        }
-      }
-
-      def peepholeMangleHook(node Node) {
-        var test = node.hookTest
-        var trueValue = node.hookTrue
-        var falseValue = node.hookFalse
-        var swapped = peepholeMangleBoolean(test, .SWAP)
-
-        # "!a ? b : c;" => "a ? c : b;"
         if swapped == .SWAP {
-          var temp = trueValue
-          trueValue = falseValue
-          falseValue = temp
-          trueValue.swapWith(falseValue)
+          var block = trueBlock
+          trueBlock = falseBlock
+          falseBlock = block
+          var statement = trueStatement
+          trueStatement = falseStatement
+          falseStatement = statement
+          trueBlock.swapWith(falseBlock)
         }
 
-        # "a ? a : b" => "a || b"
-        if looksTheSame(test, trueValue) && test.hasNoSideEffects {
-          node.become(Node.createBinary(.LOGICAL_OR, test.replaceWithNull, falseValue.replaceWithNull))
-          return
-        }
+        if trueStatement != null && falseStatement != null {
 
-        # "a ? b : a" => "a && b"
-        if looksTheSame(test, falseValue) && test.hasNoSideEffects {
-          node.become(Node.createBinary(.LOGICAL_AND, test.replaceWithNull, trueValue.replaceWithNull))
-          return
-        }
-
-        # "a ? b : b" => "a, b"
-        if looksTheSame(trueValue, falseValue) {
-          node.become(test.hasNoSideEffects ? trueValue.replaceWithNull : Node.createSequence([test.replaceWithNull, trueValue.replaceWithNull]))
-          return
-        }
-
-        # Collapse partially-identical hook expressions
-        if falseValue.kind == .HOOK {
-          var falseTest = falseValue.hookTest
-          var falseTrueValue = falseValue.hookTrue
-          var falseFalseValue = falseValue.hookFalse
-
-          # "a ? b : c ? b : d" => "a || c ? b : d"
-          if looksTheSame(trueValue, falseTrueValue) {
-            var or = Node.createBinary(.LOGICAL_OR, Node.createNull, falseTest.replaceWithNull)
-            or.binaryLeft.replaceWith(test.replaceWith(or))
-            falseValue.replaceWith(falseFalseValue.replaceWithNull)
-            peepholeMangleHook(node)
-            return
-          }
-        }
-
-        # Collapse partially-identical binary expressions
-        if trueValue.kind == falseValue.kind && trueValue.kind.isBinary {
-          var trueLeft = trueValue.binaryLeft
-          var trueRight = trueValue.binaryRight
-          var falseLeft = falseValue.binaryLeft
-          var falseRight = falseValue.binaryRight
-
-          # "a ? b = c : b = d;" => "b = a ? c : d;"
-          if looksTheSame(trueLeft, falseLeft) {
-            var hook = Node.createHook(test.replaceWithNull, trueRight.replaceWithNull, falseRight.replaceWithNull)
-            peepholeMangleHook(hook)
-            node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWithNull, hook))
+          # "if (a) b; else c;" => "a ? b : c;"
+          if trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION {
+            var hook = Node.createHook(test.replaceWithNull, trueStatement.expressionValue.replaceWithNull, falseStatement.expressionValue.replaceWithNull)
+            _peepholeMangleHook(hook)
+            node.become(Node.createExpression(hook))
           }
 
-          # "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
-          else if looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryAssign {
-            var hook = Node.createHook(test.replaceWithNull, trueLeft.replaceWithNull, falseLeft.replaceWithNull)
-            peepholeMangleHook(hook)
-            node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWithNull))
+          # "if (a) return b; else return c;" => "return a ? b : c;"
+          else if trueStatement.kind == .RETURN && falseStatement.kind == .RETURN {
+            var trueValue = trueStatement.returnValue
+            var falseValue = falseStatement.returnValue
+            if trueValue != null && falseValue != null {
+              var hook = Node.createHook(test.replaceWithNull, trueValue.replaceWithNull, falseValue.replaceWithNull)
+              _peepholeMangleHook(hook)
+              node.become(Node.createReturn(hook))
+            }
           }
         }
       }
 
-      def peepholeMangleBlock(node Node) {
-        var children = node.children
-        var i = 0
+      # "if (a) b;" => "a && b;"
+      # "if (!a) b;" => "a || b;"
+      else if trueStatement != null && trueStatement.kind == .EXPRESSION {
+        var value = trueStatement.expressionValue.replaceWithNull
+        node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.replaceWithNull, value)))
+      }
+    }
 
-        while i < children.count {
-          var child = children[i]
-          var kind = child.kind
+    def _peepholeMangleHook(node Node) {
+      var test = node.hookTest
+      var trueValue = node.hookTrue
+      var falseValue = node.hookFalse
+      var swapped = _peepholeMangleBoolean(test, .SWAP)
 
-          # "a; b; c;" => "a, b, c;"
-          if kind == .EXPRESSION {
-            while i + 1 < children.count {
-              var next = children[i + 1]
-              if next.kind != .EXPRESSION {
-                break
-              }
-              var combined = Node.createExpression(joinExpressions(child.expressionValue.replaceWithNull, next.remove.expressionValue.replaceWithNull))
-              child.replaceWith(combined)
-              child = combined
-            }
-            var value = child.expressionValue
-            if value.kind == .SEQUENCE {
-              peepholeMangleSequence(value)
-            }
-          }
+      # "!a ? b : c;" => "a ? c : b;"
+      if swapped == .SWAP {
+        var temp = trueValue
+        trueValue = falseValue
+        falseValue = temp
+        trueValue.swapWith(falseValue)
+      }
 
-          else if kind == .RETURN && child.returnValue != null {
-            while i != 0 {
-              var previous = children[i - 1]
+      # "a ? a : b" => "a || b"
+      if _looksTheSame(test, trueValue) && test.hasNoSideEffects {
+        node.become(Node.createBinary(.LOGICAL_OR, test.replaceWithNull, falseValue.replaceWithNull))
+        return
+      }
 
-              # "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
-              if previous.kind == .IF && previous.ifFalse == null {
-                var statement = previous.ifTrue.blockStatement
-                if statement != null && statement.kind == .RETURN && statement.returnValue != null {
-                  var hook = Node.createHook(previous.ifTest.replaceWithNull, statement.returnValue.replaceWithNull, child.returnValue.replaceWithNull)
-                  peepholeMangleHook(hook)
-                  child.remove
-                  child = Node.createReturn(hook)
-                  previous.replaceWith(child)
-                } else {
-                  break
-                }
-              }
+      # "a ? b : a" => "a && b"
+      if _looksTheSame(test, falseValue) && test.hasNoSideEffects {
+        node.become(Node.createBinary(.LOGICAL_AND, test.replaceWithNull, trueValue.replaceWithNull))
+        return
+      }
 
-              else {
-                break
-              }
+      # "a ? b : b" => "a, b"
+      if _looksTheSame(trueValue, falseValue) {
+        node.become(test.hasNoSideEffects ? trueValue.replaceWithNull : Node.createSequence([test.replaceWithNull, trueValue.replaceWithNull]))
+        return
+      }
 
-              i--
-            }
-          }
+      # Collapse partially-identical hook expressions
+      if falseValue.kind == .HOOK {
+        var falseTest = falseValue.hookTest
+        var falseTrueValue = falseValue.hookTrue
+        var falseFalseValue = falseValue.hookFalse
 
-          i++
+        # "a ? b : c ? b : d" => "a || c ? b : d"
+        if _looksTheSame(trueValue, falseTrueValue) {
+          var or = Node.createBinary(.LOGICAL_OR, Node.createNull, falseTest.replaceWithNull)
+          or.binaryLeft.replaceWith(test.replaceWith(or))
+          falseValue.replaceWith(falseFalseValue.replaceWithNull)
+          _peepholeMangleHook(node)
+          return
         }
       }
 
-      def patchCast(node Node) {
-        var value = node.castValue
-        var type = node.resolvedType
-        var valueType = value.resolvedType
+      # Collapse partially-identical binary expressions
+      if trueValue.kind == falseValue.kind && trueValue.kind.isBinary {
+        var trueLeft = trueValue.binaryLeft
+        var trueRight = trueValue.binaryRight
+        var falseLeft = falseValue.binaryLeft
+        var falseRight = falseValue.binaryRight
 
-        # Cast to bool
-        if type == cache.boolType {
-          if valueType != cache.boolType {
-            node.become(wrapWithNot(wrapWithNot(value.replaceWithNull)))
+        # "a ? b = c : b = d;" => "b = a ? c : d;"
+        if _looksTheSame(trueLeft, falseLeft) {
+          var hook = Node.createHook(test.replaceWithNull, trueRight.replaceWithNull, falseRight.replaceWithNull)
+          _peepholeMangleHook(hook)
+          node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWithNull, hook))
+        }
+
+        # "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
+        else if _looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryAssign {
+          var hook = Node.createHook(test.replaceWithNull, trueLeft.replaceWithNull, falseLeft.replaceWithNull)
+          _peepholeMangleHook(hook)
+          node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWithNull))
+        }
+      }
+    }
+
+    def _peepholeMangleBlock(node Node) {
+      var children = node.children
+      var i = 0
+
+      while i < children.count {
+        var child = children[i]
+        var kind = child.kind
+
+        # "a; b; c;" => "a, b, c;"
+        if kind == .EXPRESSION {
+          while i + 1 < children.count {
+            var next = children[i + 1]
+            if next.kind != .EXPRESSION {
+              break
+            }
+            var combined = Node.createExpression(_joinExpressions(child.expressionValue.replaceWithNull, next.remove.expressionValue.replaceWithNull))
+            child.replaceWith(combined)
+            child = combined
+          }
+          var value = child.expressionValue
+          if value.kind == .SEQUENCE {
+            _peepholeMangleSequence(value)
           }
         }
 
-        # Cast to int
-        else if cache.isInteger(type) {
-          if !cache.isInteger(valueType) && !alwaysConvertsOperandsToInt(node.parent) {
-            node.become(wrapWithIntCast(value.replaceWithNull))
+        else if kind == .RETURN && child.returnValue != null {
+          while i != 0 {
+            var previous = children[i - 1]
+
+            # "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
+            if previous.kind == .IF && previous.ifFalse == null {
+              var statement = previous.ifTrue.blockStatement
+              if statement != null && statement.kind == .RETURN && statement.returnValue != null {
+                var hook = Node.createHook(previous.ifTest.replaceWithNull, statement.returnValue.replaceWithNull, child.returnValue.replaceWithNull)
+                _peepholeMangleHook(hook)
+                child.remove
+                child = Node.createReturn(hook)
+                previous.replaceWith(child)
+              } else {
+                break
+              }
+            }
+
+            else {
+              break
+            }
+
+            i--
           }
         }
 
-        # Cast to double
-        else if type == cache.doubleType {
-          if !cache.isNumeric(valueType) {
-            node.become(Node.createUnary(.POSITIVE, value.replaceWithNull).withRange(node.range).withType(cache.doubleType))
-          }
-        }
+        i++
+      }
+    }
 
-        # Cast to string
-        else if type == cache.stringType {
-          if valueType != cache.stringType {
-            node.become(Node.createBinary(.ADD, value.replaceWithNull, Node.createString("").withType(cache.stringType)).withType(cache.stringType).withRange(node.range))
-          }
+    def _patchCast(node Node) {
+      var value = node.castValue
+      var type = node.resolvedType
+      var valueType = value.resolvedType
+
+      # Cast to bool
+      if type == _cache.boolType {
+        if valueType != _cache.boolType {
+          node.become(_wrapWithNot(_wrapWithNot(value.replaceWithNull)))
+        }
+      }
+
+      # Cast to int
+      else if _cache.isInteger(type) {
+        if !_cache.isInteger(valueType) && !_alwaysConvertsOperandsToInt(node.parent) {
+          node.become(_wrapWithIntCast(value.replaceWithNull))
+        }
+      }
+
+      # Cast to double
+      else if type == _cache.doubleType {
+        if !_cache.isNumeric(valueType) {
+          node.become(Node.createUnary(.POSITIVE, value.replaceWithNull).withRange(node.range).withType(_cache.doubleType))
+        }
+      }
+
+      # Cast to string
+      else if type == _cache.stringType {
+        if valueType != _cache.stringType {
+          node.become(Node.createBinary(.ADD, value.replaceWithNull, Node.createString("").withType(_cache.stringType)).withType(_cache.stringType).withRange(node.range))
         }
       }
     }
   }
 
   namespace JavaScriptEmitter {
-    @private {
-      def isCompactNodeKind(kind NodeKind) bool {
-        return kind == .EXPRESSION || kind == .VAR || kind.isJump
-      }
+    def _joinExpressions(left Node, right Node) Node {
+      var sequence = Node.createSequence(left.kind == .SEQUENCE ? left.removeChildren : [left])
+      sequence.appendChildren(right.kind == .SEQUENCE ? right.removeChildren : [right])
+      return sequence
+    }
 
-      def isFalsy(node Node) bool {
-        switch node.kind {
+    def _looksTheSame(left Node, right Node) bool {
+      if left.kind == right.kind {
+        switch left.kind {
           case .NULL { return true }
-          case .CAST { return isFalsy(node.castValue) }
           case .CONSTANT {
-            var content = node.content
-            switch content.kind {
-              case .INT { return content.asInt == 0 }
-              case .DOUBLE { return content.asDouble == 0 || content.asDouble.isNAN }
-              case .STRING { return content.asString == "" }
+            switch left.content.kind {
+              case .INT { return right.isInt && left.asInt == right.asInt }
+              case .BOOL { return right.isBool && left.asBool == right.asBool }
+              case .DOUBLE { return right.isDouble && left.asDouble == right.asDouble }
+              case .STRING { return right.isString && left.asString == right.asString }
             }
           }
+          case .NAME { return left.symbol != null && left.symbol == right.symbol || left.symbol == null && right.symbol == null && left.asString == right.asString }
+          case .DOT { return left.symbol == right.symbol && _looksTheSame(left.dotTarget, right.dotTarget) }
         }
-        return false
       }
 
-      def fullName(symbol Symbol) string {
-        var parent = symbol.parent
-        if parent != null && parent.kind != .OBJECT_GLOBAL {
-          var enclosingName = fullName(parent)
-          if symbol.isPrimaryConstructor {
-            return enclosingName
+      # Null literals are always implicitly casted, so unwrap implicit casts
+      if left.kind == .CAST { return _looksTheSame(left.castValue, right) }
+      if right.kind == .CAST { return _looksTheSame(left, right.castValue) }
+      return false
+    }
+
+    def _numberToName(number int) string {
+      const WRAP = 26 * 2
+      var name = ""
+      if number >= WRAP {
+        name = _numberToName(number / WRAP - 1)
+        number = number % WRAP
+      }
+      name += string.fromCodeUnit(number + (number < 26 ? 'a' : 'A' - 26))
+      return name
+    }
+
+    def _isCompactNodeKind(kind NodeKind) bool {
+      return kind == .EXPRESSION || kind == .VAR || kind.isJump
+    }
+
+    def _isFalsy(node Node) bool {
+      switch node.kind {
+        case .NULL { return true }
+        case .CAST { return _isFalsy(node.castValue) }
+        case .CONSTANT {
+          var content = node.content
+          switch content.kind {
+            case .INT { return content.asInt == 0 }
+            case .DOUBLE { return content.asDouble == 0 || content.asDouble.isNAN }
+            case .STRING { return content.asString == "" }
           }
-          if symbol.kind == .FUNCTION_INSTANCE {
-            enclosingName += ".prototype"
-          }
-          return enclosingName + "." + mangleName(symbol)
         }
-        return mangleName(symbol)
       }
+      return false
+    }
 
-      def shouldRenameSymbol(symbol Symbol) bool {
-        # Don't rename annotations since "@rename" is used for renaming and is identified by name
-        return !symbol.isImportedOrExported && symbol.kind != .FUNCTION_ANNOTATION
-      }
-
-      def mangleName(symbol Symbol) string {
+    def _fullName(symbol Symbol) string {
+      var parent = symbol.parent
+      if parent != null && parent.kind != .OBJECT_GLOBAL {
+        var enclosingName = _fullName(parent)
         if symbol.isPrimaryConstructor {
-          symbol = symbol.parent
+          return enclosingName
         }
-        if !symbol.isImportedOrExported && (symbol.name in isKeyword ||
-          symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS && !symbol.kind.isOnInstances && symbol.name in isFunctionProperty) {
-          return "$" + symbol.name
+        if symbol.kind == .FUNCTION_INSTANCE {
+          enclosingName += ".prototype"
         }
-        return symbol.nameWithRenaming
+        return enclosingName + "." + _mangleName(symbol)
       }
+      return _mangleName(symbol)
+    }
 
-      const isFunctionProperty = {
-        "apply": 0,
-        "call": 0,
-        "length": 0,
-        "name": 0,
+    def _shouldRenameSymbol(symbol Symbol) bool {
+      # Don't rename annotations since "@rename" is used for renaming and is identified by name
+      return !symbol.isImportedOrExported && symbol.kind != .FUNCTION_ANNOTATION
+    }
+
+    def _mangleName(symbol Symbol) string {
+      if symbol.isPrimaryConstructor {
+        symbol = symbol.parent
       }
-
-      const isKeyword = {
-        "arguments": 0,
-        "Boolean": 0,
-        "break": 0,
-        "case": 0,
-        "catch": 0,
-        "class": 0,
-        "const": 0,
-        "constructor": 0,
-        "continue": 0,
-        "Date": 0,
-        "debugger": 0,
-        "default": 0,
-        "delete": 0,
-        "do": 0,
-        "double": 0,
-        "else": 0,
-        "export": 0,
-        "extends": 0,
-        "false": 0,
-        "finally": 0,
-        "float": 0,
-        "for": 0,
-        "Function": 0,
-        "function": 0,
-        "if": 0,
-        "import": 0,
-        "in": 0,
-        "instanceof": 0,
-        "int": 0,
-        "let": 0,
-        "new": 0,
-        "null": 0,
-        "Number": 0,
-        "Object": 0,
-        "return": 0,
-        "String": 0,
-        "super": 0,
-        "this": 0,
-        "throw": 0,
-        "true": 0,
-        "try": 0,
-        "var": 0,
+      if !symbol.isImportedOrExported && (symbol.name in _isKeyword ||
+        symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS && !symbol.kind.isOnInstances && symbol.name in _isFunctionProperty) {
+        return "$" + symbol.name
       }
+      return symbol.nameWithRenaming
+    }
 
-      def needsExtends(objects List<ObjectSymbol>) bool {
-        for object in objects {
-          if !object.isImported && object.baseClass != null {
+    def _needsExtends(objects List<ObjectSymbol>) bool {
+      for object in objects {
+        if !object.isImported && object.baseClass != null {
+          return true
+        }
+      }
+      return false
+    }
+
+    def _computeNamespacePrefix(symbol ObjectSymbol) string {
+      assert(symbol.kind.isObject)
+      return symbol.kind == .OBJECT_GLOBAL ? "" : _computeNamespacePrefix(symbol.parent.asObjectSymbol) + _mangleName(symbol) + "."
+    }
+
+    def _alwaysConvertsOperandsToInt(node Node) bool {
+      if node != null {
+        switch node.kind {
+          case
+            .ASSIGN_BITWISE_AND, .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_XOR,
+            .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT, .BITWISE_AND, .BITWISE_OR,
+            .BITWISE_XOR, .COMPLEMENT, .SHIFT_LEFT, .SHIFT_RIGHT {
             return true
           }
         }
-        return false
       }
+      return false
+    }
 
-      def computePrefix(symbol ObjectSymbol) string {
-        assert(symbol.kind.isObject)
-        return symbol.kind == .OBJECT_GLOBAL ? "" : computePrefix(symbol.parent.asObjectSymbol) + mangleName(symbol) + "."
-      }
+    const _isFunctionProperty = {
+      "apply": 0,
+      "call": 0,
+      "length": 0,
+      "name": 0,
+    }
 
-      def alwaysConvertsOperandsToInt(node Node) bool {
-        if node != null {
-          switch node.kind {
-            case
-              .ASSIGN_BITWISE_AND, .ASSIGN_BITWISE_OR, .ASSIGN_BITWISE_XOR,
-              .ASSIGN_SHIFT_LEFT, .ASSIGN_SHIFT_RIGHT, .BITWISE_AND, .BITWISE_OR,
-              .BITWISE_XOR, .COMPLEMENT, .SHIFT_LEFT, .SHIFT_RIGHT {
-              return true
-            }
-          }
-        }
-        return false
-      }
+    const _isKeyword = {
+      "arguments": 0,
+      "Boolean": 0,
+      "break": 0,
+      "case": 0,
+      "catch": 0,
+      "class": 0,
+      "const": 0,
+      "constructor": 0,
+      "continue": 0,
+      "Date": 0,
+      "debugger": 0,
+      "default": 0,
+      "delete": 0,
+      "do": 0,
+      "double": 0,
+      "else": 0,
+      "export": 0,
+      "extends": 0,
+      "false": 0,
+      "finally": 0,
+      "float": 0,
+      "for": 0,
+      "Function": 0,
+      "function": 0,
+      "if": 0,
+      "import": 0,
+      "in": 0,
+      "instanceof": 0,
+      "int": 0,
+      "let": 0,
+      "new": 0,
+      "null": 0,
+      "Number": 0,
+      "Object": 0,
+      "return": 0,
+      "String": 0,
+      "super": 0,
+      "this": 0,
+      "throw": 0,
+      "true": 0,
+      "try": 0,
+      "var": 0,
     }
   }
 }
