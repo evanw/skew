@@ -4136,7 +4136,10 @@
         var value = node.returnValue();
 
         if (value !== null) {
-          this._emit(" ");
+          if (!this._mangle || !Skew.NodeKind.isUnary(value.kind)) {
+            this._emit(" ");
+          }
+
           this._emitExpression(value, Skew.Precedence.LOWEST);
         }
 
@@ -4350,7 +4353,7 @@
   Skew.JavaScriptEmitter.prototype._emitContent = function(content) {
     switch (content.kind()) {
       case Skew.ContentKind.BOOL: {
-        this._emit(this._mangle ? content.asBool() ? "!0" : "!1" : content.asBool().toString());
+        this._emit(content.asBool().toString());
         break;
       }
 
@@ -4793,6 +4796,13 @@
     }
 
     switch (kind) {
+      case Skew.NodeKind.CONSTANT: {
+        if (this._mangle && node.content.kind() === Skew.ContentKind.BOOL) {
+          node.become(Skew.Node.createUnary(Skew.NodeKind.NOT, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(node.asBool() ? 0 : 1))));
+        }
+        break;
+      }
+
       case Skew.NodeKind.ADD:
       case Skew.NodeKind.SUBTRACT:
       case Skew.NodeKind.MULTIPLY:
@@ -4822,6 +4832,13 @@
       case Skew.NodeKind.IF: {
         if (this._mangle) {
           this._peepholeMangleIf(node);
+        }
+        break;
+      }
+
+      case Skew.NodeKind.WHILE: {
+        if (this._mangle) {
+          this._peepholeMangleWhile(node);
         }
         break;
       }
@@ -5053,6 +5070,19 @@
     else if (!trueBlock.hasChildren()) {
       node.become(Skew.Node.createExpression(test.replaceWithNull()));
     }
+  };
+
+  Skew.JavaScriptEmitter.prototype._peepholeMangleWhile = function(node) {
+    var test = node.whileTest().replaceWithNull();
+    this._peepholeMangleBoolean(test, Skew.JavaScriptEmitter.BooleanSwap.NO_SWAP);
+
+    // "while (true) {}" => "for (;;) {}"
+    if (test.isTrue()) {
+      test = null;
+    }
+
+    // "while (a) {}" => "for (; a;) {}"
+    node.become(Skew.Node.createFor([], test, null, node.whileBlock().replaceWithNull()));
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleHook = function(node) {

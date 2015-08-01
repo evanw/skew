@@ -674,7 +674,9 @@ namespace Skew {
           _emit(_indent + "return")
           var value = node.returnValue
           if value != null {
-            _emit(" ")
+            if !_mangle || !value.kind.isUnary {
+              _emit(" ")
+            }
             _emitExpression(value, .LOWEST)
           }
           _emitSemicolonAfterStatement
@@ -850,7 +852,7 @@ namespace Skew {
 
     def _emitContent(content Content) {
       switch content.kind {
-        case .BOOL { _emit(_mangle ? content.asBool ? "!0" : "!1" : content.asBool.toString) }
+        case .BOOL { _emit(content.asBool.toString) }
         case .INT { _emit(content.asInt.toString) }
         case .DOUBLE { _emit(content.asDouble.toString) }
         case .STRING { _emit(quoteString(content.asString, '"')) }
@@ -1236,6 +1238,12 @@ namespace Skew {
       }
 
       switch kind {
+        case .CONSTANT {
+          if _mangle && node.content.kind == .BOOL {
+            node.become(Node.createUnary(.NOT, Node.createInt(node.asBool ? 0 : 1)))
+          }
+        }
+
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
           _patchBinaryArithmetic(node)
         }
@@ -1257,6 +1265,12 @@ namespace Skew {
         case .IF {
           if _mangle {
             _peepholeMangleIf(node)
+          }
+        }
+
+        case .WHILE {
+          if _mangle {
+            _peepholeMangleWhile(node)
           }
         }
 
@@ -1476,6 +1490,19 @@ namespace Skew {
       else if !trueBlock.hasChildren {
         node.become(Node.createExpression(test.replaceWithNull))
       }
+    }
+
+    def _peepholeMangleWhile(node Node) {
+      var test = node.whileTest.replaceWithNull
+      _peepholeMangleBoolean(test, .NO_SWAP)
+
+      # "while (true) {}" => "for (;;) {}"
+      if test.isTrue {
+        test = null
+      }
+
+      # "while (a) {}" => "for (; a;) {}"
+      node.become(Node.createFor([], test, null, node.whileBlock.replaceWithNull))
     }
 
     def _peepholeMangleHook(node Node) {
