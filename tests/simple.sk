@@ -621,66 +621,54 @@ def main(foo Foo) {
 ")
 
 test("
-@private
-class Foo {
-  @private
-  var x int
+class _Foo {
+  var _x int
+  var _bar _Bar
 
-  @private
-  def foo {
-    x = 0
-    foo
-    var y = => x
+  def _foo {
+    _x = 0
+    _foo
+    var _y = => _x
   }
 
-  @private
-  class Bar {}
-
-  var bar Bar
+  class _Bar {}
 }
 
-@private
-def main(foo Foo) {
-  foo.x = 0
-  foo.foo
-  var x = => foo.x
-  var y = => foo.foo
-  var z Foo.Bar
+def _main(_foo _Foo) {
+  _foo._x = 0
+  _foo._foo
+  var _x = => _foo._x
+  var _y = => _foo._foo
+  var _z _Foo._Bar
 }
 ", "
-<stdin>:1:1: error: Cannot use the annotation \"@private\" on \"Foo\"
-@private
-~~~~~~~~
-<stdin>:19:1: error: Cannot use the annotation \"@private\" on \"main\"
-@private
-~~~~~~~~
-<stdin>:21:7: error: Cannot access \"@private\" symbol \"x\" here
-  foo.x = 0
-      ^
-<stdin>:22:7: error: Cannot access \"@private\" symbol \"foo\" here
-  foo.foo
-      ~~~
-<stdin>:23:18: error: Cannot access \"@private\" symbol \"x\" here
-  var x = => foo.x
-                 ^
-<stdin>:24:18: error: Cannot access \"@private\" symbol \"foo\" here
-  var y = => foo.foo
-                 ~~~
-<stdin>:25:13: error: Cannot access \"@private\" symbol \"Bar\" here
-  var z Foo.Bar
-            ~~~
-<stdin>:10:9: warning: Local variable \"y\" is never read
-    var y = => x
-        ^
-<stdin>:23:7: warning: Local variable \"x\" is never read
-  var x = => foo.x
-      ^
-<stdin>:24:7: warning: Local variable \"y\" is never read
-  var y = => foo.foo
-      ^
-<stdin>:25:7: warning: Local variable \"z\" is never read
-  var z Foo.Bar
-      ^
+<stdin>:15:8: error: Cannot access protected symbol \"_x\" here
+  _foo._x = 0
+       ~~
+<stdin>:16:8: error: Cannot access protected symbol \"_foo\" here
+  _foo._foo
+       ~~~~
+<stdin>:17:20: error: Cannot access protected symbol \"_x\" here
+  var _x = => _foo._x
+                   ~~
+<stdin>:18:20: error: Cannot access protected symbol \"_foo\" here
+  var _y = => _foo._foo
+                   ~~~~
+<stdin>:19:15: error: Cannot access protected symbol \"_Bar\" here
+  var _z _Foo._Bar
+              ~~~~
+<stdin>:8:9: warning: Local variable \"_y\" is never read
+    var _y = => _x
+        ~~
+<stdin>:17:7: warning: Local variable \"_x\" is never read
+  var _x = => _foo._x
+      ~~
+<stdin>:18:7: warning: Local variable \"_y\" is never read
+  var _y = => _foo._foo
+      ~~
+<stdin>:19:7: warning: Local variable \"_z\" is never read
+  var _z _Foo._Bar
+      ~~
 ")
 
 test("
@@ -1375,43 +1363,6 @@ def main {
                    ~~~~~~~~~~~~~~~~~
 <stdin>:7:7: warning: Local variable \"bar\" is never read
   var bar int = foo
-      ~~~
-")
-
-test("
-class Foo {
-  @protected
-  def foo
-
-  @private
-  def bar
-}
-
-class Bar : Foo {
-  def baz {
-    foo
-    bar
-    self.foo
-    self.bar
-  }
-}
-
-def main(foo Foo) {
-  foo.foo
-  foo.bar
-}
-", "
-<stdin>:12:5: error: Cannot access \"@private\" symbol \"bar\" here
-    bar
-    ~~~
-<stdin>:14:10: error: Cannot access \"@private\" symbol \"bar\" here
-    self.bar
-         ~~~
-<stdin>:19:7: error: Cannot access \"@protected\" symbol \"foo\" here
-  foo.foo
-      ~~~
-<stdin>:20:7: error: Cannot access \"@private\" symbol \"bar\" here
-  foo.bar
       ~~~
 ")
 
