@@ -54,6 +54,7 @@
 ","                               COMMA;
 "?"                               QUESTION_MARK;
 ":"                               COLON;
+";"                               SEMICOLON;
 "**="                             ASSIGN_POWER;
 "+="                              ASSIGN_PLUS;
 "-="                              ASSIGN_MINUS;

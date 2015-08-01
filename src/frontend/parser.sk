@@ -293,33 +293,114 @@ namespace Skew.Parsing {
     var token = context.next
     var range = context.current.range
 
-    if !context.expect(.IDENTIFIER) || !context.expect(.IN) {
+    if !context.expect(.IDENTIFIER) {
       return null
     }
 
-    var symbol = VariableSymbol.new(.VARIABLE_LOCAL, range.toString)
-    symbol.range = range
+    # for a in b {}
+    if context.eat(.IN) {
+      var symbol = VariableSymbol.new(.VARIABLE_LOCAL, range.toString)
+      symbol.range = range
 
-    var value = expressionParser.parse(context, .LOWEST)
-    if value == null {
-      return null
-    }
-
-    if context.eat(.DOT_DOT) {
-      var second = expressionParser.parse(context, .LOWEST)
-      if second == null {
+      var value = expressionParser.parse(context, .LOWEST)
+      if value == null {
         return null
       }
-      value = Node.createPair(value, second).withRange(Range.span(value.range, second.range))
+
+      if context.eat(.DOT_DOT) {
+        var second = expressionParser.parse(context, .LOWEST)
+        if second == null {
+          return null
+        }
+        value = Node.createPair(value, second).withRange(Range.span(value.range, second.range))
+      }
+      checkExtraParentheses(context, value)
+
+      var block = parseBlock(context)
+      if block == null {
+        return null
+      }
+
+      return Node.createForeach(symbol, value, block).withRange(context.spanSince(token.range))
     }
-    checkExtraParentheses(context, value)
+
+    # for a = 0; a < 10; a++ {}
+    context.undo
+
+    var variables List<Node> = []
+    while true {
+      range = context.current.range
+
+      if !context.expect(.IDENTIFIER) {
+        return null
+      }
+
+      var symbol = VariableSymbol.new(.VARIABLE_LOCAL, range.toString)
+      symbol.range = range
+
+      if peekType(context) {
+        symbol.type = parseType(context)
+        if symbol.type == null {
+          return null
+        }
+      }
+
+      if context.eat(.ASSIGN) {
+        symbol.value = expressionParser.parse(context, .LOWEST)
+        if symbol.value == null {
+          return null
+        }
+        checkExtraParentheses(context, symbol.value)
+      }
+
+      variables.append(Node.createVariable(symbol).withRange(context.spanSince(range)))
+
+      if !context.eat(.COMMA) {
+        break
+      }
+    }
+
+    var setup = Node.createVariables(variables).withRange(context.spanSince(variables.first.symbol.range))
+
+    if !context.expect(.SEMICOLON) {
+      return null
+    }
+
+    var test = expressionParser.parse(context, .LOWEST)
+    if test == null {
+      return null
+    }
+
+    if !context.expect(.SEMICOLON) {
+      return null
+    }
+
+    var update = expressionParser.parse(context, .LOWEST)
+    if update == null {
+      return null
+    }
+
+    # This is the one place in the grammar that sequence expressions are allowed
+    if context.eat(.COMMA) {
+      update = Node.createSequence([update])
+      while true {
+        var value = expressionParser.parse(context, .LOWEST)
+        if value == null {
+          return null
+        }
+        update.appendChild(value)
+        if !context.eat(.COMMA) {
+          break
+        }
+      }
+    }
 
     var block = parseBlock(context)
     if block == null {
       return null
     }
 
-    return Node.createForeach(symbol, value, block).withRange(context.spanSince(token.range))
+    return Node.createFor(setup, test, update, block).withRange(context.spanSince(token.range))
   }
 
   def parseIf(context ParserContext) Node {
@@ -798,6 +879,9 @@ namespace Skew.Parsing {
 
           if peekType(context) {
             variable.type = parseType(context)
+            if variable.type == null {
+              return false
+            }
           }
 
           if context.eat(.ASSIGN) {

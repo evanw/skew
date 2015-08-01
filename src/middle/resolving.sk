@@ -1109,6 +1109,7 @@ namespace Skew.Resolving {
         # Statements
         case .BREAK, .CONTINUE { resolveJump(node, scope) }
         case .EXPRESSION { resolveExpression(node, scope) }
+        case .FOR { resolveFor(node, scope) }
         case .FOREACH { resolveForeach(node, scope) }
         case .IF { resolveIf(node, scope) }
         case .RETURN { resolveReturn(node, scope) }
@@ -1134,6 +1135,7 @@ namespace Skew.Resolving {
         case .NAME { resolveName(node, scope) }
         case .NULL { node.resolvedType = .NULL }
         case .PARAMETERIZE { resolveParameterize(node, scope) }
+        case .SEQUENCE { resolveSequence(node, scope, context) }
         case .SUPER { resolveSuper(node, scope) }
 
         default {
@@ -1435,6 +1437,19 @@ namespace Skew.Resolving {
       checkUnusedExpression(value)
     }
 
+    def resolveFor(node Node, scope Scope) {
+      var setup = node.forSetup
+      scope = LocalScope.new(scope, .LOOP)
+      if setup.kind == .VARIABLES {
+        resolveNode(setup, scope, null)
+      } else {
+        resolveAsParameterizedExpression(setup, scope)
+      }
+      resolveAsParameterizedExpressionWithConversion(node.forTest, scope, cache.boolType)
+      resolveAsParameterizedExpression(node.forUpdate, scope)
+      resolveBlock(node.forBlock, scope)
+    }
+
     def resolveForeach(node Node, scope Scope) {
       var type Type = .DYNAMIC
       scope = LocalScope.new(scope, .LOOP)
@@ -1611,8 +1626,7 @@ namespace Skew.Resolving {
     }
 
     def resolveWhile(node Node, scope Scope) {
-      var test = node.whileTest
-      resolveAsParameterizedExpressionWithConversion(test, scope, cache.boolType)
+      resolveAsParameterizedExpressionWithConversion(node.whileTest, scope, cache.boolType)
       resolveBlock(node.whileBlock, LocalScope.new(scope, .LOOP))
     }
 
@@ -2355,6 +2369,13 @@ namespace Skew.Resolving {
       node.symbol = value.symbol
     }
 
+    def resolveSequence(node Node, scope Scope, context Type) {
+      var children = node.children
+      for child in children {
+        resolveAsParameterizedExpressionWithTypeContext(child, scope, child == children.last ? context : null)
+      }
+    }
+
     def resolveSuper(node Node, scope Scope) {
       var function = scope.findEnclosingFunction
       var symbol = function == null ? null : function.symbol
@@ -2669,7 +2690,8 @@ namespace Skew.Resolving {
       var parent = node.parent
       return parent == null || parent.kind != .EXPRESSION && !parent.isImplicitReturn &&
         (parent.kind != .ANNOTATION || node != parent.annotationValue) &&
-        (parent.kind != .FOR || node != parent.forUpdate)
+        (parent.kind != .FOR || node != parent.forUpdate) &&
+        parent.kind != .SEQUENCE
     }
 
     def isValidVariableType(type Type) bool {
