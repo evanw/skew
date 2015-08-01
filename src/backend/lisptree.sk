@@ -81,7 +81,7 @@ namespace Skew {
         }
       }
 
-      if node.kind == .VAR {
+      if node.kind == .VARIABLE {
         _emit(" ")
         _visitVariable(node.symbol.asVariableSymbol)
       }

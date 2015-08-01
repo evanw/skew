@@ -488,7 +488,7 @@ namespace Skew.Resolving {
         if value.kind == .PAIR {
           var first = value.firstValue.replaceWithNull
           var second = value.secondValue.replaceWithNull
-          var setup = [Node.createVar(symbol)]
+          var setup = Node.createVariables([Node.createVariable(symbol)])
           var symbolName = Node.createName(symbol.name).withSymbol(symbol).withType(cache.intType)
           var update = Node.createUnary(.INCREMENT, symbolName)
           var test Node
@@ -504,7 +504,7 @@ namespace Skew.Resolving {
             count.resolvedType = cache.intType
             count.value = second
             count.state = .INITIALIZED
-            setup.append(Node.createVar(count))
+            setup.appendChild(Node.createVariable(count))
             test = Node.createBinary(.LESS_THAN, symbolName.clone, Node.createName(count.name).withSymbol(count).withType(cache.intType))
           }
 
@@ -542,10 +542,10 @@ namespace Skew.Resolving {
 
           # Move the loop variable into the loop body
           symbol.value = Node.createIndex(listName.clone, [indexName])
-          block.insertChild(0, Node.createVar(symbol))
+          block.insertChild(0, Node.createVariables([Node.createVariable(symbol)]))
 
           # Use a C-style for loop to implement this foreach loop
-          var setup = [Node.createVar(index), Node.createVar(list), Node.createVar(count)]
+          var setup = Node.createVariables([Node.createVariable(index), Node.createVariable(list), Node.createVariable(count)])
           var test = Node.createBinary(.LESS_THAN, indexName.clone, countName)
           var update = Node.createUnary(.INCREMENT, indexName.clone)
           node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments).withRange(node.range))
@@ -1115,7 +1115,8 @@ namespace Skew.Resolving {
         case .SWITCH { resolveSwitch(node, scope) }
         case .THROW { resolveThrow(node, scope) }
         case .TRY { resolveTry(node, scope) }
-        case .VAR { resolveVar(node, scope) }
+        case .VARIABLE { resolveVariable(node, scope) }
+        case .VARIABLES { resolveVariables(node, scope) }
         case .WHILE { resolveWhile(node, scope) }
 
         # Expressions
@@ -1570,11 +1571,17 @@ namespace Skew.Resolving {
       resolveAsParameterizedExpression(value, scope)
     }
 
-    def resolveVar(node Node, scope Scope) {
+    def resolveVariable(node Node, scope Scope) {
       var symbol = node.symbol.asVariableSymbol
       scope.asLocalScope.define(symbol, log)
       localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
       resolveVariable(symbol)
+    }
+
+    def resolveVariables(node Node, scope Scope) {
+      for child in node.children {
+        resolveVariable(child, scope)
+      }
     }
 
     def resolveTry(node Node, scope Scope) {
@@ -2704,7 +2711,7 @@ namespace Skew.Resolving {
       variable.resolvedType = value.resolvedType
       variable.value = value.replaceWithNull
       variable.state = .INITIALIZED
-      node.parent.insertChild(node.indexInParent, Node.createVar(variable))
+      node.parent.insertChild(node.indexInParent, Node.createVariables([Node.createVariable(variable)]))
 
       var block Node = null
       var cases = node.children

@@ -43,7 +43,7 @@ namespace Skew {
             array.name = entryPoint.scope.generateName(array.name)
             argument.kind = .VARIABLE_LOCAL
             argument.value = Node.createCall(Node.createDot(Node.createType(argument.resolvedType), "new"), [Node.createSymbolReference(array)])
-            entryPoint.block.insertChild(0, Node.createVar(argument))
+            entryPoint.block.insertChild(0, Node.createVariables([Node.createVariable(argument)]))
           }
         }
       }
@@ -509,16 +509,18 @@ namespace Skew {
 
     def emitStatement(node Node) {
       switch node.kind {
-        case .VAR {
-          var symbol = node.symbol.asVariableSymbol
-          _emit(_indent)
-          _emitExpressionOrType(symbol.type, symbol.resolvedType)
-          _emit(" " + _mangleName(symbol))
-          if symbol.value != null {
-            _emit(" = ")
-            _emitExpression(symbol.value, .ASSIGN)
+        case .VARIABLES {
+          for child in node.children {
+            var symbol = child.symbol.asVariableSymbol
+            _emit(_indent)
+            _emitExpressionOrType(symbol.type, symbol.resolvedType)
+            _emit(" " + _mangleName(symbol))
+            if symbol.value != null {
+              _emit(" = ")
+              _emitExpression(symbol.value, .ASSIGN)
+            }
+            _emit(";\n")
           }
-          _emit(";\n")
         }
 
         case .EXPRESSION {
@@ -601,28 +603,27 @@ namespace Skew {
         }
 
         case .FOR {
+          var setup = node.forSetup
           var test = node.forTest
           var update = node.forUpdate
-          var children = node.children
-          var count = children.count
           _emit(_indent + "for (")
-          if count > 3 {
-            for i in 3..count {
-              var child = children[i]
-              if i != 3 {
-                _emit(", ")
-              }
-              if child.kind == .VAR {
-                var symbol = child.symbol.asVariableSymbol
-                if i == 3 {
-                  _emitExpressionOrType(symbol.type, symbol.resolvedType)
-                  _emit(" ")
+          if setup != null {
+            if setup.kind == .VARIABLES {
+              var children = setup.children
+              var symbol = children.first.symbol.asVariableSymbol
+              _emitExpressionOrType(symbol.type, symbol.resolvedType)
+              _emit(" ")
+              for child in children {
+                symbol = child.symbol.asVariableSymbol
+                assert(child.kind == .VARIABLE)
+                if child != children.first {
+                  _emit(", ")
                 }
                 _emit(_mangleName(symbol) + " = ")
-                _emitExpression(symbol.value, .LOWEST)
-              } else {
-                _emitExpression(child, .LOWEST)
+                _emitExpression(symbol.value, .COMMA)
               }
+            } else {
+              _emitExpression(setup, .LOWEST)
             }
           }
           _emit("; ")
@@ -927,7 +928,7 @@ namespace Skew {
 
   namespace CSharpEmitter {
     def _isCompactNodeKind(kind NodeKind) bool {
-      return kind == .EXPRESSION || kind == .VAR || kind.isJump
+      return kind == .EXPRESSION || kind == .VARIABLES || kind.isJump
     }
 
     def _fullName(symbol Symbol) string {

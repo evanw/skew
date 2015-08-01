@@ -23,10 +23,12 @@ SOURCES_TEST += tests/simple.sk
 JS_FLAGS += --target=js
 JS_FLAGS += --inline-functions
 JS_FLAGS += --verbose
+JS_FLAGS += --message-limit=0
 
 CS_FLAGS += --target=cs
 CS_FLAGS += --inline-functions
 CS_FLAGS += --verbose
+CS_FLAGS += --message-limit=0
 
 default: compile-skewc compile-browser
 

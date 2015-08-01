@@ -5,6 +5,7 @@ namespace Skew {
     BLOCK
     CASE
     CATCH
+    VARIABLE
 
     # Statements
     BREAK
@@ -17,7 +18,7 @@ namespace Skew {
     SWITCH
     THROW
     TRY
-    VAR
+    VARIABLES
     WHILE
 
     # Expressions
@@ -540,12 +541,12 @@ namespace Skew {
       return Node.new(.EXPRESSION).withChildren([value])
     }
 
-    def createFor(setup List<Node>, test Node, update Node, block Node) Node {
+    def createFor(setup Node, test Node, update Node, block Node) Node {
+      assert(setup == null || setup.kind.isExpression || setup.kind == .VARIABLES)
       assert(test == null || test.kind.isExpression)
       assert(update == null || update.kind.isExpression)
       assert(block.kind == .BLOCK)
-      setup.prepend([test, update, block])
-      return Node.new(.FOR).withChildren(setup)
+      return Node.new(.FOR).withChildren([setup, test, update, block])
     }
 
     def createForeach(symbol VariableSymbol, value Node, block Node) Node {
@@ -586,8 +587,12 @@ namespace Skew {
     }
 
     # This adds the initializer expression to the tree for ease of traversal
-    def createVar(symbol VariableSymbol) Node {
-      return Node.new(.VAR).withChildren([symbol.value]).withSymbol(symbol)
+    def createVariable(symbol VariableSymbol) Node {
+      return Node.new(.VARIABLE).withChildren([symbol.value]).withSymbol(symbol)
+    }
+
+    def createVariables(variables List<Node>) Node {
+      return Node.new(.VARIABLES).withChildren(variables)
     }
 
     def createWhile(test Node, block Node) Node {
@@ -924,25 +929,32 @@ namespace Skew {
       return children[1]
     }
 
-    def forTest Node {
+    def forSetup Node {
       assert(kind == .FOR)
-      assert(children.count >= 3)
-      assert(children[0] == null || children[0].kind.isExpression)
+      assert(children.count == 4)
+      assert(children[0] == null || children[0].kind.isExpression || children[0].kind == .VARIABLES)
       return children[0]
     }
 
-    def forUpdate Node {
+    def forTest Node {
       assert(kind == .FOR)
-      assert(children.count >= 3)
+      assert(children.count == 4)
       assert(children[1] == null || children[1].kind.isExpression)
       return children[1]
     }
 
+    def forUpdate Node {
+      assert(kind == .FOR)
+      assert(children.count == 4)
+      assert(children[2] == null || children[2].kind.isExpression)
+      return children[2]
+    }
+
     def forBlock Node {
       assert(kind == .FOR)
-      assert(children.count >= 3)
-      assert(children[2].kind == .BLOCK)
-      return children[2]
+      assert(children.count == 4)
+      assert(children[3].kind == .BLOCK)
+      return children[3]
     }
 
     def foreachValue Node {

@@ -266,11 +266,24 @@ namespace Skew.Folding {
       return 0
     }
 
-    def foldVar(node Node) int {
-      var symbol = node.symbol.asVariableSymbol
+    def foldVariables(node Node) int {
+      var children = node.children
+      var i = 0
 
-      # Remove this symbol entirely if it's being inlined everywhere
-      if symbol.isConst && constantLookup.constantForSymbol(symbol) != null {
+      # Remove symbols entirely that are being inlined everywhere
+      while i < children.count {
+        var child = node.children[i]
+        var symbol = child.symbol.asVariableSymbol
+        assert(child.kind == .VARIABLE)
+        if symbol.isConst && constantLookup.constantForSymbol(symbol) != null {
+          child.remove
+        } else {
+          i++
+        }
+      }
+
+      # Empty variable statements are not allowed
+      if children.isEmpty {
         node.remove
         return -1
       }
@@ -302,8 +315,8 @@ namespace Skew.Folding {
           i--
         }
 
-        else if kind == .VAR {
-          i += foldVar(child)
+        else if kind == .VARIABLES {
+          i += foldVariables(child)
         }
 
         # Remove unused try statements since they can cause deoptimizations

@@ -81,7 +81,7 @@ namespace Skew {
     }
 
     def _isCompactNodeKind(kind NodeKind) bool {
-      return kind == .EXPRESSION || kind == .VAR || kind.isJump
+      return kind == .EXPRESSION || kind == .VARIABLE || kind.isJump
     }
 
     def _emitNewlineBeforeStatement(node Node) {
@@ -373,8 +373,10 @@ namespace Skew {
 
     def _emitStatement(node Node) {
       switch node.kind {
-        case .VAR {
-          _emitVariable(node.symbol.asVariableSymbol, .IMPLEMENT)
+        case .VARIABLES {
+          for child in node.children {
+            _emitVariable(child.symbol.asVariableSymbol, .IMPLEMENT)
+          }
         }
 
         case .EXPRESSION {
@@ -450,27 +452,26 @@ namespace Skew {
         }
 
         case .FOR {
+          var setup = node.forSetup
           var test = node.forTest
           var update = node.forUpdate
-          var children = node.children
-          var count = children.count
           _emit(_indent + "for (")
-          if count > 3 {
-            for i in 3..count {
-              var child = children[i]
-              if i != 3 {
-                _emit(", ")
-              }
-              if child.kind == .VAR {
+          if setup != null {
+            if setup.kind == .VARIABLES {
+              var children = setup.children
+              _emitType(children.first.symbol.asVariableSymbol.resolvedType, .DECLARATION)
+              _emit(" ")
+              for child in children {
                 var symbol = child.symbol.asVariableSymbol
-                if i == 3 {
-                  _emitType(symbol.resolvedType, .DECLARATION)
+                assert(child.kind == .VARIABLE)
+                if child != children.first {
+                  _emit(", ")
                 }
                 _emit(_mangleName(symbol) + " = ")
-                _emitExpression(symbol.value, .LOWEST)
-              } else {
-                _emitExpression(child, .LOWEST)
+                _emitExpression(symbol.value, .COMMA)
               }
+            } else {
+              _emitExpression(setup, .LOWEST)
             }
           }
           _emit("; ")

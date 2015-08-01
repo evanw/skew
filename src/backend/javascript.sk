@@ -648,10 +648,27 @@ namespace Skew {
       }
     }
 
+    def _emitVariables(node Node) {
+      _emit("var ")
+      for child in node.children {
+        if child != node.children.first {
+          _emit("," + _space)
+        }
+        var symbol = child.symbol.asVariableSymbol
+        _emit(_mangleName(symbol))
+        if symbol.value != null {
+          _emit(_space + "=" + _space)
+          _emitExpression(symbol.value, .COMMA)
+        }
+      }
+    }
+
     def _emitStatement(node Node) {
       switch node.kind {
-        case .VAR {
-          emitVariable(node.symbol.asVariableSymbol)
+        case .VARIABLES {
+          _emit(_indent)
+          _emitVariables(node)
+          _emitSemicolonAfterStatement
         }
 
         case .EXPRESSION {
@@ -689,24 +706,15 @@ namespace Skew {
         }
 
         case .FOR {
+          var setup = node.forSetup
           var test = node.forTest
           var update = node.forUpdate
-          var children = node.children
-          var count = children.count
           _emit(_indent + "for" + _space + "(")
-          if count > 3 {
-            for i in 3..count {
-              var child = children[i]
-              assert(child.kind == .VAR)
-              if i != 3 {
-                _emit("," + _space)
-              }
-              var symbol = child.symbol.asVariableSymbol
-              if i == 3 {
-                _emit("var ")
-              }
-              _emit(_mangleName(symbol) + _space + "=" + _space)
-              _emitExpression(symbol.value, .COMMA)
+          if setup != null {
+            if setup.kind == .VARIABLES {
+              _emitVariables(setup)
+            } else {
+              _emitExpression(setup, .LOWEST)
             }
           }
           _emit(";" + _space)
@@ -1116,7 +1124,7 @@ namespace Skew {
           _unionVariableWithFunction(function.self, function)
           if function.block != null {
             function.self.value = Node.createName("this")
-            function.block.children.prepend(Node.createVar(function.self))
+            function.block.children.prepend(Node.createVariables([Node.createVariable(function.self)]))
           }
         } else if function.self != null {
           function.self.name = "this"
@@ -1299,7 +1307,7 @@ namespace Skew {
           _patchTry(node)
         }
 
-        case .VAR {
+        case .VARIABLE {
           _unionVariableWithFunction(symbol, _enclosingFunction)
         }
       }
@@ -1502,7 +1510,7 @@ namespace Skew {
       }
 
       # "while (a) {}" => "for (; a;) {}"
-      node.become(Node.createFor([], test, null, node.whileBlock.replaceWithNull))
+      node.become(Node.createFor(null, test, null, node.whileBlock.replaceWithNull))
     }
 
     def _peepholeMangleHook(node Node) {
@@ -1713,7 +1721,7 @@ namespace Skew {
     }
 
     def _isCompactNodeKind(kind NodeKind) bool {
-      return kind == .EXPRESSION || kind == .VAR || kind.isJump
+      return kind == .EXPRESSION || kind == .VARIABLES || kind.isJump
     }
 
     def _isFalsy(node Node) bool {

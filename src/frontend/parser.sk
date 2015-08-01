@@ -157,34 +157,44 @@ namespace Skew.Parsing {
 
   def parseVarOrConst(context ParserContext) Node {
     var token = context.next
-    var range = context.current.range
+    var variables List<Node> = []
 
-    if !context.expect(.IDENTIFIER) {
-      return null
-    }
+    while true {
+      var range = context.current.range
 
-    var symbol = VariableSymbol.new(.VARIABLE_LOCAL, range.toString)
-    symbol.range = range
-
-    if token.kind == .CONST {
-      symbol.flags |= Symbol.IS_CONST
-    }
-
-    if peekType(context) {
-      symbol.type = parseType(context)
-      if symbol.type == null {
+      if !context.expect(.IDENTIFIER) {
         return null
+      }
+
+      var symbol = VariableSymbol.new(.VARIABLE_LOCAL, range.toString)
+      symbol.range = range
+
+      if token.kind == .CONST {
+        symbol.flags |= Symbol.IS_CONST
+      }
+
+      if peekType(context) {
+        symbol.type = parseType(context)
+        if symbol.type == null {
+          return null
+        }
+      }
+
+      if context.eat(.ASSIGN) {
+        symbol.value = expressionParser.parse(context, .LOWEST)
+        if symbol.value == null {
+          return null
+        }
+      }
+
+      variables.append(Node.createVariable(symbol).withRange(context.spanSince(range)))
+
+      if !context.eat(.COMMA) {
+        break
       }
     }
 
-    if context.eat(.ASSIGN) {
-      symbol.value = expressionParser.parse(context, .LOWEST)
-      if symbol.value == null {
-        return null
-      }
-    }
-
-    return Node.createVar(symbol).withRange(context.spanSince(token.range))
+    return Node.createVariables(variables).withRange(context.spanSince(token.range))
   }
 
   def parseJump(context ParserContext) Node {

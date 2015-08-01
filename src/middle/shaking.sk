@@ -191,7 +191,7 @@ namespace Skew {
         }
 
         # The variable value is a child node and has already been visited
-        case .VAR {
+        case .VARIABLE {
           _visitType(node.symbol.asVariableSymbol.resolvedType)
         }
       }
