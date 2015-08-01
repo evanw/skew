@@ -11,10 +11,10 @@ namespace Math {
 
 class double {
   def isFinite bool {
-    return !isNAN && dynamic.double.IsInfinity(self)
+    return !isNaN && !dynamic.double.IsInfinity(self)
   }
 
-  def isNAN bool {
+  def isNaN bool {
     return dynamic.double.IsNaN(self)
   }
 }
@@ -30,10 +30,6 @@ class bool {
 }
 
 class string {
-  def <=>(value string) int {
-    return (self as dynamic).CompareTo(value)
-  }
-
   def count int {
     return (self as dynamic).Length
   }

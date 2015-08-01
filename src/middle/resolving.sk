@@ -152,7 +152,7 @@ namespace Skew.Resolving {
       # Special-case doubles
       else if type == cache.doubleType {
         var number = Parsing.parseDoubleLiteral(value)
-        if !number.isNAN {
+        if !number.isNaN {
           node = Node.createDouble(number)
         }
       }
@@ -2510,11 +2510,12 @@ namespace Skew.Resolving {
         symbol = symbolType.symbol
       }
 
+      var isRawImport = symbol.isImported && !symbol.isRenamed
       node.symbol = symbol
       checkAccess(node, node.internalRangeOrRange, scope)
 
       # "<", ">", "<=", or ">="
-      if isComparison && (symbol.isImported || type == cache.doubleType) {
+      if isComparison && (isRawImport || type == cache.doubleType) {
         resolveChildrenAsParameterizedExpressions(node, scope)
         node.resolvedType = cache.boolType
         node.symbol = null
@@ -2522,7 +2523,7 @@ namespace Skew.Resolving {
       }
 
       # "<=>"
-      if kind == .COMPARE && symbol.isImported {
+      if kind == .COMPARE && isRawImport {
         resolveChildrenAsParameterizedExpressions(node, scope)
         node.kind = .SUBTRACT
         node.resolvedType = cache.intType
@@ -2531,7 +2532,7 @@ namespace Skew.Resolving {
       }
 
       # Don't replace the operator with a call if it's just used for type checking
-      if symbol.isImported && !symbol.isRenamed {
+      if isRawImport {
         if reverseBinaryOrder {
           node.children.reverse
         }
@@ -2555,7 +2556,7 @@ namespace Skew.Resolving {
       if isComparison {
         var call = Node.new(.CALL).withChildren(children).withRange(node.range)
         node.appendChild(call)
-        node.appendChild(Node.createInt(0))
+        node.appendChild(Node.createInt(0).withType(cache.intType))
         node.resolvedType = cache.boolType
         resolveFunctionCall(call, scope, symbolType)
         return

@@ -1,5 +1,8 @@
 namespace Skew {
   def parseFile(log Log, tokens List<Token>, global ObjectSymbol) {
+    if Parsing.expressionParser == null { Parsing.expressionParser = Parsing.createExpressionParser }
+    if Parsing.typeParser == null { Parsing.typeParser = Parsing.createTypeParser }
+
     var context = ParserContext.new(log, tokens)
     Parsing.parseSymbols(context, global, null)
     context.expect(.END_OF_FILE)
@@ -7,6 +10,9 @@ namespace Skew {
 }
 
 namespace Skew.Parsing {
+  var expressionParser Pratt
+  var typeParser Pratt
+
   def parseDoubleLiteral(text string) double
 
   def parseIntLiteral(text string) Box<int> {
@@ -132,7 +138,7 @@ namespace Skew.Parsing {
       # Parse a trailing if condition
       var test Node = null
       if context.eat(.IF) {
-        test = pratt.parse(context, .LOWEST)
+        test = expressionParser.parse(context, .LOWEST)
         if test == null {
           return null
         }
@@ -172,7 +178,7 @@ namespace Skew.Parsing {
     }
 
     if context.eat(.ASSIGN) {
-      symbol.value = pratt.parse(context, .LOWEST)
+      symbol.value = expressionParser.parse(context, .LOWEST)
       if symbol.value == null {
         return null
       }
@@ -190,7 +196,7 @@ namespace Skew.Parsing {
     var token = context.next
     var value Node = null
     if !context.peek(.NEWLINE) && !context.peek(.COMMENT) && !context.peek(.RIGHT_BRACE) {
-      value = pratt.parse(context, .LOWEST)
+      value = expressionParser.parse(context, .LOWEST)
       if value == null {
         return null
       }
@@ -201,7 +207,7 @@ namespace Skew.Parsing {
 
   def parseSwitch(context ParserContext) Node {
     var token = context.next
-    var value = pratt.parse(context, .LOWEST)
+    var value = expressionParser.parse(context, .LOWEST)
     if value == null {
       return null
     }
@@ -227,7 +233,7 @@ namespace Skew.Parsing {
       if context.eat(.CASE) {
         context.eat(.NEWLINE)
         while true {
-          var constant = pratt.parse(context, .LOWEST)
+          var constant = expressionParser.parse(context, .LOWEST)
           if constant == null {
             return null
           }
@@ -284,13 +290,13 @@ namespace Skew.Parsing {
     var symbol = VariableSymbol.new(.VARIABLE_LOCAL, range.toString)
     symbol.range = range
 
-    var value = pratt.parse(context, .LOWEST)
+    var value = expressionParser.parse(context, .LOWEST)
     if value == null {
       return null
     }
 
     if context.eat(.DOT_DOT) {
-      var second = pratt.parse(context, .LOWEST)
+      var second = expressionParser.parse(context, .LOWEST)
       if second == null {
         return null
       }
@@ -308,7 +314,7 @@ namespace Skew.Parsing {
 
   def parseIf(context ParserContext) Node {
     var token = context.next
-    var test = pratt.parse(context, .LOWEST)
+    var test = expressionParser.parse(context, .LOWEST)
     if test == null {
       return null
     }
@@ -324,7 +330,7 @@ namespace Skew.Parsing {
 
   def parseThrow(context ParserContext) Node {
     var token = context.next
-    var value = pratt.parse(context, .LOWEST)
+    var value = expressionParser.parse(context, .LOWEST)
     if value == null {
       return null
     }
@@ -343,7 +349,7 @@ namespace Skew.Parsing {
 
   def parseWhile(context ParserContext) Node {
     var token = context.next
-    var test = pratt.parse(context, .LOWEST)
+    var test = expressionParser.parse(context, .LOWEST)
     if test == null {
       return null
     }
@@ -372,7 +378,7 @@ namespace Skew.Parsing {
       case .WHILE { return parseWhile(context) }
     }
 
-    var value = pratt.parse(context, .LOWEST)
+    var value = expressionParser.parse(context, .LOWEST)
     if value == null {
       return null
     }
@@ -496,7 +502,7 @@ namespace Skew.Parsing {
   }
 
   def parseType(context ParserContext) Node {
-    return typePratt.parse(context, .LOWEST)
+    return typeParser.parse(context, .LOWEST)
   }
 
   def peekType(context ParserContext) bool {
@@ -515,7 +521,7 @@ namespace Skew.Parsing {
           return false
         }
       } else {
-        var value = pratt.parse(context, .LOWEST)
+        var value = expressionParser.parse(context, .LOWEST)
         if value == null {
           return false
         }
@@ -560,7 +566,7 @@ namespace Skew.Parsing {
 
       # Parse default value
       if context.eat(.ASSIGN) {
-        arg.value = pratt.parse(context, .LOWEST)
+        arg.value = expressionParser.parse(context, .LOWEST)
         if arg.value == null {
           return false
         }
@@ -641,7 +647,7 @@ namespace Skew.Parsing {
   def recursiveParseGuard(context ParserContext, parent ObjectSymbol, annotations List<Node>) Guard {
     var test Node = null
     if context.eat(.IF) {
-      test = pratt.parse(context, .LOWEST)
+      test = expressionParser.parse(context, .LOWEST)
       if test == null {
         return null
       }
@@ -785,7 +791,7 @@ namespace Skew.Parsing {
           }
 
           if context.eat(.ASSIGN) {
-            variable.value = pratt.parse(context, .LOWEST)
+            variable.value = expressionParser.parse(context, .LOWEST)
             if variable.value == null {
               return false
             }
@@ -922,7 +928,7 @@ namespace Skew.Parsing {
         }
         context.eat(.NEWLINE)
       }
-      var value = pratt.parse(context, .LOWEST)
+      var value = expressionParser.parse(context, .LOWEST)
       values.append(value)
       if value == null {
         break
@@ -1058,7 +1064,7 @@ namespace Skew.Parsing {
         if context.peek(end) {
           break
         }
-        var first = pratt.parse(context, .LOWEST)
+        var first = expressionParser.parse(context, .LOWEST)
         if first == null {
           return null
         }
@@ -1070,7 +1076,7 @@ namespace Skew.Parsing {
           if !context.expect(.COLON) {
             return null
           }
-          var second = pratt.parse(context, .LOWEST)
+          var second = expressionParser.parse(context, .LOWEST)
           if second == null {
             return null
           }
@@ -1383,7 +1389,4 @@ namespace Skew.Parsing {
 
     return pratt
   }
-
-  var pratt = createExpressionParser
-  var typePratt = createTypeParser
 }

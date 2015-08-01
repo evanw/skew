@@ -5,8 +5,9 @@ namespace Skew {
     over runPostResolvePasses bool { return true }
     over moveEverythingOffEnums bool { return true }
     over requiresIntegerSwitchStatements bool { return true }
+    over supportsListForeach bool { return true }
     over editOptions(options CompilerOptions) { options.define("TARGET", "CPLUSPLUS") }
-    over includeSources(sources List<Source>) {}
+    over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-cpp>", NATIVE_LIBRARY_CPP)) }
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return CPlusPlusEmitter.new(options, cache) }
   }
 
@@ -216,9 +217,10 @@ namespace Skew {
     }
 
     def _emitFunction(symbol FunctionSymbol, mode CodeMode) {
+      var parent = symbol.parent.asObjectSymbol
       var block = symbol.block
 
-      if symbol.isImported || block == null {
+      if symbol.isImported || mode == .IMPLEMENT && block == null {
         return
       }
 
@@ -231,7 +233,7 @@ namespace Skew {
       _emitNewlineBeforeSymbol(symbol, mode)
       _emitComments(symbol.comments)
       if mode == .IMPLEMENT {
-        _emitTypeParameters(symbol.parent.asObjectSymbol.parameters) # TODO: Merge these with the ones on the symbol when symbols have both
+        _emitTypeParameters(parent.parameters) # TODO: Merge these with the ones on the symbol when symbols have both
       }
       _emitTypeParameters(symbol.parameters)
       _emit(_indent)
@@ -244,7 +246,21 @@ namespace Skew {
         }
         _emitType(symbol.resolvedType.returnType, .DECLARATION)
       }
-      _emit(mode == .DEFINE ? _mangleName(symbol) : _fullName(symbol))
+      if mode == .IMPLEMENT && parent.kind != .OBJECT_GLOBAL {
+        _emit(_fullName(parent))
+        if parent.parameters != null {
+          _emit("<")
+          for parameter in parent.parameters {
+            if parameter != parent.parameters.first {
+              _emit(", ")
+            }
+            _emit(_mangleName(parameter))
+          }
+          _emit(">")
+        }
+        _emit("::")
+      }
+      _emit(_mangleName(symbol))
       _emitArgumentList(symbol)
 
       if mode == .IMPLEMENT {
@@ -307,7 +323,7 @@ namespace Skew {
 
       # C++ can't forward-declare variables without also giving them external linkage
       var avoidFullName = symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind != .OBJECT_CLASS
-      if mode == .IMPLEMENT {
+      if mode == .IMPLEMENT && symbol.kind != .VARIABLE_LOCAL {
         _adjustNamespace(avoidFullName ? symbol.parent : null)
       }
 
@@ -513,7 +529,21 @@ namespace Skew {
         }
 
         case .FOREACH {
-          _emit("TODO:FOREACH")
+          var symbol = node.symbol.asVariableSymbol
+          var value = node.foreachValue
+          _emit(_indent + "for (")
+          _emitType(symbol.resolvedType, .DECLARATION)
+          _emit(_mangleName(symbol))
+          _emit(" : ")
+          if value.resolvedType.isReference {
+            _emit("*")
+            _emitExpression(value, .UNARY_PREFIX)
+          } else {
+            _emitExpression(value, .LOWEST)
+          }
+          _emit(")")
+          _emitBlock(node.foreachBlock)
+          _emit("\n")
         }
 
         default {
@@ -552,7 +582,7 @@ namespace Skew {
         case .BOOL { _emit(content.asBool.toString) }
         case .INT { _emit(content.asInt.toString) }
         case .DOUBLE { _emit(content.asDouble.toString) }
-        case .STRING { _emit(quoteString(content.asString, '"')) }
+        case .STRING { _emit(quoteString(content.asString, '"') + "_s") }
       }
     }
 
@@ -585,17 +615,27 @@ namespace Skew {
         }
 
         case .CONSTANT {
+          if node.resolvedType.isEnum {
+            _emit("(")
+            _emitType(node.resolvedType, .NORMAL)
+            _emit(")")
+          }
           _emitContent(node.content)
         }
 
         case .CALL {
           var value = node.callValue
+          var wrap = false
 
           if value.kind == .SUPER {
             _emit(_fullName(symbol))
           }
 
           else if symbol != null && symbol.kind == .FUNCTION_CONSTRUCTOR {
+            wrap = precedence == Precedence.MEMBER
+            if wrap {
+              _emit("(")
+            }
             _emit("new ")
             _emitType(node.resolvedType, .BARE)
           }
@@ -619,6 +659,9 @@ namespace Skew {
           }
 
           _emit(")")
+          if wrap {
+            _emit(")")
+          }
         }
 
         case .CAST {
@@ -673,7 +716,7 @@ namespace Skew {
               if i > 1 {
                 _emit(", ")
               }
-              _emitExpression(node.children[i], .COMMA)
+              _emitType(node.children[i].resolvedType, .NORMAL)
             }
             _emit(">")
           }
@@ -704,23 +747,25 @@ namespace Skew {
 
         case .INITIALIZER_LIST, .INITIALIZER_SET, .INITIALIZER_MAP {
           var children = node.children
-          _emit("{")
-          for child in children {
-            if child != children.first {
-              _emit(", ")
+          _emit("new ")
+          _emitType(node.resolvedType, .BARE)
+          if children.isEmpty {
+            _emit("()")
+          } else {
+            _emit(" { ")
+            for child in children {
+              if child != children.first {
+                _emit(", ")
+              }
+              _emitExpression(child, .COMMA)
             }
-            _emitExpression(child, .COMMA)
+            _emit(" }")
           }
-          _emit("}")
         }
 
         case .PAIR {
           _includeNames["<utility>"] = 0
-          _emit("std::make_pair<")
-          _emitType(node.firstValue.resolvedType, .NORMAL)
-          _emit(", ")
-          _emitType(node.secondValue.resolvedType, .NORMAL)
-          _emit(">(")
+          _emit("std::make_pair(")
           _emitExpression(node.firstValue, .COMMA)
           _emit(", ")
           _emitExpression(node.secondValue, .COMMA)
@@ -742,6 +787,14 @@ namespace Skew {
           }
 
           else if kind.isBinary {
+            # Clang warns about "&&" inside "||" or "&" inside "|" without parentheses
+            var parent = node.parent
+            if parent != null && (
+                parent.kind == .LOGICAL_OR && kind == .LOGICAL_AND ||
+                parent.kind == .BITWISE_OR && kind == .BITWISE_AND) {
+              precedence = .MEMBER
+            }
+
             var info = operatorInfo[kind]
             if info.precedence as int < precedence as int {
               _emit("(")

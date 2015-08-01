@@ -24,7 +24,7 @@ class double {
     return dynamic.isFinite(self)
   }
 
-  def isNAN bool {
+  def isNaN bool {
     return dynamic.isNaN(self)
   }
 }

@@ -1,0 +1,25 @@
+namespace Skew {
+  const NATIVE_LIBRARY_CPP = "
+class bool {
+  def toString string {
+    return self ? \"true\" : \"false\"
+  }
+}
+
+class int {
+  def toString string {
+    return dynamic.intToString(self)
+  }
+}
+
+class double {
+  def toString string {
+    return dynamic.doubleToString(self)
+  }
+
+  def isNaN bool {
+    return self != self
+  }
+}
+"
+}

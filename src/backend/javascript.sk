@@ -1687,7 +1687,7 @@ namespace Skew {
           var content = node.content
           switch content.kind {
             case .INT { return content.asInt == 0 }
-            case .DOUBLE { return content.asDouble == 0 || content.asDouble.isNAN }
+            case .DOUBLE { return content.asDouble == 0 || content.asDouble.isNaN }
             case .STRING { return content.asString == "" }
           }
         }

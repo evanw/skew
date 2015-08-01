@@ -145,7 +145,7 @@ class double {
   def /=(x double)
 
   def isFinite bool
-  def isNAN bool
+  def isNaN bool
 
   @rename(\"ToString\") if TARGET == .CSHARP
   def toString string
@@ -159,6 +159,8 @@ class double {
 class string {
   def +(x string) string
   def +=(x string)
+  @rename(\"CompareTo\") if TARGET == .CSHARP
+  @rename(\"compare\") if TARGET == .CPLUSPLUS
   def <=>(x string) int
   def [](x int) int
   def codePoints List<int>
@@ -168,6 +170,7 @@ class string {
   def endsWith(x string) bool
   def get(x int) string
   @rename(\"Contains\") if TARGET == .CSHARP
+  @rename(\"contains\") if TARGET == .CPLUSPLUS
   def in(x string) bool
   @rename(\"IndexOf\") if TARGET == .CSHARP
   def indexOf(x string) int
@@ -285,14 +288,6 @@ class List<T> {
   @rename(\"unshift\") if TARGET == .JAVASCRIPT
   def prepend(x T)
   def prepend(x List<T>)
-
-  # @prefer
-  # def +(x T) List<T>
-  # def +(x List<T>) List<T>
-
-  # @prefer
-  # def +=(x T)
-  # def +=(x List<T>)
 }
 
 @import
@@ -307,6 +302,7 @@ class StringMap<T> {
   def each(x fn(string, T))
   def get(key string, defaultValue T) T
   @rename(\"ContainsKey\") if TARGET == .CSHARP
+  @rename(\"contains\") if TARGET == .CPLUSPLUS
   def in(key string) bool
   def isEmpty bool
   def keys List<string>
@@ -329,6 +325,7 @@ class IntMap<T> {
   def each(x fn(int, T))
   def get(key int, defaultValue T) T
   @rename(\"ContainsKey\") if TARGET == .CSHARP
+  @rename(\"contains\") if TARGET == .CPLUSPLUS
   def in(key int) bool
   def isEmpty bool
   def keys List<int>
