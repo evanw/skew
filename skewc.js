@@ -5048,6 +5048,11 @@
       var value = trueStatement.expressionValue().replaceWithNull();
       node.become(Skew.Node.createExpression(Skew.Node.createBinary(swapped === Skew.JavaScriptEmitter.BooleanSwap.SWAP ? Skew.NodeKind.LOGICAL_OR : Skew.NodeKind.LOGICAL_AND, test.replaceWithNull(), value)));
     }
+
+    // "if (a) {}" => "a;"
+    else if (!trueBlock.hasChildren()) {
+      node.become(Skew.Node.createExpression(test.replaceWithNull()));
+    }
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleHook = function(node) {
@@ -5131,22 +5136,29 @@
 
       // "a; b; c;" => "a, b, c;"
       if (kind === Skew.NodeKind.EXPRESSION) {
-        while ((i + 1 | 0) < children.length) {
-          var next = children[i + 1 | 0];
-
-          if (next.kind !== Skew.NodeKind.EXPRESSION) {
-            break;
-          }
-
-          var combined = Skew.Node.createExpression(Skew.JavaScriptEmitter._joinExpressions(child.expressionValue().replaceWithNull(), next.remove().expressionValue().replaceWithNull()));
-          child.replaceWith(combined);
-          child = combined;
+        if (child.expressionValue().hasNoSideEffects()) {
+          child.remove();
+          --i;
         }
 
-        var value = child.expressionValue();
+        else {
+          while ((i + 1 | 0) < children.length) {
+            var next = children[i + 1 | 0];
 
-        if (value.kind === Skew.NodeKind.SEQUENCE) {
-          this._peepholeMangleSequence(value);
+            if (next.kind !== Skew.NodeKind.EXPRESSION) {
+              break;
+            }
+
+            var combined = Skew.Node.createExpression(Skew.JavaScriptEmitter._joinExpressions(child.expressionValue().replaceWithNull(), next.remove().expressionValue().replaceWithNull()));
+            child.replaceWith(combined);
+            child = combined;
+          }
+
+          var value = child.expressionValue();
+
+          if (value.kind === Skew.NodeKind.SEQUENCE) {
+            this._peepholeMangleSequence(value);
+          }
         }
       }
 

@@ -1471,6 +1471,11 @@ namespace Skew {
         var value = trueStatement.expressionValue.replaceWithNull
         node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.replaceWithNull, value)))
       }
+
+      # "if (a) {}" => "a;"
+      else if !trueBlock.hasChildren {
+        node.become(Node.createExpression(test.replaceWithNull))
+      }
     }
 
     def _peepholeMangleHook(node Node) {
@@ -1554,18 +1559,23 @@ namespace Skew {
 
         # "a; b; c;" => "a, b, c;"
         if kind == .EXPRESSION {
-          while i + 1 < children.count {
-            var next = children[i + 1]
-            if next.kind != .EXPRESSION {
-              break
+          if child.expressionValue.hasNoSideEffects {
+            child.remove
+            i--
+          } else {
+            while i + 1 < children.count {
+              var next = children[i + 1]
+              if next.kind != .EXPRESSION {
+                break
+              }
+              var combined = Node.createExpression(_joinExpressions(child.expressionValue.replaceWithNull, next.remove.expressionValue.replaceWithNull))
+              child.replaceWith(combined)
+              child = combined
             }
-            var combined = Node.createExpression(_joinExpressions(child.expressionValue.replaceWithNull, next.remove.expressionValue.replaceWithNull))
-            child.replaceWith(combined)
-            child = combined
-          }
-          var value = child.expressionValue
-          if value.kind == .SEQUENCE {
-            _peepholeMangleSequence(value)
+            var value = child.expressionValue
+            if value.kind == .SEQUENCE {
+              _peepholeMangleSequence(value)
+            }
           }
         }
 
