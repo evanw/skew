@@ -5991,11 +5991,11 @@
     }
 
     var builder = new StringBuilder();
-    builder.append('{"version":3,"_sources":[');
+    builder.append('{"version":3,"sources":[');
     builder.append(sourceNames.join(','));
     builder.append('],"sourcesContent":[');
     builder.append(sourceContents.join(','));
-    builder.append('],"names":[],"_mappings":"');
+    builder.append('],"names":[],"mappings":"');
 
     // Sort the mappings in increasing order by generated location
     this._mappings.sort(function(a, b) {

@@ -31,11 +31,11 @@ namespace Skew {
       }
 
       var builder = StringBuilder.new
-      builder.append("{\"version\":3,\"_sources\":[")
+      builder.append("{\"version\":3,\"sources\":[")
       builder.append(",".join(sourceNames))
       builder.append("],\"sourcesContent\":[")
       builder.append(",".join(sourceContents))
-      builder.append("],\"names\":[],\"_mappings\":\"")
+      builder.append("],\"names\":[],\"mappings\":\"")
 
       # Sort the mappings in increasing order by generated location
       _mappings.sort((a, b) => {

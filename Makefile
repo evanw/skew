@@ -63,8 +63,8 @@ check-cs: | build
 release: compile-browser | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.min.js
 	node skewc.js $(SOURCES_BROWSER) $(JS_FLAGS) --release --output-file=build/browser.min.js
-	gzip -c build/browser.min.js > build/browser.min.js.gz
-	du -h build/browser.js build/browser.min.js build/browser.min.js.gz
+	type zopfli > /dev/null 2>&1 && (zopfli -c build/browser.min.js > build/browser.min.js.gz) || (gzip -c build/browser.min.js > build/browser.min.js.gz)
+	ls -l build/browser.js build/browser.min.js build/browser.min.js.gz
 
 watch:
 	node_modules/.bin/watch src 'clear && make compile-browser'
