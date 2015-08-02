@@ -19,6 +19,7 @@ def main dynamic {
   dynamic.a(dynamic.b + -dynamic.c)
   dynamic.a(dynamic.b - +dynamic.c)
   dynamic.a(dynamic.b - -dynamic.c)
+  return \"\"
   return dynamic.a
   return dynamic.a + dynamic.b
   return -dynamic.a
@@ -26,8 +27,28 @@ def main dynamic {
   return !dynamic.a
 }
 ", "
-(function(){main=function(){a(b+ +c);a(b+-c);a(b-+c);a(b- -c);return a;return a+b;return-a;return~a;return!a}})();
+(function(){main=function(){a(b+ +c);a(b+-c);a(b-+c);a(b- -c);return'';return a;return a+b;return-a;return~a;return!a}})();
 ").jsMinify
+
+# Check for whitespace with numeric literals
+test("
+@export
+def foo dynamic {
+  return -1
+}
+
+@export
+def bar dynamic {
+  return -1.5
+}
+
+@export
+def baz dynamic {
+  return 0
+}
+", "
+(function(){foo=function(){return-1};bar=function(){return-1.5};baz=function(){return 0}})();
+").jsMinify.foldAllConstants
 
 # There is no "dangling if" ambiguity here
 test("

@@ -4150,6 +4150,12 @@
     }
   };
 
+  Skew.JavaScriptEmitter.prototype._emitSpaceBeforeKeyword = function(node) {
+    if (!this._minify || !Skew.NodeKind.isUnary(node.kind) && !node.isString() && !node.isNumberLessThanZero()) {
+      this._emit(' ');
+    }
+  };
+
   Skew.JavaScriptEmitter.prototype._emitStatement = function(node) {
     switch (node.kind) {
       case Skew.NodeKind.VARIABLES: {
@@ -4183,10 +4189,7 @@
         var value = node.returnValue();
 
         if (value !== null) {
-          if (!this._minify || !Skew.NodeKind.isUnary(value.kind)) {
-            this._emit(' ');
-          }
-
+          this._emitSpaceBeforeKeyword(value);
           this._emitExpression(value, Skew.Precedence.LOWEST);
         }
 
@@ -4195,8 +4198,10 @@
       }
 
       case Skew.NodeKind.THROW: {
-        this._emit(this._indent + 'throw ');
-        this._emitExpression(node.throwValue(), Skew.Precedence.LOWEST);
+        var value1 = node.throwValue();
+        this._emit(this._indent + 'throw');
+        this._emitSpaceBeforeKeyword(value1);
+        this._emitExpression(value1, Skew.Precedence.LOWEST);
         this._emitSemicolonAfterStatement();
         break;
       }
@@ -4271,13 +4276,13 @@
           }
 
           else {
-            for (var value1 = child.firstChild(); value1 !== block; value1 = value1.nextSibling()) {
-              if (value1.previousSibling() !== null) {
+            for (var value2 = child.firstChild(); value2 !== block; value2 = value2.nextSibling()) {
+              if (value2.previousSibling() !== null) {
                 this._emit(this._newline);
               }
 
               this._emit(this._indent + 'case ');
-              this._emitExpression(value1, Skew.Precedence.LOWEST);
+              this._emitExpression(value2, Skew.Precedence.LOWEST);
               this._emit(':');
             }
           }

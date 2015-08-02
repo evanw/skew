@@ -663,6 +663,12 @@ namespace Skew {
       }
     }
 
+    def _emitSpaceBeforeKeyword(node Node) {
+      if !_minify || !node.kind.isUnary && !node.isString && !node.isNumberLessThanZero {
+        _emit(" ")
+      }
+    }
+
     def _emitStatement(node Node) {
       switch node.kind {
         case .VARIABLES {
@@ -691,17 +697,17 @@ namespace Skew {
           _emit(_indent + "return")
           var value = node.returnValue
           if value != null {
-            if !_minify || !value.kind.isUnary {
-              _emit(" ")
-            }
+            _emitSpaceBeforeKeyword(value)
             _emitExpression(value, .LOWEST)
           }
           _emitSemicolonAfterStatement
         }
 
         case .THROW {
-          _emit(_indent + "throw ")
-          _emitExpression(node.throwValue, .LOWEST)
+          var value = node.throwValue
+          _emit(_indent + "throw")
+          _emitSpaceBeforeKeyword(value)
+          _emitExpression(value, .LOWEST)
           _emitSemicolonAfterStatement
         }
 
