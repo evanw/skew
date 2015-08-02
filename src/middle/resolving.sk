@@ -1639,10 +1639,22 @@ namespace Skew.Resolving {
       var symbol = type.symbol
 
       # Getters are called implicitly, so explicitly calling one is an error.
-      # This error prevents a getter returning a lambda which is then called,
-      # but that's really strange and I think this error is more useful.
-      if symbol.isGetter && isCallValue(node) {
-        log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange, symbol.name, symbol.range)
+      # This error prevents a getter returning a lambda which is then called.
+      # To overcome this, wrap the call in parentheses:
+      #
+      #   def foo fn()
+      #
+      #   def bar {
+      #     foo()   # Error
+      #     (foo)() # Correct
+      #   }
+      #
+      if symbol.isGetter && isCallValue(node) && !node.callValue.isInsideParentheses {
+        if symbol.resolvedType.returnType != null && symbol.resolvedType.returnType.kind == .LAMBDA {
+          log.semanticErrorGetterRequiresWrap(node.range, symbol.name, symbol.range)
+        } else {
+          log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange, symbol.name, symbol.range)
+        }
         return false
       }
 
@@ -2552,10 +2564,10 @@ namespace Skew.Resolving {
       resolveFunctionCall(node, scope, symbolType)
     }
 
-    def automaticallyCallGetter(node Node, scope Scope) {
+    def automaticallyCallGetter(node Node, scope Scope) bool {
       var symbol = node.symbol
       if symbol == null {
-        return
+        return false
       }
       var kind = symbol.kind
       var parent = node.parent
@@ -2582,14 +2594,17 @@ namespace Skew.Resolving {
       if symbol.isGetter {
         node.become(Node.createCall(node.cloneAndStealChildren).withRange(node.range))
         resolveAsParameterizedExpression(node, scope)
+        return true
       }
 
       # Forbid bare function references
-      else if node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction && kind != .FUNCTION_ANNOTATION &&
+      if node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction && kind != .FUNCTION_ANNOTATION &&
           !isCallValue(node) && (parent == null || parent.kind != .PARAMETERIZE || !isCallValue(parent)) {
         log.semanticErrorMustCallFunction(node.internalRangeOrRange, symbol.name)
         node.resolvedType = .DYNAMIC
       }
+
+      return false
     }
 
     def checkSwitchStatements(nodes List<Node>, scope Scope) {

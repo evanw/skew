@@ -371,7 +371,7 @@ def @foo(x int)
 <stdin>:1:5: note: The function declaration is here
 def @foo(x int)
     ~~~~
-<stdin>:6:5: error: The function \"@bar\" takes no arguments and is already called implicitly
+<stdin>:6:5: error: Cannot call the value returned from the function \"@bar\" (this function was called automatically because it takes no arguments)
 @bar(1)
     ~~~
 <stdin>:2:5: note: The function declaration is here
@@ -3536,6 +3536,31 @@ def main {
 <stdin>:2:35: error: \"<=>\" is not declared on type \"bool\"
   List<bool>.new.sort((a, b) => a <=> b)
                                   ~~~
+")
+
+test("
+def foo fn()
+def bar
+
+def main {
+  foo()
+  (foo)()
+  bar()
+  bar
+}
+", "
+<stdin>:5:3: error: Wrap calls to the function \"foo\" in parentheses to call the returned lambda
+  foo()
+  ~~~
+<stdin>:1:5: note: The function declaration is here
+def foo fn()
+    ~~~
+<stdin>:7:6: error: Cannot call the value returned from the function \"bar\" (this function was called automatically because it takes no arguments)
+  bar()
+     ~~
+<stdin>:2:5: note: The function declaration is here
+def bar
+    ~~~
 ")
 
   }

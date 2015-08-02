@@ -9723,8 +9723,16 @@
     }
   };
 
+  Skew.Log.prototype.semanticErrorGetterRequiresWrap = function(range, name, $function) {
+    this.error(range, 'Wrap calls to the function "' + name + '" in parentheses to call the returned lambda');
+
+    if ($function !== null) {
+      this.note($function, 'The function declaration is here');
+    }
+  };
+
   Skew.Log.prototype.semanticErrorGetterCalledTwice = function(range, name, $function) {
-    this.error(range, 'The function "' + name + '" takes no arguments and is already called implicitly');
+    this.error(range, 'Cannot call the value returned from the function "' + name + '" (this function was called automatically because it takes no arguments)');
 
     if ($function !== null) {
       this.note($function, 'The function declaration is here');
@@ -14320,10 +14328,25 @@
     var symbol = type.symbol;
 
     // Getters are called implicitly, so explicitly calling one is an error.
-    // This error prevents a getter returning a lambda which is then called,
-    // but that's really strange and I think this error is more useful.
-    if (symbol.isGetter() && Skew.Resolving.Resolver.isCallValue(node)) {
-      this.log.semanticErrorGetterCalledTwice(node.parent().internalRangeOrRange(), symbol.name, symbol.range);
+    // This error prevents a getter returning a lambda which is then called.
+    // To overcome this, wrap the call in parentheses:
+    //
+    //   def foo fn()
+    //
+    //   def bar {
+    //     foo()   # Error
+    //     (foo)() # Correct
+    //   }
+    //
+    if (symbol.isGetter() && Skew.Resolving.Resolver.isCallValue(node) && !node.callValue().isInsideParentheses()) {
+      if (symbol.resolvedType.returnType !== null && symbol.resolvedType.returnType.kind === Skew.TypeKind.LAMBDA) {
+        this.log.semanticErrorGetterRequiresWrap(node.range, symbol.name, symbol.range);
+      }
+
+      else {
+        this.log.semanticErrorGetterCalledTwice(node.parent().internalRangeOrRange(), symbol.name, symbol.range);
+      }
+
       return false;
     }
 
@@ -15361,7 +15384,7 @@
     var symbol = node.symbol;
 
     if (symbol === null) {
-      return;
+      return false;
     }
 
     var kind = symbol.kind;
@@ -15391,13 +15414,16 @@
     if (symbol.isGetter()) {
       node.become(Skew.Node.createCall(node.cloneAndStealChildren()).withRange(node.range));
       this.resolveAsParameterizedExpression(node, scope);
+      return true;
     }
 
     // Forbid bare function references
-    else if (node.resolvedType !== Skew.Type.DYNAMIC && Skew.SymbolKind.isFunctionOrOverloadedFunction(kind) && kind !== Skew.SymbolKind.FUNCTION_ANNOTATION && !Skew.Resolving.Resolver.isCallValue(node) && (parent === null || parent.kind !== Skew.NodeKind.PARAMETERIZE || !Skew.Resolving.Resolver.isCallValue(parent))) {
+    if (node.resolvedType !== Skew.Type.DYNAMIC && Skew.SymbolKind.isFunctionOrOverloadedFunction(kind) && kind !== Skew.SymbolKind.FUNCTION_ANNOTATION && !Skew.Resolving.Resolver.isCallValue(node) && (parent === null || parent.kind !== Skew.NodeKind.PARAMETERIZE || !Skew.Resolving.Resolver.isCallValue(parent))) {
       this.log.semanticErrorMustCallFunction(node.internalRangeOrRange(), symbol.name);
       node.resolvedType = Skew.Type.DYNAMIC;
     }
+
+    return false;
   };
 
   Skew.Resolving.Resolver.prototype.checkSwitchStatements = function(nodes, scope) {

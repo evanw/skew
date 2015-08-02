@@ -204,8 +204,15 @@ namespace Skew {
       }
     }
 
+    def semanticErrorGetterRequiresWrap(range Range, name string, function Range) {
+      error(range, "Wrap calls to the function \"" + name + "\" in parentheses to call the returned lambda")
+      if function != null {
+        note(function, "The function declaration is here")
+      }
+    }
+
     def semanticErrorGetterCalledTwice(range Range, name string, function Range) {
-      error(range, "The function \"" + name + "\" takes no arguments and is already called implicitly")
+      error(range, "Cannot call the value returned from the function \"" + name + "\" (this function was called automatically because it takes no arguments)")
       if function != null {
         note(function, "The function declaration is here")
       }
