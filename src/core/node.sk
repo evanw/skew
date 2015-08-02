@@ -1080,9 +1080,8 @@ namespace Skew {
     def forSetup Node {
       assert(kind == .FOR)
       assert(childCount == 4)
-      var setup = _firstChild
-      assert(setup.kind.isExpression || setup.kind == .VARIABLES)
-      return setup.isEmptySequence ? null : setup
+      assert(_firstChild.kind.isExpression || _firstChild.kind == .VARIABLES)
+      return _firstChild
     }
 
     def forTest Node {
@@ -1095,9 +1094,8 @@ namespace Skew {
     def forUpdate Node {
       assert(kind == .FOR)
       assert(childCount == 4)
-      var update = _lastChild._previousSibling
-      assert(update.kind.isExpression)
-      return update.isEmptySequence ? null : update
+      assert(_lastChild._previousSibling.kind.isExpression)
+      return _lastChild._previousSibling
     }
 
     def forBlock Node {

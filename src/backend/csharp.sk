@@ -607,7 +607,7 @@ namespace Skew {
           var test = node.forTest
           var update = node.forUpdate
           _emit(_indent + "for (")
-          if setup != null {
+          if !setup.isEmptySequence {
             if setup.kind == .VARIABLES {
               var symbol = setup.firstChild.symbol.asVariableSymbol
               _emitExpressionOrType(symbol.type, symbol.resolvedType)
@@ -626,11 +626,11 @@ namespace Skew {
             }
           }
           _emit("; ")
-          if test != null {
+          if !test.isEmptySequence {
             _emitExpression(test, .LOWEST)
           }
           _emit("; ")
-          if update != null {
+          if !update.isEmptySequence {
             _emitExpression(update, .LOWEST)
           }
           _emit(")\n")

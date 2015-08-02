@@ -1773,7 +1773,7 @@
         var update = node.forUpdate();
         this._emit(this._indent + "for (");
 
-        if (setup !== null) {
+        if (!setup.isEmptySequence()) {
           if (setup.kind === Skew.NodeKind.VARIABLES) {
             var symbol1 = setup.firstChild().symbol.asVariableSymbol();
             this._emitExpressionOrType(symbol1.type, symbol1.resolvedType);
@@ -1799,13 +1799,13 @@
 
         this._emit("; ");
 
-        if (test !== null) {
+        if (!test.isEmptySequence()) {
           this._emitExpression(test, Skew.Precedence.LOWEST);
         }
 
         this._emit("; ");
 
-        if (update !== null) {
+        if (!update.isEmptySequence()) {
           this._emitExpression(update, Skew.Precedence.LOWEST);
         }
 
@@ -2745,7 +2745,7 @@
         var update = node.forUpdate();
         this._emit(this._indent + "for (");
 
-        if (setup !== null) {
+        if (!setup.isEmptySequence()) {
           if (setup.kind === Skew.NodeKind.VARIABLES) {
             this._emitType(setup.firstChild().symbol.asVariableSymbol().resolvedType, Skew.CPlusPlusEmitter.CppEmitType.DECLARATION);
             this._emit(" ");
@@ -2770,13 +2770,13 @@
 
         this._emit("; ");
 
-        if (test !== null) {
+        if (!test.isEmptySequence()) {
           this._emitExpression(test, Skew.Precedence.LOWEST);
         }
 
         this._emit("; ");
 
-        if (update !== null) {
+        if (!update.isEmptySequence()) {
           this._emitExpression(update, Skew.Precedence.LOWEST);
         }
 
@@ -4169,7 +4169,7 @@
         var update = node.forUpdate();
         this._emit(this._indent + "for" + this._space + "(");
 
-        if (setup !== null) {
+        if (!setup.isEmptySequence()) {
           if (setup.kind === Skew.NodeKind.VARIABLES) {
             this._emitVariables(setup);
           }
@@ -4181,13 +4181,13 @@
 
         this._emit(";" + this._space);
 
-        if (test !== null) {
+        if (!test.isEmptySequence()) {
           this._emitExpression(test, Skew.Precedence.LOWEST);
         }
 
         this._emit(";" + this._space);
 
-        if (update !== null) {
+        if (!update.isEmptySequence()) {
           this._emitExpression(update, Skew.Precedence.LOWEST);
         }
 
@@ -4810,6 +4810,14 @@
         break;
       }
 
+      case Skew.NodeKind.GREATER_THAN_OR_EQUAL:
+      case Skew.NodeKind.LESS_THAN_OR_EQUAL: {
+        if (this._mangle) {
+          this._peepholeMangleBinaryRelational(node);
+        }
+        break;
+      }
+
       case Skew.NodeKind.BLOCK: {
         if (this._mangle) {
           this._peepholeMangleBlock(node);
@@ -4962,6 +4970,50 @@
     }
   };
 
+  Skew.JavaScriptEmitter.prototype._isIntegerType = function(node) {
+    return node.resolvedType !== null && this._cache.isInteger(node.resolvedType);
+  };
+
+  Skew.JavaScriptEmitter.prototype._peepholeMangleBinaryRelational = function(node) {
+    assert(node.kind === Skew.NodeKind.GREATER_THAN_OR_EQUAL || node.kind === Skew.NodeKind.LESS_THAN_OR_EQUAL);
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+
+    if (this._isIntegerType(left) && this._isIntegerType(right)) {
+      if (left.isInt()) {
+        var value = left.asInt();
+
+        // "2 >= a" => "3 > a"
+        if (node.kind === Skew.NodeKind.GREATER_THAN_OR_EQUAL && value < 2147483647) {
+          left.content = new Skew.IntContent(value + 1 | 0);
+          node.kind = Skew.NodeKind.GREATER_THAN;
+        }
+
+        // "2 <= a" => "1 < a"
+        else if (node.kind === Skew.NodeKind.LESS_THAN_OR_EQUAL && value >= -2147483647) {
+          left.content = new Skew.IntContent(value - 1 | 0);
+          node.kind = Skew.NodeKind.LESS_THAN;
+        }
+      }
+
+      else if (right.isInt()) {
+        var value1 = right.asInt();
+
+        // "a >= 2" => "a > 1"
+        if (node.kind === Skew.NodeKind.GREATER_THAN_OR_EQUAL && value1 >= -2147483647) {
+          right.content = new Skew.IntContent(value1 - 1 | 0);
+          node.kind = Skew.NodeKind.GREATER_THAN;
+        }
+
+        // "a <= 2" => "a < 3"
+        else if (node.kind === Skew.NodeKind.LESS_THAN_OR_EQUAL && value1 < 2147483647) {
+          right.content = new Skew.IntContent(value1 + 1 | 0);
+          node.kind = Skew.NodeKind.LESS_THAN;
+        }
+      }
+    }
+  };
+
   // Simplifies the node assuming it's used in a boolean context. Note that
   // this may replace the passed-in node, which will then need to be queried
   // again if it's needed for further stuff.
@@ -5084,7 +5136,8 @@
     this._peepholeMangleBoolean(test.remove(), Skew.JavaScriptEmitter.BooleanSwap.NO_SWAP);
 
     // "while (a) {}" => "for (; a;) {}"
-    node.become(Skew.Node.createFor(new Skew.Node(Skew.NodeKind.SEQUENCE), test, new Skew.Node(Skew.NodeKind.SEQUENCE), block.remove()));
+    // "while (true) {}" => "for (;;) {}"
+    node.become(Skew.Node.createFor(new Skew.Node(Skew.NodeKind.SEQUENCE), test.kind === Skew.NodeKind.NOT && test.unaryValue().isInt() && test.unaryValue().asInt() === 0 ? new Skew.Node(Skew.NodeKind.SEQUENCE) : test, new Skew.Node(Skew.NodeKind.SEQUENCE), block.remove()));
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleFor = function(node) {
@@ -5103,6 +5156,12 @@
       trueValue = falseValue;
       falseValue = temp;
       trueValue.swapWith(falseValue);
+    }
+
+    // "a.b ? c : null" => "a.b && c"
+    if (falseValue.kind === Skew.NodeKind.CAST && falseValue.castValue().kind === Skew.NodeKind.NULL && test.resolvedType !== null && test.resolvedType !== Skew.Type.DYNAMIC && test.resolvedType.isReference()) {
+      node.become(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_AND, test.remove(), trueValue.remove()));
+      return;
     }
 
     // "a ? a : b" => "a || b"
@@ -5163,29 +5222,27 @@
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleBlock = function(node) {
-    for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
+    for (var child = node.firstChild(), next = null; child !== null; child = next) {
+      var previous = child.previousSibling();
+      next = child.nextSibling();
+
       switch (child.kind) {
+        case Skew.NodeKind.VARIABLES: {
+          if (previous !== null && previous.kind === Skew.NodeKind.VARIABLES) {
+            child.replaceWith(previous.remove().appendChildrenFrom(child));
+          }
+          break;
+        }
+
         case Skew.NodeKind.EXPRESSION: {
           if (child.expressionValue().hasNoSideEffects()) {
             child.remove();
           }
 
-          else {
-            while (true) {
-              var previous = child.previousSibling();
-
-              if (previous === null || previous.kind !== Skew.NodeKind.EXPRESSION) {
-                break;
-              }
-
-              child.become(Skew.Node.createExpression(Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.expressionValue().remove())));
-            }
-
-            var value = child.expressionValue();
-
-            if (value.kind === Skew.NodeKind.SEQUENCE) {
-              this._peepholeMangleSequence(value);
-            }
+          else if (previous !== null && previous.kind === Skew.NodeKind.EXPRESSION) {
+            var sequence = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.expressionValue().remove());
+            this._peepholeMangleSequence(sequence);
+            child.become(Skew.Node.createExpression(sequence));
           }
           break;
         }
@@ -5193,22 +5250,41 @@
         case Skew.NodeKind.RETURN: {
           if (child.returnValue() !== null) {
             while (true) {
-              var previous1 = child.previousSibling();
-
-              if (previous1 === null || previous1.kind !== Skew.NodeKind.IF || previous1.ifFalse() !== null) {
+              if (previous === null || previous.kind !== Skew.NodeKind.IF || previous.ifFalse() !== null) {
                 break;
               }
 
-              var statement = previous1.ifTrue().blockStatement();
+              var statement = previous.ifTrue().blockStatement();
 
               if (statement === null || statement.kind !== Skew.NodeKind.RETURN || statement.returnValue() === null) {
                 break;
               }
 
-              var hook = Skew.Node.createHook(previous1.remove().ifTest().remove(), statement.returnValue().remove(), child.returnValue().remove());
+              var hook = Skew.Node.createHook(previous.remove().ifTest().remove(), statement.returnValue().remove(), child.returnValue().remove());
               this._peepholeMangleHook(hook);
               child.become(Skew.Node.createReturn(hook));
+              previous = child.previousSibling();
             }
+          }
+          break;
+        }
+
+        case Skew.NodeKind.FOR: {
+          var setup = child.forSetup();
+
+          // "var a; for (;;) {}" => "for (var a;;) {}"
+          if (setup.isEmptySequence() && previous !== null && previous.kind === Skew.NodeKind.VARIABLES) {
+            setup.replaceWith(previous.remove().appendChildrenFrom(setup));
+          }
+
+          // "var a; for (var b;;) {}" => "for (var a, b;;) {}"
+          else if (setup.kind === Skew.NodeKind.VARIABLES && previous !== null && previous.kind === Skew.NodeKind.VARIABLES) {
+            setup.replaceWith(previous.remove().appendChildrenFrom(setup));
+          }
+
+          // "a; for (b;;) {}" => "for (a, b;;) {}"
+          else if (Skew.NodeKind.isExpression(setup.kind) && previous !== null && previous.kind === Skew.NodeKind.EXPRESSION) {
+            setup.replaceWith(Skew.Node.createSequence2(previous.remove().expressionValue().remove(), setup.cloneAndStealChildren()));
           }
           break;
         }
@@ -5376,10 +5452,6 @@
   };
 
   Skew.JavaScriptEmitter._mangleName = function(symbol) {
-    if (symbol === null) {
-      return "(NULL!)";
-    }
-
     if (symbol.isPrimaryConstructor()) {
       symbol = symbol.parent;
     }
@@ -6795,9 +6867,8 @@
   Skew.Node.prototype.forSetup = function() {
     assert(this.kind === Skew.NodeKind.FOR);
     assert(this.childCount() === 4);
-    var setup = this._firstChild;
-    assert(Skew.NodeKind.isExpression(setup.kind) || setup.kind === Skew.NodeKind.VARIABLES);
-    return setup.isEmptySequence() ? null : setup;
+    assert(Skew.NodeKind.isExpression(this._firstChild.kind) || this._firstChild.kind === Skew.NodeKind.VARIABLES);
+    return this._firstChild;
   };
 
   Skew.Node.prototype.forTest = function() {
@@ -6810,9 +6881,8 @@
   Skew.Node.prototype.forUpdate = function() {
     assert(this.kind === Skew.NodeKind.FOR);
     assert(this.childCount() === 4);
-    var update = this._lastChild._previousSibling;
-    assert(Skew.NodeKind.isExpression(update.kind));
-    return update.isEmptySequence() ? null : update;
+    assert(Skew.NodeKind.isExpression(this._lastChild._previousSibling.kind));
+    return this._lastChild._previousSibling;
   };
 
   Skew.Node.prototype.forBlock = function() {
