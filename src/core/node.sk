@@ -655,6 +655,11 @@ namespace Skew {
             return
           }
         }
+
+        case .SEQUENCE {
+          _lastChild.invertBooleanCondition(cache)
+          return
+        }
       }
 
       become(createUnary(.NOT, cloneAndStealChildren).withType(cache.boolType))

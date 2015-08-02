@@ -733,5 +733,25 @@ class Foo {
 })();
 ").jsMangle
 
+# Test a loop special case
+test("
+@export
+def main {
+  while true {
+    dynamic.a()
+    if dynamic.b {
+      break
+    }
+  }
+}
+", "
+(function() {
+  main = function() {
+    for (; a(), !b; ) {
+    }
+  };
+})();
+").jsMangle
+
   }
 }

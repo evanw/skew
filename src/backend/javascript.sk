@@ -839,7 +839,10 @@ namespace Skew {
       var braces = BracesMode.CAN_OMIT_BRACES
       if falseBlock != null {
         var statement = trueBlock.blockStatement
-        if statement != null && (statement.kind == .IF || statement.kind == .FOR || statement.kind == .FOREACH || statement.kind == .WHILE) {
+        if statement != null && (statement.kind == .IF ||
+            statement.kind == .FOR && statement.forBlock.blockStatement != null ||
+            statement.kind == .FOREACH && statement.foreachBlock.blockStatement != null ||
+            statement.kind == .WHILE && statement.whileBlock.blockStatement != null) {
           braces = .MUST_KEEP_BRACES
         }
       }
@@ -1447,7 +1450,7 @@ namespace Skew {
 
       # "(a, b) || c" => "a, b || c"
       # "(a, b) && c" => "a, b && c"
-      if (kind == .LOGICAL_OR || kind == .LOGICAL_AND) && left.kind == .SEQUENCE && left.hasChildren {
+      if (kind == .LOGICAL_OR || kind == .LOGICAL_AND) && left.kind == .SEQUENCE {
         var binary = Node.createBinary(kind, left.lastChild.cloneAndStealChildren, right.remove)
         _peepholeMangleBinary(binary)
         left.lastChild.replaceWith(binary)
@@ -1558,6 +1561,11 @@ namespace Skew {
         return .SWAP
       }
 
+      # "if (a, !b) c; else d;" => "if (a, b) d; else c;"
+      if node.kind == .SEQUENCE {
+        return _peepholeMangleBoolean(node.lastChild, canSwap)
+      }
+
       return .NO_SWAP
     }
 
@@ -1629,13 +1637,34 @@ namespace Skew {
       _peepholeMangleBoolean(test.remove, .NO_SWAP)
 
       # "while (a) {}" => "for (; a;) {}"
-      # "while (true) {}" => "for (;;) {}"
-      node.become(Node.createFor(Node.createSequence, test.kind == .NOT && test.unaryValue.isInt && test.unaryValue.asInt == 0 ?
-        Node.createSequence : test, Node.createSequence, block.remove))
+      var loop = Node.createFor(Node.createSequence, test, Node.createSequence, block.remove).withRange(node.range)
+      _peepholeMangleFor(loop)
+      node.become(loop)
     }
 
     def _peepholeMangleFor(node Node) {
-      _peepholeMangleBoolean(node.forTest, .NO_SWAP)
+      var test = node.forTest
+      _peepholeMangleBoolean(test, .NO_SWAP)
+
+      # "for (; true;) {}" => "for (;;) {}"
+      if test.kind == .NOT && test.unaryValue.isInt && test.unaryValue.asInt == 0 {
+        var empty = Node.createSequence
+        test.replaceWith(empty)
+        test = empty
+      }
+
+      # "for (a;;) if (b) break;" => "for (a; b;) {}"
+      if test.isEmptySequence && node.forUpdate.isEmptySequence {
+        var statement = node.forBlock.blockStatement
+        if statement != null && statement.kind == .IF && statement.ifFalse == null {
+          var branch = statement.ifTrue.blockStatement
+          if branch != null && branch.kind == .BREAK {
+            var condition = statement.remove.ifTest.remove
+            condition.invertBooleanCondition(_cache)
+            test.replaceWith(condition)
+          }
+        }
+      }
     }
 
     def _peepholeMangleHook(node Node) {
@@ -1832,7 +1861,7 @@ namespace Skew {
                     child.appendChild(block)
                     assert(block == child.ifFalse)
                   } else {
-                    return
+                    return # Returning here is fine because this is the last child
                   }
 
                   # Move the rest of this block into the block for the if statement

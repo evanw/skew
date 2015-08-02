@@ -4365,7 +4365,7 @@
     if (falseBlock !== null) {
       var statement = trueBlock.blockStatement();
 
-      if (statement !== null && (statement.kind === Skew.NodeKind.IF || statement.kind === Skew.NodeKind.FOR || statement.kind === Skew.NodeKind.FOREACH || statement.kind === Skew.NodeKind.WHILE)) {
+      if (statement !== null && (statement.kind === Skew.NodeKind.IF || statement.kind === Skew.NodeKind.FOR && statement.forBlock().blockStatement() !== null || statement.kind === Skew.NodeKind.FOREACH && statement.foreachBlock().blockStatement() !== null || statement.kind === Skew.NodeKind.WHILE && statement.whileBlock().blockStatement() !== null)) {
         braces = Skew.JavaScriptEmitter.BracesMode.MUST_KEEP_BRACES;
       }
     }
@@ -5075,7 +5075,7 @@
 
     // "(a, b) || c" => "a, b || c"
     // "(a, b) && c" => "a, b && c"
-    if ((kind === Skew.NodeKind.LOGICAL_OR || kind === Skew.NodeKind.LOGICAL_AND) && left.kind === Skew.NodeKind.SEQUENCE && left.hasChildren()) {
+    if ((kind === Skew.NodeKind.LOGICAL_OR || kind === Skew.NodeKind.LOGICAL_AND) && left.kind === Skew.NodeKind.SEQUENCE) {
       var binary = Skew.Node.createBinary(kind, left.lastChild().cloneAndStealChildren(), right.remove());
       this._peepholeMangleBinary(binary);
       left.lastChild().replaceWith(binary);
@@ -5187,6 +5187,11 @@
       return Skew.JavaScriptEmitter.BooleanSwap.SWAP;
     }
 
+    // "if (a, !b) c; else d;" => "if (a, b) d; else c;"
+    if (node.kind === Skew.NodeKind.SEQUENCE) {
+      return this._peepholeMangleBoolean(node.lastChild(), canSwap);
+    }
+
     return Skew.JavaScriptEmitter.BooleanSwap.NO_SWAP;
   };
 
@@ -5259,12 +5264,36 @@
     this._peepholeMangleBoolean(test.remove(), Skew.JavaScriptEmitter.BooleanSwap.NO_SWAP);
 
     // "while (a) {}" => "for (; a;) {}"
-    // "while (true) {}" => "for (;;) {}"
-    node.become(Skew.Node.createFor(new Skew.Node(Skew.NodeKind.SEQUENCE), test.kind === Skew.NodeKind.NOT && test.unaryValue().isInt() && test.unaryValue().asInt() === 0 ? new Skew.Node(Skew.NodeKind.SEQUENCE) : test, new Skew.Node(Skew.NodeKind.SEQUENCE), block.remove()));
+    var loop = Skew.Node.createFor(new Skew.Node(Skew.NodeKind.SEQUENCE), test, new Skew.Node(Skew.NodeKind.SEQUENCE), block.remove()).withRange(node.range);
+    this._peepholeMangleFor(loop);
+    node.become(loop);
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleFor = function(node) {
-    this._peepholeMangleBoolean(node.forTest(), Skew.JavaScriptEmitter.BooleanSwap.NO_SWAP);
+    var test = node.forTest();
+    this._peepholeMangleBoolean(test, Skew.JavaScriptEmitter.BooleanSwap.NO_SWAP);
+
+    // "for (; true;) {}" => "for (;;) {}"
+    if (test.kind === Skew.NodeKind.NOT && test.unaryValue().isInt() && test.unaryValue().asInt() === 0) {
+      var empty = new Skew.Node(Skew.NodeKind.SEQUENCE);
+      test.replaceWith(empty);
+      test = empty;
+    }
+
+    // "for (a;;) if (b) break;" => "for (a; b;) {}"
+    if (test.isEmptySequence() && node.forUpdate().isEmptySequence()) {
+      var statement = node.forBlock().blockStatement();
+
+      if (statement !== null && statement.kind === Skew.NodeKind.IF && statement.ifFalse() === null) {
+        var branch = statement.ifTrue().blockStatement();
+
+        if (branch !== null && branch.kind === Skew.NodeKind.BREAK) {
+          var condition = statement.remove().ifTest().remove();
+          condition.invertBooleanCondition(this._cache);
+          test.replaceWith(condition);
+        }
+      }
+    }
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleHook = function(node) {
@@ -5473,6 +5502,7 @@
                 }
 
                 else {
+                  // Returning here is fine because this is the last child
                   return;
                 }
 
@@ -6870,6 +6900,11 @@
           return;
         }
         break;
+      }
+
+      case Skew.NodeKind.SEQUENCE: {
+        this._lastChild.invertBooleanCondition(cache);
+        return;
       }
     }
 
