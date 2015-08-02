@@ -13,8 +13,8 @@ namespace Skew {
 
         var function = symbol.asFunctionSymbol
         function.kind = .FUNCTION_GLOBAL
-        function.arguments.prepend(function.self)
-        function.self = null
+        function.arguments.prepend(function.this)
+        function.this = null
 
         # Update all call sites
         for callSite in info.callSites {
@@ -22,8 +22,8 @@ namespace Skew {
 
           # Rewrite "super(foo)" to "bar(self, foo)"
           if value.kind == .SUPER {
-            var self = callSite.enclosingSymbol.asFunctionSymbol.self
-            value.replaceWith(Node.createSymbolReference(self))
+            var this = callSite.enclosingSymbol.asFunctionSymbol.this
+            value.replaceWith(Node.createSymbolReference(this))
           }
 
           # Rewrite "self.foo(bar)" to "foo(self, bar)"

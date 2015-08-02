@@ -616,10 +616,10 @@ namespace Skew.Resolving {
       # Referencing a normal variable instead of a special node kind for "this"
       # makes many things much easier including lambda capture and devirtualization
       if symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR {
-        symbol.self = VariableSymbol.new(.VARIABLE_ARGUMENT, "self")
-        symbol.self.flags |= Symbol.IS_CONST
-        symbol.self.resolvedType = cache.parameterize(symbol.parent.resolvedType)
-        symbol.self.state = .INITIALIZED
+        symbol.this = VariableSymbol.new(.VARIABLE_ARGUMENT, "self")
+        symbol.this.flags |= Symbol.IS_CONST
+        symbol.this.resolvedType = cache.parameterize(symbol.parent.resolvedType)
+        symbol.this.state = .INITIALIZED
       }
 
       # Lazily-initialize automatically generated functions
@@ -792,11 +792,11 @@ namespace Skew.Resolving {
             argument.range = variable.range
             symbol.arguments.append(argument)
             block.appendChild(Node.createExpression(Node.createBinary(.ASSIGN,
-              Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
+              Node.createMemberReference(Node.createSymbolReference(symbol.this), variable),
               Node.createSymbolReference(argument)).withRange(variable.range)))
           } else {
             block.appendChild(Node.createExpression(Node.createBinary(.ASSIGN,
-              Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
+              Node.createMemberReference(Node.createSymbolReference(symbol.this), variable),
               variable.value).withRange(variable.range)))
             variable.value = null
           }
@@ -840,8 +840,8 @@ namespace Skew.Resolving {
       initializeSymbol(symbol)
 
       var scope = LocalScope.new(symbol.scope, .NORMAL)
-      if symbol.self != null {
-        scope.define(symbol.self, log)
+      if symbol.this != null {
+        scope.define(symbol.this, log)
       }
 
       # Default values for argument variables aren't resolved with this local
@@ -877,7 +877,7 @@ namespace Skew.Resolving {
 
               if variable.value != null {
                 block.insertChildBefore(first, Node.createExpression(Node.createBinary(.ASSIGN,
-                  Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
+                  Node.createMemberReference(Node.createSymbolReference(symbol.this), variable),
                   variable.value)))
                 variable.value = null
               }
@@ -2249,7 +2249,7 @@ namespace Skew.Resolving {
 
       # Automatically insert "self." before instance symbols
       if symbol.kind.isOnInstances {
-        var variable = enclosingFunction != null ? enclosingFunction.symbol.self : null
+        var variable = enclosingFunction != null ? enclosingFunction.symbol.this : null
         if variable != null {
           node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range))
         } else {

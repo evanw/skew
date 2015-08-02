@@ -270,7 +270,7 @@ namespace Skew {
     var overloaded OverloadedFunctionSymbol = null
     var parameters List<ParameterSymbol> = null
     var arguments List<VariableSymbol> = []
-    var self VariableSymbol = null # For instance functions and constructors
+    var this VariableSymbol = null # For instance functions and constructors
     var argumentOnlyType Type = null # For quickly comparing the argument types of two function symbols
     var returnType Node = null
     var block Node = null

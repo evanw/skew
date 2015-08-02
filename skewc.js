@@ -584,8 +584,8 @@
       if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind === Skew.SymbolKind.OBJECT_ENUM || symbol.parent.isImported() && !symbol.isImported() || !symbol.isImportedOrExported() && virtualLookup !== null && !virtualLookup.isVirtual(symbol))) {
         var $function = symbol.asFunctionSymbol();
         $function.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
-        $function.$arguments.unshift($function.self);
-        $function.self = null;
+        $function.$arguments.unshift($function.$this);
+        $function.$this = null;
 
         // Update all call sites
         for (var i = 0, list = info.callSites, count = list.length; i < count; ++i) {
@@ -594,8 +594,8 @@
 
           // Rewrite "super(foo)" to "bar(self, foo)"
           if (value.kind === Skew.NodeKind.SUPER) {
-            var self = callSite.enclosingSymbol.asFunctionSymbol().self;
-            value.replaceWith(Skew.Node.createSymbolReference(self));
+            var $this = callSite.enclosingSymbol.asFunctionSymbol().$this;
+            value.replaceWith(Skew.Node.createSymbolReference($this));
           }
 
           // Rewrite "self.foo(bar)" to "foo(self, bar)"
@@ -1474,9 +1474,9 @@
     }
 
     // C# has sane capture rules for "this" so no variable insertion is needed
-    if (symbol.self !== null) {
-      symbol.self.name = 'this';
-      symbol.self.flags |= Skew.Symbol.IS_EXPORTED;
+    if (symbol.$this !== null) {
+      symbol.$this.name = 'this';
+      symbol.$this.flags |= Skew.Symbol.IS_EXPORTED;
     }
 
     this._emitNewlineBeforeSymbol(symbol);
@@ -2476,9 +2476,9 @@
     }
 
     // We can't use lambdas in C++ since they don't have the right semantics so no variable insertion is needed
-    if (symbol.self !== null) {
-      symbol.self.name = 'this';
-      symbol.self.flags |= Skew.Symbol.IS_EXPORTED;
+    if (symbol.$this !== null) {
+      symbol.$this.name = 'this';
+      symbol.$this.flags |= Skew.Symbol.IS_EXPORTED;
     }
 
     this._emitNewlineBeforeSymbol(symbol, mode);
@@ -3635,10 +3635,10 @@
       // Explicitly add function arguments since they won't be reached by
       // normal tree traversal
       if (Skew.SymbolKind.isFunction(symbol.kind)) {
-        var context = symbol.asFunctionSymbol().self;
+        var $this = symbol.asFunctionSymbol().$this;
 
-        if (context !== null) {
-          this._allocateNamingGroupIndex(context);
+        if ($this !== null) {
+          this._allocateNamingGroupIndex($this);
         }
 
         for (var i = 0, list = symbol.asFunctionSymbol().$arguments, count = list.length; i < count; ++i) {
@@ -4495,7 +4495,7 @@
         this._emit('(');
 
         if (call) {
-          this._emit(Skew.JavaScriptEmitter._mangleName(this._enclosingFunction.self));
+          this._emit(Skew.JavaScriptEmitter._mangleName(this._enclosingFunction.$this));
         }
 
         for (var child = value.nextSibling(); child !== null; child = child.nextSibling()) {
@@ -4716,28 +4716,57 @@
     // Scan over child functions
     var isPrimaryConstructor = true;
     in_List.removeIf(symbol.functions, function($function) {
+      var block = $function.block;
+      var $this = $function.$this;
       self._allocateNamingGroupIndex($function);
 
       // Check to see if we need an explicit "self" parameter while patching the block
       self._needsSelf = false;
-      self._currentSelf = $function.self;
+      self._currentSelf = $this;
       self._enclosingFunction = $function;
-      self._patchNode($function.block);
+      self._patchNode(block);
       self._enclosingFunction = null;
 
       // Only insert the "self" variable if required to handle capture inside lambdas
       if (self._needsSelf) {
-        self._unionVariableWithFunction($function.self, $function);
+        self._unionVariableWithFunction($this, $function);
 
-        if ($function.block !== null) {
-          $function.self.value = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('this'));
-          $function.block.prependChild(new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable($function.self)));
+        if (block !== null) {
+          var variable = Skew.Node.createVariable($this);
+          var merged = false;
+          $this.value = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('this'));
+
+          // When mangling, add the "self" variable to an existing variable statement if present
+          if (self._mangle && block.hasChildren()) {
+            var firstChild = block.firstChild();
+
+            if (firstChild.kind === Skew.NodeKind.VARIABLES) {
+              firstChild.prependChild(variable);
+              merged = true;
+            }
+
+            else if (firstChild.kind === Skew.NodeKind.FOR) {
+              if (firstChild.forSetup().kind === Skew.NodeKind.VARIABLES) {
+                firstChild.forSetup().prependChild(variable);
+                merged = true;
+              }
+
+              else if (firstChild.forSetup().isEmptySequence()) {
+                firstChild.forSetup().replaceWith(new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(variable));
+                merged = true;
+              }
+            }
+          }
+
+          if (!merged) {
+            block.prependChild(new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(variable));
+          }
         }
       }
 
-      else if ($function.self !== null) {
-        $function.self.name = 'this';
-        $function.self.flags |= Skew.Symbol.IS_EXPORTED;
+      else if ($this !== null) {
+        $this.name = 'this';
+        $this.flags |= Skew.Symbol.IS_EXPORTED;
       }
 
       for (var i = 0, list = $function.$arguments, count = list.length; i < count; ++i) {
@@ -9409,7 +9438,7 @@
     this.overloaded = null;
     this.parameters = null;
     this.$arguments = [];
-    this.self = null;
+    this.$this = null;
     this.argumentOnlyType = null;
     this.returnType = null;
     this.block = null;
@@ -13071,10 +13100,10 @@
     // Referencing a normal variable instead of a special node kind for "this"
     // makes many things much easier including lambda capture and devirtualization
     if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE || symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
-      symbol.self = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, 'self');
-      symbol.self.flags |= Skew.Symbol.IS_CONST;
-      symbol.self.resolvedType = this.cache.parameterize(symbol.parent.resolvedType);
-      symbol.self.state = Skew.SymbolState.INITIALIZED;
+      symbol.$this = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, 'self');
+      symbol.$this.flags |= Skew.Symbol.IS_CONST;
+      symbol.$this.resolvedType = this.cache.parameterize(symbol.parent.resolvedType);
+      symbol.$this.state = Skew.SymbolState.INITIALIZED;
     }
 
     // Lazily-initialize automatically generated functions
@@ -13277,11 +13306,11 @@
           argument1.state = Skew.SymbolState.INITIALIZED;
           argument1.range = variable1.range;
           symbol.$arguments.push(argument1);
-          block.appendChild(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable1), Skew.Node.createSymbolReference(argument1)).withRange(variable1.range)));
+          block.appendChild(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable1), Skew.Node.createSymbolReference(argument1)).withRange(variable1.range)));
         }
 
         else {
-          block.appendChild(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable1), variable1.value).withRange(variable1.range)));
+          block.appendChild(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable1), variable1.value).withRange(variable1.range)));
           variable1.value = null;
         }
       }
@@ -13325,8 +13354,8 @@
     this.initializeSymbol(symbol);
     var scope = new Skew.LocalScope(symbol.scope, Skew.LocalType.NORMAL);
 
-    if (symbol.self !== null) {
-      scope.define(symbol.self, this.log);
+    if (symbol.$this !== null) {
+      scope.define(symbol.$this, this.log);
     }
 
     // Default values for argument variables aren't resolved with this local
@@ -13366,7 +13395,7 @@
             }
 
             if (variable.value !== null) {
-              block.insertChildBefore(first, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.self), variable), variable.value)));
+              block.insertChildBefore(first, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable), variable.value)));
               variable.value = null;
             }
           }
@@ -15033,7 +15062,7 @@
 
     // Automatically insert "self." before instance symbols
     if (Skew.SymbolKind.isOnInstances(symbol.kind)) {
-      var variable = enclosingFunction !== null ? enclosingFunction.symbol.self : null;
+      var variable = enclosingFunction !== null ? enclosingFunction.symbol.$this : null;
 
       if (variable !== null) {
         node.become(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name)).appendChild(Skew.Node.createSymbolReference(variable)).withRange(node.range));

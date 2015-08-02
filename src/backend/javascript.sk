@@ -237,9 +237,9 @@ namespace Skew {
         # Explicitly add function arguments since they won't be reached by
         # normal tree traversal
         if symbol.kind.isFunction {
-          var context = symbol.asFunctionSymbol.self
-          if context != null {
-            _allocateNamingGroupIndex(context)
+          var this = symbol.asFunctionSymbol.this
+          if this != null {
+            _allocateNamingGroupIndex(this)
           }
           for argument in symbol.asFunctionSymbol.arguments {
             _allocateNamingGroupIndex(argument)
@@ -938,7 +938,7 @@ namespace Skew {
           _emit("(")
 
           if call {
-            _emit(_mangleName(_enclosingFunction.self))
+            _emit(_mangleName(_enclosingFunction.this))
           }
 
           for child = value.nextSibling; child != null; child = child.nextSibling {
@@ -1125,25 +1125,49 @@ namespace Skew {
       # Scan over child functions
       var isPrimaryConstructor = true
       symbol.functions.removeIf(function => {
+        var block = function.block
+        var this = function.this
         _allocateNamingGroupIndex(function)
 
         # Check to see if we need an explicit "self" parameter while patching the block
         _needsSelf = false
-        _currentSelf = function.self
+        _currentSelf = this
         _enclosingFunction = function
-        _patchNode(function.block)
+        _patchNode(block)
         _enclosingFunction = null
 
         # Only insert the "self" variable if required to handle capture inside lambdas
         if _needsSelf {
-          _unionVariableWithFunction(function.self, function)
-          if function.block != null {
-            function.self.value = Node.createName("this")
-            function.block.prependChild(Node.createVariables.appendChild(Node.createVariable(function.self)))
+          _unionVariableWithFunction(this, function)
+          if block != null {
+            var variable = Node.createVariable(this)
+            var merged = false
+            this.value = Node.createName("this")
+
+            # When mangling, add the "self" variable to an existing variable statement if present
+            if _mangle && block.hasChildren {
+              var firstChild = block.firstChild
+              if firstChild.kind == .VARIABLES {
+                firstChild.prependChild(variable)
+                merged = true
+              } else if firstChild.kind == .FOR {
+                if firstChild.forSetup.kind == .VARIABLES {
+                  firstChild.forSetup.prependChild(variable)
+                  merged = true
+                } else if firstChild.forSetup.isEmptySequence {
+                  firstChild.forSetup.replaceWith(Node.createVariables.appendChild(variable))
+                  merged = true
+                }
+              }
+            }
+
+            if !merged {
+              block.prependChild(Node.createVariables.appendChild(variable))
+            }
           }
-        } else if function.self != null {
-          function.self.name = "this"
-          function.self.flags |= Symbol.IS_EXPORTED
+        } else if this != null {
+          this.name = "this"
+          this.flags |= Symbol.IS_EXPORTED
         }
 
         for argument in function.arguments {

@@ -221,9 +221,9 @@ namespace Skew {
       }
 
       # We can't use lambdas in C++ since they don't have the right semantics so no variable insertion is needed
-      if symbol.self != null {
-        symbol.self.name = "this"
-        symbol.self.flags |= Symbol.IS_EXPORTED
+      if symbol.this != null {
+        symbol.this.name = "this"
+        symbol.this.flags |= Symbol.IS_EXPORTED
       }
 
       _emitNewlineBeforeSymbol(symbol, mode)

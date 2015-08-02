@@ -667,5 +667,71 @@ def bar {
 })();
 ").jsMangle
 
+# Test mangling the "self" variable
+test("
+@export
+class Foo {
+  var x = 100
+
+  def foo fn() int {
+    var y = dynamic.get()
+    return => x + y
+  }
+
+  def bar fn() int {
+    var y = dynamic.get()
+    while true {
+      return => x + y
+    }
+  }
+
+  def baz fn() int {
+    while true {
+      return => x
+    }
+  }
+
+  def test fn() int {
+    return => x
+  }
+}
+", "
+(function() {
+  Foo = function() {
+    this.x = 100;
+  };
+
+  Foo.prototype.foo = function() {
+    var a = this, b = get();
+    return function() {
+      return a.x + b;
+    };
+  };
+
+  Foo.prototype.bar = function() {
+    for (var a = this, b = get(); ; ) {
+      return function() {
+        return a.x + b;
+      };
+    }
+  };
+
+  Foo.prototype.baz = function() {
+    for (var a = this; ; ) {
+      return function() {
+        return a.x;
+      };
+    }
+  };
+
+  Foo.prototype.test = function() {
+    var a = this;
+    return function() {
+      return a.x;
+    };
+  };
+})();
+").jsMangle
+
   }
 }
