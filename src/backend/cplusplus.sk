@@ -530,8 +530,7 @@ namespace Skew {
           var value = node.foreachValue
           _emit(_indent + "for (")
           _emitType(symbol.resolvedType, .DECLARATION)
-          _emit(_mangleName(symbol))
-          _emit(" : ")
+          _emit(_mangleName(symbol) + " : ")
           if value.resolvedType.isReference {
             _emit("*")
             _emitExpression(value, .UNARY_PREFIX)
@@ -579,7 +578,7 @@ namespace Skew {
         case .BOOL { _emit(content.asBool.toString) }
         case .INT { _emit(content.asInt.toString) }
         case .DOUBLE { _emit(content.asDouble.toString) }
-        case .STRING { _emit(quoteString(content.asString, '"') + "_s") }
+        case .STRING { _emit(quoteString(content.asString, .DOUBLE) + "_s") }
       }
     }
 

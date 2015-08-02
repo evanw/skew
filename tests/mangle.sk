@@ -85,7 +85,38 @@ def main(foo string) {
 ", "
 (function() {
   main = function(a) {
-    ~a.indexOf(\"foo\") && bar();
+    ~a.indexOf('foo') && bar();
+  };
+})();
+").jsMangle.inlineAllFunctions.foldAllConstants
+
+# Test index to member conversions
+test("
+@export
+def foo(map StringMap<int>) {
+  dynamic.test(map[\"x\"])
+  dynamic.test(map[\"_\"])
+  dynamic.test(map[\"0\"])
+  dynamic.test(map[\"x0\"])
+  dynamic.test(map[\"if\"])
+}
+
+@export
+def bar(map StringMap<int>) {
+  map[\"x\"] = dynamic.test()
+  map[\"_\"] = dynamic.test()
+  map[\"0\"] = dynamic.test()
+  map[\"x0\"] = dynamic.test()
+  map[\"if\"] = dynamic.test()
+}
+", "
+(function() {
+  foo = function(a) {
+    test(a.x), test(a._), test(a['0']), test(a.x0), test(a['if']);
+  };
+
+  bar = function(a) {
+    a.x = test(), a._ = test(), a['0'] = test(), a.x0 = test(), a['if'] = test();
   };
 })();
 ").jsMangle.inlineAllFunctions.foldAllConstants

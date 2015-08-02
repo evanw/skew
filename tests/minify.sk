@@ -1,6 +1,16 @@
 namespace Skew.Tests {
   def testMinify {
 
+# Strings should be emitted using the shortest representation
+test("
+@export
+def main {
+  dynamic.a(\"'\" + \"\\\"\")
+}
+", "
+(function(){main=function(){a(\"'\"+'\"')}})();
+").jsMinify
+
 # Check for various whitespace issues
 test("
 @export

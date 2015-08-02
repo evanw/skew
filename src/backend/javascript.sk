@@ -868,7 +868,7 @@ namespace Skew {
         case .BOOL { _emit(content.asBool.toString) }
         case .INT { _emit(content.asInt.toString) }
         case .DOUBLE { _emit(content.asDouble.toString) }
-        case .STRING { _emit(quoteString(content.asString, '"')) }
+        case .STRING { _emit(quoteString(content.asString, .SHORTEST)) }
       }
     }
 
@@ -1269,6 +1269,18 @@ namespace Skew {
           }
         }
 
+        case .ASSIGN_INDEX {
+          if _mangle {
+            _peepholeMangleAssignIndex(node)
+          }
+        }
+
+        case .INDEX {
+          if _mangle {
+            _peepholeMangleIndex(node)
+          }
+        }
+
         case .BLOCK {
           if _mangle {
             _peepholeMangleBlock(node)
@@ -1646,6 +1658,26 @@ namespace Skew {
       }
     }
 
+    def _peepholeMangleAssignIndex(node Node) {
+      var left = node.assignIndexLeft
+      var center = node.assignIndexCenter
+      var right = node.assignIndexRight
+
+      if _isIdentifierString(center) {
+        node.become(Node.createBinary(.ASSIGN, Node.createDot(left.remove, center.asString).withRange(
+          Range.span(left.range, center.range)), right.remove).withRange(node.range))
+      }
+    }
+
+    def _peepholeMangleIndex(node Node) {
+      var left = node.indexLeft
+      var right = node.indexRight
+
+      if _isIdentifierString(right) {
+        node.become(Node.createDot(left.remove, right.asString).withRange(node.range).withType(node.resolvedType))
+      }
+    }
+
     def _peepholeMangleBlock(node Node) {
       for child = node.firstChild, next Node = null; child != null; child = next {
         var previous = child.previousSibling
@@ -1755,6 +1787,20 @@ namespace Skew {
 
     def _canDecrement(value int) bool {
       return value >= -0x7FFFFFFF
+    }
+
+    def _isIdentifierString(node Node) bool {
+      if node.isString {
+        var value = node.asString
+        for i in 0..value.count {
+          var c = value[i]
+          if (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && c != '_' && c != '$' && (i == 0 || c < '0' || c > '9') {
+            return false
+          }
+        }
+        return value != "" && !(value in _isKeyword)
+      }
+      return false
     }
 
     def _singleIf(block Node) Node {

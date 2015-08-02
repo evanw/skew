@@ -26,8 +26,8 @@ namespace Skew {
       var sourceContents List<string> = []
 
       for source in _sources {
-        sourceNames.append(quoteString(source.name, '"'))
-        sourceContents.append(quoteString(source.contents, '"'))
+        sourceNames.append(quoteString(source.name, .DOUBLE))
+        sourceContents.append(quoteString(source.contents, .DOUBLE))
       }
 
       var builder = StringBuilder.new

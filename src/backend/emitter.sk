@@ -130,9 +130,28 @@ namespace Skew {
 
   const HEX = "0123456789ABCDEF"
 
-  def quoteString(text string, quote int) string {
+  enum QuoteStyle {
+    DOUBLE
+    SINGLE
+    SHORTEST
+  }
+
+  def quoteString(text string, style QuoteStyle) string {
+    # Use whichever quote character is less frequent
+    if style == .SHORTEST {
+      var singleQuotes = 0
+      var doubleQuotes = 0
+      for i in 0..text.count {
+        var c = text[i]
+        if c == '"' { doubleQuotes++ }
+        else if c == '\'' { singleQuotes++ }
+      }
+      style = singleQuotes <= doubleQuotes ? .SINGLE : .DOUBLE
+    }
+
     var builder = StringBuilder.new
-    var quoteString = string.fromCodeUnit(quote)
+    var quoteString = style == .SINGLE ? "'" : "\""
+    var quote = style == .SINGLE ? '\'' : '"'
     var escaped = ""
     var start = 0 # Append long runs of unescaped characters using a single slice for speed
     builder.append(quoteString)
