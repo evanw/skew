@@ -1263,12 +1263,6 @@ namespace Skew {
           _patchBinaryArithmetic(node)
         }
 
-        case .GREATER_THAN_OR_EQUAL, .LESS_THAN_OR_EQUAL {
-          if _mangle {
-            _peepholeMangleBinaryRelational(node)
-          }
-        }
-
         case .ASSIGN_INDEX {
           if _mangle {
             _peepholeMangleAssignIndex(node)
@@ -1340,6 +1334,12 @@ namespace Skew {
 
         case .VARIABLE {
           _unionVariableWithFunction(symbol, _enclosingFunction)
+        }
+
+        default {
+          if _mangle && kind.isBinary {
+            _peepholeMangleBinary(node)
+          }
         }
       }
     }
@@ -1415,13 +1415,23 @@ namespace Skew {
       }
     }
 
-    def _peepholeMangleBinaryRelational(node Node) {
-      assert(node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL)
-
+    def _peepholeMangleBinary(node Node) {
+      var kind = node.kind
       var left = node.binaryLeft
       var right = node.binaryRight
 
-      if _cache.isInteger(left.resolvedType) && _cache.isInteger(right.resolvedType) {
+      # "a + (b + c)" => "(a + b) + c"
+      if kind.isBinaryAssociative && right.kind == kind {
+        while true {
+          node.rotateBinaryRightToLeft
+          node = node.binaryLeft
+          if !node.kind.isBinaryAssociative || node.binaryRight.kind != node.kind {
+            break
+          }
+        }
+      }
+
+      else if (kind == .GREATER_THAN_OR_EQUAL || kind == .LESS_THAN_OR_EQUAL) && _cache.isInteger(left.resolvedType) && _cache.isInteger(right.resolvedType) {
         if left.isInt {
           var value = left.asInt
 
@@ -1565,6 +1575,16 @@ namespace Skew {
       else if trueStatement != null && trueStatement.kind == .EXPRESSION {
         node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.remove, trueStatement.expressionValue.remove)))
       }
+
+      # "if (a) if (b) c;" => "if (a && b) c;"
+      else {
+        var singleIf = _singleIf(trueBlock)
+        if singleIf != null && singleIf.ifFalse == null {
+          var block = singleIf.ifTrue
+          test.replaceWith(Node.createBinary(.LOGICAL_AND, test.cloneAndStealChildren, singleIf.ifTest.remove))
+          trueBlock.replaceWith(block.remove)
+        }
+      }
     }
 
     def _peepholeMangleWhile(node Node) {
@@ -1627,8 +1647,11 @@ namespace Skew {
         var falseFalseValue = falseValue.hookFalse
 
         # "a ? b : c ? b : d" => "a || c ? b : d"
+        # "a ? b : c || d ? b : e" => "a || c || d ? b : e"
         if _looksTheSame(trueValue, falseTrueValue) {
-          test.replaceWith(Node.createBinary(.LOGICAL_OR, test.cloneAndStealChildren, falseTest.remove))
+          var both = Node.createBinary(.LOGICAL_OR, test.cloneAndStealChildren, falseTest.remove)
+          _peepholeMangleBinary(both)
+          test.replaceWith(both)
           falseValue.replaceWith(falseFalseValue.remove)
           _peepholeMangleHook(node)
           return

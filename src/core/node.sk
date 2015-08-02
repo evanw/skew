@@ -118,6 +118,16 @@ namespace Skew {
       return self as int >= ASSIGN as int && self as int <= ASSIGN_SUBTRACT as int
     }
 
+    # Note that add and multiply are NOT associative in finite-precision arithmetic
+    def isBinaryAssociative bool {
+      switch self {
+        case .BITWISE_AND, .BITWISE_OR, .BITWISE_XOR, .LOGICAL_AND, .LOGICAL_OR {
+          return true
+        }
+      }
+      return false
+    }
+
     def isBinaryComparison bool {
       return self as int >= GREATER_THAN as int && self as int <= LESS_THAN_OR_EQUAL as int
     }
@@ -644,6 +654,28 @@ namespace Skew {
       }
 
       become(createUnary(.NOT, cloneAndStealChildren).withType(cache.boolType))
+    }
+
+    # "a + (b + c)" => "(a + b) + c"
+    def rotateBinaryRightToLeft {
+      assert(kind == binaryRight.kind)
+
+      var left = binaryLeft
+      var right = binaryRight
+      var rightLeft = right.binaryLeft
+      var rightRight = right.binaryRight
+
+      # "a + (b + c)" => "(b + c) + a"
+      left.swapWith(right)
+
+      # "a + (b + c)" => "(c + b) + a"
+      rightLeft.swapWith(rightRight)
+
+      # "a + (b + c)" => "(a + c + b)"
+      right.prependChild(left.remove)
+
+      # "a + (b + c)" => "(a + b) + c"
+      appendChild(rightRight.remove)
     }
   }
 

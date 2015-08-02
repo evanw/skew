@@ -4865,14 +4865,6 @@
         break;
       }
 
-      case Skew.NodeKind.GREATER_THAN_OR_EQUAL:
-      case Skew.NodeKind.LESS_THAN_OR_EQUAL: {
-        if (this._mangle) {
-          this._peepholeMangleBinaryRelational(node);
-        }
-        break;
-      }
-
       case Skew.NodeKind.ASSIGN_INDEX: {
         if (this._mangle) {
           this._peepholeMangleAssignIndex(node);
@@ -4961,6 +4953,13 @@
         this._unionVariableWithFunction(symbol, this._enclosingFunction);
         break;
       }
+
+      default: {
+        if (this._mangle && Skew.NodeKind.isBinary(kind)) {
+          this._peepholeMangleBinary(node);
+        }
+        break;
+      }
     }
   };
 
@@ -5039,12 +5038,24 @@
     }
   };
 
-  Skew.JavaScriptEmitter.prototype._peepholeMangleBinaryRelational = function(node) {
-    assert(node.kind === Skew.NodeKind.GREATER_THAN_OR_EQUAL || node.kind === Skew.NodeKind.LESS_THAN_OR_EQUAL);
+  Skew.JavaScriptEmitter.prototype._peepholeMangleBinary = function(node) {
+    var kind = node.kind;
     var left = node.binaryLeft();
     var right = node.binaryRight();
 
-    if (this._cache.isInteger(left.resolvedType) && this._cache.isInteger(right.resolvedType)) {
+    // "a + (b + c)" => "(a + b) + c"
+    if (Skew.NodeKind.isBinaryAssociative(kind) && right.kind === kind) {
+      while (true) {
+        node.rotateBinaryRightToLeft();
+        node = node.binaryLeft();
+
+        if (!Skew.NodeKind.isBinaryAssociative(node.kind) || node.binaryRight().kind !== node.kind) {
+          break;
+        }
+      }
+    }
+
+    else if ((kind === Skew.NodeKind.GREATER_THAN_OR_EQUAL || kind === Skew.NodeKind.LESS_THAN_OR_EQUAL) && this._cache.isInteger(left.resolvedType) && this._cache.isInteger(right.resolvedType)) {
       if (left.isInt()) {
         var value = left.asInt();
 
@@ -5188,6 +5199,17 @@
     else if (trueStatement !== null && trueStatement.kind === Skew.NodeKind.EXPRESSION) {
       node.become(Skew.Node.createExpression(Skew.Node.createBinary(swapped === Skew.JavaScriptEmitter.BooleanSwap.SWAP ? Skew.NodeKind.LOGICAL_OR : Skew.NodeKind.LOGICAL_AND, test.remove(), trueStatement.expressionValue().remove())));
     }
+
+    // "if (a) if (b) c;" => "if (a && b) c;"
+    else {
+      var singleIf = Skew.JavaScriptEmitter._singleIf(trueBlock);
+
+      if (singleIf !== null && singleIf.ifFalse() === null) {
+        var block1 = singleIf.ifTrue();
+        test.replaceWith(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_AND, test.cloneAndStealChildren(), singleIf.ifTest().remove()));
+        trueBlock.replaceWith(block1.remove());
+      }
+    }
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleWhile = function(node) {
@@ -5249,8 +5271,11 @@
       var falseFalseValue = falseValue.hookFalse();
 
       // "a ? b : c ? b : d" => "a || c ? b : d"
+      // "a ? b : c || d ? b : e" => "a || c || d ? b : e"
       if (Skew.JavaScriptEmitter._looksTheSame(trueValue, falseTrueValue)) {
-        test.replaceWith(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test.cloneAndStealChildren(), falseTest.remove()));
+        var both = Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test.cloneAndStealChildren(), falseTest.remove());
+        this._peepholeMangleBinary(both);
+        test.replaceWith(both);
         falseValue.replaceWith(falseFalseValue.remove());
         this._peepholeMangleHook(node);
         return;
@@ -6101,6 +6126,21 @@
     return self >= Skew.NodeKind.ASSIGN && self <= Skew.NodeKind.ASSIGN_SUBTRACT;
   };
 
+  // Note that add and multiply are NOT associative in finite-precision arithmetic
+  Skew.NodeKind.isBinaryAssociative = function(self) {
+    switch (self) {
+      case Skew.NodeKind.BITWISE_AND:
+      case Skew.NodeKind.BITWISE_OR:
+      case Skew.NodeKind.BITWISE_XOR:
+      case Skew.NodeKind.LOGICAL_AND:
+      case Skew.NodeKind.LOGICAL_OR: {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   Skew.NodeKind.isBinaryComparison = function(self) {
     return self >= Skew.NodeKind.GREATER_THAN && self <= Skew.NodeKind.LESS_THAN_OR_EQUAL;
   };
@@ -6685,6 +6725,27 @@
     }
 
     this.become(Skew.Node.createUnary(Skew.NodeKind.NOT, this.cloneAndStealChildren()).withType(cache.boolType));
+  };
+
+  // "a + (b + c)" => "(a + b) + c"
+  Skew.Node.prototype.rotateBinaryRightToLeft = function() {
+    assert(this.kind === this.binaryRight().kind);
+    var left = this.binaryLeft();
+    var right = this.binaryRight();
+    var rightLeft = right.binaryLeft();
+    var rightRight = right.binaryRight();
+
+    // "a + (b + c)" => "(b + c) + a"
+    left.swapWith(right);
+
+    // "a + (b + c)" => "(c + b) + a"
+    rightLeft.swapWith(rightRight);
+
+    // "a + (b + c)" => "(a + c + b)"
+    right.prependChild(left.remove());
+
+    // "a + (b + c)" => "(a + b) + c"
+    this.appendChild(rightRight.remove());
   };
 
   Skew.Node.createAnnotation = function(value, test) {
@@ -10700,14 +10761,9 @@
 
     // "a + (b + c)" => "(a + b) + c"
     if (right.kind === Skew.NodeKind.ADD) {
-      var rightLeft = right.binaryLeft();
-      var rightRight = right.binaryRight();
-      assert(rightLeft.resolvedType === this.cache.stringType || rightLeft.resolvedType === Skew.Type.DYNAMIC);
-      assert(rightRight.resolvedType === this.cache.stringType || rightRight.resolvedType === Skew.Type.DYNAMIC);
-      left.swapWith(right);
-      rightLeft.swapWith(rightRight);
-      right.prependChild(left.remove());
-      node.appendChild(rightRight.remove());
+      assert(right.binaryLeft().resolvedType === this.cache.stringType || right.binaryLeft().resolvedType === Skew.Type.DYNAMIC);
+      assert(right.binaryRight().resolvedType === this.cache.stringType || right.binaryRight().resolvedType === Skew.Type.DYNAMIC);
+      node.rotateBinaryRightToLeft();
     }
   };
 

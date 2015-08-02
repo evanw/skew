@@ -100,14 +100,9 @@ namespace Skew.Folding {
 
       # "a + (b + c)" => "(a + b) + c"
       if right.kind == .ADD {
-        var rightLeft = right.binaryLeft
-        var rightRight = right.binaryRight
-        assert(rightLeft.resolvedType == cache.stringType || rightLeft.resolvedType == .DYNAMIC)
-        assert(rightRight.resolvedType == cache.stringType || rightRight.resolvedType == .DYNAMIC)
-        left.swapWith(right)
-        rightLeft.swapWith(rightRight)
-        right.prependChild(left.remove)
-        node.appendChild(rightRight.remove)
+        assert(right.binaryLeft.resolvedType == cache.stringType || right.binaryLeft.resolvedType == .DYNAMIC)
+        assert(right.binaryRight.resolvedType == cache.stringType || right.binaryRight.resolvedType == .DYNAMIC)
+        node.rotateBinaryRightToLeft
       }
     }
 

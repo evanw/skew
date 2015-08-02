@@ -1,6 +1,37 @@
 namespace Skew.Tests {
   def testMangle {
 
+# Test associative operator rotation
+test("
+@export
+def foo {
+  dynamic.test(dynamic.a + (dynamic.b + dynamic.c))
+  dynamic.test(dynamic.a - (dynamic.b - dynamic.c))
+  dynamic.test(dynamic.a * (dynamic.b * dynamic.c))
+  dynamic.test(dynamic.a / (dynamic.b / dynamic.c))
+  dynamic.test(dynamic.a & (dynamic.b & dynamic.c))
+  dynamic.test(dynamic.a | (dynamic.b | dynamic.c))
+  dynamic.test(dynamic.a ^ (dynamic.b ^ dynamic.c))
+  dynamic.test(dynamic.a && (dynamic.b && dynamic.c))
+  dynamic.test(dynamic.a || (dynamic.b || dynamic.c))
+}
+
+@export
+def bar {
+  dynamic.test(dynamic.a & ((dynamic.b | dynamic.c) & (dynamic.d & (dynamic.e & dynamic.f))))
+}
+", "
+(function() {
+  foo = function() {
+    test(a + (b + c)), test(a - (b - c)), test(a * (b * c)), test(a / (b / c)), test(a & b & c), test(a | b | c), test(a ^ b ^ c), test(a && b && c), test(a || b || c);
+  };
+
+  bar = function() {
+    test(a & (b | c) & d & e & f);
+  };
+})();
+").jsMangle
+
 # Test if statement folding
 test("
 @export
@@ -30,10 +61,37 @@ def foo bool {
   if dynamic.e && dynamic.f { return true }
   return false
 }
+
+@export
+def bar bool {
+  if dynamic.a { return true }
+  else if dynamic.b && dynamic.c { return true }
+  else if dynamic.d { return true }
+  else if dynamic.e && dynamic.f { return true }
+  else { return false }
+}
+
+@export
+def baz bool {
+  if dynamic.a || dynamic.b {
+    if dynamic.c || dynamic.d {
+      return true
+    }
+  }
+  return false
+}
 ", "
 (function() {
   foo = function() {
     return a || b && c || d || e && f ? !0 : !1;
+  };
+
+  bar = function() {
+    return a || b && c || d || e && f ? !0 : !1;
+  };
+
+  baz = function() {
+    return (a || b) && (c || d) ? !0 : !1;
   };
 })();
 ").jsMangle
@@ -41,40 +99,102 @@ def foo bool {
 # Test integer comparison special cases
 test("
 @export
-def main(foo int, bar fn()) {
-  if foo < 1 { bar() }
-  if foo <= 1 { bar() }
-  if foo > 1 { bar() }
-  if foo >= 1 { bar() }
-  if foo == 1 { bar() }
-  if foo != 1 { bar() }
+def foo(bar int, baz fn()) {
+  if bar < 1 { baz() }
+  if bar <= 1 { baz() }
+  if bar > 1 { baz() }
+  if bar >= 1 { baz() }
+  if bar == 1 { baz() }
+  if bar != 1 { baz() }
+}
+
+@export
+def bar(foo int, baz fn()) {
+  if 1 < foo { baz() }
+  if 1 <= foo { baz() }
+  if 1 > foo { baz() }
+  if 1 >= foo { baz() }
+  if 1 == foo { baz() }
+  if 1 != foo { baz() }
 }
 ", "
 (function() {
-  main = function(a, b) {
+  foo = function(a, b) {
     a < 1 && b(), a < 2 && b(), a > 1 && b(), a > 0 && b(), a ^ 1 || b(), a ^ 1 && b();
   };
+
+  bar = function(a, b) {
+    1 < a && b(), 0 < a && b(), 1 > a && b(), 2 > a && b(), 1 ^ a || b(), 1 ^ a && b();
+  };
 })();
-").jsMangle.inlineAllFunctions
+").jsMangle
+
+# Test enum comparison special cases
+test("
+@export
+def foo(bar int, baz fn()) {
+  if bar == Foo.FOO { baz() }
+  if bar != Foo.FOO { baz() }
+  if bar == Foo.BAR { baz() }
+  if bar != Foo.BAR { baz() }
+}
+
+@export
+def bar(foo int, baz fn()) {
+  if Foo.FOO == foo { baz() }
+  if Foo.FOO != foo { baz() }
+  if Foo.BAR == foo { baz() }
+  if Foo.BAR != foo { baz() }
+}
+
+enum Foo {
+  FOO
+  BAR
+}
+", "
+(function() {
+  foo = function(a, b) {
+    a || b(), a && b(), a ^ 1 || b(), a ^ 1 && b();
+  };
+
+  bar = function(a, b) {
+    a || b(), a && b(), 1 ^ a || b(), 1 ^ a && b();
+  };
+})();
+").jsMangle.foldAllConstants
 
 # Doubles should not trigger integer comparison special cases
 test("
 @export
-def main(foo double, bar fn()) {
-  if foo < 1 { bar() }
-  if foo <= 1 { bar() }
-  if foo > 1 { bar() }
-  if foo >= 1 { bar() }
-  if foo == 1 { bar() }
-  if foo != 1 { bar() }
+def foo(bar double, baz fn()) {
+  if bar < 1 { baz() }
+  if bar <= 1 { baz() }
+  if bar > 1 { baz() }
+  if bar >= 1 { baz() }
+  if bar == 1 { baz() }
+  if bar != 1 { baz() }
+}
+
+@export
+def bar(foo double, baz fn()) {
+  if 1 < foo { baz() }
+  if 1 <= foo { baz() }
+  if 1 > foo { baz() }
+  if 1 >= foo { baz() }
+  if 1 == foo { baz() }
+  if 1 != foo { baz() }
 }
 ", "
 (function() {
-  main = function(a, b) {
+  foo = function(a, b) {
     a < 1 && b(), a <= 1 && b(), a > 1 && b(), a >= 1 && b(), a === 1 && b(), a !== 1 && b();
   };
+
+  bar = function(a, b) {
+    1 < a && b(), 1 <= a && b(), 1 > a && b(), 1 >= a && b(), 1 === a && b(), 1 !== a && b();
+  };
 })();
-").jsMangle.inlineAllFunctions
+").jsMangle
 
 # Test a special case for comparison with -1
 test("
@@ -120,6 +240,31 @@ def bar(map StringMap<int>) {
   };
 })();
 ").jsMangle.inlineAllFunctions.foldAllConstants
+
+# Test dead code elimination with constants
+test("
+enum Foo {
+  FOO
+  BAR
+  BAZ
+}
+
+const foo = Foo.BAZ
+
+@export
+def bar {
+  if foo == .FOO { dynamic.test(\"FOO\") }
+  else if foo == .BAR { dynamic.test(\"BAR\") }
+  else if foo == .BAZ { dynamic.test(\"BAZ\") }
+  else { dynamic.test(\"FAIL\") }
+}
+", "
+(function() {
+  bar = function() {
+    test('BAZ');
+  };
+})();
+").jsMangle.foldAllConstants
 
   }
 }
