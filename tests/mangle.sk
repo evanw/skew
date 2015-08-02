@@ -768,5 +768,25 @@ def bar {
 })();
 ").jsMangle
 
+# Test mangling the name of catch variables
+test("
+@export
+def foo {
+  try {
+  } catch foo dynamic {
+  }
+}
+", "
+(function() {
+  foo = function() {
+    try {
+    }
+
+    catch (a) {
+    }
+  };
+})();
+").jsMangle
+
   }
 }

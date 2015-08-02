@@ -1402,6 +1402,10 @@ namespace Skew {
         }
 
         node.insertChildAfter(tryBlock, Node.createCatch(variable, block))
+
+        # Make sure the new variable name is mangled
+        _allocateNamingGroupIndex(variable)
+        _unionVariableWithFunction(variable, _enclosingFunction)
       }
     }
 

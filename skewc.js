@@ -5022,6 +5022,10 @@
       }
 
       node.insertChildAfter(tryBlock, Skew.Node.createCatch(variable, block));
+
+      // Make sure the new variable name is mangled
+      this._allocateNamingGroupIndex(variable);
+      this._unionVariableWithFunction(variable, this._enclosingFunction);
     }
   };
 
