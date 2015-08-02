@@ -99,7 +99,7 @@ def baz bool {
 # More tests for if statement return folding
 test("
 @export
-def test(x dynamic) dynamic {
+def foo(x dynamic) dynamic {
   x.foo(1)
   if x.y {
     x.foo(2)
@@ -117,12 +117,23 @@ def test(x dynamic) dynamic {
     }
   }
 }
+
+@export
+def bar(x double) int {
+  if x < 0 { return 0 }
+  if x > 1 { return 1 }
+  return 2
+}
 ", "
 (function() {
-  test = function(a) {
+  foo = function(a) {
     if ((a.foo(1), a.y && (a.foo(2), a.y)) || (a.foo(3), a.y && (a.foo(4), a.y))) {
       return a.foo(0), a;
     }
+  };
+
+  bar = function(a) {
+    return a < 0 ? 0 : a > 1 ? 1 : 2;
   };
 })();
 ").jsMangle

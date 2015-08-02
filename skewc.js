@@ -5352,22 +5352,34 @@
         }
 
         case Skew.NodeKind.RETURN: {
-          // "if (a) return b; return c;" => "return a ? b : c;"
-          if (previous !== null && child.returnValue() !== null && previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null) {
-            var statement = previous.ifTrue().blockStatement();
+          while (previous !== null) {
+            // "if (a) return b; return c;" => "return a ? b : c;"
+            if (child.returnValue() !== null && previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null) {
+              var statement = previous.ifTrue().blockStatement();
 
-            if (statement !== null && statement.kind === Skew.NodeKind.RETURN && statement.returnValue() !== null) {
-              var hook = Skew.Node.createHook(previous.remove().ifTest().remove(), statement.returnValue().remove(), child.returnValue().remove());
-              this._peepholeMangleHook(hook);
-              child.become(Skew.Node.createReturn(hook));
+              if (statement !== null && statement.kind === Skew.NodeKind.RETURN && statement.returnValue() !== null) {
+                var hook = Skew.Node.createHook(previous.remove().ifTest().remove(), statement.returnValue().remove(), child.returnValue().remove());
+                this._peepholeMangleHook(hook);
+                child.become(Skew.Node.createReturn(hook));
+              }
+
+              else {
+                break;
+              }
             }
-          }
 
-          // "a; return b;" => "return a, b;"
-          else if (previous !== null && child.returnValue() !== null && previous.kind === Skew.NodeKind.EXPRESSION) {
-            var sequence1 = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.returnValue().remove());
-            this._peepholeMangleSequence(sequence1);
-            child.become(Skew.Node.createReturn(sequence1));
+            // "a; return b;" => "return a, b;"
+            else if (child.returnValue() !== null && previous.kind === Skew.NodeKind.EXPRESSION) {
+              var sequence1 = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.returnValue().remove());
+              this._peepholeMangleSequence(sequence1);
+              child.become(Skew.Node.createReturn(sequence1));
+            }
+
+            else {
+              break;
+            }
+
+            previous = child.previousSibling();
           }
           break;
         }
