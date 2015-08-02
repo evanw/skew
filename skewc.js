@@ -574,7 +574,7 @@
           // Rewrite "super(foo)" to "bar(self, foo)"
           if (value.kind === Skew.NodeKind.SUPER) {
             var self = callSite.enclosingSymbol.asFunctionSymbol().self;
-            value.replaceWith(new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(self.name)).withSymbol(self));
+            value.replaceWith(Skew.Node.createSymbolReference(self));
           }
 
           // Rewrite "self.foo(bar)" to "foo(self, bar)"
@@ -2284,12 +2284,8 @@
     this._previousSymbol = symbol;
   };
 
-  Skew.CPlusPlusEmitter.prototype._isCompactNodeKind = function(kind) {
-    return kind === Skew.NodeKind.EXPRESSION || kind === Skew.NodeKind.VARIABLE || Skew.NodeKind.isJump(kind);
-  };
-
   Skew.CPlusPlusEmitter.prototype._emitNewlineBeforeStatement = function(node) {
-    if (this._previousNode !== null && (node.comments !== null || !this._isCompactNodeKind(this._previousNode.kind) || !this._isCompactNodeKind(node.kind))) {
+    if (this._previousNode !== null && (node.comments !== null || !Skew.CPlusPlusEmitter._isCompactNodeKind(this._previousNode.kind) || !Skew.CPlusPlusEmitter._isCompactNodeKind(node.kind))) {
       this._emit("\n");
     }
 
@@ -3298,6 +3294,10 @@
         this._handleSymbol(symbol.parent);
       }
     }
+  };
+
+  Skew.CPlusPlusEmitter._isCompactNodeKind = function(kind) {
+    return kind === Skew.NodeKind.EXPRESSION || kind === Skew.NodeKind.VARIABLE || Skew.NodeKind.isJump(kind);
   };
 
   Skew.CPlusPlusEmitter._fullName = function(symbol) {
@@ -4725,7 +4725,7 @@
   Skew.JavaScriptEmitter.prototype._createIntBinary = function(kind, left, right) {
     if (kind === Skew.NodeKind.MULTIPLY) {
       this._needsMultiply = true;
-      return Skew.Node.createCall(new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(this._multiply.name)).withSymbol(this._multiply)).withType(this._cache.intType).appendChild(left).appendChild(right);
+      return Skew.Node.createCall(Skew.Node.createSymbolReference(this._multiply)).withType(this._cache.intType).appendChild(left).appendChild(right);
     }
 
     return this._wrapWithIntCast(Skew.Node.createBinary(kind, left, right).withType(this._cache.intType));
@@ -12579,7 +12579,7 @@
         var first = value.firstValue();
         var second = value.secondValue();
         var setup = new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(symbol));
-        var symbolName = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(symbol.name)).withSymbol(symbol).withType(this.cache.intType);
+        var symbolName = Skew.Node.createSymbolReference(symbol);
         var update = Skew.Node.createUnary(Skew.NodeKind.INCREMENT, symbolName);
         var test = null;
 
@@ -12595,7 +12595,7 @@
           count.value = second.remove();
           count.state = Skew.SymbolState.INITIALIZED;
           setup.appendChild(Skew.Node.createVariable(count));
-          test = Skew.Node.createBinary(Skew.NodeKind.LESS_THAN, symbolName.clone(), new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(count.name)).withSymbol(count).withType(this.cache.intType));
+          test = Skew.Node.createBinary(Skew.NodeKind.LESS_THAN, symbolName.clone(), Skew.Node.createSymbolReference(count));
         }
 
         // Use a C-style for loop to implement this foreach loop
@@ -12614,21 +12614,21 @@
         index.resolvedType = this.cache.intType;
         index.value = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this.cache.intType);
         index.state = Skew.SymbolState.INITIALIZED;
-        var indexName = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(index.name)).withSymbol(index).withType(index.resolvedType);
+        var indexName = Skew.Node.createSymbolReference(index);
 
         // Create the list variable
         var list = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName("list"));
         list.resolvedType = value.resolvedType;
         list.value = value.remove();
         list.state = Skew.SymbolState.INITIALIZED;
-        var listName = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(list.name)).withSymbol(list).withType(list.resolvedType);
+        var listName = Skew.Node.createSymbolReference(list);
 
         // Create the count variable
         var count2 = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName("count"));
         count2.resolvedType = this.cache.intType;
         count2.value = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent("count")).appendChild(listName);
         count2.state = Skew.SymbolState.INITIALIZED;
-        var countName = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(count2.name)).withSymbol(count2).withType(count2.resolvedType);
+        var countName = Skew.Node.createSymbolReference(count2);
 
         // Move the loop variable into the loop body
         symbol.value = Skew.Node.createIndex(listName.clone(), indexName);

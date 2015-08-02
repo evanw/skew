@@ -1177,7 +1177,7 @@ namespace Skew {
     def _createIntBinary(kind NodeKind, left Node, right Node) Node {
       if kind == .MULTIPLY {
         _needsMultiply = true
-        return Node.createCall(Node.createName(_multiply.name).withSymbol(_multiply)).withType(_cache.intType).appendChild(left).appendChild(right)
+        return Node.createCall(Node.createSymbolReference(_multiply)).withType(_cache.intType).appendChild(left).appendChild(right)
       }
       return _wrapWithIntCast(Node.createBinary(kind, left, right).withType(_cache.intType))
     }

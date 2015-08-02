@@ -489,7 +489,7 @@ namespace Skew.Resolving {
           var first = value.firstValue
           var second = value.secondValue
           var setup = Node.createVariables.appendChild(Node.createVariable(symbol))
-          var symbolName = Node.createName(symbol.name).withSymbol(symbol).withType(cache.intType)
+          var symbolName = Node.createSymbolReference(symbol)
           var update = Node.createUnary(.INCREMENT, symbolName)
           var test Node
 
@@ -505,7 +505,7 @@ namespace Skew.Resolving {
             count.value = second.remove
             count.state = .INITIALIZED
             setup.appendChild(Node.createVariable(count))
-            test = Node.createBinary(.LESS_THAN, symbolName.clone, Node.createName(count.name).withSymbol(count).withType(cache.intType))
+            test = Node.createBinary(.LESS_THAN, symbolName.clone, Node.createSymbolReference(count))
           }
 
           # Use a C-style for loop to implement this foreach loop
@@ -524,21 +524,21 @@ namespace Skew.Resolving {
           index.resolvedType = cache.intType
           index.value = Node.createInt(0).withType(cache.intType)
           index.state = .INITIALIZED
-          var indexName = Node.createName(index.name).withSymbol(index).withType(index.resolvedType)
+          var indexName = Node.createSymbolReference(index)
 
           # Create the list variable
           var list = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("list"))
           list.resolvedType = value.resolvedType
           list.value = value.remove
           list.state = .INITIALIZED
-          var listName = Node.createName(list.name).withSymbol(list).withType(list.resolvedType)
+          var listName = Node.createSymbolReference(list)
 
           # Create the count variable
           var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("count"))
           count.resolvedType = cache.intType
           count.value = Node.createDot(listName, "count")
           count.state = .INITIALIZED
-          var countName = Node.createName(count.name).withSymbol(count).withType(count.resolvedType)
+          var countName = Node.createSymbolReference(count)
 
           # Move the loop variable into the loop body
           symbol.value = Node.createIndex(listName.clone, indexName)

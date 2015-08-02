@@ -80,10 +80,6 @@ namespace Skew {
       _previousSymbol = symbol
     }
 
-    def _isCompactNodeKind(kind NodeKind) bool {
-      return kind == .EXPRESSION || kind == .VARIABLE || kind.isJump
-    }
-
     def _emitNewlineBeforeStatement(node Node) {
       if _previousNode != null && (node.comments != null || !_isCompactNodeKind(_previousNode.kind) || !_isCompactNodeKind(node.kind)) {
         _emit("\n")
@@ -913,6 +909,10 @@ namespace Skew {
   }
 
   namespace CPlusPlusEmitter {
+    def _isCompactNodeKind(kind NodeKind) bool {
+      return kind == .EXPRESSION || kind == .VARIABLE || kind.isJump
+    }
+
     def _fullName(symbol Symbol) string {
       var parent = symbol.parent
       if parent != null && parent.kind != .OBJECT_GLOBAL && !symbol.kind.isParameter {

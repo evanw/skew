@@ -23,7 +23,7 @@ namespace Skew {
           # Rewrite "super(foo)" to "bar(self, foo)"
           if value.kind == .SUPER {
             var self = callSite.enclosingSymbol.asFunctionSymbol.self
-            value.replaceWith(Node.createName(self.name).withSymbol(self))
+            value.replaceWith(Node.createSymbolReference(self))
           }
 
           # Rewrite "self.foo(bar)" to "foo(self, bar)"
