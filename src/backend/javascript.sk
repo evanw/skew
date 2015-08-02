@@ -98,7 +98,7 @@ namespace Skew {
 
       # Emit special-cased variables that must come first
       if _needsExtends(objects) { _emitFunction(_convertLambdaToFunction(_extends)) }
-      if _needsMultiply { emitVariable(_multiply) }
+      if _needsMultiply { _emitVariable(_multiply) }
 
       # Emit objects and functions
       for object in objects {
@@ -115,7 +115,7 @@ namespace Skew {
         }
         for variable in object.variables {
           if variable != _extends && variable != _multiply {
-            emitVariable(variable)
+            _emitVariable(variable)
           }
         }
       }
@@ -280,7 +280,7 @@ namespace Skew {
       # Generate and assign names to all internal symbols, but use shorter
       # names for more frequently used symbols.
       var sortedGroups List<SymbolGroup> = []
-      for group in extractGroups(namingGroupsUnionFind, .ALL_SYMBOLS) {
+      for group in _extractGroups(namingGroupsUnionFind, .ALL_SYMBOLS) {
         var count = 0
         for symbol in group {
           if _shouldRenameSymbol(symbol) {
@@ -295,7 +295,7 @@ namespace Skew {
         for symbol in group.symbols {
           if _shouldRenameSymbol(symbol) {
             if name == "" {
-              name = generateSymbolName(reservedNames)
+              name = _generateSymbolName(reservedNames)
             }
             symbol.name = name
           }
@@ -311,7 +311,7 @@ namespace Skew {
     #   function e(a, b, c) {}
     #
     def _aliasLocalVariables(unionFind UnionFind, order List<int>) {
-      _zipTogetherInOrder(unionFind, order, extractGroups(_localVariableUnionFind, .ONLY_LOCAL_VARIABLES))
+      _zipTogetherInOrder(unionFind, order, _extractGroups(_localVariableUnionFind, .ONLY_LOCAL_VARIABLES))
     }
 
     # Merge all related types together into naming groups. This ensures names
@@ -331,7 +331,7 @@ namespace Skew {
           }
         }
       }
-      _zipTogetherInOrder(unionFind, order, extractGroups(relatedTypesUnionFind, .ONLY_INSTANCE_VARIABLES))
+      _zipTogetherInOrder(unionFind, order, _extractGroups(relatedTypesUnionFind, .ONLY_INSTANCE_VARIABLES))
     }
 
     def _zipTogetherInOrder(unionFind UnionFind, order List<int>, groups List<List<Symbol>>) {
@@ -348,7 +348,7 @@ namespace Skew {
       }
     }
 
-    def generateSymbolName(reservedNames StringMap<int>) string {
+    def _generateSymbolName(reservedNames StringMap<int>) string {
       while true {
         var name = _numberToName(_nextSymbolName)
         _nextSymbolName++
@@ -358,7 +358,7 @@ namespace Skew {
       }
     }
 
-    def extractGroups(unionFind UnionFind, mode ExtractGroupsMode) List<List<Symbol>> {
+    def _extractGroups(unionFind UnionFind, mode ExtractGroupsMode) List<List<Symbol>> {
       var labelToGroup IntMap<List<Symbol>> = {}
       for symbol in _allSymbols {
         if mode == .ONLY_LOCAL_VARIABLES && !symbol.kind.isLocalOrArgumentVariable ||
@@ -377,7 +377,7 @@ namespace Skew {
       return labelToGroup.values
     }
 
-    def addMapping(range Range) {
+    def _addMapping(range Range) {
       if _sourceMap && range != null {
         var source = range.source
         var start = range.start
@@ -459,7 +459,7 @@ namespace Skew {
 
       switch symbol.kind {
         case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
-          addMapping(symbol.range)
+          _addMapping(symbol.range)
           _emitNewlineBeforeSymbol(symbol)
           _emitComments(symbol.comments)
           _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
@@ -468,7 +468,7 @@ namespace Skew {
         }
 
         case .OBJECT_ENUM {
-          addMapping(symbol.range)
+          _addMapping(symbol.range)
           _emitNewlineBeforeSymbol(symbol)
           _emitComments(symbol.comments)
           _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{")
@@ -482,7 +482,7 @@ namespace Skew {
                 _emit(",")
               }
               _emit(_newline)
-              addMapping(variable.range)
+              _addMapping(variable.range)
               _emitNewlineBeforeSymbol(variable)
               _emitComments(variable.comments)
               _emit(_indent + _mangleName(variable) + ":" + _space)
@@ -512,7 +512,7 @@ namespace Skew {
                   _emit("\n" + _indent)
                 }
                 _emitSemicolonIfNeeded
-                addMapping(_extends.range)
+                _addMapping(_extends.range)
                 _emit(_mangleName(_extends) + "(" + _fullName(symbol) + "," + _space + _fullName(symbol.baseClass) + ")")
                 _emitSemicolonAfterStatement
               }
@@ -544,7 +544,7 @@ namespace Skew {
         if argument != arguments.first {
           _emit("," + _space)
         }
-        addMapping(argument.range)
+        _addMapping(argument.range)
         _emit(_mangleName(argument))
       }
     }
@@ -554,7 +554,7 @@ namespace Skew {
         return
       }
 
-      addMapping(symbol.range)
+      _addMapping(symbol.range)
       _emitNewlineBeforeSymbol(symbol)
       _emitComments(symbol.comments)
 
@@ -590,13 +590,13 @@ namespace Skew {
       }
     }
 
-    def emitVariable(symbol VariableSymbol) {
+    def _emitVariable(symbol VariableSymbol) {
       if symbol.isImported {
         return
       }
 
       if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || _namespacePrefix == "" || symbol.kind.isLocalOrArgumentVariable) {
-        addMapping(symbol.range)
+        _addMapping(symbol.range)
         _emitNewlineBeforeSymbol(symbol)
         _emitComments(symbol.comments)
         _emit(_indent + (_namespacePrefix == "" && !symbol.isExported || symbol.kind.isLocalOrArgumentVariable ? "var " : _namespacePrefix) + _mangleName(symbol))
@@ -617,7 +617,7 @@ namespace Skew {
       for child = node.firstChild; child != null; child = child.nextSibling {
         _emitSemicolonIfNeeded
         _emitNewlineBeforeStatement(child)
-        addMapping(child.range)
+        _addMapping(child.range)
         _emitComments(child.comments)
         _emitStatement(child)
         _emitNewlineAfterStatement(child)
@@ -628,7 +628,7 @@ namespace Skew {
 
     def _emitBlock(node Node, after AfterToken, mode BracesMode) {
       var shouldMinify = mode == .CAN_OMIT_BRACES && _minify
-      addMapping(node.range)
+      _addMapping(node.range)
       if shouldMinify && !node.hasChildren {
         _emit(";")
       } else if shouldMinify && node.hasOneChild {
@@ -876,7 +876,7 @@ namespace Skew {
 
     def _emitExpression(node Node, precedence Precedence) {
       var kind = node.kind
-      addMapping(node.range)
+      _addMapping(node.range)
 
       switch kind {
         case .TYPE {

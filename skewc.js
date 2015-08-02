@@ -3420,7 +3420,7 @@
     }
 
     if (this._needsMultiply) {
-      this.emitVariable(this._multiply);
+      this._emitVariable(this._multiply);
     }
 
     // Emit objects and functions
@@ -3444,7 +3444,7 @@
         var variable = list1[i1];
 
         if (variable !== this._extends && variable !== this._multiply) {
-          this.emitVariable(variable);
+          this._emitVariable(variable);
         }
       }
     }
@@ -3649,7 +3649,7 @@
     // names for more frequently used symbols.
     var sortedGroups = [];
 
-    for (var i3 = 0, list3 = this.extractGroups(namingGroupsUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ALL_SYMBOLS), count4 = list3.length; i3 < count4; ++i3) {
+    for (var i3 = 0, list3 = this._extractGroups(namingGroupsUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ALL_SYMBOLS), count4 = list3.length; i3 < count4; ++i3) {
       var group = list3[i3];
       var count = 0;
 
@@ -3677,7 +3677,7 @@
 
         if (Skew.JavaScriptEmitter._shouldRenameSymbol(symbol3)) {
           if (name === "") {
-            name = this.generateSymbolName(reservedNames);
+            name = this._generateSymbolName(reservedNames);
           }
 
           symbol3.name = name;
@@ -3694,7 +3694,7 @@
   //   function e(a, b, c) {}
   //
   Skew.JavaScriptEmitter.prototype._aliasLocalVariables = function(unionFind, order) {
-    this._zipTogetherInOrder(unionFind, order, this.extractGroups(this._localVariableUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ONLY_LOCAL_VARIABLES));
+    this._zipTogetherInOrder(unionFind, order, this._extractGroups(this._localVariableUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ONLY_LOCAL_VARIABLES));
   };
 
   // Merge all related types together into naming groups. This ensures names
@@ -3720,7 +3720,7 @@
       }
     }
 
-    this._zipTogetherInOrder(unionFind, order, this.extractGroups(relatedTypesUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES));
+    this._zipTogetherInOrder(unionFind, order, this._extractGroups(relatedTypesUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES));
   };
 
   Skew.JavaScriptEmitter.prototype._zipTogetherInOrder = function(unionFind, order, groups) {
@@ -3742,7 +3742,7 @@
     }
   };
 
-  Skew.JavaScriptEmitter.prototype.generateSymbolName = function(reservedNames) {
+  Skew.JavaScriptEmitter.prototype._generateSymbolName = function(reservedNames) {
     while (true) {
       var name = Skew.JavaScriptEmitter._numberToName(this._nextSymbolName);
       ++this._nextSymbolName;
@@ -3753,7 +3753,7 @@
     }
   };
 
-  Skew.JavaScriptEmitter.prototype.extractGroups = function(unionFind, mode) {
+  Skew.JavaScriptEmitter.prototype._extractGroups = function(unionFind, mode) {
     var labelToGroup = Object.create(null);
 
     for (var i = 0, list = this._allSymbols, count = list.length; i < count; ++i) {
@@ -3778,7 +3778,7 @@
     return in_IntMap.values(labelToGroup);
   };
 
-  Skew.JavaScriptEmitter.prototype.addMapping = function(range) {
+  Skew.JavaScriptEmitter.prototype._addMapping = function(range) {
     if (this._sourceMap && range !== null) {
       var source = range.source;
       var start = range.start;
@@ -3868,7 +3868,7 @@
     switch (symbol.kind) {
       case Skew.SymbolKind.OBJECT_NAMESPACE:
       case Skew.SymbolKind.OBJECT_INTERFACE: {
-        this.addMapping(symbol.range);
+        this._addMapping(symbol.range);
         this._emitNewlineBeforeSymbol(symbol);
         this._emitComments(symbol.comments);
         this._emit(this._indent + (this._namespacePrefix === "" && !symbol.isExported() ? "var " : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + "=" + this._space + "{}");
@@ -3878,7 +3878,7 @@
       }
 
       case Skew.SymbolKind.OBJECT_ENUM: {
-        this.addMapping(symbol.range);
+        this._addMapping(symbol.range);
         this._emitNewlineBeforeSymbol(symbol);
         this._emitComments(symbol.comments);
         this._emit(this._indent + (this._namespacePrefix === "" && !symbol.isExported() ? "var " : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + "=" + this._space + "{");
@@ -3898,7 +3898,7 @@
             }
 
             this._emit(this._newline);
-            this.addMapping(variable.range);
+            this._addMapping(variable.range);
             this._emitNewlineBeforeSymbol(variable);
             this._emitComments(variable.comments);
             this._emit(this._indent + Skew.JavaScriptEmitter._mangleName(variable) + ":" + this._space);
@@ -3938,7 +3938,7 @@
               }
 
               this._emitSemicolonIfNeeded();
-              this.addMapping(this._extends.range);
+              this._addMapping(this._extends.range);
               this._emit(Skew.JavaScriptEmitter._mangleName(this._extends) + "(" + Skew.JavaScriptEmitter._fullName(symbol) + "," + this._space + Skew.JavaScriptEmitter._fullName(symbol.baseClass) + ")");
               this._emitSemicolonAfterStatement();
             }
@@ -3977,7 +3977,7 @@
         this._emit("," + this._space);
       }
 
-      this.addMapping(argument.range);
+      this._addMapping(argument.range);
       this._emit(Skew.JavaScriptEmitter._mangleName(argument));
     }
   };
@@ -3987,7 +3987,7 @@
       return;
     }
 
-    this.addMapping(symbol.range);
+    this._addMapping(symbol.range);
     this._emitNewlineBeforeSymbol(symbol);
     this._emitComments(symbol.comments);
     var isExpression = this._namespacePrefix !== "" || symbol.isExported();
@@ -4028,13 +4028,13 @@
     }
   };
 
-  Skew.JavaScriptEmitter.prototype.emitVariable = function(symbol) {
+  Skew.JavaScriptEmitter.prototype._emitVariable = function(symbol) {
     if (symbol.isImported()) {
       return;
     }
 
     if (symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind !== Skew.SymbolKind.VARIABLE_ENUM && (symbol.value !== null || this._namespacePrefix === "" || Skew.SymbolKind.isLocalOrArgumentVariable(symbol.kind))) {
-      this.addMapping(symbol.range);
+      this._addMapping(symbol.range);
       this._emitNewlineBeforeSymbol(symbol);
       this._emitComments(symbol.comments);
       this._emit(this._indent + (this._namespacePrefix === "" && !symbol.isExported() || Skew.SymbolKind.isLocalOrArgumentVariable(symbol.kind) ? "var " : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol));
@@ -4055,7 +4055,7 @@
     for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
       this._emitSemicolonIfNeeded();
       this._emitNewlineBeforeStatement(child);
-      this.addMapping(child.range);
+      this._addMapping(child.range);
       this._emitComments(child.comments);
       this._emitStatement(child);
       this._emitNewlineAfterStatement(child);
@@ -4066,7 +4066,7 @@
 
   Skew.JavaScriptEmitter.prototype._emitBlock = function(node, after, mode) {
     var shouldMinify = mode === Skew.JavaScriptEmitter.BracesMode.CAN_OMIT_BRACES && this._minify;
-    this.addMapping(node.range);
+    this._addMapping(node.range);
 
     if (shouldMinify && !node.hasChildren()) {
       this._emit(";");
@@ -4382,7 +4382,7 @@
 
   Skew.JavaScriptEmitter.prototype._emitExpression = function(node, precedence) {
     var kind = node.kind;
-    this.addMapping(node.range);
+    this._addMapping(node.range);
 
     switch (kind) {
       case Skew.NodeKind.TYPE: {
