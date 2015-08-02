@@ -91,9 +91,9 @@ namespace Skew {
         _visitFunction(node.symbol.asFunctionSymbol)
       }
 
-      else if node.children != null {
+      else if node.hasChildren {
         _increaseIndent
-        for child in node.children {
+        for child = node.firstChild; child != null; child = child.nextSibling {
           _emit("\n" + _indent)
           _visitNode(child)
         }

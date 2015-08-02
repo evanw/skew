@@ -72,15 +72,8 @@ namespace Skew.Folding {
       }
 
       # Fold operands before folding this node
-      var children = node.children
-      if children != null {
-        var n = children.count
-        for i in 0..n {
-          var child = children[n - i - 1]
-          if child != null {
-            foldConstants(child)
-          }
-        }
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        foldConstants(child)
       }
 
       # Separating the case bodies into separate functions makes the JavaScript JIT go faster
@@ -105,14 +98,16 @@ namespace Skew.Folding {
       assert(left.resolvedType == cache.stringType || left.resolvedType == .DYNAMIC)
       assert(right.resolvedType == cache.stringType || right.resolvedType == .DYNAMIC)
 
+      # "a + (b + c)" => "(a + b) + c"
       if right.kind == .ADD {
         var rightLeft = right.binaryLeft
         var rightRight = right.binaryRight
         assert(rightLeft.resolvedType == cache.stringType || rightLeft.resolvedType == .DYNAMIC)
         assert(rightRight.resolvedType == cache.stringType || rightRight.resolvedType == .DYNAMIC)
         left.swapWith(right)
-        left.swapWith(rightRight)
-        left.swapWith(rightLeft)
+        rightLeft.swapWith(rightRight)
+        right.prependChild(left.remove)
+        node.appendChild(rightRight.remove)
       }
     }
 
@@ -145,7 +140,7 @@ namespace Skew.Folding {
 
     def foldTry(node Node) int {
       var tryBlock = node.tryBlock
-      var finallyBlock = node.finallyBlock
+      # var finallyBlock = node.finallyBlock
 
       # A try block without any statements cannot possibly throw
       if !tryBlock.hasChildren {
@@ -153,39 +148,35 @@ namespace Skew.Folding {
         return -1
       }
 
-      # No need to keep an empty finally block around
-      if finallyBlock != null && !finallyBlock.hasChildren {
-        finallyBlock.replaceWithNull
-        finallyBlock = null
-      }
+      # # No need to keep an empty finally block around
+      # if finallyBlock != null && !finallyBlock.hasChildren {
+      #   finallyBlock.remove
+      #   finallyBlock = null
+      # }
 
-      # Inline the contents of the try block into the parent if possible
-      if node.children.count == 2 && finallyBlock == null {
-        var replacements = tryBlock.removeChildren
-        node.replaceWithNodes(replacements)
-        return replacements.count - 1
-      }
+      # # Inline the contents of the try block into the parent if possible
+      # if node.children.count == 2 && finallyBlock == null {
+      #   node.replaceWithChildrenFrom(tryBlock)
+      # }
 
       return 0
     }
 
-    def foldIf(node Node) int {
+    def foldIf(node Node) {
       var test = node.ifTest
       var trueBlock = node.ifTrue
       var falseBlock = node.ifFalse
 
       # No reason to keep an empty "else" block
       if falseBlock != null && !falseBlock.hasChildren {
-        falseBlock.replaceWithNull
+        falseBlock.remove
         falseBlock = null
       }
 
       # Always true if statement
       if test.isTrue {
         # Inline the contents of the true block
-        var replacements = trueBlock.removeChildren
-        node.replaceWithNodes(replacements)
-        return replacements.count - 1
+        node.replaceWithChildrenFrom(trueBlock)
       }
 
       # Always false if statement
@@ -193,13 +184,12 @@ namespace Skew.Folding {
         # Remove entirely
         if falseBlock == null {
           node.remove
-          return -1
         }
 
         # Inline the contents of the false block
-        var replacements = falseBlock.removeChildren
-        node.replaceWithNodes(replacements)
-        return replacements.count - 1
+        else {
+          node.replaceWithChildrenFrom(falseBlock)
+        }
       }
 
       # Remove if statements with empty true blocks
@@ -207,14 +197,12 @@ namespace Skew.Folding {
         # "if (a) {} else b;" => "if (!a) b;"
         if falseBlock != null && falseBlock.hasChildren {
           test.invertBooleanCondition(cache)
-          trueBlock.swapWith(falseBlock)
-          trueBlock.replaceWithNull
+          trueBlock.remove
         }
 
         # "if (a) {}" => ""
         else if test.hasNoSideEffects {
           node.remove
-          return -1
         }
 
         # "if (a) {}" => "a;"
@@ -222,18 +210,15 @@ namespace Skew.Folding {
           node.become(Node.createExpression(test.remove))
         }
       }
-
-      return 0
     }
 
-    def foldSwitch(node Node) int {
-      var children = node.children
+    def foldSwitch(node Node) {
+      var value = node.switchValue
       var defaultCase Node = null
 
       # Check for a default case
-      for i in 1..children.count {
-        var child = children[i]
-        if child.children.count == 1 {
+      for child = value.nextSibling; child != null; child = child.nextSibling {
+        if child.hasOneChild {
           defaultCase = child
           break
         }
@@ -247,9 +232,8 @@ namespace Skew.Folding {
 
       # If the default case is missing, all other empty cases can be removed too
       if defaultCase == null {
-        var n = children.count
-        for i in 1..n {
-          var child = children[n - i]
+        for child = node.lastChild, previous Node = null; child != value; child = previous {
+          previous = child.previousSibling
           if !child.caseBlock.hasChildren {
             child.remove
           }
@@ -257,84 +241,62 @@ namespace Skew.Folding {
       }
 
       # Replace "switch (foo) {}" with "foo;"
-      if node.children.count == 1 {
-        var value = node.switchValue
-        node.replaceWith(Node.createExpression(value.remove).withRange(node.range))
-        return -1
+      if node.hasOneChild {
+        node.become(Node.createExpression(value.remove).withRange(node.range))
       }
-
-      return 0
     }
 
-    def foldVariables(node Node) int {
-      var children = node.children
-      var i = 0
-
+    def foldVariables(node Node) {
       # Remove symbols entirely that are being inlined everywhere
-      while i < children.count {
-        var child = node.children[i]
-        var symbol = child.symbol.asVariableSymbol
+      for child = node.firstChild; child != null; child = child.nextSibling {
         assert(child.kind == .VARIABLE)
+        var symbol = child.symbol.asVariableSymbol
         if symbol.isConst && constantLookup.constantForSymbol(symbol) != null {
           child.remove
-        } else {
-          i++
         }
       }
 
       # Empty variable statements are not allowed
-      if children.isEmpty {
+      if !node.hasChildren {
         node.remove
-        return -1
       }
-
-      return 0
     }
 
     def foldBlock(node Node) {
-      var children = node.children
-      var i = 0
-
-      while i < children.count {
-        var child = children[i]
+      for child = node.firstChild; child != null; child = child.nextSibling {
         var kind = child.kind
 
         # Remove everything after a jump
         if kind.isJump {
-          var j = children.count - 1
-          while j > i {
-            node.removeChildAtIndex(j)
-            j--
+          while child.nextSibling != null {
+            child.nextSibling.remove
           }
           break
         }
 
         # Remove constants and "while false { ... }" entirely
         if kind == .EXPRESSION && child.expressionValue.hasNoSideEffects || kind == .WHILE && child.whileTest.isFalse {
-          node.removeChildAtIndex(i)
-          i--
+          child.remove
         }
 
         else if kind == .VARIABLES {
-          i += foldVariables(child)
+          foldVariables(child)
         }
 
         # Remove unused try statements since they can cause deoptimizations
         else if kind == .TRY {
-          i += foldTry(child)
+          foldTry(child)
         }
 
         # Statically evaluate if statements where possible
         else if kind == .IF {
-          i += foldIf(child)
+          foldIf(child)
         }
 
         # Fold switch statements
         else if kind == .SWITCH {
-          i += foldSwitch(child)
+          foldSwitch(child)
         }
-
-        i++
       }
     }
 
@@ -442,7 +404,7 @@ namespace Skew.Folding {
         switch value.kind {
           case .NOT, .EQUAL, .NOT_EQUAL, .LOGICAL_OR, .LOGICAL_AND, .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
             value.invertBooleanCondition(cache)
-            node.become(value)
+            node.become(value.remove)
           }
         }
       }
@@ -480,7 +442,7 @@ namespace Skew.Folding {
         var isLeftConstant = left.isInt
         if isLeftConstant || right.isInt {
           foldConstantAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value)
-          node.become(variable)
+          node.become(variable.remove)
           return
         }
       }
@@ -525,7 +487,7 @@ namespace Skew.Folding {
 
       # -a + b => b - a
       if left.kind == .NEGATIVE && isAdd {
-        left.become(left.unaryValue.replaceWithNull)
+        left.become(left.unaryValue.remove)
         left.swapWith(right)
         node.kind = .SUBTRACT
       }
@@ -533,7 +495,7 @@ namespace Skew.Folding {
       # a + -b => a - b
       # a - -b => a + b
       else if right.kind == .NEGATIVE {
-        right.become(right.unaryValue.replaceWithNull)
+        right.become(right.unaryValue.remove)
         node.kind = isAdd ? .SUBTRACT : .ADD
       }
     }

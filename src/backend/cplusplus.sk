@@ -265,8 +265,8 @@ namespace Skew {
 
       if mode == .IMPLEMENT {
         # Move the super constructor call out of the function body
-        if symbol.kind == .FUNCTION_CONSTRUCTOR && !block.children.isEmpty {
-          var first = block.children.first
+        if symbol.kind == .FUNCTION_CONSTRUCTOR && block.hasChildren {
+          var first = block.firstChild
           if first.kind == .EXPRESSION {
             var call = first.expressionValue
             if call.kind == .CALL && call.callValue.kind == .SUPER {
@@ -350,14 +350,14 @@ namespace Skew {
       _emitNewlineAfterSymbol(symbol)
     }
 
-    def _emitStatements(statements List<Node>) {
+    def _emitStatements(node Node) {
       _previousNode = null
 
-      for statement in statements {
-        _emitNewlineBeforeStatement(statement)
-        _emitComments(statement.comments)
-        _emitStatement(statement)
-        _emitNewlineAfterStatement(statement)
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _emitNewlineBeforeStatement(child)
+        _emitComments(child.comments)
+        _emitStatement(child)
+        _emitNewlineAfterStatement(child)
       }
 
       _previousNode = null
@@ -366,7 +366,7 @@ namespace Skew {
     def _emitBlock(node Node) {
       _emit(" {\n")
       _increaseIndent
-      _emitStatements(node.children)
+      _emitStatements(node)
       _decreaseIndent
       _emit(_indent + "}")
     }
@@ -374,7 +374,7 @@ namespace Skew {
     def _emitStatement(node Node) {
       switch node.kind {
         case .VARIABLES {
-          for child in node.children {
+          for child = node.firstChild; child != null; child = child.nextSibling {
             _emitVariable(child.symbol.asVariableSymbol, .IMPLEMENT)
           }
         }
@@ -400,31 +400,31 @@ namespace Skew {
         }
 
         case .SWITCH {
-          var cases = node.children
+          var switchValue = node.switchValue
           _emit(_indent + "switch (")
-          _emitExpression(node.switchValue, .LOWEST)
+          _emitExpression(switchValue, .LOWEST)
           _emit(") {\n")
           _increaseIndent
-          for i in 1..cases.count {
-            var child = cases[i]
-            var values = child.children
+          for child = switchValue.nextSibling; child != null; child = child.nextSibling {
             var block = child.caseBlock
-            if i != 1 {
+            if child.previousSibling != switchValue {
               _emit("\n")
             }
-            if values.count == 1 {
+            if child.hasOneChild {
               _emit(_indent + "default:")
             } else {
-              for j in 1..values.count {
-                if j != 1 { _emit("\n") }
+              for value = child.firstChild; value != block; value = value.nextSibling {
+                if value.previousSibling != null {
+                  _emit("\n")
+                }
                 _emit(_indent + "case ")
-                _emitExpression(values[j], .LOWEST)
+                _emitExpression(value, .LOWEST)
                 _emit(":")
               }
             }
             _emit(" {\n")
             _increaseIndent
-            _emitStatements(block.children)
+            _emitStatements(block)
             if !block.blockAlwaysEndsWithReturn {
               _emit(_indent + "break;\n")
             }
@@ -458,13 +458,12 @@ namespace Skew {
           _emit(_indent + "for (")
           if setup != null {
             if setup.kind == .VARIABLES {
-              var children = setup.children
-              _emitType(children.first.symbol.asVariableSymbol.resolvedType, .DECLARATION)
+              _emitType(setup.firstChild.symbol.asVariableSymbol.resolvedType, .DECLARATION)
               _emit(" ")
-              for child in children {
+              for child = setup.firstChild; child != null; child = child.nextSibling {
                 var symbol = child.symbol.asVariableSymbol
                 assert(child.kind == .VARIABLE)
-                if child != children.first {
+                if child.previousSibling != null {
                   _emit(", ")
                 }
                 _emit(_mangleName(symbol) + " = ")
@@ -488,13 +487,13 @@ namespace Skew {
         }
 
         case .TRY {
-          var children = node.children
+          var tryBlock = node.tryBlock
           var finallyBlock = node.finallyBlock
           _emit(_indent + "try")
-          _emitBlock(node.tryBlock)
+          _emitBlock(tryBlock)
           _emit("\n")
-          for i in 1..children.count - 1 {
-            var child = children[i]
+
+          for child = tryBlock.nextSibling; child != finallyBlock; child = child.nextSibling {
             if child.comments != null {
               _emit("\n")
               _emitComments(child.comments)
@@ -510,6 +509,7 @@ namespace Skew {
             _emitBlock(child.catchBlock)
             _emit("\n")
           }
+
           if finallyBlock != null {
             if finallyBlock.comments != null {
               _emit("\n")
@@ -561,7 +561,7 @@ namespace Skew {
 
       var block = node.ifFalse
       if block != null {
-        var singleIf = block.children.count == 1 && block.children[0].kind == .IF ? block.children[0] : null
+        var singleIf = block.hasOneChild && block.firstChild.kind == .IF ? block.firstChild : null
         _emit("\n\n")
         _emitComments(block.comments)
         if singleIf != null {
@@ -584,6 +584,16 @@ namespace Skew {
         case .INT { _emit(content.asInt.toString) }
         case .DOUBLE { _emit(content.asDouble.toString) }
         case .STRING { _emit(quoteString(content.asString, '"') + "_s") }
+      }
+    }
+
+    def _emitCommaSeparatedExpressions(from Node, to Node) {
+      while from != to {
+        _emitExpression(from, .COMMA)
+        from = from.nextSibling
+        if from != to {
+          _emit(", ")
+        }
       }
     }
 
@@ -651,15 +661,9 @@ namespace Skew {
           }
 
           _emit("(")
-
-          for i in 1..node.children.count {
-            if i > 1 {
-              _emit(", ")
-            }
-            _emitExpression(node.children[i], .COMMA)
-          }
-
+          _emitCommaSeparatedExpressions(node.firstChild.nextSibling, null)
           _emit(")")
+
           if wrap {
             _emit(")")
           }
@@ -685,10 +689,9 @@ namespace Skew {
         }
 
         case .INDEX {
-          assert(node.children.count == 2)
-          _emitExpression(node.children[0], .UNARY_POSTFIX)
+          _emitExpression(node.indexTarget, .UNARY_POSTFIX)
           _emit("[")
-          _emitExpression(node.children[1], .LOWEST)
+          _emitCommaSeparatedExpressions(node.indexTarget.nextSibling, null)
           _emit("]")
         }
 
@@ -696,30 +699,40 @@ namespace Skew {
           if Precedence.ASSIGN as int < precedence as int {
             _emit("(")
           }
-          assert(node.children.count == 3)
-          _emitExpression(node.children[0], .UNARY_POSTFIX)
+          _emitExpression(node.assignIndexTarget, .UNARY_POSTFIX)
           _emit("[")
-          _emitExpression(node.children[1], .LOWEST)
+          _emitCommaSeparatedExpressions(node.assignIndexTarget.nextSibling, node.assignIndexValue)
           _emit("] = ")
-          _emitExpression(node.children[2], .ASSIGN)
+          _emitExpression(node.assignIndexValue, .ASSIGN)
           if Precedence.ASSIGN as int < precedence as int {
             _emit(")")
           }
         }
 
         case .PARAMETERIZE {
-          if node.parameterizeValue.isType {
+          var value = node.parameterizeValue
+          if value.isType {
             _emitType(node.resolvedType, .NORMAL)
           } else {
-            _emitExpression(node.parameterizeValue, precedence)
+            _emitExpression(value, precedence)
             _emit("<")
-            for i in 1..node.children.count {
-              if i > 1 {
+            for child = value.nextSibling; child != null; child = child.nextSibling {
+              if child.previousSibling != value {
                 _emit(", ")
               }
-              _emitType(node.children[i].resolvedType, .NORMAL)
+              _emitType(child.resolvedType, .NORMAL)
             }
             _emit(">")
+          }
+        }
+
+        case .SEQUENCE {
+          if Precedence.COMMA as int <= precedence as int {
+            _emit("(")
+          }
+          _emitCommaSeparatedExpressions(node.firstChild, null)
+          if Precedence.COMMA as int <= precedence as int {
+            _emit(")")
           }
         }
 
@@ -747,19 +760,13 @@ namespace Skew {
         }
 
         case .INITIALIZER_LIST, .INITIALIZER_SET, .INITIALIZER_MAP {
-          var children = node.children
           _emit("new ")
           _emitType(node.resolvedType, .BARE)
-          if children.isEmpty {
+          if node.hasChildren {
             _emit("()")
           } else {
             _emit(" { ")
-            for child in children {
-              if child != children.first {
-                _emit(", ")
-              }
-              _emitExpression(child, .COMMA)
-            }
+            _emitCommaSeparatedExpressions(node.firstChild, null)
             _emit(" }")
           }
         }
@@ -767,9 +774,7 @@ namespace Skew {
         case .PAIR {
           _includeNames["<utility>"] = 0
           _emit("std::make_pair(")
-          _emitExpression(node.firstValue, .COMMA)
-          _emit(", ")
-          _emitExpression(node.secondValue, .COMMA)
+          _emitCommaSeparatedExpressions(node.firstChild, null)
           _emit(")")
         }
 
@@ -892,9 +897,9 @@ namespace Skew {
         if symbol.annotations != null {
           for annotation in symbol.annotations {
             if annotation.symbol != null && annotation.symbol.fullName == "include" {
-              var children = annotation.annotationValue.children
-              if children.count == 2 {
-                _includeNames[children.last.asString] = 0
+              var value = annotation.annotationValue
+              if value.childCount == 2 {
+                _includeNames[value.lastChild.asString] = 0
               }
             }
           }

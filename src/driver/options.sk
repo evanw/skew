@@ -93,7 +93,7 @@ namespace Skew.Options {
       var node = nodeForOption(option)
       var ranges List<Range> = []
       if node != null {
-        for child in node.children {
+        for child = node.firstChild; child != null; child = child.nextSibling {
           ranges.append(child.range)
         }
       }
@@ -205,7 +205,7 @@ namespace Skew.Options {
               if data.option in optionalArguments {
                 node = optionalArguments[data.option]
               } else {
-                node = Node.createInitializer(.INITIALIZER_LIST, [])
+                node = Node.createInitializer(.INITIALIZER_LIST)
                 optionalArguments[data.option] = node
               }
               node.appendChild(Node.createString(text).withRange(textRange))

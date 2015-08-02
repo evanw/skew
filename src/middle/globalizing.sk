@@ -28,10 +28,10 @@ namespace Skew {
 
           # Rewrite "self.foo(bar)" to "foo(self, bar)"
           else {
-            value.dotTarget.swapWith(value)
+            value.replaceWith(value.dotTarget.remove)
           }
 
-          callSite.callNode.insertChild(0, Node.createName(function.name).withSymbol(function))
+          callSite.callNode.prependChild(Node.createSymbolReference(function))
         }
       }
     }

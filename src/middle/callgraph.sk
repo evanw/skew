@@ -34,10 +34,8 @@ namespace Skew {
 
     def _visitNode(node Node, context Symbol) {
       if node != null {
-        if node.children != null {
-          for child in node.children {
-            _visitNode(child, context)
-          }
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          _visitNode(child, context)
         }
 
         if node.kind == .CALL && node.symbol != null {

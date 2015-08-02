@@ -168,12 +168,8 @@ namespace Skew {
         return
       }
 
-      var children = node.children
-
-      if children != null {
-        for child in children {
-          _visitNode(child)
-        }
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _visitNode(child)
       }
 
       if node.symbol != null {
@@ -238,6 +234,9 @@ namespace Skew.Shaking {
     symbol.objects.removeIf(object => !(object.id in usages))
     symbol.functions.removeIf(function => !(function.id in usages))
     symbol.variables.removeIf(variable => !(variable.id in usages))
-    for object in symbol.objects { removeUnusedSymbols(object, usages) }
+
+    for object in symbol.objects {
+      removeUnusedSymbols(object, usages)
+    }
   }
 }

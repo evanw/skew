@@ -486,23 +486,23 @@ namespace Skew.Resolving {
 
         # Handle "for i in 0..10"
         if value.kind == .PAIR {
-          var first = value.firstValue.replaceWithNull
-          var second = value.secondValue.replaceWithNull
-          var setup = Node.createVariables([Node.createVariable(symbol)])
+          var first = value.firstValue
+          var second = value.secondValue
+          var setup = Node.createVariables.appendChild(Node.createVariable(symbol))
           var symbolName = Node.createName(symbol.name).withSymbol(symbol).withType(cache.intType)
           var update = Node.createUnary(.INCREMENT, symbolName)
           var test Node
 
           # Special-case constant iteration limits to generate simpler code
           if second.kind == .CONSTANT || second.kind == .NAME && second.symbol != null && second.symbol.isConst {
-            test = Node.createBinary(.LESS_THAN, symbolName.clone, second)
+            test = Node.createBinary(.LESS_THAN, symbolName.clone, second.remove)
           }
 
           # Otherwise, save the iteration limit in case it changes during iteration
           else {
             var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("count"))
             count.resolvedType = cache.intType
-            count.value = second
+            count.value = second.remove
             count.state = .INITIALIZED
             setup.appendChild(Node.createVariable(count))
             test = Node.createBinary(.LESS_THAN, symbolName.clone, Node.createName(count.name).withSymbol(count).withType(cache.intType))
@@ -510,8 +510,8 @@ namespace Skew.Resolving {
 
           # Use a C-style for loop to implement this foreach loop
           symbol.flags &= ~Symbol.IS_CONST
-          symbol.value = first
-          node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments).withRange(node.range))
+          symbol.value = first.remove
+          node.become(Node.createFor(setup, test, update, block.remove).withComments(node.comments).withRange(node.range))
 
           # Make sure the new expressions are resolved
           resolveNode(test, symbol.scope, null)
@@ -529,7 +529,7 @@ namespace Skew.Resolving {
           # Create the list variable
           var list = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("list"))
           list.resolvedType = value.resolvedType
-          list.value = value.replaceWithNull
+          list.value = value.remove
           list.state = .INITIALIZED
           var listName = Node.createName(list.name).withSymbol(list).withType(list.resolvedType)
 
@@ -541,14 +541,14 @@ namespace Skew.Resolving {
           var countName = Node.createName(count.name).withSymbol(count).withType(count.resolvedType)
 
           # Move the loop variable into the loop body
-          symbol.value = Node.createIndex(listName.clone, [indexName])
-          block.insertChild(0, Node.createVariables([Node.createVariable(symbol)]))
+          symbol.value = Node.createIndex(listName.clone).appendChild(indexName)
+          block.prependChild(Node.createVariables.appendChild(Node.createVariable(symbol)))
 
           # Use a C-style for loop to implement this foreach loop
-          var setup = Node.createVariables([Node.createVariable(index), Node.createVariable(list), Node.createVariable(count)])
+          var setup = Node.createVariables.appendChild(Node.createVariable(index)).appendChild(Node.createVariable(list)).appendChild(Node.createVariable(count))
           var test = Node.createBinary(.LESS_THAN, indexName.clone, countName)
           var update = Node.createUnary(.INCREMENT, indexName.clone)
-          node.become(Node.createFor(setup, test, update, block.replaceWithNull).withComments(node.comments).withRange(node.range))
+          node.become(Node.createFor(setup, test, update, block.remove).withComments(node.comments).withRange(node.range))
 
           # Make sure the new expressions are resolved
           resolveNode(symbol.value, symbol.scope, null)
@@ -779,22 +779,28 @@ namespace Skew.Resolving {
     }
 
     def automaticallyGenerateClassConstructor(symbol FunctionSymbol) {
-      var statements List<Node> = []
+      # Create the function body
+      var block = Node.createBlock
+      symbol.block = block
 
       # Mirror the base constructor's arguments
       if symbol.overridden != null {
         initializeSymbol(symbol.overridden)
         var arguments = symbol.overridden.arguments
-        var values List<Node> = []
-        for variable in arguments {
-          var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
-          argument.resolvedType = variable.resolvedType
-          argument.state = .INITIALIZED
-          symbol.arguments.append(argument)
-          values.append(Node.createSymbolReference(argument))
-        }
         var base = Node.createSuper.withRange(symbol.overridden.range)
-        statements.append(Node.createExpression(values.isEmpty ? base : Node.createCall(base, values)))
+        if arguments.isEmpty {
+          block.appendChild(Node.createExpression(base))
+        } else {
+          var call = Node.createCall(base)
+          for variable in arguments {
+            var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
+            argument.resolvedType = variable.resolvedType
+            argument.state = .INITIALIZED
+            symbol.arguments.append(argument)
+            call.appendChild(Node.createSymbolReference(argument))
+          }
+          block.prependChild(Node.createExpression(call))
+        }
       }
 
       # Add an argument for every uninitialized variable
@@ -809,20 +815,17 @@ namespace Skew.Resolving {
             argument.state = .INITIALIZED
             argument.range = variable.range
             symbol.arguments.append(argument)
-            statements.append(Node.createExpression(Node.createBinary(.ASSIGN,
+            block.appendChild(Node.createExpression(Node.createBinary(.ASSIGN,
               Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
               Node.createSymbolReference(argument)).withRange(variable.range)))
           } else {
-            statements.append(Node.createExpression(Node.createBinary(.ASSIGN,
+            block.appendChild(Node.createExpression(Node.createBinary(.ASSIGN,
               Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
               variable.value).withRange(variable.range)))
             variable.value = null
           }
         }
       }
-
-      # Create the function body
-      symbol.block = Node.createBlock(statements)
 
       # Make constructors without arguments into getters
       if symbol.arguments.isEmpty {
@@ -832,18 +835,18 @@ namespace Skew.Resolving {
 
     def automaticallyGenerateEnumToString(symbol FunctionSymbol) {
       var parent = symbol.parent.asObjectSymbol
-      var names List<Node> = []
+      var names = Node.createList
       initializeSymbol(parent)
 
       for variable in parent.variables {
         if variable.kind == .VARIABLE_ENUM {
-          assert(variable.enumValue == names.count)
-          names.append(Node.createString(variable.name))
+          assert(variable.enumValue == names.childCount)
+          names.appendChild(Node.createString(variable.name))
         }
       }
 
       var strings = VariableSymbol.new(.VARIABLE_GLOBAL, parent.scope.generateName("strings"))
-      strings.value = Node.createInitializer(.INITIALIZER_LIST, names)
+      strings.value = names
       strings.flags |= Symbol.IS_PROTECTED | Symbol.IS_CONST
       strings.state = .INITIALIZED
       strings.parent = parent
@@ -853,7 +856,7 @@ namespace Skew.Resolving {
       resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType)
 
       symbol.returnType = Node.createType(cache.stringType)
-      symbol.block = Node.createBlock([Node.createReturn(Node.createIndex(Node.createSymbolReference(strings), [Node.createName("self")]))])
+      symbol.block = Node.createBlock.appendChild(Node.createReturn(Node.createIndex(Node.createSymbolReference(strings)).appendChild(Node.createName("self"))))
       symbol.flags |= Symbol.IS_GETTER
     }
 
@@ -877,7 +880,7 @@ namespace Skew.Resolving {
       if block != null {
         # User-specified constructors have variable initializers automatically inserted
         if symbol.kind == .FUNCTION_CONSTRUCTOR && !symbol.isAutomaticallyGenerated {
-          var index = 0
+          var first = block.firstChild
           for variable in symbol.parent.asObjectSymbol.variables {
             if variable.kind == .VARIABLE_INSTANCE {
               initializeSymbol(variable)
@@ -897,10 +900,9 @@ namespace Skew.Resolving {
               }
 
               if variable.value != null {
-                block.insertChild(index, Node.createExpression(Node.createBinary(.ASSIGN,
+                block.insertChildBefore(first, Node.createExpression(Node.createBinary(.ASSIGN,
                   Node.createMemberReference(Node.createSymbolReference(symbol.self), variable),
                   variable.value)))
-                index++
                 variable.value = null
               }
             }
@@ -1175,7 +1177,7 @@ namespace Skew.Resolving {
     }
 
     def resolveChildrenAsParameterizedExpressions(node Node, scope Scope) {
-      for child in node.children {
+      for child = node.firstChild; child != null; child = child.nextSibling {
         resolveAsParameterizedExpression(child, scope)
       }
     }
@@ -1255,8 +1257,8 @@ namespace Skew.Resolving {
         for annotation in symbol.annotations {
           if annotation.symbol != null && annotation.symbol.fullName == "@deprecated" {
             var value = annotation.annotationValue
-            if value.kind == .CALL {
-              var last = value.children.last
+            if value.kind == .CALL && value.childCount == 2 {
+              var last = value.lastChild
               if last.kind == .CONSTANT && last.content.kind == .STRING {
                 log.warning(range, last.content.asString)
                 return
@@ -1293,9 +1295,7 @@ namespace Skew.Resolving {
 
       # Make the implicit conversion explicit for convenience later on
       if kind == .IMPLICIT {
-        var value = Node.createNull
-        value.become(node)
-        node.become(Node.createCast(value, Node.createType(to)).withType(to).withRange(node.range))
+        node.become(Node.createCast(node.cloneAndStealChildren, Node.createType(to)).withType(to).withRange(node.range))
       }
     }
 
@@ -1320,10 +1320,9 @@ namespace Skew.Resolving {
       }
 
       # Ensure all arguments are constants
-      var children = value.children
       var isValid = true
-      for i in 1..children.count {
-        isValid = isValid && recursivelyResolveAsConstant(children[i])
+      for child = value.callValue.nextSibling; child != null; child = child.nextSibling {
+        isValid = isValid && recursivelyResolveAsConstant(child)
       }
       if !isValid {
         return false
@@ -1363,8 +1362,8 @@ namespace Skew.Resolving {
         symbol.flags |= flag
 
         # Store the new name for later
-        if flag == Symbol.IS_RENAMED && children.count == 2 {
-          symbol.rename = children.last.asString
+        if flag == Symbol.IS_RENAMED && value.childCount == 2 {
+          symbol.rename = value.lastChild.asString
         }
       }
 
@@ -1385,11 +1384,8 @@ namespace Skew.Resolving {
     def resolveBlock(node Node, scope Scope) {
       assert(node.kind == .BLOCK)
 
-      var children = node.children
-      var i = 0
-
-      while i < children.count {
-        var child = children[i]
+      for child = node.firstChild, next Node = null; child != null; child = next {
+        next = child.nextSibling
 
         # There is a well-known ambiguity in languages like JavaScript where
         # a return statement followed by a newline and a value can either be
@@ -1398,10 +1394,11 @@ namespace Skew.Resolving {
         # statement. Luckily, we're better off than JavaScript since we know
         # the type of the function. Parse a single statement in a non-void
         # function but two statements in a void function.
-        if child.kind == .RETURN && i + 1 < children.count && child.returnValue == null && children[i + 1].kind == .EXPRESSION {
+        if child.kind == .RETURN && next != null && child.returnValue == null && next.kind == .EXPRESSION {
           var function = scope.findEnclosingFunctionOrLambda.symbol
           if function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null {
-            child.replaceChild(0, node.removeChildAtIndex(i + 1).expressionValue.replaceWithNull)
+            child.appendChild(next.remove.expressionValue.remove)
+            next = child.nextSibling
           }
         }
 
@@ -1411,12 +1408,9 @@ namespace Skew.Resolving {
         if child.kind == .EXPRESSION {
           var value = child.expressionValue
           if value.kind == .CALL && value.symbol != null && value.symbol.isSkipped {
-            node.removeChildAtIndex(i)
-            continue
+            child.remove
           }
         }
-
-        i++
       }
     }
 
@@ -1554,24 +1548,22 @@ namespace Skew.Resolving {
 
     def resolveSwitch(node Node, scope Scope) {
       var value = node.switchValue
-      var cases = node.children
       resolveAsParameterizedExpression(value, scope)
 
-      for i in 1..cases.count {
-        var child = cases[i]
-        var values = child.children
+      for child = value.nextSibling; child != null; child = child.nextSibling {
+        var block = child.caseBlock
 
-        for j in 1..values.count {
-          var caseValue = values[j]
+        # Resolve all case values
+        for caseValue = child.firstChild; caseValue != block; caseValue = caseValue.nextSibling {
           resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType)
         }
 
         # The default case must be last, makes changing into an if chain easier later
-        if values.count == 1 && i + 1 != cases.count {
+        if child.hasOneChild && child.nextSibling != null {
           log.semanticErrorDefaultCaseNotLast(child.range)
         }
 
-        resolveBlock(child.caseBlock, LocalScope.new(scope, .NORMAL))
+        resolveBlock(block, LocalScope.new(scope, .NORMAL))
       }
 
       # Collect switch statements until the end of the function
@@ -1594,23 +1586,23 @@ namespace Skew.Resolving {
     }
 
     def resolveVariables(node Node, scope Scope) {
-      for child in node.children {
+      for child = node.firstChild; child != null; child = child.nextSibling {
         resolveVariable(child, scope)
       }
     }
 
     def resolveTry(node Node, scope Scope) {
-      var children = node.children
+      var tryBlock = node.tryBlock
       var finallyBlock = node.finallyBlock
-      resolveBlock(node.tryBlock, LocalScope.new(scope, .NORMAL))
+      resolveBlock(tryBlock, LocalScope.new(scope, .NORMAL))
 
       # Bare try statements catch all thrown values
-      if children.count == 2 && finallyBlock == null {
-        node.insertChild(1, Node.createCatch(null, Node.createBlock([])))
+      if node.hasOneChild {
+        node.appendChild(Node.createCatch(null, Node.createBlock))
       }
 
-      for i in 1..children.count - 1 {
-        var child = children[i]
+      # Check catch statements
+      for child = tryBlock.nextSibling; child != finallyBlock; child = child.nextSibling {
         var childScope = LocalScope.new(scope, .NORMAL)
         if child.symbol != null {
           var symbol = child.symbol.asVariableSymbol
@@ -1620,6 +1612,7 @@ namespace Skew.Resolving {
         resolveBlock(child.catchBlock, childScope)
       }
 
+      # Check finally block
       if finallyBlock != null {
         resolveBlock(finallyBlock, LocalScope.new(scope, .NORMAL))
       }
@@ -1660,8 +1653,8 @@ namespace Skew.Resolving {
 
       # If there was an error, resolve the arguments to check for further
       # errors but use a dynamic type context to avoid introducing errors
-      for i in 1..node.children.count {
-        resolveAsParameterizedExpressionWithConversion(node.children[i], scope, .DYNAMIC)
+      for child = value.nextSibling; child != null; child = child.nextSibling {
+        resolveAsParameterizedExpressionWithConversion(child, scope, .DYNAMIC)
       }
     }
 
@@ -1694,7 +1687,7 @@ namespace Skew.Resolving {
     def resolveFunctionCall(node Node, scope Scope, type Type) bool {
       var function = type.symbol != null ? type.symbol.asFunctionSymbol : null
       var expected = type.argumentTypes.count
-      var count = node.children.count - 1
+      var count = node.childCount - 1
       node.symbol = function
 
       # Use the return type even if there were errors
@@ -1718,28 +1711,31 @@ namespace Skew.Resolving {
       }
 
       # Check argument types
-      for i in 0..count {
-        resolveAsParameterizedExpressionWithConversion(node.children[i + 1], scope, type.argumentTypes[i])
+      var value = node.firstChild
+      var child = value.nextSibling
+      for argumentType in type.argumentTypes {
+        resolveAsParameterizedExpressionWithConversion(child, scope, argumentType)
+        child = child.nextSibling
       }
 
       # Forbid constructing an abstract type
-      var callValue = node.children.first
-      if function != null && function.kind == .FUNCTION_CONSTRUCTOR && isAbstractObject(function.parent.asObjectSymbol) && callValue.kind != .SUPER {
+      if function != null && function.kind == .FUNCTION_CONSTRUCTOR && isAbstractObject(function.parent.asObjectSymbol) && value.kind != .SUPER {
         var reason = function.parent.asObjectSymbol.isAbstractBecauseOf
         log.semanticErrorAbstractNew(node.internalRangeOrRange, function.parent.resolvedType, reason.range, reason.name)
       }
 
       # Replace overloaded symbols with the chosen overload
-      if function != null && function.overloaded != null && callValue.symbol == function.overloaded {
-        callValue.symbol = function
+      if function != null && function.overloaded != null && value.symbol == function.overloaded {
+        value.symbol = function
       }
 
       return true
     }
 
-    def resolveOverloadedFunction(range Range, children List<Node>, scope Scope, symbolType Type) Type {
+    def resolveOverloadedFunction(range Range, node Node, scope Scope, symbolType Type) Type {
       var overloaded = symbolType.symbol.asOverloadedFunctionSymbol
-      var count = children.count - 1
+      var firstArgument = node.firstChild.nextSibling
+      var count = node.childCount - 1
       var candidates List<Type> = []
 
       # Filter by argument length and substitute using the current type environment
@@ -1766,10 +1762,9 @@ namespace Skew.Resolving {
       # a list literal needs type context to resolve correctly.
       var index = 0
       while index < candidates.count {
-        var argumentTypes = candidates[index].argumentTypes
-        for i in 0..count {
-          var kind = children[i + 1].kind
-          var type = argumentTypes[i]
+        var child = firstArgument
+        for type in candidates[index].argumentTypes {
+          var kind = child.kind
           if kind == .NULL && !type.isReference ||
               kind == .INITIALIZER_LIST && findMember(type, "[new]") == null && findMember(type, "[...]") == null ||
               (kind == .INITIALIZER_SET || kind == .INITIALIZER_MAP) && findMember(type, "{new}") == null && findMember(type, "{...}") == null {
@@ -1777,6 +1772,7 @@ namespace Skew.Resolving {
             index--
             break
           }
+          child = child.nextSibling
         }
         index++
       }
@@ -1787,20 +1783,21 @@ namespace Skew.Resolving {
       }
 
       # If that still didn't work, resolve the arguments without type context
-      for i in 0..count {
-        resolveAsParameterizedExpression(children[i + 1], scope)
+      for child = firstArgument; child != null; child = child.nextSibling {
+        resolveAsParameterizedExpression(child, scope)
       }
 
       # Try again, this time discarding all implicit conversion failures
       index = 0
       while index < candidates.count {
-        var argumentTypes = candidates[index].argumentTypes
-        for i in 0..count {
-          if !cache.canImplicitlyConvert(children[i + 1].resolvedType, argumentTypes[i]) {
+        var child = firstArgument
+        for type in candidates[index].argumentTypes {
+          if !cache.canImplicitlyConvert(child.resolvedType, type) {
             candidates.removeAt(index)
             index--
             break
           }
+          child = child.nextSibling
         }
         index++
       }
@@ -1812,8 +1809,8 @@ namespace Skew.Resolving {
 
       # Extract argument types for an error if there is one
       var childTypes List<Type> = []
-      for i in 0..count {
-        childTypes.append(children[i + 1].resolvedType)
+      for child = firstArgument; child != null; child = child.nextSibling {
+        childTypes.append(child.resolvedType)
       }
 
       # Give up without a match
@@ -1826,7 +1823,7 @@ namespace Skew.Resolving {
       for type in candidates {
         var isMatch = true
         for i in 0..count {
-          if children[i + 1].resolvedType != type.argumentTypes[i] {
+          if childTypes[i] != type.argumentTypes[i] {
             isMatch = false
             break
           }
@@ -1857,7 +1854,7 @@ namespace Skew.Resolving {
     }
 
     def resolveOverloadedFunctionCall(node Node, scope Scope, type Type) bool {
-      var match = resolveOverloadedFunction(node.callValue.range, node.children, scope, type)
+      var match = resolveOverloadedFunction(node.callValue.range, node, scope, type)
       if match != null && resolveFunctionCall(node, scope, match) {
         checkAccess(node, node.callValue.internalRangeOrRange, scope)
         return true
@@ -1936,7 +1933,7 @@ namespace Skew.Resolving {
           return
         }
         target = Node.createType(context)
-        node.replaceChild(0, target)
+        node.appendChild(target)
       } else {
         resolveNode(target, scope, null)
       }
@@ -2040,7 +2037,7 @@ namespace Skew.Resolving {
             var type Type = null
 
             # Resolve all children for this pass
-            for child in node.children {
+            for child = node.firstChild; child != null; child = child.nextSibling {
               if pass != 0 || !needsTypeContext(child) {
                 resolveAsParameterizedExpression(child, scope)
                 type = mergeCommonType(type, child)
@@ -2059,7 +2056,7 @@ namespace Skew.Resolving {
             var valueType Type = null
 
             # Resolve all children for this pass
-            for child in node.children {
+            for child = node.firstChild; child != null; child = child.nextSibling {
               var key = child.firstValue
               var value = child.secondValue
               if pass != 0 || !needsTypeContext(key) {
@@ -2106,14 +2103,13 @@ namespace Skew.Resolving {
       var isList = node.kind == .INITIALIZER_LIST
       var create = findMember(context, isList ? "[new]" : "{new}")
       var add = findMember(context, isList ? "[...]" : "{...}")
-      var children = node.children
 
       # Special-case imported literals to prevent an infinite loop for list literals
       if add != null && add.isImported {
         var function = add.asFunctionSymbol
         if function.arguments.count == (isList ? 1 : 2) {
           var functionType = cache.substitute(function.resolvedType, context.environment)
-          for child in children {
+          for child = node.firstChild; child != null; child = child.nextSibling {
             if child.kind == .PAIR {
               resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, functionType.argumentTypes[0])
               resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, functionType.argumentTypes[1])
@@ -2129,11 +2125,15 @@ namespace Skew.Resolving {
       # Use simple call chaining when there's an add operator present
       if add != null {
         var chain = Node.createDot(Node.createType(context).withRange(node.range), create != null ? create.name : "new").withRange(node.range)
-        for i in 0..children.count {
-          var child = children[i]
+        while node.hasChildren {
+          var child = node.firstChild.remove
           var dot = Node.createDot(chain, add.name).withRange(child.range)
-          var arguments = child.kind == .PAIR ? [child.firstValue.replaceWithNull, child.secondValue.replaceWithNull] : [child.replaceWithNull]
-          chain = Node.createCall(dot, arguments).withRange(child.range)
+          chain = Node.createCall(dot).withRange(child.range)
+          if child.kind == .PAIR {
+            chain.appendChildrenFrom(child)
+          } else {
+            chain.appendChild(child)
+          }
         }
         node.become(chain)
         resolveAsParameterizedExpressionWithConversion(node, scope, context)
@@ -2149,23 +2149,25 @@ namespace Skew.Resolving {
       var dot = Node.createDot(Node.createType(context).withRange(node.range), create.name).withRange(node.range)
 
       # The literal "{}" is ambiguous and may be a map or a set
-      if children.isEmpty && !isList && shouldUseMapConstructor(create) {
-        node.become(Node.createCall(dot, [Node.createList([]).withRange(node.range), Node.createList([]).withRange(node.range)]).withRange(node.range))
+      if !node.hasChildren && !isList && shouldUseMapConstructor(create) {
+        node.become(Node.createCall(dot).withRange(node.range).appendChild(Node.createList).appendChild(Node.createList))
         resolveAsParameterizedExpressionWithConversion(node, scope, context)
         return true
       }
 
       # Call the initializer constructor
       if node.kind == .INITIALIZER_MAP {
-        var firstValues List<Node> = []
-        var secondValues List<Node> = []
-        for child in children {
-          firstValues.append(child.firstValue.replaceWithNull)
-          secondValues.append(child.secondValue.replaceWithNull)
+        var firstValues = Node.createList
+        var secondValues = Node.createList
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          var first = child.firstValue
+          var second = child.secondValue
+          firstValues.appendChild(first.remove)
+          secondValues.appendChild(second.remove)
         }
-        node.become(Node.createCall(dot, [Node.createList(firstValues).withRange(node.range), Node.createList(secondValues).withRange(node.range)]).withRange(node.range))
+        node.become(Node.createCall(dot).withRange(node.range).appendChild(firstValues).appendChild(secondValues))
       } else {
-        node.become(Node.createCall(dot, [Node.createList(node.removeChildren).withRange(node.range)]).withRange(node.range))
+        node.become(Node.createCall(dot).withRange(node.range).appendChild(Node.createList.appendChildrenFrom(node)))
       }
       resolveAsParameterizedExpressionWithConversion(node, scope, context)
       return true
@@ -2225,19 +2227,22 @@ namespace Skew.Resolving {
     }
 
     def resolveLambdaType(node Node, scope Scope) {
-      var types List<Type> = []
+      var lambdaReturnType = node.lambdaReturnType
+      var argumentTypes List<Type> = []
+      var returnType Type = null
 
-      for child in node.children {
-        if child != null {
-          resolveAsParameterizedType(child, scope)
-          types.append(child.resolvedType)
-        } else {
-          types.append(null)
-        }
+      for child = node.firstChild; child != lambdaReturnType; child = child.nextSibling {
+        resolveAsParameterizedType(child, scope)
+        argumentTypes.append(child.resolvedType)
       }
 
-      var returnType = types.takeLast
-      node.resolvedType = cache.createLambdaType(types, returnType)
+      # An empty return type is signaled by the type "null"
+      if lambdaReturnType.kind != .TYPE || lambdaReturnType.resolvedType != null {
+        resolveAsParameterizedType(lambdaReturnType, scope)
+        returnType = lambdaReturnType.resolvedType
+      }
+
+      node.resolvedType = cache.createLambdaType(argumentTypes, returnType)
     }
 
     def resolveName(node Node, scope Scope) {
@@ -2275,7 +2280,7 @@ namespace Skew.Resolving {
       if symbol.kind.isOnInstances {
         var variable = enclosingFunction != null ? enclosingFunction.symbol.self : null
         if variable != null {
-          node.withChildren([Node.createSymbolReference(variable)]).kind = .DOT
+          node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range))
         } else {
           log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
         }
@@ -2333,11 +2338,11 @@ namespace Skew.Resolving {
 
       # Resolve parameter types
       var substitutions List<Type> = []
-      var count = node.children.count - 1
-      for i in 0..count {
-        var child = node.children[i + 1]
+      var count = 0
+      for child = value.nextSibling; child != null; child = child.nextSibling {
         resolveAsParameterizedType(child, scope)
         substitutions.append(child.resolvedType)
+        count++
       }
 
       # Check for type parameters
@@ -2370,9 +2375,8 @@ namespace Skew.Resolving {
     }
 
     def resolveSequence(node Node, scope Scope, context Type) {
-      var children = node.children
-      for child in children {
-        resolveAsParameterizedExpressionWithTypeContext(child, scope, child == children.last ? context : null)
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        resolveAsParameterizedExpressionWithTypeContext(child, scope, child.nextSibling == null ? context : null)
       }
     }
 
@@ -2435,7 +2439,7 @@ namespace Skew.Resolving {
 
         # Automatically call setters
         if left.symbol != null && left.symbol.isSetter {
-          node.become(Node.createCall(left.replaceWithNull, [right.replaceWithNull]).withRange(node.range).withInternalRange(right.range))
+          node.become(Node.createCall(left.remove).withRange(node.range).withInternalRange(right.range).appendChild(right.remove))
           resolveAsParameterizedExpression(node, scope)
         }
 
@@ -2468,8 +2472,10 @@ namespace Skew.Resolving {
       # The order of operands are reversed for the "in" operator
       var kind = node.kind
       var reverseBinaryOrder = kind == .IN
-      var target = node.children[reverseBinaryOrder as int]
-      var other = kind.isBinary ? node.children[1 - (reverseBinaryOrder as int)] : null
+      var first = node.firstChild
+      var second = first.nextSibling
+      var target = reverseBinaryOrder ? second : first
+      var other = kind.isBinary ? reverseBinaryOrder ? first : second : null
 
       # Allow "foo in [.FOO, .BAR]"
       if kind == .IN && target.kind == .INITIALIZER_LIST && !needsTypeContext(other) {
@@ -2525,11 +2531,11 @@ namespace Skew.Resolving {
       # Resolve the overload now so the symbol's properties can be inspected
       if symbol.kind.isOverloadedFunction {
         if reverseBinaryOrder {
-          node.children.reverse
+          first.swapWith(second)
         }
-        symbolType = resolveOverloadedFunction(node.internalRangeOrRange, node.children, scope, symbolType)
+        symbolType = resolveOverloadedFunction(node.internalRangeOrRange, node, scope, symbolType)
         if reverseBinaryOrder {
-          node.children.reverse
+          first.swapWith(second)
         }
         if symbolType == null {
           resolveChildrenAsParameterizedExpressions(node, scope)
@@ -2562,27 +2568,27 @@ namespace Skew.Resolving {
       # Don't replace the operator with a call if it's just used for type checking
       if isRawImport {
         if reverseBinaryOrder {
-          node.children.reverse
+          first.swapWith(second)
         }
         if !resolveFunctionCall(node, scope, symbolType) {
           resolveChildrenAsParameterizedExpressions(node, scope)
         }
         if reverseBinaryOrder {
-          node.children.reverse
+          first.swapWith(second)
         }
         return
       }
 
       # Resolve the method call
-      var children = node.removeChildren
       if reverseBinaryOrder {
-        children.reverse
+        first.swapWith(second)
       }
-      children[0] = Node.createDot(children[0], name).withSymbol(symbol).withRange(node.internalRangeOrRange)
+      target = Node.createDot(target.remove, name).withSymbol(symbol).withRange(node.internalRangeOrRange)
+      node.prependChild(target)
 
       # Implement the logic for the "<=>" operator
       if isComparison {
-        var call = Node.new(.CALL).withChildren(children).withRange(node.range)
+        var call = Node.new(.CALL).appendChildrenFrom(node).withRange(node.range)
         node.appendChild(call)
         node.appendChild(Node.createInt(0).withType(cache.intType))
         node.resolvedType = cache.boolType
@@ -2592,7 +2598,6 @@ namespace Skew.Resolving {
 
       # All other operators are just normal method calls
       node.kind = .CALL
-      node.withChildren(children)
       resolveFunctionCall(node, scope, symbolType)
     }
 
@@ -2605,7 +2610,7 @@ namespace Skew.Resolving {
       var parent = node.parent
 
       # The check for getters is complicated by overloaded functions
-      if !symbol.isGetter && kind.isOverloadedFunction && (!isCallValue(node) || parent.children.count == 1) {
+      if !symbol.isGetter && kind.isOverloadedFunction && (!isCallValue(node) || parent.hasOneChild) {
         var overloaded = symbol.asOverloadedFunctionSymbol
         for getter in overloaded.symbols {
 
@@ -2624,9 +2629,7 @@ namespace Skew.Resolving {
 
       # Automatically wrap the getter in a call expression
       if symbol.isGetter {
-        var value = Node.createNull
-        value.become(node)
-        node.become(Node.createCall(value, []).withRange(node.range))
+        node.become(Node.createCall(node.cloneAndStealChildren).withRange(node.range))
         resolveAsParameterizedExpression(node, scope)
       }
 
@@ -2641,15 +2644,12 @@ namespace Skew.Resolving {
     def checkSwitchStatements(nodes List<Node>, scope Scope) {
       if options.target.requiresIntegerSwitchStatements {
         for node in nodes {
-          var cases = node.children
           var isAllInts = true
 
           # Attempt to convert each case value to a constant
-          for i in 1..cases.count {
-            var child = cases[i]
-            var values = child.children
-            for j in 1..values.count {
-              var caseValue = values[j]
+          for child = node.switchValue.nextSibling; child != null; child = child.nextSibling {
+            var block = child.caseBlock
+            for caseValue = child.firstChild; caseValue != block; caseValue = caseValue.nextSibling {
               if caseValue.symbol == null || caseValue.symbol.kind != .VARIABLE_ENUM {
                 constantFolder.foldConstants(caseValue)
                 if !caseValue.isInt {
@@ -2727,37 +2727,33 @@ namespace Skew.Resolving {
 
     def convertSwitchToIfChain(node Node, scope Scope) {
       var variable = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("value"))
-      var value = node.switchValue
+      var value = node.switchValue.remove
+      var block Node = null
 
       # Stash the variable being switched over so it's only evaluated once
       variable.resolvedType = value.resolvedType
-      variable.value = value.replaceWithNull
+      variable.value = value
       variable.state = .INITIALIZED
-      node.parent.insertChild(node.indexInParent, Node.createVariables([Node.createVariable(variable)]))
-
-      var block Node = null
-      var cases = node.children
+      node.parent.insertChildBefore(node, Node.createVariables.appendChild(Node.createVariable(variable)))
 
       # Build the chain in reverse starting with the last case
-      for i in 1..cases.count {
-        var child = cases[cases.count - i]
-        var caseBlock = child.caseBlock.replaceWithNull
+      for child = node.lastChild; child != null; child = child.previousSibling {
+        var caseBlock = child.caseBlock.remove
         var test Node = null
-        var values = child.children
 
         # Combine adjacent cases in a "||" chain
-        for j in 1..values.count {
-          var caseValue = Node.createBinary(.EQUAL, Node.createSymbolReference(variable), values[j].replaceWithNull)
+        while child.hasChildren {
+          var caseValue = Node.createBinary(.EQUAL, Node.createSymbolReference(variable), child.firstChild.remove)
           test = test != null ? Node.createBinary(.LOGICAL_OR, test, caseValue) : caseValue
         }
 
         # Chain if-else statements together
-        block = test != null ? Node.createBlock([Node.createIf(test, caseBlock, block)]) : caseBlock
+        block = test != null ? Node.createBlock.appendChild(Node.createIf(test, caseBlock, block)) : caseBlock
       }
 
       # Replace the switch statement with the if chain
       if block != null {
-        node.replaceWithNodes(block.removeChildren)
+        node.replaceWithChildrenFrom(block)
       } else {
         node.remove
       }

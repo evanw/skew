@@ -571,7 +571,7 @@ namespace Skew {
       _emit(")" + _space + "{" + _newline)
       _increaseIndent
       _enclosingFunction = symbol
-      _emitStatements(symbol.block.children)
+      _emitStatements(symbol.block)
       _enclosingFunction = null
       _decreaseIndent
       _emit(_indent + "}")
@@ -611,16 +611,16 @@ namespace Skew {
       }
     }
 
-    def _emitStatements(statements List<Node>) {
+    def _emitStatements(node Node) {
       _previousNode = null
 
-      for statement in statements {
+      for child = node.firstChild; child != null; child = child.nextSibling {
         _emitSemicolonIfNeeded
-        _emitNewlineBeforeStatement(statement)
-        addMapping(statement.range)
-        _emitComments(statement.comments)
-        _emitStatement(statement)
-        _emitNewlineAfterStatement(statement)
+        _emitNewlineBeforeStatement(child)
+        addMapping(child.range)
+        _emitComments(child.comments)
+        _emitStatement(child)
+        _emitNewlineAfterStatement(child)
       }
 
       _previousNode = null
@@ -631,16 +631,16 @@ namespace Skew {
       addMapping(node.range)
       if shouldMinify && !node.hasChildren {
         _emit(";")
-      } else if shouldMinify && node.children.count == 1 {
+      } else if shouldMinify && node.hasOneChild {
         if after == .AFTER_KEYWORD {
           _emit(" ")
         }
-        _emitStatement(node.children.first)
+        _emitStatement(node.firstChild)
       } else {
         _emit(_space + "{" + _newline)
         if node.hasChildren {
           _increaseIndent
-          _emitStatements(node.children)
+          _emitStatements(node)
           _decreaseIndent
         }
         _emit(_indent + "}")
@@ -650,8 +650,8 @@ namespace Skew {
 
     def _emitVariables(node Node) {
       _emit("var ")
-      for child in node.children {
-        if child != node.children.first {
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        if child.previousSibling != null {
           _emit("," + _space)
         }
         var symbol = child.symbol.asVariableSymbol
@@ -745,28 +745,26 @@ namespace Skew {
         }
 
         case .SWITCH {
-          var cases = node.children
+          var switchValue = node.switchValue
           _emit(_indent + "switch" + _space + "(")
-          _emitExpression(node.switchValue, .LOWEST)
+          _emitExpression(switchValue, .LOWEST)
           _emit(")" + _space + "{" + _newline)
           _increaseIndent
-          for i in 1..cases.count {
-            var child = cases[i]
-            var values = child.children
+          for child = switchValue.nextSibling; child != null; child = child.nextSibling {
             var block = child.caseBlock
             _emitSemicolonIfNeeded
-            if i != 1 {
+            if child.previousSibling != switchValue {
               _emit(_newline)
             }
-            if values.count == 1 {
+            if child.hasOneChild {
               _emit(_indent + "default:")
             } else {
-              for j in 1..values.count {
-                if j != 1 {
+              for value = child.firstChild; value != block; value = value.nextSibling {
+                if value.previousSibling != null {
                   _emit(_newline)
                 }
                 _emit(_indent + "case ")
-                _emitExpression(values[j], .LOWEST)
+                _emitExpression(value, .LOWEST)
                 _emit(":")
               }
             }
@@ -774,7 +772,7 @@ namespace Skew {
               _emit(" {\n")
               _increaseIndent
             }
-            _emitStatements(block.children)
+            _emitStatements(block)
             if !block.blockAlwaysEndsWithReturn {
               _emitSemicolonIfNeeded
               _emit(_indent + "break")
@@ -791,13 +789,12 @@ namespace Skew {
         }
 
         case .TRY {
-          var children = node.children
+          var tryBlock = node.tryBlock
           var finallyBlock = node.finallyBlock
           _emit(_indent + "try")
-          _emitBlock(node.tryBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
+          _emitBlock(tryBlock, .AFTER_KEYWORD, .MUST_KEEP_BRACES)
           _emit(_newline)
-          for i in 1..children.count - 1 {
-            var child = children[i]
+          for child = tryBlock.nextSibling; child != finallyBlock; child = child.nextSibling {
             _emit(_newline)
             _emitComments(child.comments)
             _emit(_indent + "catch" + _space + "(" + _mangleName(child.symbol) + ")")
@@ -867,6 +864,16 @@ namespace Skew {
       }
     }
 
+    def _emitCommaSeparatedExpressions(from Node, to Node) {
+      while from != to {
+        _emitExpression(from, .COMMA)
+        from = from.nextSibling
+        if from != to {
+          _emit(", ")
+        }
+      }
+    }
+
     def _emitExpression(node Node, precedence Precedence) {
       var kind = node.kind
       addMapping(node.range)
@@ -925,28 +932,36 @@ namespace Skew {
             _emit(_mangleName(_enclosingFunction.self))
           }
 
-          for i in 1..node.children.count {
-            if call || i > 1 {
+          for child = value.nextSibling; child != null; child = child.nextSibling {
+            if call || child.previousSibling != value {
               _emit("," + _space)
             }
-            _emitExpression(node.children[i], .COMMA)
+            _emitExpression(child, .COMMA)
           }
 
           _emit(")")
         }
 
         case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
-          var children = node.children
-          var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && children.isEmpty
-          var isIndented = !_minify && !children.all(child => child.comments == null)
+          var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && !node.hasChildren
+          var isIndented = false
+
+          if !_minify {
+            for child = node.firstChild; child != null; child = child.nextSibling {
+              if child.comments != null {
+                isIndented = true
+                break
+              }
+            }
+          }
 
           _emit(useBraces ? "{" : "[")
           if isIndented {
             _increaseIndent
           }
 
-          for child in children {
-            if child != children.first {
+          for child = node.firstChild; child != null; child = child.nextSibling {
+            if child.previousSibling != null {
               _emit("," + (isIndented ? "" : _space))
             }
             if isIndented {
@@ -971,25 +986,24 @@ namespace Skew {
         }
 
         case .INDEX {
-          assert(node.children.count == 2)
-          _emitExpression(node.children[0], .UNARY_POSTFIX)
+          var target = node.indexTarget
+          _emitExpression(target, .UNARY_POSTFIX)
           _emit("[")
-          _emitExpression(node.children[1], .LOWEST)
+          _emitCommaSeparatedExpressions(target.nextSibling, null)
           _emit("]")
         }
 
         case .ASSIGN_INDEX {
+          var target = node.assignIndexTarget
+          var value = node.assignIndexValue
           if Precedence.ASSIGN as int < precedence as int {
             _emit("(")
           }
-
-          assert(node.children.count == 3)
-          _emitExpression(node.children[0], .UNARY_POSTFIX)
+          _emitExpression(target, .UNARY_POSTFIX)
           _emit("[")
-          _emitExpression(node.children[1], .LOWEST)
+          _emitCommaSeparatedExpressions(target.nextSibling, value)
           _emit("]" + _space + "=" + _space + "")
-          _emitExpression(node.children[2], .ASSIGN)
-
+          _emitExpression(value, .ASSIGN)
           if Precedence.ASSIGN as int < precedence as int {
             _emit(")")
           }
@@ -1007,12 +1021,7 @@ namespace Skew {
           if Precedence.COMMA as int <= precedence as int {
             _emit("(")
           }
-          for i in 0..node.children.count {
-            if i != 0 {
-              _emit("," + _space)
-            }
-            _emitExpression(node.children[i], .COMMA)
-          }
+          _emitCommaSeparatedExpressions(node.firstChild, null)
           if Precedence.COMMA as int <= precedence as int {
             _emit(")")
           }
@@ -1124,7 +1133,7 @@ namespace Skew {
           _unionVariableWithFunction(function.self, function)
           if function.block != null {
             function.self.value = Node.createName("this")
-            function.block.children.prepend(Node.createVariables([Node.createVariable(function.self)]))
+            function.block.prependChild(Node.createVariables.appendChild(Node.createVariable(function.self)))
           }
         } else if function.self != null {
           function.self.name = "this"
@@ -1171,7 +1180,7 @@ namespace Skew {
     def _createIntBinary(kind NodeKind, left Node, right Node) Node {
       if kind == .MULTIPLY {
         _needsMultiply = true
-        return Node.createCall(Node.createName(_multiply.name).withSymbol(_multiply), [left, right]).withType(_cache.intType)
+        return Node.createCall(Node.createName(_multiply.name).withSymbol(_multiply)).withType(_cache.intType).appendChild(left).appendChild(right)
       }
       return _wrapWithIntCast(Node.createBinary(kind, left, right).withType(_cache.intType))
     }
@@ -1185,7 +1194,7 @@ namespace Skew {
     }
 
     def _wrapWithTypeIndex(node Node, index Type, type Type) Node {
-      return Node.createIndex(Node.createType(index), [node]).withType(type).withRange(node.range)
+      return Node.createIndex(Node.createType(index)).withType(type).withRange(node.range).appendChild(node)
     }
 
     def _patchBinaryArithmetic(node Node) {
@@ -1196,7 +1205,7 @@ namespace Skew {
         var left = node.binaryLeft
         var right = node.binaryRight
         if left.resolvedType == _cache.intType && right.resolvedType == _cache.intType {
-          node.become(_createIntBinary(node.kind, left.replaceWithNull, right.replaceWithNull).withRange(node.range))
+          node.become(_createIntBinary(node.kind, left.remove, right.remove).withRange(node.range))
         }
       }
     }
@@ -1220,7 +1229,6 @@ namespace Skew {
       }
 
       var oldEnclosingFunction = _enclosingFunction
-      var children = node.children
       var symbol = node.symbol
       var kind = node.kind
 
@@ -1231,18 +1239,16 @@ namespace Skew {
         }
       }
 
-      if children != null {
-        if kind == .LAMBDA {
-          _enclosingFunction = symbol.asFunctionSymbol
-        }
+      if kind == .LAMBDA {
+        _enclosingFunction = symbol.asFunctionSymbol
+      }
 
-        for child in children {
-          _patchNode(child)
-        }
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _patchNode(child)
+      }
 
-        if kind == .LAMBDA {
-          _enclosingFunction = oldEnclosingFunction
-        }
+      if kind == .LAMBDA {
+        _enclosingFunction = oldEnclosingFunction
       }
 
       switch kind {
@@ -1273,6 +1279,12 @@ namespace Skew {
         case .IF {
           if _mangle {
             _peepholeMangleIf(node)
+          }
+        }
+
+        case .FOR {
+          if _mangle {
+            _peepholeMangleFor(node)
           }
         }
 
@@ -1314,16 +1326,17 @@ namespace Skew {
     }
 
     def _patchTry(node Node) {
-      if node.children.count > 2 {
-        var children = node.removeChildren
-        var tryNode = children.first
-        var finallyNode = children.last
-        var variable = VariableSymbol.new(.VARIABLE_LOCAL, children.count == 3 && children[1].symbol != null ? children[1].symbol.name : _enclosingFunction.scope.generateName("e"))
-        var block Node = Node.createBlock([Node.createThrow(Node.createSymbolReference(variable))])
+      if node.hasChildren && !node.hasOneChild {
+        var tryBlock = node.tryBlock
+        var finallyBlock = node.finallyBlock
+        var firstCatch = finallyBlock != null ? finallyBlock.previousSibling : node.lastChild
+        var variable = VariableSymbol.new(.VARIABLE_LOCAL, firstCatch.kind == .CATCH && firstCatch.symbol != null ?
+          firstCatch.symbol.name : _enclosingFunction.scope.generateName("e"))
+        var block = Node.createBlock.appendChild(Node.createThrow(Node.createSymbolReference(variable)))
 
-        for i in 1..children.count - 1 {
-          var child = children[children.count - i - 1]
-          var catchBlock = child.catchBlock.replaceWithNull
+        # Iterate backwards over the catch blocks
+        for child = firstCatch, previous = child.previousSibling; child != tryBlock; child = previous, previous = child.previousSibling {
+          var catchBlock = child.remove.catchBlock.remove
 
           # Just rename all catch symbols to the same name instead of substituting the variable
           if child.symbol != null {
@@ -1333,15 +1346,15 @@ namespace Skew {
           # Build up the chain of tests in reverse
           if child.symbol != null && child.symbol.resolvedType != .DYNAMIC {
             var test = Node.createBinary(.IS, Node.createSymbolReference(variable), Node.createType(child.symbol.resolvedType))
-            block = Node.createBlock([catchBlock.children.isEmpty
-              ? Node.createIf(Node.createUnary(.NOT, test), block, null)
-              : Node.createIf(test, catchBlock, block)])
+            block = Node.createBlock.appendChild(catchBlock.hasChildren
+              ? Node.createIf(test, catchBlock, block)
+              : Node.createIf(Node.createUnary(.NOT, test), block, null))
           } else {
             block = catchBlock
           }
         }
 
-        node.withChildren([tryNode, Node.createCatch(variable, block), finallyNode])
+        node.insertChildAfter(tryBlock, Node.createCatch(variable, block))
       }
     }
 
@@ -1352,8 +1365,8 @@ namespace Skew {
       }
 
       if node.kind == .ASSIGN_INDEX {
-        var children = node.children
-        return children.count == 3 && children[0].hasNoSideEffects && children[1].hasNoSideEffects && children[2].hasNoSideEffects ? children[2] : null
+        var value = node.assignIndexValue
+        return value.hasNoSideEffects && node.assignIndexTarget.hasNoSideEffects && node.childCount == 3 && value.previousSibling.hasNoSideEffects ? value : null
       }
 
       return null
@@ -1363,27 +1376,29 @@ namespace Skew {
       assert(node.kind == .SEQUENCE)
 
       # "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
-      var i = node.children.count - 1
-      while i > 0 {
-        var current = node.children[i]
-        var currentRight = _assignSourceIfNoSideEffects(current)
-        if currentRight != null {
-          while i != 0 {
-            var previous = node.children[i - 1]
-            var previousRight = _assignSourceIfNoSideEffects(previous)
-            if previousRight == null || !_looksTheSame(previousRight, currentRight) {
+      # "a = 0, b = 0, c = 1, d = 1;" => "a = b = 0, c = d = 1;"
+      for child = node.lastChild; child != null; child = child.previousSibling {
+        var childRight = _assignSourceIfNoSideEffects(child)
+        if childRight != null {
+          while true {
+            var previous = child.previousSibling
+            if previous == null {
               break
             }
-            previousRight.replaceWith(current.remove)
-            current = previous
-            i--
+            var previousRight = _assignSourceIfNoSideEffects(previous)
+            if previousRight == null || !_looksTheSame(previousRight, childRight) {
+              break
+            }
+            previousRight.become(child.remove)
+            child = previous
           }
         }
-        i--
       }
     }
 
-    # Simplifies the node assuming it's used in a boolean context
+    # Simplifies the node assuming it's used in a boolean context. Note that
+    # this may replace the passed-in node, which will then need to be queried
+    # again if it's needed for further stuff.
     def _peepholeMangleBoolean(node Node, canSwap BooleanSwap) BooleanSwap {
       var kind = node.kind
 
@@ -1398,7 +1413,7 @@ namespace Skew {
           # This minification is not valid for floating-point values because
           # of NaN, since NaN != 0 but NaN is falsy in JavaScript
           if left.resolvedType != null && left.resolvedType != _cache.doubleType && right.resolvedType != null && right.resolvedType != _cache.doubleType {
-            replacement.replaceWithNull
+            replacement.remove
             node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement)
           }
         }
@@ -1408,13 +1423,13 @@ namespace Skew {
           # "if (a != -1) c;" => "if (~a) c;"
           # "if (a == -1) c; else d;" => "if (~a) d; else c;"
           if right.isInt && right.asInt == -1 {
-            node.become(Node.createUnary(.COMPLEMENT, left.replaceWithNull))
+            node.become(Node.createUnary(.COMPLEMENT, left.remove))
           }
 
           # "if (-1 != b) c;" => "if (~b) c;"
           # "if (-1 == b) c; else d;" => "if (~b) d; else c;"
           else if left.isInt && left.asInt == -1 {
-            node.become(Node.createUnary(.COMPLEMENT, right.replaceWithNull))
+            node.become(Node.createUnary(.COMPLEMENT, right.remove))
           }
 
           # "if (a != b) c;" => "if (a ^ b) c;"
@@ -1437,7 +1452,7 @@ namespace Skew {
       # "a == 0 ? b : c;" => "a ? c : b;"
       # This is not an "else if" check since EQUAL may be turned into NOT above
       if node.kind == .NOT && canSwap == .SWAP {
-        node.become(node.unaryValue.replaceWithNull)
+        node.become(node.unaryValue.remove)
         return .SWAP
       }
 
@@ -1469,7 +1484,7 @@ namespace Skew {
 
           # "if (a) b; else c;" => "a ? b : c;"
           if trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION {
-            var hook = Node.createHook(test.replaceWithNull, trueStatement.expressionValue.replaceWithNull, falseStatement.expressionValue.replaceWithNull)
+            var hook = Node.createHook(test.remove, trueStatement.expressionValue.remove, falseStatement.expressionValue.remove)
             _peepholeMangleHook(hook)
             node.become(Node.createExpression(hook))
           }
@@ -1479,7 +1494,7 @@ namespace Skew {
             var trueValue = trueStatement.returnValue
             var falseValue = falseStatement.returnValue
             if trueValue != null && falseValue != null {
-              var hook = Node.createHook(test.replaceWithNull, trueValue.replaceWithNull, falseValue.replaceWithNull)
+              var hook = Node.createHook(test.remove, trueValue.remove, falseValue.remove)
               _peepholeMangleHook(hook)
               node.become(Node.createReturn(hook))
             }
@@ -1490,27 +1505,26 @@ namespace Skew {
       # "if (a) b;" => "a && b;"
       # "if (!a) b;" => "a || b;"
       else if trueStatement != null && trueStatement.kind == .EXPRESSION {
-        var value = trueStatement.expressionValue.replaceWithNull
-        node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.replaceWithNull, value)))
+        node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.remove, trueStatement.expressionValue.remove)))
       }
 
       # "if (a) {}" => "a;"
       else if !trueBlock.hasChildren {
-        node.become(Node.createExpression(test.replaceWithNull))
+        node.become(Node.createExpression(test.remove))
       }
     }
 
     def _peepholeMangleWhile(node Node) {
-      var test = node.whileTest.replaceWithNull
-      _peepholeMangleBoolean(test, .NO_SWAP)
-
-      # "while (true) {}" => "for (;;) {}"
-      if test.isTrue {
-        test = null
-      }
+      var test = node.whileTest
+      var block = node.whileBlock
+      _peepholeMangleBoolean(test.remove, .NO_SWAP)
 
       # "while (a) {}" => "for (; a;) {}"
-      node.become(Node.createFor(null, test, null, node.whileBlock.replaceWithNull))
+      node.become(Node.createFor(Node.createSequence, test, Node.createSequence, block.remove))
+    }
+
+    def _peepholeMangleFor(node Node) {
+      _peepholeMangleBoolean(node.forTest, .NO_SWAP)
     }
 
     def _peepholeMangleHook(node Node) {
@@ -1529,19 +1543,19 @@ namespace Skew {
 
       # "a ? a : b" => "a || b"
       if _looksTheSame(test, trueValue) && test.hasNoSideEffects {
-        node.become(Node.createBinary(.LOGICAL_OR, test.replaceWithNull, falseValue.replaceWithNull))
+        node.become(Node.createBinary(.LOGICAL_OR, test.remove, falseValue.remove))
         return
       }
 
       # "a ? b : a" => "a && b"
       if _looksTheSame(test, falseValue) && test.hasNoSideEffects {
-        node.become(Node.createBinary(.LOGICAL_AND, test.replaceWithNull, trueValue.replaceWithNull))
+        node.become(Node.createBinary(.LOGICAL_AND, test.remove, trueValue.remove))
         return
       }
 
       # "a ? b : b" => "a, b"
       if _looksTheSame(trueValue, falseValue) {
-        node.become(test.hasNoSideEffects ? trueValue.replaceWithNull : Node.createSequence([test.replaceWithNull, trueValue.replaceWithNull]))
+        node.become(test.hasNoSideEffects ? trueValue.remove : Node.createSequence.appendChild(test.remove).appendChild(trueValue.remove))
         return
       }
 
@@ -1553,9 +1567,9 @@ namespace Skew {
 
         # "a ? b : c ? b : d" => "a || c ? b : d"
         if _looksTheSame(trueValue, falseTrueValue) {
-          var or = Node.createBinary(.LOGICAL_OR, Node.createNull, falseTest.replaceWithNull)
+          var or = Node.createBinary(.LOGICAL_OR, Node.createNull, falseTest.remove)
           or.binaryLeft.replaceWith(test.replaceWith(or))
-          falseValue.replaceWith(falseFalseValue.replaceWithNull)
+          falseValue.replaceWith(falseFalseValue.remove)
           _peepholeMangleHook(node)
           return
         }
@@ -1570,77 +1584,65 @@ namespace Skew {
 
         # "a ? b = c : b = d;" => "b = a ? c : d;"
         if _looksTheSame(trueLeft, falseLeft) {
-          var hook = Node.createHook(test.replaceWithNull, trueRight.replaceWithNull, falseRight.replaceWithNull)
+          var hook = Node.createHook(test.remove, trueRight.remove, falseRight.remove)
           _peepholeMangleHook(hook)
-          node.become(Node.createBinary(trueValue.kind, trueLeft.replaceWithNull, hook))
+          node.become(Node.createBinary(trueValue.kind, trueLeft.remove, hook))
         }
 
         # "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
         else if _looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryAssign {
-          var hook = Node.createHook(test.replaceWithNull, trueLeft.replaceWithNull, falseLeft.replaceWithNull)
+          var hook = Node.createHook(test.remove, trueLeft.remove, falseLeft.remove)
           _peepholeMangleHook(hook)
-          node.become(Node.createBinary(trueValue.kind, hook, trueRight.replaceWithNull))
+          node.become(Node.createBinary(trueValue.kind, hook, trueRight.remove))
         }
       }
     }
 
     def _peepholeMangleBlock(node Node) {
-      var children = node.children
-      var i = 0
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        switch child.kind {
+          # "a; b; c;" => "a, b, c;"
+          case .EXPRESSION {
+            if child.expressionValue.hasNoSideEffects {
+              child.remove
+            } else {
+              while true {
+                var previous = child.previousSibling
+                if previous == null || previous.kind != .EXPRESSION {
+                  break
+                }
 
-      while i < children.count {
-        var child = children[i]
-        var kind = child.kind
-
-        # "a; b; c;" => "a, b, c;"
-        if kind == .EXPRESSION {
-          if child.expressionValue.hasNoSideEffects {
-            child.remove
-            i--
-          } else {
-            while i + 1 < children.count {
-              var next = children[i + 1]
-              if next.kind != .EXPRESSION {
-                break
+                child.become(Node.createExpression(Node.createSequence(previous.remove.expressionValue.remove, child.expressionValue.remove)))
               }
-              var combined = Node.createExpression(_joinExpressions(child.expressionValue.replaceWithNull, next.remove.expressionValue.replaceWithNull))
-              child.replaceWith(combined)
-              child = combined
-            }
-            var value = child.expressionValue
-            if value.kind == .SEQUENCE {
-              _peepholeMangleSequence(value)
+
+              var value = child.expressionValue
+              if value.kind == .SEQUENCE {
+                _peepholeMangleSequence(value)
+              }
             }
           }
-        }
 
-        else if kind == .RETURN && child.returnValue != null {
-          while i != 0 {
-            var previous = children[i - 1]
+          # "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
+          case .RETURN {
+            if child.returnValue != null {
+              while true {
+                var previous = child.previousSibling
+                if previous == null || previous.kind != .IF || previous.ifFalse != null {
+                  break
+                }
 
-            # "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
-            if previous.kind == .IF && previous.ifFalse == null {
-              var statement = previous.ifTrue.blockStatement
-              if statement != null && statement.kind == .RETURN && statement.returnValue != null {
-                var hook = Node.createHook(previous.ifTest.replaceWithNull, statement.returnValue.replaceWithNull, child.returnValue.replaceWithNull)
+                var statement = previous.ifTrue.blockStatement
+                if statement == null || statement.kind != .RETURN || statement.returnValue == null {
+                  break
+                }
+
+                var hook = Node.createHook(previous.remove.ifTest.remove, statement.returnValue.remove, child.returnValue.remove)
                 _peepholeMangleHook(hook)
-                child.remove
-                child = Node.createReturn(hook)
-                previous.replaceWith(child)
-              } else {
-                break
+                child.become(Node.createReturn(hook))
               }
             }
-
-            else {
-              break
-            }
-
-            i--
           }
         }
-
-        i++
       }
     }
 
@@ -1652,40 +1654,34 @@ namespace Skew {
       # Cast to bool
       if type == _cache.boolType {
         if valueType != _cache.boolType {
-          node.become(_wrapWithNot(_wrapWithNot(value.replaceWithNull)))
+          node.become(_wrapWithNot(_wrapWithNot(value.remove)))
         }
       }
 
       # Cast to int
       else if _cache.isInteger(type) {
         if !_cache.isInteger(valueType) && !_alwaysConvertsOperandsToInt(node.parent) {
-          node.become(_wrapWithIntCast(value.replaceWithNull))
+          node.become(_wrapWithIntCast(value.remove))
         }
       }
 
       # Cast to double
       else if type == _cache.doubleType {
         if !_cache.isNumeric(valueType) {
-          node.become(Node.createUnary(.POSITIVE, value.replaceWithNull).withRange(node.range).withType(_cache.doubleType))
+          node.become(Node.createUnary(.POSITIVE, value.remove).withRange(node.range).withType(_cache.doubleType))
         }
       }
 
       # Cast to string
       else if type == _cache.stringType {
         if valueType != _cache.stringType {
-          node.become(Node.createBinary(.ADD, value.replaceWithNull, Node.createString("").withType(_cache.stringType)).withType(_cache.stringType).withRange(node.range))
+          node.become(Node.createBinary(.ADD, value.remove, Node.createString("").withType(_cache.stringType)).withType(_cache.stringType).withRange(node.range))
         }
       }
     }
   }
 
   namespace JavaScriptEmitter {
-    def _joinExpressions(left Node, right Node) Node {
-      var sequence = Node.createSequence(left.kind == .SEQUENCE ? left.removeChildren : [left])
-      sequence.appendChildren(right.kind == .SEQUENCE ? right.removeChildren : [right])
-      return sequence
-    }
-
     def _looksTheSame(left Node, right Node) bool {
       if left.kind == right.kind {
         switch left.kind {
@@ -1761,6 +1757,9 @@ namespace Skew {
     }
 
     def _mangleName(symbol Symbol) string {
+      if symbol == null {
+        return "(NULL!)"
+      }
       if symbol.isPrimaryConstructor {
         symbol = symbol.parent
       }

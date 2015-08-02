@@ -25,7 +25,7 @@ namespace Skew.Inlining {
       var callSite = info.callSites[i]
       if callSite != null {
         var node = callSite.callNode
-        assert(node.children.count == info.symbol.arguments.count + 1)
+        assert(node.childCount == info.symbol.arguments.count + 1)
 
         # Propagate spreading annotations that must be preserved through inlining
         if spreadingAnnotations != null {
@@ -66,8 +66,8 @@ namespace Skew.Inlining {
         #
         if !info.unusedArguments.isEmpty {
           var hasSideEffects = false
-          for index in info.unusedArguments {
-            if !node.children[index + 1].hasNoSideEffects {
+          for child = node.callValue.nextSibling; child != null; child = child.nextSibling {
+            if !child.hasNoSideEffects {
               hasSideEffects = true
               break
             }
@@ -78,8 +78,11 @@ namespace Skew.Inlining {
         }
 
         var clone = info.inlineValue.clone.withType(node.resolvedType)
-        var values = node.removeChildren
-        var value = values.takeFirst
+        var value = node.firstChild.remove
+        var values List<Node> = []
+        while node.hasChildren {
+          values.append(node.firstChild.remove)
+        }
         assert(value.kind == .NAME && value.symbol == info.symbol)
         node.become(clone)
         recursivelySubstituteArguments(node, info.symbol.arguments, values)
@@ -95,13 +98,8 @@ namespace Skew.Inlining {
 
   def recursivelyInlineFunctionCalls(graph InliningGraph, node Node) {
     # Recursively inline child nodes first
-    var children = node.children
-    if children != null {
-      for child in children {
-        if child != null {
-          recursivelyInlineFunctionCalls(graph, child)
-        }
-      }
+    for child = node.firstChild; child != null; child = child.nextSibling {
+      recursivelyInlineFunctionCalls(graph, child)
     }
 
     # Inline calls after all children have been processed
@@ -128,14 +126,9 @@ namespace Skew.Inlining {
     }
 
     # Otherwise, recursively search for substitutions in all child nodes
-    var children = node.children
-    if children != null {
-      for i in 0..children.count {
-        var child = children[i]
-        if child != null {
-          recursivelySubstituteArguments(child, arguments, values)
-        }
-      }
+    for child = node.firstChild, next Node = null; child != null; child = next {
+      next = child.nextSibling
+      recursivelySubstituteArguments(child, arguments, values)
     }
   }
 
@@ -223,7 +216,7 @@ namespace Skew.Inlining {
           return InliningInfo.new(symbol, Node.createNull, info.callSites, unusedArguments)
         }
 
-        var first = block.children.first
+        var first = block.firstChild
         var inlineValue Node = null
 
         # If the first value in the function is a return statement, then the
@@ -234,7 +227,7 @@ namespace Skew.Inlining {
         }
 
         # Otherwise, this statement must be a lone expression statement
-        else if first.kind == .EXPRESSION && block.children.count == 1 {
+        else if first.kind == .EXPRESSION && first.nextSibling == null {
           inlineValue = first.expressionValue
         }
 
@@ -279,12 +272,9 @@ namespace Skew.Inlining {
       }
 
       # Inlining is impossible at this node if it's impossible for any child node
-      var children = node.children
-      if children != null {
-        for child in children {
-          if child != null && !_recursivelyCountArgumentUses(child, argumentCounts) {
-            return false
-          }
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        if !_recursivelyCountArgumentUses(child, argumentCounts) {
+          return false
         }
       }
 

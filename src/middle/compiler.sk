@@ -235,10 +235,8 @@ namespace Skew {
   def _verifyHierarchy(node Node, parent Node) {
     if node != null {
       assert(node.parent == parent)
-      if node.children != null {
-        for child in node.children {
-          _verifyHierarchy(child, node)
-        }
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _verifyHierarchy(child, node)
       }
     }
   }
