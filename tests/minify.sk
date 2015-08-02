@@ -46,7 +46,7 @@ def main {
   }
 }
 ", "
-(function(){main=function(){if(a())if(b()){var c=d();e(c,c)}else{var f=g();h(f,f)}else i()}})();
+(function(){main=function(){if(a()){if(b()){var c=d();e(c,c)}else{var f=g();h(f,f)}}else i()}})();
 ").jsMinify
 
 # This must be careful about the "dangling if" ambiguity
@@ -90,6 +90,22 @@ def main {
 }
 ", "
 (function(){main=function(){if(a()){if(b()){var c=d();e(c,c)}else if(f()){var g=h();i(g,g)}}else{var j=k();l(j,j)}}})();
+").jsMinify
+
+# A tricky "dangling if" issue
+test("
+@export
+def main {
+  if dynamic.a() {
+    while true {
+      if dynamic.b() { break }
+    }
+  } else {
+    dynamic.c()
+  }
+}
+", "
+(function(){main=function(){if(a()){while(true)if(b())break}else c()}})();
 ").jsMinify
 
   }

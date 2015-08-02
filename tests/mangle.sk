@@ -96,6 +96,37 @@ def baz bool {
 })();
 ").jsMangle
 
+# More tests for if statement return folding
+test("
+@export
+def test(x dynamic) dynamic {
+  x.foo(1)
+  if x.y {
+    x.foo(2)
+    if x.y {
+      x.foo(0)
+      return x
+    }
+  }
+  x.foo(3)
+  if x.y {
+    x.foo(4)
+    if x.y {
+      x.foo(0)
+      return x
+    }
+  }
+}
+", "
+(function() {
+  test = function(a) {
+    if ((a.foo(1), a.y && (a.foo(2), a.y)) || (a.foo(3), a.y && (a.foo(4), a.y))) {
+      return a.foo(0), a;
+    }
+  };
+})();
+").jsMangle
+
 # Test integer comparison special cases
 test("
 @export

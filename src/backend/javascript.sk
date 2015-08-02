@@ -835,10 +835,11 @@ namespace Skew {
       # "if (a) if (b) c; else d; else e;"
       # "if (a) { if (b) if (c) d; else e; } else f;"
       # "if (a) { if (b) c; else if (d) e; } else f;"
+      # "if (a) { while (true) if (b) break; } else c;"
       var braces = BracesMode.CAN_OMIT_BRACES
       if falseBlock != null {
-        var singleIf = _singleIf(trueBlock)
-        if singleIf != null && (singleIf.ifFalse == null || _singleIf(singleIf.ifFalse) != null) {
+        var statement = trueBlock.blockStatement
+        if statement != null && (statement.kind == .IF || statement.kind == .FOR || statement.kind == .FOREACH || statement.kind == .WHILE) {
           braces = .MUST_KEEP_BRACES
         }
       }
@@ -1718,17 +1719,15 @@ namespace Skew {
           case .EXPRESSION {
             if child.expressionValue.hasNoSideEffects {
               child.remove
-            } else {
-              if previous != null && previous.kind == .EXPRESSION {
-                var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.expressionValue.remove)
-                _peepholeMangleSequence(sequence)
-                child.become(Node.createExpression(sequence))
-              }
+            } else if previous != null && previous.kind == .EXPRESSION {
+              var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.expressionValue.remove)
+              _peepholeMangleSequence(sequence)
+              child.become(Node.createExpression(sequence))
             }
           }
 
-          # "if (a) return b; return c;" => "return a ? b : c;"
           case .RETURN {
+            # "if (a) return b; return c;" => "return a ? b : c;"
             if previous != null && child.returnValue != null && previous.kind == .IF && previous.ifFalse == null {
               var statement = previous.ifTrue.blockStatement
               if statement != null && statement.kind == .RETURN && statement.returnValue != null {
@@ -1737,12 +1736,34 @@ namespace Skew {
                 child.become(Node.createReturn(hook))
               }
             }
+
+            # "a; return b;" => "return a, b;"
+            else if previous != null && child.returnValue != null && previous.kind == .EXPRESSION {
+              var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.returnValue.remove)
+              _peepholeMangleSequence(sequence)
+              child.become(Node.createReturn(sequence))
+            }
           }
 
-          # "if (a) b; if (c) b;" => "if (a || c) b;"
           case .IF {
-            if previous != null && child.ifFalse == null && previous.kind == .IF && previous.ifFalse == null && _looksTheSame(previous.ifTrue, child.ifTrue) {
-              child.ifTest.replaceWith(Node.createBinary(.LOGICAL_OR, previous.remove.ifTest.remove, child.ifTest.cloneAndStealChildren))
+            while previous != null {
+              # "if (a) b; if (c) b;" => "if (a || c) b;"
+              if child.ifFalse == null && previous.kind == .IF && previous.ifFalse == null && _looksTheSame(previous.ifTrue, child.ifTrue) {
+                child.ifTest.replaceWith(Node.createBinary(.LOGICAL_OR, previous.remove.ifTest.remove, child.ifTest.cloneAndStealChildren))
+              }
+
+              # "a; if (b) c;" => "if (a, b) c;"
+              else if previous.kind == .EXPRESSION {
+                var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.ifTest.cloneAndStealChildren)
+                _peepholeMangleSequence(sequence)
+                child.ifTest.replaceWith(sequence)
+              }
+
+              else {
+                break
+              }
+
+              previous = child.previousSibling
             }
           }
 
@@ -1877,7 +1898,7 @@ namespace Skew {
 
           case
             .BLOCK, .BREAK, .CONTINUE, .EXPRESSION, .IF, .RETURN, .THROW, .WHILE,
-            .ASSIGN_INDEX, .CALL, .HOOK, .INDEX, .INITIALIZER_LIST, .INITIALIZER_MAP, .PAIR,
+            .ASSIGN_INDEX, .CALL, .HOOK, .INDEX, .INITIALIZER_LIST, .INITIALIZER_MAP, .PAIR, .SEQUENCE,
             .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
             return _childrenLookTheSame(left, right)
           }

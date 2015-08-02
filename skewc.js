@@ -4359,12 +4359,13 @@
     // "if (a) if (b) c; else d; else e;"
     // "if (a) { if (b) if (c) d; else e; } else f;"
     // "if (a) { if (b) c; else if (d) e; } else f;"
+    // "if (a) { while (true) if (b) break; } else c;"
     var braces = Skew.JavaScriptEmitter.BracesMode.CAN_OMIT_BRACES;
 
     if (falseBlock !== null) {
-      var singleIf = Skew.JavaScriptEmitter._singleIf(trueBlock);
+      var statement = trueBlock.blockStatement();
 
-      if (singleIf !== null && (singleIf.ifFalse() === null || Skew.JavaScriptEmitter._singleIf(singleIf.ifFalse()) !== null)) {
+      if (statement !== null && (statement.kind === Skew.NodeKind.IF || statement.kind === Skew.NodeKind.FOR || statement.kind === Skew.NodeKind.FOREACH || statement.kind === Skew.NodeKind.WHILE)) {
         braces = Skew.JavaScriptEmitter.BracesMode.MUST_KEEP_BRACES;
       }
     }
@@ -4372,20 +4373,20 @@
     this._emitBlock(node.ifTrue(), Skew.JavaScriptEmitter.AfterToken.AFTER_PARENTHESIS, braces);
 
     if (falseBlock !== null) {
-      var singleIf1 = Skew.JavaScriptEmitter._singleIf(falseBlock);
+      var singleIf = Skew.JavaScriptEmitter._singleIf(falseBlock);
       this._emitSemicolonIfNeeded();
       this._emit(this._newline + this._newline);
       this._emitComments(falseBlock.comments);
 
-      if (singleIf1 !== null) {
-        this._emitComments(singleIf1.comments);
+      if (singleIf !== null) {
+        this._emitComments(singleIf.comments);
       }
 
       this._emit(this._indent + 'else');
 
-      if (singleIf1 !== null) {
+      if (singleIf !== null) {
         this._emit(' ');
-        this._emitIf(singleIf1);
+        this._emitIf(singleIf);
       }
 
       else {
@@ -5351,6 +5352,7 @@
         }
 
         case Skew.NodeKind.RETURN: {
+          // "if (a) return b; return c;" => "return a ? b : c;"
           if (previous !== null && child.returnValue() !== null && previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null) {
             var statement = previous.ifTrue().blockStatement();
 
@@ -5360,12 +5362,35 @@
               child.become(Skew.Node.createReturn(hook));
             }
           }
+
+          // "a; return b;" => "return a, b;"
+          else if (previous !== null && child.returnValue() !== null && previous.kind === Skew.NodeKind.EXPRESSION) {
+            var sequence1 = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.returnValue().remove());
+            this._peepholeMangleSequence(sequence1);
+            child.become(Skew.Node.createReturn(sequence1));
+          }
           break;
         }
 
         case Skew.NodeKind.IF: {
-          if (previous !== null && child.ifFalse() === null && previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null && Skew.JavaScriptEmitter._looksTheSame(previous.ifTrue(), child.ifTrue())) {
-            child.ifTest().replaceWith(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, previous.remove().ifTest().remove(), child.ifTest().cloneAndStealChildren()));
+          while (previous !== null) {
+            // "if (a) b; if (c) b;" => "if (a || c) b;"
+            if (child.ifFalse() === null && previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null && Skew.JavaScriptEmitter._looksTheSame(previous.ifTrue(), child.ifTrue())) {
+              child.ifTest().replaceWith(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, previous.remove().ifTest().remove(), child.ifTest().cloneAndStealChildren()));
+            }
+
+            // "a; if (b) c;" => "if (a, b) c;"
+            else if (previous.kind === Skew.NodeKind.EXPRESSION) {
+              var sequence2 = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.ifTest().cloneAndStealChildren());
+              this._peepholeMangleSequence(sequence2);
+              child.ifTest().replaceWith(sequence2);
+            }
+
+            else {
+              break;
+            }
+
+            previous = child.previousSibling();
           }
           break;
         }
@@ -5530,6 +5555,7 @@
         case Skew.NodeKind.INITIALIZER_LIST:
         case Skew.NodeKind.INITIALIZER_MAP:
         case Skew.NodeKind.PAIR:
+        case Skew.NodeKind.SEQUENCE:
         case Skew.NodeKind.COMPLEMENT:
         case Skew.NodeKind.DECREMENT:
         case Skew.NodeKind.INCREMENT:
