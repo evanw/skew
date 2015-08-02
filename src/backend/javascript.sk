@@ -1421,8 +1421,17 @@ namespace Skew {
       var left = node.binaryLeft
       var right = node.binaryRight
 
+      # "(a, b) || c" => "a, b || c"
+      # "(a, b) && c" => "a, b && c"
+      if (kind == .LOGICAL_OR || kind == .LOGICAL_AND) && left.kind == .SEQUENCE && left.hasChildren {
+        var binary = Node.createBinary(kind, left.lastChild.cloneAndStealChildren, right.remove)
+        _peepholeMangleBinary(binary)
+        left.lastChild.replaceWith(binary)
+        node.become(left.remove)
+      }
+
       # "a + (b + c)" => "(a + b) + c"
-      if kind.isBinaryAssociative && right.kind == kind {
+      else if kind.isBinaryAssociative && right.kind == kind {
         while true {
           node.rotateBinaryRightToLeft
           node = node.binaryLeft
@@ -1574,7 +1583,9 @@ namespace Skew {
       # "if (a) b;" => "a && b;"
       # "if (!a) b;" => "a || b;"
       else if trueStatement != null && trueStatement.kind == .EXPRESSION {
-        node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.remove, trueStatement.expressionValue.remove)))
+        var binary = Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.remove, trueStatement.expressionValue.remove)
+        _peepholeMangleBinary(binary)
+        node.become(Node.createExpression(binary))
       }
 
       # "if (a) if (b) c;" => "if (a && b) c;"
@@ -1775,6 +1786,48 @@ namespace Skew {
 
               previous = child.previousSibling
             }
+
+            # "void foo() { if (a) return; b(); c() }" => "void foo() { if (!a) { b(); c() } }"
+            # "while (a) { if (b) continue; c(); d() }" => "while (a) { if (!b) { c(); d() } }"
+            if child.ifFalse == null {
+              var trueBlock = child.ifTrue
+              if trueBlock.hasChildren {
+                var statement = trueBlock.lastChild
+                if (statement.kind == .RETURN && statement.returnValue == null || statement.kind == .CONTINUE) && _isJumpImplied(node, statement.kind) {
+                  var block Node
+
+                  # If the if statement block without the jump is empty, then flip
+                  # the condition of the if statement and reuse the block. Otherwise,
+                  # create an else branch for the if statement and use that block.
+                  statement.remove
+                  if !trueBlock.hasChildren {
+                    child.ifTest.invertBooleanCondition(_cache)
+                    block = trueBlock
+                  } else if next != null {
+                    block = Node.createBlock
+                    child.appendChild(block)
+                    assert(block == child.ifFalse)
+                  } else {
+                    return
+                  }
+
+                  # Move the rest of this block into the block for the if statement
+                  while child.nextSibling != null {
+                    block.appendChild(child.nextSibling.remove)
+                  }
+                  _peepholeMangleBlock(block)
+                  _peepholeMangleIf(child)
+
+                  # "a(); if (b) return; c();" => "a(); if (!b) c();" => "a(); !b && c();" => "a(), !b && c();"
+                  if child.kind == .EXPRESSION && previous != null && previous.kind == .EXPRESSION {
+                    var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.expressionValue.remove)
+                    _peepholeMangleSequence(sequence)
+                    child.become(Node.createExpression(sequence))
+                  }
+                  return
+                }
+              }
+            }
           }
 
           case .FOR {
@@ -1835,6 +1888,19 @@ namespace Skew {
   }
 
   namespace JavaScriptEmitter {
+    def _isJumpImplied(node Node, kind NodeKind) bool {
+      assert(node.kind == .BLOCK)
+      assert(kind == .RETURN || kind == .CONTINUE)
+      var parent = node.parent
+      if kind == .RETURN && parent == null || kind == .CONTINUE && parent != null && parent.kind.isLoop {
+        return true
+      }
+      if parent != null && parent.kind == .IF && parent.nextSibling == null {
+        return _isJumpImplied(parent.parent, kind)
+      }
+      return false
+    }
+
     def _canIncrement(value int) bool {
       return value < 0x7FFFFFFF
     }

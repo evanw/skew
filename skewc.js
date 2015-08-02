@@ -5044,8 +5044,17 @@
     var left = node.binaryLeft();
     var right = node.binaryRight();
 
+    // "(a, b) || c" => "a, b || c"
+    // "(a, b) && c" => "a, b && c"
+    if ((kind === Skew.NodeKind.LOGICAL_OR || kind === Skew.NodeKind.LOGICAL_AND) && left.kind === Skew.NodeKind.SEQUENCE && left.hasChildren()) {
+      var binary = Skew.Node.createBinary(kind, left.lastChild().cloneAndStealChildren(), right.remove());
+      this._peepholeMangleBinary(binary);
+      left.lastChild().replaceWith(binary);
+      node.become(left.remove());
+    }
+
     // "a + (b + c)" => "(a + b) + c"
-    if (Skew.NodeKind.isBinaryAssociative(kind) && right.kind === kind) {
+    else if (Skew.NodeKind.isBinaryAssociative(kind) && right.kind === kind) {
       while (true) {
         node.rotateBinaryRightToLeft();
         node = node.binaryLeft();
@@ -5198,7 +5207,9 @@
     // "if (a) b;" => "a && b;"
     // "if (!a) b;" => "a || b;"
     else if (trueStatement !== null && trueStatement.kind === Skew.NodeKind.EXPRESSION) {
-      node.become(Skew.Node.createExpression(Skew.Node.createBinary(swapped === Skew.JavaScriptEmitter.BooleanSwap.SWAP ? Skew.NodeKind.LOGICAL_OR : Skew.NodeKind.LOGICAL_AND, test.remove(), trueStatement.expressionValue().remove())));
+      var binary = Skew.Node.createBinary(swapped === Skew.JavaScriptEmitter.BooleanSwap.SWAP ? Skew.NodeKind.LOGICAL_OR : Skew.NodeKind.LOGICAL_AND, test.remove(), trueStatement.expressionValue().remove());
+      this._peepholeMangleBinary(binary);
+      node.become(Skew.Node.createExpression(binary));
     }
 
     // "if (a) if (b) c;" => "if (a && b) c;"
@@ -5404,6 +5415,57 @@
 
             previous = child.previousSibling();
           }
+
+          // "void foo() { if (a) return; b(); c() }" => "void foo() { if (!a) { b(); c() } }"
+          // "while (a) { if (b) continue; c(); d() }" => "while (a) { if (!b) { c(); d() } }"
+          if (child.ifFalse() === null) {
+            var trueBlock = child.ifTrue();
+
+            if (trueBlock.hasChildren()) {
+              var statement1 = trueBlock.lastChild();
+
+              if ((statement1.kind === Skew.NodeKind.RETURN && statement1.returnValue() === null || statement1.kind === Skew.NodeKind.CONTINUE) && Skew.JavaScriptEmitter._isJumpImplied(node, statement1.kind)) {
+                var block = null;
+
+                // If the if statement block without the jump is empty, then flip
+                // the condition of the if statement and reuse the block. Otherwise,
+                // create an else branch for the if statement and use that block.
+                statement1.remove();
+
+                if (!trueBlock.hasChildren()) {
+                  child.ifTest().invertBooleanCondition(this._cache);
+                  block = trueBlock;
+                }
+
+                else if (next !== null) {
+                  block = new Skew.Node(Skew.NodeKind.BLOCK);
+                  child.appendChild(block);
+                  assert(block === child.ifFalse());
+                }
+
+                else {
+                  return;
+                }
+
+                // Move the rest of this block into the block for the if statement
+                while (child.nextSibling() !== null) {
+                  block.appendChild(child.nextSibling().remove());
+                }
+
+                this._peepholeMangleBlock(block);
+                this._peepholeMangleIf(child);
+
+                // "a(); if (b) return; c();" => "a(); if (!b) c();" => "a(); !b && c();" => "a(), !b && c();"
+                if (child.kind === Skew.NodeKind.EXPRESSION && previous !== null && previous.kind === Skew.NodeKind.EXPRESSION) {
+                  var sequence3 = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.expressionValue().remove());
+                  this._peepholeMangleSequence(sequence3);
+                  child.become(Skew.Node.createExpression(sequence3));
+                }
+
+                return;
+              }
+            }
+          }
           break;
         }
 
@@ -5462,6 +5524,22 @@
         node.become(Skew.Node.createBinary(Skew.NodeKind.ADD, value.remove(), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.StringContent('')).withType(this._cache.stringType)).withType(this._cache.stringType).withRange(node.range));
       }
     }
+  };
+
+  Skew.JavaScriptEmitter._isJumpImplied = function(node, kind) {
+    assert(node.kind === Skew.NodeKind.BLOCK);
+    assert(kind === Skew.NodeKind.RETURN || kind === Skew.NodeKind.CONTINUE);
+    var parent = node.parent();
+
+    if (kind === Skew.NodeKind.RETURN && parent === null || kind === Skew.NodeKind.CONTINUE && parent !== null && Skew.NodeKind.isLoop(parent.kind)) {
+      return true;
+    }
+
+    if (parent !== null && parent.kind === Skew.NodeKind.IF && parent.nextSibling() === null) {
+      return Skew.JavaScriptEmitter._isJumpImplied(parent.parent(), kind);
+    }
+
+    return false;
   };
 
   Skew.JavaScriptEmitter._isIdentifierString = function(node) {
@@ -6138,6 +6216,10 @@
     ASSIGN_SHIFT_LEFT: 73,
     ASSIGN_SHIFT_RIGHT: 74,
     ASSIGN_SUBTRACT: 75
+  };
+
+  Skew.NodeKind.isLoop = function(self) {
+    return self === Skew.NodeKind.FOR || self === Skew.NodeKind.FOREACH || self === Skew.NodeKind.WHILE;
   };
 
   Skew.NodeKind.isExpression = function(self) {
@@ -13965,6 +14047,7 @@
         if ($function.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR && $function.resolvedType.returnType !== null) {
           child.appendChild(next.remove().expressionValue().remove());
           next = child.nextSibling();
+          assert(child.returnValue() !== null);
         }
       }
 
@@ -14561,6 +14644,7 @@
 
       target = new Skew.Node(Skew.NodeKind.TYPE).withType(context);
       node.appendChild(target);
+      assert(node.dotTarget() === target);
     }
 
     else {

@@ -308,5 +308,364 @@ def bar {
 })();
 ").jsMangle.foldAllConstants
 
+# Test return statement collapsing
+test("
+@export
+def foo {
+  if dynamic.x {
+    dynamic.y()
+    return
+  }
+}
+", "
+(function() {
+  foo = function() {
+    if (x) {
+      y();
+    }
+  };
+})();
+").jsMangle
+
+# Test return statement collapsing
+test("
+@export
+def foo {
+  if dynamic.x { return }
+  dynamic.y()
+  dynamic.y()
+}
+", "
+(function() {
+  foo = function() {
+    x || (y(), y());
+  };
+})();
+").jsMangle
+
+# Test return statement collapsing
+test("
+@export
+def foo {
+  if dynamic.x { return }
+  dynamic.y()
+  if dynamic.x { return }
+  dynamic.y()
+}
+", "
+(function() {
+  foo = function() {
+    x || (y(), x || y());
+  };
+})();
+").jsMangle
+
+# Test return statement collapsing
+test("
+@export
+def foo {
+  if dynamic.x {
+    if dynamic.y { return }
+    dynamic.z()
+    dynamic.z()
+  }
+}
+", "
+(function() {
+  foo = function() {
+    x && (y || (z(), z()));
+  };
+})();
+").jsMangle
+
+# Test return statement collapsing
+test("
+@export
+def foo {
+  if dynamic.x {
+    if dynamic.y { return }
+    dynamic.z()
+    dynamic.z()
+  }
+  dynamic.z()
+}
+", "
+(function() {
+  foo = function() {
+    if (x) {
+      if (y) {
+        return;
+      }
+
+      z(), z();
+    }
+
+    z();
+  };
+})();
+").jsMangle
+
+# Test return statement collapsing
+test("
+@export
+def foo {
+  while dynamic.x {
+    if dynamic.y { return }
+    dynamic.z()
+    dynamic.z()
+  }
+}
+", "
+(function() {
+  foo = function() {
+    for (; x; ) {
+      if (y) {
+        return;
+      }
+
+      z(), z();
+    }
+  };
+})();
+").jsMangle
+
+# Test return statement collapsing
+test("
+@export
+def foo {
+  dynamic.a()
+  dynamic.b()
+  if dynamic.c() {
+    if dynamic.d() { return }
+    dynamic.e()
+    dynamic.f()
+  }
+}
+
+@export
+def bar {
+  dynamic.a()
+  dynamic.b()
+  if dynamic.c() {
+    if dynamic.d() { return }
+    dynamic.e()
+    dynamic.f()
+  }
+  dynamic.g()
+}
+", "
+(function() {
+  foo = function() {
+    a(), b(), c() && (d() || (e(), f()));
+  };
+
+  bar = function() {
+    if (a(), b(), c()) {
+      if (d()) {
+        return;
+      }
+
+      e(), f();
+    }
+
+    g();
+  };
+})();
+").jsMangle
+
+# Test continue statement collapsing
+test("
+@export
+def foo {
+  while dynamic.x {
+    if dynamic.y {
+      dynamic.z()
+      continue
+    }
+  }
+}
+", "
+(function() {
+  foo = function() {
+    for (; x; ) {
+      if (y) {
+        z();
+      }
+    }
+  };
+})();
+").jsMangle
+
+# Test continue statement collapsing
+test("
+@export
+def foo {
+  while dynamic.x {
+    if dynamic.y { continue }
+    dynamic.z()
+    dynamic.z()
+  }
+}
+", "
+(function() {
+  foo = function() {
+    for (; x; ) {
+      y || (z(), z());
+    }
+  };
+})();
+").jsMangle
+
+# Test continue statement collapsing
+test("
+@export
+def foo {
+  while dynamic.x {
+    if dynamic.y { continue }
+    dynamic.z()
+    if dynamic.y { continue }
+    dynamic.z()
+  }
+}
+", "
+(function() {
+  foo = function() {
+    for (; x; ) {
+      y || (z(), y || z());
+    }
+  };
+})();
+").jsMangle
+
+# Test continue statement collapsing
+test("
+@export
+def foo {
+  while dynamic.x {
+    if dynamic.y {
+      dynamic.z()
+      if dynamic.y { continue }
+      dynamic.z()
+      dynamic.z()
+    }
+  }
+}
+", "
+(function() {
+  foo = function() {
+    for (; x; ) {
+      y && (z(), y || (z(), z()));
+    }
+  };
+})();
+").jsMangle
+
+# Test continue statement collapsing
+test("
+@export
+def foo {
+  while dynamic.x {
+    if dynamic.y {
+      dynamic.z()
+      if dynamic.y { continue }
+      dynamic.z()
+      dynamic.z()
+    }
+    dynamic.z()
+  }
+}
+", "
+(function() {
+  foo = function() {
+    for (; x; ) {
+      if (y) {
+        if (z(), y) {
+          continue;
+        }
+
+        z(), z();
+      }
+
+      z();
+    }
+  };
+})();
+").jsMangle
+
+# Test continue statement collapsing
+test("
+@export
+def foo {
+  while dynamic.x {
+    if dynamic.y {
+      dynamic.z()
+      continue
+    }
+    dynamic.z()
+    dynamic.z()
+  }
+}
+", "
+(function() {
+  foo = function() {
+    for (; x; ) {
+      y ? z() : (z(), z());
+    }
+  };
+})();
+").jsMangle
+
+# Test continue statement collapsing
+test("
+@export
+def foo {
+  while dynamic.x {
+    dynamic.a()
+    dynamic.b()
+    if dynamic.c() {
+      if dynamic.d() { continue }
+      dynamic.e()
+      dynamic.f()
+    }
+  }
+}
+
+@export
+def bar {
+  while dynamic.x {
+    dynamic.a()
+    dynamic.b()
+    if dynamic.c() {
+      if dynamic.d() { continue }
+      dynamic.e()
+      dynamic.f()
+    }
+    dynamic.g()
+  }
+}
+", "
+(function() {
+  foo = function() {
+    for (; x; ) {
+      a(), b(), c() && (d() || (e(), f()));
+    }
+  };
+
+  bar = function() {
+    for (; x; ) {
+      if (a(), b(), c()) {
+        if (d()) {
+          continue;
+        }
+
+        e(), f();
+      }
+
+      g();
+    }
+  };
+})();
+").jsMangle
+
   }
 }

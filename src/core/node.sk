@@ -94,6 +94,10 @@ namespace Skew {
       return self as int >= ASSIGN as int && self as int <= WHILE as int
     }
 
+    def isLoop bool {
+      return self == FOR || self == FOREACH || self == WHILE
+    }
+
     def isExpression bool {
       return self as int >= ASSIGN_INDEX as int && self as int <= ASSIGN_SUBTRACT as int
     }

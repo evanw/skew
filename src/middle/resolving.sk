@@ -1375,6 +1375,7 @@ namespace Skew.Resolving {
           if function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null {
             child.appendChild(next.remove.expressionValue.remove)
             next = child.nextSibling
+            assert(child.returnValue != null)
           }
         }
 
@@ -1910,6 +1911,7 @@ namespace Skew.Resolving {
         }
         target = Node.createType(context)
         node.appendChild(target)
+        assert(node.dotTarget == target)
       } else {
         resolveNode(target, scope, null)
       }
