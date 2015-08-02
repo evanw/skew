@@ -1654,14 +1654,20 @@ namespace Skew {
       }
 
       # "for (a;;) if (b) break;" => "for (a; b;) {}"
-      if test.isEmptySequence && node.forUpdate.isEmptySequence {
+      if node.forUpdate.isEmptySequence {
         var statement = node.forBlock.blockStatement
         if statement != null && statement.kind == .IF && statement.ifFalse == null {
           var branch = statement.ifTrue.blockStatement
           if branch != null && branch.kind == .BREAK {
             var condition = statement.remove.ifTest.remove
             condition.invertBooleanCondition(_cache)
-            test.replaceWith(condition)
+            if test.isEmptySequence {
+              test.replaceWith(condition)
+            } else {
+              condition = Node.createBinary(.LOGICAL_AND, test.cloneAndStealChildren, condition)
+              _peepholeMangleBinary(condition)
+              test.become(condition)
+            }
           }
         }
       }

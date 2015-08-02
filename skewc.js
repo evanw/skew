@@ -5281,7 +5281,7 @@
     }
 
     // "for (a;;) if (b) break;" => "for (a; b;) {}"
-    if (test.isEmptySequence() && node.forUpdate().isEmptySequence()) {
+    if (node.forUpdate().isEmptySequence()) {
       var statement = node.forBlock().blockStatement();
 
       if (statement !== null && statement.kind === Skew.NodeKind.IF && statement.ifFalse() === null) {
@@ -5290,7 +5290,16 @@
         if (branch !== null && branch.kind === Skew.NodeKind.BREAK) {
           var condition = statement.remove().ifTest().remove();
           condition.invertBooleanCondition(this._cache);
-          test.replaceWith(condition);
+
+          if (test.isEmptySequence()) {
+            test.replaceWith(condition);
+          }
+
+          else {
+            condition = Skew.Node.createBinary(Skew.NodeKind.LOGICAL_AND, test.cloneAndStealChildren(), condition);
+            this._peepholeMangleBinary(condition);
+            test.become(condition);
+          }
         }
       }
     }

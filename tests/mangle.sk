@@ -736,18 +736,33 @@ class Foo {
 # Test a loop special case
 test("
 @export
-def main {
+def foo {
   while true {
     dynamic.a()
-    if dynamic.b {
+    if dynamic.b() {
+      break
+    }
+  }
+}
+
+@export
+def bar {
+  while dynamic.a() {
+    dynamic.b()
+    if dynamic.c() {
       break
     }
   }
 }
 ", "
 (function() {
-  main = function() {
-    for (; a(), !b; ) {
+  foo = function() {
+    for (; a(), !b(); ) {
+    }
+  };
+
+  bar = function() {
+    for (; a() && (b(), !c()); ) {
     }
   };
 })();
