@@ -1931,6 +1931,8 @@ namespace Skew {
       else if _cache.isInteger(type) {
         if !_cache.isInteger(valueType) && !_alwaysConvertsOperandsToInt(node.parent) {
           node.become(_wrapWithIntCast(value.remove))
+        } else if value.isInt {
+          node.become(value.remove.withType(node.resolvedType))
         }
       }
 

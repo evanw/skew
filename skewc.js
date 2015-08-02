@@ -5581,6 +5581,10 @@
       if (!this._cache.isInteger(valueType) && !Skew.JavaScriptEmitter._alwaysConvertsOperandsToInt(node.parent())) {
         node.become(this._wrapWithIntCast(value.remove()));
       }
+
+      else if (value.isInt()) {
+        node.become(value.remove().withType(node.resolvedType));
+      }
     }
 
     // Cast to double
