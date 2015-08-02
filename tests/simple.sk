@@ -774,10 +774,10 @@ class Foo {
 <stdin>:5:7: error: Expected \"[...]\" to take 1 argument
   def [...]
       ~~~~~
-<stdin>:6:7: error: Expected \"[]\" to take at least 1 argument
+<stdin>:6:7: error: Expected \"[]\" to take 1 argument
   def []
       ~~
-<stdin>:7:7: error: Expected \"[]=\" to take at least 2 arguments
+<stdin>:7:7: error: Expected \"[]=\" to take 2 arguments
   def []=
       ~~~
 <stdin>:8:7: error: Expected \"foo=\" to take 1 argument
@@ -786,7 +786,7 @@ class Foo {
 <stdin>:9:7: error: Expected \"!\" to take 0 arguments
   def !(x int)
       ^
-<stdin>:10:7: error: Expected \"{...}\" to take between 1 and 2 arguments
+<stdin>:10:7: error: Expected \"{...}\" to take 2 arguments
   def {...}
       ~~~~~
 ")
@@ -1080,7 +1080,7 @@ class Foo {
 <stdin>:3:34: error: Constructors cannot have a return type
   def {new}(x int, y int, z int) int
                                  ~~~
-<stdin>:3:7: error: Expected \"{new}\" to take at most 2 arguments
+<stdin>:3:7: error: Expected \"{new}\" to take either 0 or 2 arguments
   def {new}(x int, y int, z int) int
       ~~~~~
 ")
@@ -1433,7 +1433,7 @@ def foo(foo Foo) {
   foo += []
   foo += [false]
   foo += {}
-  foo += {false}
+  foo += {false: false}
 }
 ", "
 <stdin>:7:7: error: No overload of \"+=\" was found that takes 1 argument of type bool
@@ -1449,10 +1449,10 @@ def foo(foo Foo) {
   foo += {}
       ~~
 <stdin>:11:10: error: Cannot infer a type for this literal
-  foo += {false}
-         ~~~~~~~
+  foo += {false: false}
+         ~~~~~~~~~~~~~~
 <stdin>:11:7: error: No overload of \"+=\" was found that takes 1 argument of type dynamic
-  foo += {false}
+  foo += {false: false}
       ~~
 ")
 
@@ -2874,31 +2874,6 @@ def main {
       ~~~
 <stdin>:11:7: warning: Local variable \"bar\" is never read
   var bar Foo<int> = [0]
-      ~~~
-")
-
-test("
-class Foo<T> {
-  def {new}(t List<T>) {}
-}
-
-class Bar<T> {
-  def {new}(t T) {}
-}
-
-def main {
-  var foo Foo<int> = {0}
-  var bar Foo<int> = {0}
-}
-", "
-<stdin>:6:13: error: Expected argument \"t\" to be of type \"List<T>\" instead of type \"T\"
-  def {new}(t T) {}
-            ^
-<stdin>:10:7: warning: Local variable \"foo\" is never read
-  var foo Foo<int> = {0}
-      ~~~
-<stdin>:11:7: warning: Local variable \"bar\" is never read
-  var bar Foo<int> = {0}
       ~~~
 ")
 

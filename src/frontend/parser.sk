@@ -1144,7 +1144,7 @@ namespace Skew.Parsing {
 
   var initializerParselet = (context ParserContext) Node => {
     var token = context.next
-    var kind NodeKind = token.kind == .LEFT_BRACE || token.kind == .SET_NEW ? .INITIALIZER_SET : .INITIALIZER_LIST
+    var kind NodeKind = token.kind == .LEFT_BRACE ? .INITIALIZER_MAP : .INITIALIZER_LIST
     var node = Node.createInitializer(kind)
 
     if token.kind == .LEFT_BRACE || token.kind == .LEFT_BRACKET {
@@ -1161,16 +1161,6 @@ namespace Skew.Parsing {
           return null
         }
         var colon = context.current
-
-        # Switch from a set to a map if we see a colon
-        if expectColon && !node.hasChildren {
-          if !context.peek(.COLON) {
-            expectColon = false
-          } else {
-            node.kind = .INITIALIZER_MAP
-          }
-        }
-
         if !expectColon {
           node.appendChild(first)
         } else {
@@ -1383,12 +1373,12 @@ namespace Skew.Parsing {
 
     # Index expressions
     pratt.parselet(.LEFT_BRACKET, .MEMBER).infix = (context, left) => {
-      var node = Node.createIndex(left)
       var token = context.next
-      if !parseCommaSeparatedList(context, node, .RIGHT_BRACKET) {
+      var right = expressionParser.parse(context, .LOWEST)
+      if right == null || !context.expect(.RIGHT_BRACKET) {
         return null
       }
-      return node.withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
+      return Node.createIndex(left, right).withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
     }
 
     # Parenthetic groups and lambda expressions like "() => x"

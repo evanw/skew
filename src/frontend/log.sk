@@ -278,13 +278,40 @@ namespace Skew {
       error(range, "Expected \"" + name + "\" to take " + count.toString + " argument" + PrettyPrint.plural(count))
     }
 
-    def semanticErrorWrongArgumentCountRange(range Range, name string, lower int, upper int) {
-      if lower == 0 {
-        error(range, "Expected \"" + name + "\" to take at most " + upper.toString + " argument" + PrettyPrint.plural(upper))
-      } else if upper == -1 {
-        error(range, "Expected \"" + name + "\" to take at least " + lower.toString + " argument" + PrettyPrint.plural(lower))
-      } else {
-        error(range, "Expected \"" + name + "\" to take between " + lower.toString + " and " + upper.toString + " arguments")
+    def semanticErrorWrongArgumentCountRange(range Range, name string, values List<int>) {
+      assert(!values.isEmpty)
+
+      var first = values.first
+      var count = values.count
+
+      if count == 1 {
+        semanticErrorWrongArgumentCount(range, name, first)
+      }
+
+      else {
+        var counts List<string> = []
+        var min = first
+        var max = first
+
+        for value in values {
+          min = Math.min(min, value)
+          max = Math.max(max, value)
+          counts.append(value.toString)
+        }
+
+        # Assuming values are unique, this means all values form a continuous range
+        if max - min + 1 == count {
+          if min == 0 {
+            error(range, "Expected \"" + name + "\" to take at most " + max.toString + " argument" + PrettyPrint.plural(max))
+          } else {
+            error(range, "Expected \"" + name + "\" to take between " + min.toString + " and " + max.toString + " arguments")
+          }
+        }
+
+        # Otherwise, the values are disjoint
+        else {
+          error(range, "Expected \"" + name + "\" to take either " + PrettyPrint.join(counts, "or") + " arguments")
+        }
       }
     }
 

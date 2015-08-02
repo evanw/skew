@@ -541,7 +541,7 @@ namespace Skew.Resolving {
           var countName = Node.createName(count.name).withSymbol(count).withType(count.resolvedType)
 
           # Move the loop variable into the loop body
-          symbol.value = Node.createIndex(listName.clone).appendChild(indexName)
+          symbol.value = Node.createIndex(listName.clone, indexName)
           block.prependChild(Node.createVariables.appendChild(Node.createVariable(symbol)))
 
           # Use a C-style for loop to implement this foreach loop
@@ -703,39 +703,15 @@ namespace Skew.Resolving {
       # Validate argument count
       else {
         var argumentCount = argumentCountForOperator(symbol.name)
-        var hasArgumentCountError = false
 
-        switch argumentCount {
-          case .ZERO, .ONE {
-            var expected = argumentCount == .ZERO ? 0 : 1
-            if count != expected {
-              log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, expected)
-              hasArgumentCountError = true
-            }
-          }
-
-          case .ZERO_OR_ONE, .ONE_OR_TWO, .TWO_OR_FEWER {
-            var lower = argumentCount == .ONE_OR_TWO ? 1 : 0
-            var upper = argumentCount == .ZERO_OR_ONE ? 1 : 2
-            if count < lower || count > upper {
-              log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, lower, upper)
-              hasArgumentCountError = true
-            }
-          }
-
-          case .ONE_OR_MORE, .TWO_OR_MORE {
-            var expected = argumentCount == .ONE_OR_MORE ? 1 : 2
-            if count < expected {
-              log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, expected, -1)
-              hasArgumentCountError = true
-            }
-          }
+        if argumentCount != null && !(count in argumentCount) {
+          log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, argumentCount)
         }
 
         # Enforce that the initializer constructor operators take lists of
         # values to avoid confusing error messages inside the code generated
         # for initializer expressions
-        if !hasArgumentCountError && (symbol.name == "{new}" || symbol.name == "[new]") {
+        else if symbol.name == "{new}" || symbol.name == "[new]" {
           for argument in symbol.arguments {
             if argument.resolvedType != .DYNAMIC && !cache.isList(argument.resolvedType) {
               log.semanticErrorExpectedList(argument.range, argument.name, argument.resolvedType)
@@ -856,7 +832,7 @@ namespace Skew.Resolving {
       resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType)
 
       symbol.returnType = Node.createType(cache.stringType)
-      symbol.block = Node.createBlock.appendChild(Node.createReturn(Node.createIndex(Node.createSymbolReference(strings)).appendChild(Node.createName("self"))))
+      symbol.block = Node.createBlock.appendChild(Node.createReturn(Node.createIndex(Node.createSymbolReference(strings), Node.createName("self"))))
       symbol.flags |= Symbol.IS_GETTER
     }
 
@@ -1123,15 +1099,15 @@ namespace Skew.Resolving {
         case .WHILE { resolveWhile(node, scope) }
 
         # Expressions
-        case .ASSIGN_INDEX { resolveIndex(node, scope) }
+        case .ASSIGN_INDEX { resolveOperatorOverload(node, scope) }
         case .CALL { resolveCall(node, scope) }
         case .CAST { resolveCast(node, scope, context) }
         case .CONSTANT { resolveConstant(node, scope) }
         case .DOT { resolveDot(node, scope, context) }
         case .DYNAMIC {}
         case .HOOK { resolveHook(node, scope, context) }
-        case .INDEX { resolveIndex(node, scope) }
-        case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET { resolveInitializer(node, scope, context) }
+        case .INDEX { resolveOperatorOverload(node, scope) }
+        case .INITIALIZER_LIST, .INITIALIZER_MAP { resolveInitializer(node, scope, context) }
         case .LAMBDA { resolveLambda(node, scope, context) }
         case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
         case .NAME { resolveName(node, scope) }
@@ -1141,7 +1117,7 @@ namespace Skew.Resolving {
         case .SUPER { resolveSuper(node, scope) }
 
         default {
-          if node.kind.isUnary { resolveUnary(node, scope) }
+          if node.kind.isUnary { resolveOperatorOverload(node, scope) }
           else if node.kind.isBinary { resolveBinary(node, scope) }
           else { assert(false) }
         }
@@ -1767,7 +1743,7 @@ namespace Skew.Resolving {
           var kind = child.kind
           if kind == .NULL && !type.isReference ||
               kind == .INITIALIZER_LIST && findMember(type, "[new]") == null && findMember(type, "[...]") == null ||
-              (kind == .INITIALIZER_SET || kind == .INITIALIZER_MAP) && findMember(type, "{new}") == null && findMember(type, "{...}") == null {
+              kind == .INITIALIZER_MAP && findMember(type, "{new}") == null && findMember(type, "{...}") == null {
             candidates.removeAt(index)
             index--
             break
@@ -2087,18 +2063,6 @@ namespace Skew.Resolving {
       log.semanticErrorInitializerTypeInferenceFailed(node.range)
     }
 
-    def shouldUseMapConstructor(symbol Symbol) bool {
-      if symbol.kind.isFunction {
-        return symbol.asFunctionSymbol.arguments.count == 2
-      }
-      for overload in symbol.asOverloadedFunctionSymbol.symbols {
-        if overload.arguments.count == 2 {
-          return true
-        }
-      }
-      return false
-    }
-
     def resolveInitializerWithContext(node Node, scope Scope, context Type) bool {
       var isList = node.kind == .INITIALIZER_LIST
       var create = findMember(context, isList ? "[new]" : "{new}")
@@ -2147,13 +2111,6 @@ namespace Skew.Resolving {
       }
 
       var dot = Node.createDot(Node.createType(context).withRange(node.range), create.name).withRange(node.range)
-
-      # The literal "{}" is ambiguous and may be a map or a set
-      if !node.hasChildren && !isList && shouldUseMapConstructor(create) {
-        node.become(Node.createCall(dot).withRange(node.range).appendChild(Node.createList).appendChild(Node.createList))
-        resolveAsParameterizedExpressionWithConversion(node, scope, context)
-        return true
-      }
 
       # Call the initializer constructor
       if node.kind == .INITIALIZER_MAP {
@@ -2400,10 +2357,6 @@ namespace Skew.Resolving {
       automaticallyCallGetter(node, scope)
     }
 
-    def resolveUnary(node Node, scope Scope) {
-      resolveOperatorOverload(node, scope)
-    }
-
     def resolveBinary(node Node, scope Scope) {
       var kind = node.kind
       var left = node.binaryLeft
@@ -2461,10 +2414,6 @@ namespace Skew.Resolving {
         return
       }
 
-      resolveOperatorOverload(node, scope)
-    }
-
-    def resolveIndex(node Node, scope Scope) {
       resolveOperatorOverload(node, scope)
     }
 

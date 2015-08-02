@@ -689,9 +689,9 @@ namespace Skew {
         }
 
         case .INDEX {
-          _emitExpression(node.indexTarget, .UNARY_POSTFIX)
+          _emitExpression(node.indexLeft, .UNARY_POSTFIX)
           _emit("[")
-          _emitCommaSeparatedExpressions(node.indexTarget.nextSibling, null)
+          _emitExpression(node.indexRight, .LOWEST)
           _emit("]")
         }
 
@@ -699,11 +699,11 @@ namespace Skew {
           if Precedence.ASSIGN as int < precedence as int {
             _emit("(")
           }
-          _emitExpression(node.assignIndexTarget, .UNARY_POSTFIX)
+          _emitExpression(node.assignIndexLeft, .UNARY_POSTFIX)
           _emit("[")
-          _emitCommaSeparatedExpressions(node.assignIndexTarget.nextSibling, node.assignIndexValue)
+          _emitExpression(node.assignIndexCenter, .LOWEST)
           _emit("] = ")
-          _emitExpression(node.assignIndexValue, .ASSIGN)
+          _emitExpression(node.assignIndexRight, .ASSIGN)
           if Precedence.ASSIGN as int < precedence as int {
             _emit(")")
           }
@@ -759,7 +759,7 @@ namespace Skew {
           _emitBlock(lambda.block)
         }
 
-        case .INITIALIZER_LIST, .INITIALIZER_SET, .INITIALIZER_MAP {
+        case .INITIALIZER_LIST, .INITIALIZER_MAP {
           _emit("new ")
           _emitType(node.resolvedType, .BARE)
           if node.hasChildren {

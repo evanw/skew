@@ -32,7 +32,6 @@ namespace Skew {
     INDEX
     INITIALIZER_LIST
     INITIALIZER_MAP
-    INITIALIZER_SET
     LAMBDA
     LAMBDA_TYPE
     NAME
@@ -100,7 +99,7 @@ namespace Skew {
     }
 
     def isInitializer bool {
-      return self as int >= INITIALIZER_LIST as int && self as int <= INITIALIZER_SET as int
+      return self == INITIALIZER_LIST || self == INITIALIZER_MAP
     }
 
     def isUnary bool {
@@ -736,15 +735,17 @@ namespace Skew {
       return new(.WHILE).appendChild(test).appendChild(block)
     }
 
-    def createAssignIndex(target Node, value Node) Node {
-      assert(target.kind.isExpression)
-      assert(value.kind.isExpression)
-      return new(.ASSIGN_INDEX).appendChild(target).appendChild(value)
+    def createAssignIndex(left Node, center Node, right Node) Node {
+      assert(left.kind.isExpression)
+      assert(center.kind.isExpression)
+      assert(right.kind.isExpression)
+      return new(.ASSIGN_INDEX).appendChild(left).appendChild(center).appendChild(right)
     }
 
-    def createIndex(target Node) Node {
-      assert(target.kind.isExpression)
-      return new(.INDEX).appendChild(target)
+    def createIndex(left Node, right Node) Node {
+      assert(left.kind.isExpression)
+      assert(right.kind.isExpression)
+      return new(.INDEX).appendChild(left).appendChild(right)
     }
 
     def createCall(target Node) Node {
@@ -1162,23 +1163,37 @@ namespace Skew {
       return _lastChild
     }
 
-    def indexTarget Node {
+    def indexLeft Node {
       assert(kind == .INDEX)
-      assert(childCount >= 1)
+      assert(childCount == 2)
       assert(_firstChild.kind.isExpression)
       return _firstChild
     }
 
-    def assignIndexTarget Node {
+    def indexRight Node {
+      assert(kind == .INDEX)
+      assert(childCount == 2)
+      assert(_firstChild._nextSibling.kind.isExpression)
+      return _firstChild._nextSibling
+    }
+
+    def assignIndexLeft Node {
       assert(kind == .ASSIGN_INDEX)
-      assert(childCount >= 2)
+      assert(childCount == 3)
       assert(_firstChild.kind.isExpression)
       return _firstChild
     }
 
-    def assignIndexValue Node {
+    def assignIndexCenter Node {
       assert(kind == .ASSIGN_INDEX)
-      assert(childCount >= 2)
+      assert(childCount == 3)
+      assert(_firstChild._nextSibling.kind.isExpression)
+      return _firstChild._nextSibling
+    }
+
+    def assignIndexRight Node {
+      assert(kind == .ASSIGN_INDEX)
+      assert(childCount == 3)
       assert(_lastChild.kind.isExpression)
       return _lastChild
     }

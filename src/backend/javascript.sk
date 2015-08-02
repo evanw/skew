@@ -726,7 +726,7 @@ namespace Skew {
             _emitExpression(update, .LOWEST)
           }
           _emit(")")
-          _emitBlock(node.forBlock, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+          _emitBlock(node.forBlock, .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
           _emit(_newline)
         }
 
@@ -734,7 +734,7 @@ namespace Skew {
           _emit(_indent + "for" + _space + "(var " + _mangleName(node.symbol) + " in ")
           _emitExpression(node.foreachValue, .LOWEST)
           _emit(")")
-          _emitBlock(node.foreachBlock, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
+          _emitBlock(node.foreachBlock, .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
           _emit(_newline)
         }
 
@@ -869,7 +869,7 @@ namespace Skew {
         _emitExpression(from, .COMMA)
         from = from.nextSibling
         if from != to {
-          _emit(", ")
+          _emit("," + _space)
         }
       }
     }
@@ -942,8 +942,8 @@ namespace Skew {
           _emit(")")
         }
 
-        case .INITIALIZER_LIST, .INITIALIZER_MAP, .INITIALIZER_SET {
-          var useBraces = kind == .INITIALIZER_MAP || kind == .INITIALIZER_SET && !node.hasChildren
+        case .INITIALIZER_LIST, .INITIALIZER_MAP {
+          var useBraces = kind == .INITIALIZER_MAP
           var isIndented = false
 
           if !_minify {
@@ -986,24 +986,21 @@ namespace Skew {
         }
 
         case .INDEX {
-          var target = node.indexTarget
-          _emitExpression(target, .UNARY_POSTFIX)
+          _emitExpression(node.indexLeft, .UNARY_POSTFIX)
           _emit("[")
-          _emitCommaSeparatedExpressions(target.nextSibling, null)
+          _emitExpression(node.indexRight, .LOWEST)
           _emit("]")
         }
 
         case .ASSIGN_INDEX {
-          var target = node.assignIndexTarget
-          var value = node.assignIndexValue
           if Precedence.ASSIGN as int < precedence as int {
             _emit("(")
           }
-          _emitExpression(target, .UNARY_POSTFIX)
+          _emitExpression(node.assignIndexLeft, .UNARY_POSTFIX)
           _emit("[")
-          _emitCommaSeparatedExpressions(target.nextSibling, value)
+          _emitExpression(node.assignIndexCenter, .LOWEST)
           _emit("]" + _space + "=" + _space + "")
-          _emitExpression(value, .ASSIGN)
+          _emitExpression(node.assignIndexRight, .ASSIGN)
           if Precedence.ASSIGN as int < precedence as int {
             _emit(")")
           }
@@ -1193,10 +1190,6 @@ namespace Skew {
       return Node.createBinary(.BITWISE_OR, node, Node.createInt(0).withType(_cache.intType)).withType(_cache.intType).withRange(node.range)
     }
 
-    def _wrapWithTypeIndex(node Node, index Type, type Type) Node {
-      return Node.createIndex(Node.createType(index)).withType(type).withRange(node.range).appendChild(node)
-    }
-
     def _patchBinaryArithmetic(node Node) {
       # Make sure arithmetic integer operators don't emit doubles outside the
       # integer range. Allowing this causes JIT slowdowns due to extra checks
@@ -1365,8 +1358,8 @@ namespace Skew {
       }
 
       if node.kind == .ASSIGN_INDEX {
-        var value = node.assignIndexValue
-        return value.hasNoSideEffects && node.assignIndexTarget.hasNoSideEffects && node.childCount == 3 && value.previousSibling.hasNoSideEffects ? value : null
+        var right = node.assignIndexRight
+        return node.assignIndexLeft.hasNoSideEffects && node.assignIndexCenter.hasNoSideEffects && right.hasNoSideEffects ? right : null
       }
 
       return null
