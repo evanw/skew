@@ -877,21 +877,21 @@ namespace Skew {
           _emitBlock(symbol.asFunctionSymbol.block)
         }
 
-        default {
-          if kind.isUnary {
-            var value = node.unaryValue
-            var info = operatorInfo[kind]
-            if info.precedence as int < precedence as int {
-              _emit("(")
-            }
-            _emit(info.text)
-            _emitExpression(value, info.precedence)
-            if info.precedence as int < precedence as int {
-              _emit(")")
-            }
+        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
+          var value = node.unaryValue
+          var info = operatorInfo[kind]
+          if info.precedence as int < precedence as int {
+            _emit("(")
           }
+          _emit(info.text)
+          _emitExpression(value, info.precedence)
+          if info.precedence as int < precedence as int {
+            _emit(")")
+          }
+        }
 
-          else if kind.isBinary {
+        default {
+          if kind.isBinary {
             var left = node.binaryLeft
             var right = node.binaryRight
 

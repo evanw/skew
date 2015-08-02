@@ -18,7 +18,7 @@ SOURCES_TEST += $(SOURCES)
 SOURCES_TEST += src/driver/tests.sk
 SOURCES_TEST += src/lib/terminal.sk
 SOURCES_TEST += src/lib/unit.sk
-SOURCES_TEST += tests/simple.sk
+SOURCES_TEST += tests/*.sk
 
 JS_FLAGS += --target=js
 JS_FLAGS += --inline-functions

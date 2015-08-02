@@ -84,9 +84,9 @@ namespace Skew.Folding {
         case .DOT { foldDot(node) }
         case .HOOK { foldHook(node) }
         case .NAME { foldName(node) }
+        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { foldUnary(node) }
         default {
-          if kind.isUnary { foldUnary(node) }
-          else if kind.isBinary { foldBinary(node) }
+          if kind.isBinary { foldBinary(node) }
         }
       }
     }

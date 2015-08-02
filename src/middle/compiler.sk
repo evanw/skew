@@ -28,7 +28,7 @@ namespace Skew {
     var verbose = false
     var outputDirectory = ""
     var outputFile = ""
-    var target CompilerTarget = CompilerTarget.new
+    var target = CompilerTarget.new
 
     def define(name string, value string) {
       var range = Source.new("<internal>", "--define:" + name + "=" + value).entireRange

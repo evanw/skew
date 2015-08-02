@@ -691,7 +691,7 @@ namespace Skew {
           _emit(_indent + "return")
           var value = node.returnValue
           if value != null {
-            if !_mangle || !value.kind.isUnary {
+            if !_minify || !value.kind.isUnary {
               _emit(" ")
             }
             _emitExpression(value, .LOWEST)
@@ -832,12 +832,20 @@ namespace Skew {
       _emit(")")
 
       # Make sure to always keep braces to avoid the dangling "else" case
-      var trueStatement = trueBlock.blockStatement
-      _emitBlock(node.ifTrue, .AFTER_PARENTHESIS, falseBlock != null && trueStatement != null && trueStatement.kind == .IF ? .MUST_KEEP_BRACES : .CAN_OMIT_BRACES)
+      # "if (a) if (b) c; else d; else e;"
+      # "if (a) { if (b) if (c) d; else e; } else f;"
+      # "if (a) { if (b) c; else if (d) e; } else f;"
+      var braces = BracesMode.CAN_OMIT_BRACES
+      if falseBlock != null {
+        var singleIf = _singleIf(trueBlock)
+        if singleIf != null && (singleIf.ifFalse == null || _singleIf(singleIf.ifFalse) != null) {
+          braces = .MUST_KEEP_BRACES
+        }
+      }
+      _emitBlock(node.ifTrue, .AFTER_PARENTHESIS, braces)
 
       if falseBlock != null {
-        var falseStatement = falseBlock.blockStatement
-        var singleIf = falseStatement != null && falseStatement.kind == .IF ? falseStatement : null
+        var singleIf = _singleIf(falseBlock)
         _emitSemicolonIfNeeded
         _emit(_newline + _newline)
         _emitComments(falseBlock.comments)
@@ -1050,21 +1058,21 @@ namespace Skew {
           _emitBlock(symbol.block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
         }
 
-        default {
-          if kind.isUnary {
-            var value = node.unaryValue
-            var info = operatorInfo[kind]
-            if info.precedence as int < precedence as int {
-              _emit("(")
-            }
-            _emit(info.text)
-            _emitExpression(value, info.precedence)
-            if info.precedence as int < precedence as int {
-              _emit(")")
-            }
+        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
+          var value = node.unaryValue
+          var info = operatorInfo[kind]
+          if info.precedence as int < precedence as int {
+            _emit("(")
           }
+          _emit(info.text)
+          _emitExpression(value, info.precedence)
+          if info.precedence as int < precedence as int {
+            _emit(")")
+          }
+        }
 
-          else if kind.isBinary {
+        default {
+          if kind.isBinary {
             var info = operatorInfo[kind]
             var right = node.binaryRight
 
@@ -1395,17 +1403,13 @@ namespace Skew {
       }
     }
 
-    def _isIntegerType(node Node) bool {
-      return node.resolvedType != null && _cache.isInteger(node.resolvedType)
-    }
-
     def _peepholeMangleBinaryRelational(node Node) {
       assert(node.kind == .GREATER_THAN_OR_EQUAL || node.kind == .LESS_THAN_OR_EQUAL)
 
       var left = node.binaryLeft
       var right = node.binaryRight
 
-      if _isIntegerType(left) && _isIntegerType(right) {
+      if _cache.isInteger(left.resolvedType) && _cache.isInteger(right.resolvedType) {
         if left.isInt {
           var value = left.asInt
 
@@ -1549,11 +1553,6 @@ namespace Skew {
       else if trueStatement != null && trueStatement.kind == .EXPRESSION {
         node.become(Node.createExpression(Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.remove, trueStatement.expressionValue.remove)))
       }
-
-      # "if (a) {}" => "a;"
-      else if !trueBlock.hasChildren {
-        node.become(Node.createExpression(test.remove))
-      }
     }
 
     def _peepholeMangleWhile(node Node) {
@@ -1617,8 +1616,7 @@ namespace Skew {
 
         # "a ? b : c ? b : d" => "a || c ? b : d"
         if _looksTheSame(trueValue, falseTrueValue) {
-          var or = Node.createBinary(.LOGICAL_OR, Node.createNull, falseTest.remove)
-          or.binaryLeft.replaceWith(test.replaceWith(or))
+          test.replaceWith(Node.createBinary(.LOGICAL_OR, test.cloneAndStealChildren, falseTest.remove))
           falseValue.replaceWith(falseFalseValue.remove)
           _peepholeMangleHook(node)
           return
@@ -1674,24 +1672,22 @@ namespace Skew {
             }
           }
 
-          # "if (a) return b; if (c) return d; return e;" => "return a ? b : c ? d : e;"
+          # "if (a) return b; return c;" => "return a ? b : c;"
           case .RETURN {
-            if child.returnValue != null {
-              while true {
-                if previous == null || previous.kind != .IF || previous.ifFalse != null {
-                  break
-                }
-
-                var statement = previous.ifTrue.blockStatement
-                if statement == null || statement.kind != .RETURN || statement.returnValue == null {
-                  break
-                }
-
+            if previous != null && child.returnValue != null && previous.kind == .IF && previous.ifFalse == null {
+              var statement = previous.ifTrue.blockStatement
+              if statement != null && statement.kind == .RETURN && statement.returnValue != null {
                 var hook = Node.createHook(previous.remove.ifTest.remove, statement.returnValue.remove, child.returnValue.remove)
                 _peepholeMangleHook(hook)
                 child.become(Node.createReturn(hook))
-                previous = child.previousSibling
               }
+            }
+          }
+
+          # "if (a) b; if (c) b;" => "if (a || c) b;"
+          case .IF {
+            if previous != null && child.ifFalse == null && previous.kind == .IF && previous.ifFalse == null && _looksTheSame(previous.ifTrue, child.ifTrue) {
+              child.ifTest.replaceWith(Node.createBinary(.LOGICAL_OR, previous.remove.ifTest.remove, child.ifTest.cloneAndStealChildren))
             }
           }
 
@@ -1699,17 +1695,17 @@ namespace Skew {
             var setup = child.forSetup
 
             # "var a; for (;;) {}" => "for (var a;;) {}"
-            if setup.isEmptySequence && previous != null && previous.kind == .VARIABLES {
+            if previous != null && setup.isEmptySequence && previous.kind == .VARIABLES {
               setup.replaceWith(previous.remove.appendChildrenFrom(setup))
             }
 
             # "var a; for (var b;;) {}" => "for (var a, b;;) {}"
-            else if setup.kind == .VARIABLES && previous != null && previous.kind == .VARIABLES {
+            else if previous != null && setup.kind == .VARIABLES && previous.kind == .VARIABLES {
               setup.replaceWith(previous.remove.appendChildrenFrom(setup))
             }
 
             # "a; for (b;;) {}" => "for (a, b;;) {}"
-            else if setup.kind.isExpression && previous != null && previous.kind == .EXPRESSION {
+            else if previous != null && setup.kind.isExpression && previous.kind == .EXPRESSION {
               setup.replaceWith(Node.createSequence(previous.remove.expressionValue.remove, setup.cloneAndStealChildren))
             }
           }
@@ -1761,10 +1757,46 @@ namespace Skew {
       return value >= -0x7FFFFFFF
     }
 
+    def _singleIf(block Node) Node {
+      if block == null {
+        return null
+      }
+      var statement = block.blockStatement
+      if statement != null && statement.kind == .IF {
+        return statement
+      }
+      return null
+    }
+
+    def _symbolsOrStringsLookTheSame(left Node, right Node) bool {
+      return
+        left.symbol != null && left.symbol == right.symbol ||
+        left.symbol == null && right.symbol == null && left.asString == right.asString
+    }
+
+    def _childrenLookTheSame(left Node, right Node) bool {
+      var leftChild = left.firstChild
+      var rightChild = right.firstChild
+
+      while leftChild != null && rightChild != null {
+        if !_looksTheSame(leftChild, rightChild) {
+          return false
+        }
+
+        leftChild = leftChild.nextSibling
+        rightChild = rightChild.nextSibling
+      }
+
+      return leftChild == null && rightChild == null
+    }
+
     def _looksTheSame(left Node, right Node) bool {
       if left.kind == right.kind {
         switch left.kind {
           case .NULL { return true }
+          case .NAME { return _symbolsOrStringsLookTheSame(left, right) }
+          case .DOT { return _symbolsOrStringsLookTheSame(left, right) && _looksTheSame(left.dotTarget, right.dotTarget) }
+
           case .CONSTANT {
             switch left.content.kind {
               case .INT { return right.isInt && left.asInt == right.asInt }
@@ -1773,8 +1805,17 @@ namespace Skew {
               case .STRING { return right.isString && left.asString == right.asString }
             }
           }
-          case .NAME { return left.symbol != null && left.symbol == right.symbol || left.symbol == null && right.symbol == null && left.asString == right.asString }
-          case .DOT { return left.symbol == right.symbol && _looksTheSame(left.dotTarget, right.dotTarget) }
+
+          case
+            .BLOCK, .BREAK, .CONTINUE, .EXPRESSION, .IF, .RETURN, .THROW, .WHILE,
+            .ASSIGN_INDEX, .CALL, .HOOK, .INDEX, .INITIALIZER_LIST, .INITIALIZER_MAP, .PAIR,
+            .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
+            return _childrenLookTheSame(left, right)
+          }
+
+          default {
+            if left.kind.isBinary { return _childrenLookTheSame(left, right) }
+          }
         }
       }
 

@@ -1,0 +1,86 @@
+namespace Skew.Tests {
+  def testMinify {
+
+# Check for various whitespace issues
+test("
+@export
+def main dynamic {
+  dynamic.a(dynamic.b + +dynamic.c)
+  dynamic.a(dynamic.b + -dynamic.c)
+  dynamic.a(dynamic.b - +dynamic.c)
+  dynamic.a(dynamic.b - -dynamic.c)
+  return dynamic.a
+  return dynamic.a + dynamic.b
+  return -dynamic.a
+  return ~dynamic.a
+  return !dynamic.a
+}
+", "
+(function(){main=function(){a(b+ +c);a(b+-c);a(b-+c);a(b- -c);return a;return a+b;return-a;return~a;return!a}})();
+").jsMinify
+
+# There is no "dangling if" ambiguity here
+test("
+@export
+def main {
+  if dynamic.a() {
+    if dynamic.b() {
+      var c = dynamic.d()
+      dynamic.e(c, c)
+    } else {
+      var f = dynamic.g()
+      dynamic.h(f, f)
+    }
+  } else {
+    dynamic.i()
+  }
+}
+", "
+(function(){main=function(){if(a())if(b()){var c=d();e(c,c)}else{var f=g();h(f,f)}else i()}})();
+").jsMinify
+
+# This must be careful about the "dangling if" ambiguity
+test("
+@export
+def main {
+  if dynamic.a() {
+    if dynamic.b() {
+      if dynamic.c() {
+        var d = dynamic.e()
+        dynamic.f(d, d)
+      } else {
+        var g = dynamic.h()
+        dynamic.i(g, g)
+      }
+    }
+  } else {
+    dynamic.j()
+  }
+}
+", "
+(function(){main=function(){if(a()){if(b())if(c()){var d=e();f(d,d)}else{var g=h();i(g,g)}}else j()}})();
+").jsMinify
+
+# Another "dangling if" variant
+test("
+@export
+def main {
+  if dynamic.a() {
+    if dynamic.b() {
+      var c = dynamic.d()
+      dynamic.e(c, c)
+    } else if dynamic.f() {
+      var g = dynamic.h()
+      dynamic.i(g, g)
+    }
+  } else {
+    var j = dynamic.k()
+    dynamic.l(j, j)
+  }
+}
+", "
+(function(){main=function(){if(a()){if(b()){var c=d();e(c,c)}else if(f()){var g=h();i(g,g)}}else{var j=k();l(j,j)}}})();
+").jsMinify
+
+  }
+}

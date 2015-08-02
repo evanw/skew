@@ -2,13 +2,42 @@ namespace Skew.Tests {
   class CompilerTest : Unit.Test {
     var _input string
     var _expected string
+    var _options = CompilerOptions.new
 
     over run {
       rename(compactWhitespace(_input))
       var log = Log.new
-      compile(log, CompilerOptions.new, [Source.new("<stdin>", _input)])
-      var output = log.toString
+      var result = compile(log, _options, [Source.new("<stdin>", _input)])
+      var output = result.outputs.isEmpty ? log.toString : "\n".join(
+        result.outputs.map<string>(source => (source.name == "" ? "" : "[" + source.name + "]\n") + source.contents))
       expectString(trim(_expected), trim(output))
+    }
+
+    def jsMangle CompilerTest {
+      _options.target = JavaScriptTarget.new
+      _options.jsMangle = true
+      return self
+    }
+
+    def jsMinify CompilerTest {
+      _options.target = JavaScriptTarget.new
+      _options.jsMinify = true
+      return self
+    }
+
+    def foldAllConstants CompilerTest {
+      _options.foldAllConstants = true
+      return self
+    }
+
+    def globalizeAllFunctions CompilerTest {
+      _options.globalizeAllFunctions = true
+      return self
+    }
+
+    def inlineAllFunctions CompilerTest {
+      _options.inlineAllFunctions = true
+      return self
     }
   }
 
@@ -50,6 +79,8 @@ namespace Skew.Tests {
 
   @entry
   def main int {
+    testMangle
+    testMinify
     testSimple
 
     var report = Unit.TerminalReport.new

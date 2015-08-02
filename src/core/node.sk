@@ -562,9 +562,9 @@ namespace Skew {
         case .CAST { return castValue.hasNoSideEffects }
         case .HOOK { return hookTest.hasNoSideEffects && hookTrue.hasNoSideEffects && hookFalse.hasNoSideEffects }
         case .DOT { return dotTarget.hasNoSideEffects }
+        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { return !kind.isUnaryAssign && unaryValue.hasNoSideEffects }
         default {
           if kind.isBinary { return !kind.isBinaryAssign && binaryLeft.hasNoSideEffects && binaryRight.hasNoSideEffects }
-          if kind.isUnary { return !kind.isUnaryAssign && unaryValue.hasNoSideEffects }
         }
       }
       return false

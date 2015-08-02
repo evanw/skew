@@ -1,0 +1,94 @@
+namespace Skew.Tests {
+  def testMangle {
+
+# Test if statement folding
+test("
+@export
+def main {
+  if dynamic.a() {}
+  if dynamic.b() { dynamic.c() }
+  if dynamic.d() {}
+  else { dynamic.e() }
+  if dynamic.f() { dynamic.g() }
+  else { dynamic.h() }
+}
+", "
+(function() {
+  main = function() {
+    a(), b() && c(), d() || e(), f() ? g() : h();
+  };
+})();
+").jsMangle.foldAllConstants
+
+# Test if statement return folding
+test("
+@export
+def foo bool {
+  if dynamic.a { return true }
+  if dynamic.b && dynamic.c { return true }
+  if dynamic.d { return true }
+  if dynamic.e && dynamic.f { return true }
+  return false
+}
+", "
+(function() {
+  foo = function() {
+    return a || b && c || d || e && f ? !0 : !1;
+  };
+})();
+").jsMangle
+
+# Test integer comparison special cases
+test("
+@export
+def main(foo int, bar fn()) {
+  if foo < 1 { bar() }
+  if foo <= 1 { bar() }
+  if foo > 1 { bar() }
+  if foo >= 1 { bar() }
+  if foo == 1 { bar() }
+  if foo != 1 { bar() }
+}
+", "
+(function() {
+  main = function(a, b) {
+    a < 1 && b(), a < 2 && b(), a > 1 && b(), a > 0 && b(), a ^ 1 || b(), a ^ 1 && b();
+  };
+})();
+").jsMangle.inlineAllFunctions
+
+# Doubles should not trigger integer comparison special cases
+test("
+@export
+def main(foo double, bar fn()) {
+  if foo < 1 { bar() }
+  if foo <= 1 { bar() }
+  if foo > 1 { bar() }
+  if foo >= 1 { bar() }
+  if foo == 1 { bar() }
+  if foo != 1 { bar() }
+}
+", "
+(function() {
+  main = function(a, b) {
+    a < 1 && b(), a <= 1 && b(), a > 1 && b(), a >= 1 && b(), a === 1 && b(), a !== 1 && b();
+  };
+})();
+").jsMangle.inlineAllFunctions
+
+# Test a special case for comparison with -1
+test("
+@export
+def main(foo string) {
+  if \"foo\" in foo { dynamic.bar() }
+}
+", "
+(function() {
+  main = function(a) {
+    ~a.indexOf(\"foo\") && bar();
+  };
+})();
+").jsMangle.inlineAllFunctions.foldAllConstants
+
+  }
+}

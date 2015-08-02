@@ -2108,24 +2108,30 @@
         break;
       }
 
-      default: {
-        if (Skew.NodeKind.isUnary(kind)) {
-          var value3 = node.unaryValue();
-          var info = Skew.operatorInfo[kind];
+      case Skew.NodeKind.COMPLEMENT:
+      case Skew.NodeKind.DECREMENT:
+      case Skew.NodeKind.INCREMENT:
+      case Skew.NodeKind.NEGATIVE:
+      case Skew.NodeKind.NOT:
+      case Skew.NodeKind.POSITIVE: {
+        var value3 = node.unaryValue();
+        var info = Skew.operatorInfo[kind];
 
-          if (info.precedence < precedence) {
-            this._emit("(");
-          }
-
-          this._emit(info.text);
-          this._emitExpression(value3, info.precedence);
-
-          if (info.precedence < precedence) {
-            this._emit(")");
-          }
+        if (info.precedence < precedence) {
+          this._emit("(");
         }
 
-        else if (Skew.NodeKind.isBinary(kind)) {
+        this._emit(info.text);
+        this._emitExpression(value3, info.precedence);
+
+        if (info.precedence < precedence) {
+          this._emit(")");
+        }
+        break;
+      }
+
+      default: {
+        if (Skew.NodeKind.isBinary(kind)) {
           var left = node.binaryLeft();
           var right = node.binaryRight();
 
@@ -3147,24 +3153,30 @@
         break;
       }
 
-      default: {
-        if (Skew.NodeKind.isUnary(kind)) {
-          var value3 = node.unaryValue();
-          var info = Skew.operatorInfo[kind];
+      case Skew.NodeKind.COMPLEMENT:
+      case Skew.NodeKind.DECREMENT:
+      case Skew.NodeKind.INCREMENT:
+      case Skew.NodeKind.NEGATIVE:
+      case Skew.NodeKind.NOT:
+      case Skew.NodeKind.POSITIVE: {
+        var value3 = node.unaryValue();
+        var info = Skew.operatorInfo[kind];
 
-          if (info.precedence < precedence) {
-            this._emit("(");
-          }
-
-          this._emit(info.text);
-          this._emitExpression(value3, info.precedence);
-
-          if (info.precedence < precedence) {
-            this._emit(")");
-          }
+        if (info.precedence < precedence) {
+          this._emit("(");
         }
 
-        else if (Skew.NodeKind.isBinary(kind)) {
+        this._emit(info.text);
+        this._emitExpression(value3, info.precedence);
+
+        if (info.precedence < precedence) {
+          this._emit(")");
+        }
+        break;
+      }
+
+      default: {
+        if (Skew.NodeKind.isBinary(kind)) {
           // Clang warns about "&&" inside "||" or "&" inside "|" without parentheses
           var parent = node.parent();
 
@@ -4145,7 +4157,7 @@
         var value = node.returnValue();
 
         if (value !== null) {
-          if (!this._mangle || !Skew.NodeKind.isUnary(value.kind)) {
+          if (!this._minify || !Skew.NodeKind.isUnary(value.kind)) {
             this._emit(" ");
           }
 
@@ -4318,25 +4330,36 @@
     this._emit(")");
 
     // Make sure to always keep braces to avoid the dangling "else" case
-    var trueStatement = trueBlock.blockStatement();
-    this._emitBlock(node.ifTrue(), Skew.JavaScriptEmitter.AfterToken.AFTER_PARENTHESIS, falseBlock !== null && trueStatement !== null && trueStatement.kind === Skew.NodeKind.IF ? Skew.JavaScriptEmitter.BracesMode.MUST_KEEP_BRACES : Skew.JavaScriptEmitter.BracesMode.CAN_OMIT_BRACES);
+    // "if (a) if (b) c; else d; else e;"
+    // "if (a) { if (b) if (c) d; else e; } else f;"
+    // "if (a) { if (b) c; else if (d) e; } else f;"
+    var braces = Skew.JavaScriptEmitter.BracesMode.CAN_OMIT_BRACES;
 
     if (falseBlock !== null) {
-      var falseStatement = falseBlock.blockStatement();
-      var singleIf = falseStatement !== null && falseStatement.kind === Skew.NodeKind.IF ? falseStatement : null;
+      var singleIf = Skew.JavaScriptEmitter._singleIf(trueBlock);
+
+      if (singleIf !== null && (singleIf.ifFalse() === null || Skew.JavaScriptEmitter._singleIf(singleIf.ifFalse()) !== null)) {
+        braces = Skew.JavaScriptEmitter.BracesMode.MUST_KEEP_BRACES;
+      }
+    }
+
+    this._emitBlock(node.ifTrue(), Skew.JavaScriptEmitter.AfterToken.AFTER_PARENTHESIS, braces);
+
+    if (falseBlock !== null) {
+      var singleIf1 = Skew.JavaScriptEmitter._singleIf(falseBlock);
       this._emitSemicolonIfNeeded();
       this._emit(this._newline + this._newline);
       this._emitComments(falseBlock.comments);
 
-      if (singleIf !== null) {
-        this._emitComments(singleIf.comments);
+      if (singleIf1 !== null) {
+        this._emitComments(singleIf1.comments);
       }
 
       this._emit(this._indent + "else");
 
-      if (singleIf !== null) {
+      if (singleIf1 !== null) {
         this._emit(" ");
-        this._emitIf(singleIf);
+        this._emitIf(singleIf1);
       }
 
       else {
@@ -4589,24 +4612,30 @@
         break;
       }
 
-      default: {
-        if (Skew.NodeKind.isUnary(kind)) {
-          var value1 = node.unaryValue();
-          var info = Skew.operatorInfo[kind];
+      case Skew.NodeKind.COMPLEMENT:
+      case Skew.NodeKind.DECREMENT:
+      case Skew.NodeKind.INCREMENT:
+      case Skew.NodeKind.NEGATIVE:
+      case Skew.NodeKind.NOT:
+      case Skew.NodeKind.POSITIVE: {
+        var value1 = node.unaryValue();
+        var info = Skew.operatorInfo[kind];
 
-          if (info.precedence < precedence) {
-            this._emit("(");
-          }
-
-          this._emit(info.text);
-          this._emitExpression(value1, info.precedence);
-
-          if (info.precedence < precedence) {
-            this._emit(")");
-          }
+        if (info.precedence < precedence) {
+          this._emit("(");
         }
 
-        else if (Skew.NodeKind.isBinary(kind)) {
+        this._emit(info.text);
+        this._emitExpression(value1, info.precedence);
+
+        if (info.precedence < precedence) {
+          this._emit(")");
+        }
+        break;
+      }
+
+      default: {
+        if (Skew.NodeKind.isBinary(kind)) {
           var info1 = Skew.operatorInfo[kind];
           var right = node.binaryRight();
 
@@ -4970,16 +4999,12 @@
     }
   };
 
-  Skew.JavaScriptEmitter.prototype._isIntegerType = function(node) {
-    return node.resolvedType !== null && this._cache.isInteger(node.resolvedType);
-  };
-
   Skew.JavaScriptEmitter.prototype._peepholeMangleBinaryRelational = function(node) {
     assert(node.kind === Skew.NodeKind.GREATER_THAN_OR_EQUAL || node.kind === Skew.NodeKind.LESS_THAN_OR_EQUAL);
     var left = node.binaryLeft();
     var right = node.binaryRight();
 
-    if (this._isIntegerType(left) && this._isIntegerType(right)) {
+    if (this._cache.isInteger(left.resolvedType) && this._cache.isInteger(right.resolvedType)) {
       if (left.isInt()) {
         var value = left.asInt();
 
@@ -5123,11 +5148,6 @@
     else if (trueStatement !== null && trueStatement.kind === Skew.NodeKind.EXPRESSION) {
       node.become(Skew.Node.createExpression(Skew.Node.createBinary(swapped === Skew.JavaScriptEmitter.BooleanSwap.SWAP ? Skew.NodeKind.LOGICAL_OR : Skew.NodeKind.LOGICAL_AND, test.remove(), trueStatement.expressionValue().remove())));
     }
-
-    // "if (a) {}" => "a;"
-    else if (!trueBlock.hasChildren()) {
-      node.become(Skew.Node.createExpression(test.remove()));
-    }
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleWhile = function(node) {
@@ -5190,8 +5210,7 @@
 
       // "a ? b : c ? b : d" => "a || c ? b : d"
       if (Skew.JavaScriptEmitter._looksTheSame(trueValue, falseTrueValue)) {
-        var or = Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, new Skew.Node(Skew.NodeKind.NULL), falseTest.remove());
-        or.binaryLeft().replaceWith(test.replaceWith(or));
+        test.replaceWith(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test.cloneAndStealChildren(), falseTest.remove()));
         falseValue.replaceWith(falseFalseValue.remove());
         this._peepholeMangleHook(node);
         return;
@@ -5248,23 +5267,21 @@
         }
 
         case Skew.NodeKind.RETURN: {
-          if (child.returnValue() !== null) {
-            while (true) {
-              if (previous === null || previous.kind !== Skew.NodeKind.IF || previous.ifFalse() !== null) {
-                break;
-              }
+          if (previous !== null && child.returnValue() !== null && previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null) {
+            var statement = previous.ifTrue().blockStatement();
 
-              var statement = previous.ifTrue().blockStatement();
-
-              if (statement === null || statement.kind !== Skew.NodeKind.RETURN || statement.returnValue() === null) {
-                break;
-              }
-
+            if (statement !== null && statement.kind === Skew.NodeKind.RETURN && statement.returnValue() !== null) {
               var hook = Skew.Node.createHook(previous.remove().ifTest().remove(), statement.returnValue().remove(), child.returnValue().remove());
               this._peepholeMangleHook(hook);
               child.become(Skew.Node.createReturn(hook));
-              previous = child.previousSibling();
             }
+          }
+          break;
+        }
+
+        case Skew.NodeKind.IF: {
+          if (previous !== null && child.ifFalse() === null && previous.kind === Skew.NodeKind.IF && previous.ifFalse() === null && Skew.JavaScriptEmitter._looksTheSame(previous.ifTrue(), child.ifTrue())) {
+            child.ifTest().replaceWith(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, previous.remove().ifTest().remove(), child.ifTest().cloneAndStealChildren()));
           }
           break;
         }
@@ -5273,17 +5290,17 @@
           var setup = child.forSetup();
 
           // "var a; for (;;) {}" => "for (var a;;) {}"
-          if (setup.isEmptySequence() && previous !== null && previous.kind === Skew.NodeKind.VARIABLES) {
+          if (previous !== null && setup.isEmptySequence() && previous.kind === Skew.NodeKind.VARIABLES) {
             setup.replaceWith(previous.remove().appendChildrenFrom(setup));
           }
 
           // "var a; for (var b;;) {}" => "for (var a, b;;) {}"
-          else if (setup.kind === Skew.NodeKind.VARIABLES && previous !== null && previous.kind === Skew.NodeKind.VARIABLES) {
+          else if (previous !== null && setup.kind === Skew.NodeKind.VARIABLES && previous.kind === Skew.NodeKind.VARIABLES) {
             setup.replaceWith(previous.remove().appendChildrenFrom(setup));
           }
 
           // "a; for (b;;) {}" => "for (a, b;;) {}"
-          else if (Skew.NodeKind.isExpression(setup.kind) && previous !== null && previous.kind === Skew.NodeKind.EXPRESSION) {
+          else if (previous !== null && Skew.NodeKind.isExpression(setup.kind) && previous.kind === Skew.NodeKind.EXPRESSION) {
             setup.replaceWith(Skew.Node.createSequence2(previous.remove().expressionValue().remove(), setup.cloneAndStealChildren()));
           }
           break;
@@ -5326,11 +5343,53 @@
     }
   };
 
+  Skew.JavaScriptEmitter._singleIf = function(block) {
+    if (block === null) {
+      return null;
+    }
+
+    var statement = block.blockStatement();
+
+    if (statement !== null && statement.kind === Skew.NodeKind.IF) {
+      return statement;
+    }
+
+    return null;
+  };
+
+  Skew.JavaScriptEmitter._symbolsOrStringsLookTheSame = function(left, right) {
+    return left.symbol !== null && left.symbol === right.symbol || left.symbol === null && right.symbol === null && left.asString() === right.asString();
+  };
+
+  Skew.JavaScriptEmitter._childrenLookTheSame = function(left, right) {
+    var leftChild = left.firstChild();
+    var rightChild = right.firstChild();
+
+    while (leftChild !== null && rightChild !== null) {
+      if (!Skew.JavaScriptEmitter._looksTheSame(leftChild, rightChild)) {
+        return false;
+      }
+
+      leftChild = leftChild.nextSibling();
+      rightChild = rightChild.nextSibling();
+    }
+
+    return leftChild === null && rightChild === null;
+  };
+
   Skew.JavaScriptEmitter._looksTheSame = function(left, right) {
     if (left.kind === right.kind) {
       switch (left.kind) {
         case Skew.NodeKind.NULL: {
           return true;
+        }
+
+        case Skew.NodeKind.NAME: {
+          return Skew.JavaScriptEmitter._symbolsOrStringsLookTheSame(left, right);
+        }
+
+        case Skew.NodeKind.DOT: {
+          return Skew.JavaScriptEmitter._symbolsOrStringsLookTheSame(left, right) && Skew.JavaScriptEmitter._looksTheSame(left.dotTarget(), right.dotTarget());
         }
 
         case Skew.NodeKind.CONSTANT: {
@@ -5354,12 +5413,35 @@
           break;
         }
 
-        case Skew.NodeKind.NAME: {
-          return left.symbol !== null && left.symbol === right.symbol || left.symbol === null && right.symbol === null && left.asString() === right.asString();
+        case Skew.NodeKind.BLOCK:
+        case Skew.NodeKind.BREAK:
+        case Skew.NodeKind.CONTINUE:
+        case Skew.NodeKind.EXPRESSION:
+        case Skew.NodeKind.IF:
+        case Skew.NodeKind.RETURN:
+        case Skew.NodeKind.THROW:
+        case Skew.NodeKind.WHILE:
+        case Skew.NodeKind.ASSIGN_INDEX:
+        case Skew.NodeKind.CALL:
+        case Skew.NodeKind.HOOK:
+        case Skew.NodeKind.INDEX:
+        case Skew.NodeKind.INITIALIZER_LIST:
+        case Skew.NodeKind.INITIALIZER_MAP:
+        case Skew.NodeKind.PAIR:
+        case Skew.NodeKind.COMPLEMENT:
+        case Skew.NodeKind.DECREMENT:
+        case Skew.NodeKind.INCREMENT:
+        case Skew.NodeKind.NEGATIVE:
+        case Skew.NodeKind.NOT:
+        case Skew.NodeKind.POSITIVE: {
+          return Skew.JavaScriptEmitter._childrenLookTheSame(left, right);
         }
 
-        case Skew.NodeKind.DOT: {
-          return left.symbol === right.symbol && Skew.JavaScriptEmitter._looksTheSame(left.dotTarget(), right.dotTarget());
+        default: {
+          if (Skew.NodeKind.isBinary(left.kind)) {
+            return Skew.JavaScriptEmitter._childrenLookTheSame(left, right);
+          }
+          break;
         }
       }
     }
@@ -6429,13 +6511,18 @@
         return this.dotTarget().hasNoSideEffects();
       }
 
+      case Skew.NodeKind.COMPLEMENT:
+      case Skew.NodeKind.DECREMENT:
+      case Skew.NodeKind.INCREMENT:
+      case Skew.NodeKind.NEGATIVE:
+      case Skew.NodeKind.NOT:
+      case Skew.NodeKind.POSITIVE: {
+        return !Skew.NodeKind.isUnaryAssign(this.kind) && this.unaryValue().hasNoSideEffects();
+      }
+
       default: {
         if (Skew.NodeKind.isBinary(this.kind)) {
           return !Skew.NodeKind.isBinaryAssign(this.kind) && this.binaryLeft().hasNoSideEffects() && this.binaryRight().hasNoSideEffects();
-        }
-
-        if (Skew.NodeKind.isUnary(this.kind)) {
-          return !Skew.NodeKind.isUnaryAssign(this.kind) && this.unaryValue().hasNoSideEffects();
         }
         break;
       }
@@ -7204,6 +7291,11 @@
     }
   };
 
+  Skew.Parsing.eatCommentsAndNewlines = function(context) {
+    while (context.eat(Skew.TokenKind.COMMENT) || context.eat(Skew.TokenKind.NEWLINE)) {
+    }
+  };
+
   Skew.Parsing.parseLeadingComments = function(context) {
     var comments = null;
 
@@ -7400,9 +7492,8 @@
       var start = context.current();
 
       if (context.eat(Skew.TokenKind.CASE)) {
-        context.eat(Skew.TokenKind.NEWLINE);
-
         while (true) {
+          Skew.Parsing.eatCommentsAndNewlines(context);
           var constant = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
 
           if (constant === null) {
@@ -10504,12 +10595,18 @@
         break;
       }
 
-      default: {
-        if (Skew.NodeKind.isUnary(kind)) {
-          this.foldUnary(node);
-        }
+      case Skew.NodeKind.COMPLEMENT:
+      case Skew.NodeKind.DECREMENT:
+      case Skew.NodeKind.INCREMENT:
+      case Skew.NodeKind.NEGATIVE:
+      case Skew.NodeKind.NOT:
+      case Skew.NodeKind.POSITIVE: {
+        this.foldUnary(node);
+        break;
+      }
 
-        else if (Skew.NodeKind.isBinary(kind)) {
+      default: {
+        if (Skew.NodeKind.isBinary(kind)) {
           this.foldBinary(node);
         }
         break;
@@ -16817,8 +16914,7 @@
         }
       }
 
-      while (context.eat(Skew.TokenKind.COMMENT) || context.eat(Skew.TokenKind.NEWLINE)) {
-      }
+      Skew.Parsing.eatCommentsAndNewlines(context);
 
       if (!context.expect(end)) {
         return null;
