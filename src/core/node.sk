@@ -153,6 +153,7 @@ namespace Skew {
 
   # Nodes represent executable code (variable initializers and function bodies)
   class Node {
+    const id = _createID
     var kind NodeKind
     var flags = 0
     var range Range = null
@@ -511,6 +512,15 @@ namespace Skew {
         parent.insertChildBefore(nextSibling, node.remove)
       }
     }
+  }
+
+  namespace Node {
+    def _createID int {
+      _nextID++
+      return _nextID
+    }
+
+    var _nextID = 0
   }
 
   # Node-specific queries

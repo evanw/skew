@@ -1087,6 +1087,8 @@
     this._namespaceStack = [];
     this._symbolsCheckedForUsing = Object.create(null);
     this._usingNames = Object.create(null);
+    this._loopLabels = Object.create(null);
+    this._enclosingFunction = null;
   };
 
   __extends(Skew.CSharpEmitter, Skew.Emitter);
@@ -1479,6 +1481,7 @@
       symbol.$this.flags |= Skew.Symbol.IS_EXPORTED;
     }
 
+    this._enclosingFunction = symbol;
     this._emitNewlineBeforeSymbol(symbol);
     this._emitComments(symbol.comments);
     this._emit(this._indent + 'public ');
@@ -1535,6 +1538,7 @@
     }
 
     this._emitNewlineAfterSymbol(symbol);
+    this._enclosingFunction = null;
   };
 
   Skew.CSharpEmitter.prototype._emitType = function(type) {
@@ -1670,7 +1674,36 @@
     }
   };
 
+  Skew.CSharpEmitter.prototype._scanForSwitchBreak = function(node, loop) {
+    if (node.kind === Skew.NodeKind.BREAK) {
+      for (var parent = node.parent(); parent !== loop; parent = parent.parent()) {
+        if (parent.kind === Skew.NodeKind.SWITCH) {
+          var label = in_IntMap.get(this._loopLabels, loop.id, null);
+
+          if (label === null) {
+            label = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, this._enclosingFunction.scope.generateName('label'));
+            this._loopLabels[loop.id] = label;
+          }
+
+          this._loopLabels[node.id] = label;
+          break;
+        }
+      }
+    }
+
+    // Stop at nested loops since those will be tested later
+    else if (node === loop || !Skew.NodeKind.isLoop(node.kind)) {
+      for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
+        this._scanForSwitchBreak(child, loop);
+      }
+    }
+  };
+
   Skew.CSharpEmitter.prototype._emitStatement = function(node) {
+    if (Skew.NodeKind.isLoop(node.kind)) {
+      this._scanForSwitchBreak(node, node);
+    }
+
     switch (node.kind) {
       case Skew.NodeKind.VARIABLES: {
         for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
@@ -1697,7 +1730,15 @@
       }
 
       case Skew.NodeKind.BREAK: {
-        this._emit(this._indent + 'break;\n');
+        var label = in_IntMap.get(this._loopLabels, node.id, null);
+
+        if (label !== null) {
+          this._emit(this._indent + 'goto ' + Skew.CSharpEmitter._mangleName(label) + ';\n');
+        }
+
+        else {
+          this._emit(this._indent + 'break;\n');
+        }
         break;
       }
 
@@ -1887,6 +1928,14 @@
       default: {
         assert(false);
         break;
+      }
+    }
+
+    if (Skew.NodeKind.isLoop(node.kind)) {
+      var label1 = in_IntMap.get(this._loopLabels, node.id, null);
+
+      if (label1 !== null) {
+        this._emit(this._indent + Skew.CSharpEmitter._mangleName(label1) + ':\n');
       }
     }
   };
@@ -2123,9 +2172,12 @@
       }
 
       case Skew.NodeKind.LAMBDA: {
+        var oldEnclosingFunction = this._enclosingFunction;
+        this._enclosingFunction = symbol.asFunctionSymbol();
         this._emitArgumentList(symbol.asFunctionSymbol());
         this._emit(' =>\n');
         this._emitBlock(symbol.asFunctionSymbol().block);
+        this._enclosingFunction = oldEnclosingFunction;
         break;
       }
 
@@ -3409,6 +3461,8 @@
     this._enclosingFunction = null;
     this._extends = null;
     this._multiply = null;
+    this._enclosingLoop = null;
+    this._loopLabels = Object.create(null);
     this._sourceMap = false;
     this._generator = new Skew.SourceMapGenerator();
     this._currentLine = 0;
@@ -4173,7 +4227,13 @@
       }
 
       case Skew.NodeKind.BREAK: {
+        var label = in_IntMap.get(this._loopLabels, node.id, null);
         this._emit(this._indent + 'break');
+
+        if (label !== null) {
+          this._emit(' ' + Skew.JavaScriptEmitter._mangleName(label));
+        }
+
         this._emitSemicolonAfterStatement();
         break;
       }
@@ -4210,7 +4270,9 @@
         var setup = node.forSetup();
         var test = node.forTest();
         var update = node.forUpdate();
-        this._emit(this._indent + 'for' + this._space + '(');
+        this._emit(this._indent);
+        this._emitLoopLabel(node);
+        this._emit('for' + this._space + '(');
 
         if (!setup.isEmptySequence()) {
           if (setup.kind === Skew.NodeKind.VARIABLES) {
@@ -4222,15 +4284,17 @@
           }
         }
 
-        this._emit(';' + this._space);
+        this._emit(';');
 
         if (!test.isEmptySequence()) {
+          this._emit(this._space);
           this._emitExpression(test, Skew.Precedence.LOWEST);
         }
 
-        this._emit(';' + this._space);
+        this._emit(';');
 
         if (!update.isEmptySequence()) {
+          this._emit(this._space);
           this._emitExpression(update, Skew.Precedence.LOWEST);
         }
 
@@ -4241,7 +4305,9 @@
       }
 
       case Skew.NodeKind.FOREACH: {
-        this._emit(this._indent + 'for' + this._space + '(var ' + Skew.JavaScriptEmitter._mangleName(node.symbol) + ' in ');
+        this._emit(this._indent);
+        this._emitLoopLabel(node);
+        this._emit('for' + this._space + '(var ' + Skew.JavaScriptEmitter._mangleName(node.symbol) + ' in ');
         this._emitExpression(node.foreachValue(), Skew.Precedence.LOWEST);
         this._emit(')');
         this._emitBlock(node.foreachBlock(), Skew.JavaScriptEmitter.AfterToken.AFTER_PARENTHESIS, Skew.JavaScriptEmitter.BracesMode.CAN_OMIT_BRACES);
@@ -4338,7 +4404,9 @@
       }
 
       case Skew.NodeKind.WHILE: {
-        this._emit(this._indent + 'while' + this._space + '(');
+        this._emit(this._indent);
+        this._emitLoopLabel(node);
+        this._emit('while' + this._space + '(');
         this._emitExpression(node.whileTest(), Skew.Precedence.LOWEST);
         this._emit(')');
         this._emitBlock(node.whileBlock(), Skew.JavaScriptEmitter.AfterToken.AFTER_PARENTHESIS, Skew.JavaScriptEmitter.BracesMode.CAN_OMIT_BRACES);
@@ -4350,6 +4418,14 @@
         assert(false);
         break;
       }
+    }
+  };
+
+  Skew.JavaScriptEmitter.prototype._emitLoopLabel = function(node) {
+    var label = in_IntMap.get(this._loopLabels, node.id, null);
+
+    if (label !== null) {
+      this._emit(Skew.JavaScriptEmitter._mangleName(label) + ':' + this._space);
     }
   };
 
@@ -4860,6 +4936,7 @@
     }
 
     var oldEnclosingFunction = this._enclosingFunction;
+    var oldLoop = this._enclosingLoop;
     var symbol = node.symbol;
     var kind = node.kind;
 
@@ -4875,6 +4952,10 @@
       this._enclosingFunction = symbol.asFunctionSymbol();
     }
 
+    else if (Skew.NodeKind.isLoop(kind)) {
+      this._enclosingLoop = node;
+    }
+
     for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
       this._patchNode(child);
     }
@@ -4883,7 +4964,16 @@
       this._enclosingFunction = oldEnclosingFunction;
     }
 
+    else if (Skew.NodeKind.isLoop(kind)) {
+      this._enclosingLoop = oldLoop;
+    }
+
     switch (kind) {
+      case Skew.NodeKind.BREAK: {
+        this._patchBreak(node);
+        break;
+      }
+
       case Skew.NodeKind.CONSTANT: {
         if (this._mangle && node.content.kind() === Skew.ContentKind.BOOL) {
           node.become(Skew.Node.createUnary(Skew.NodeKind.NOT, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(node.asBool() ? 0 : 1))));
@@ -4960,15 +5050,7 @@
       }
 
       case Skew.NodeKind.LAMBDA: {
-        var $function = symbol.asFunctionSymbol();
-
-        for (var i = 0, list = $function.$arguments, count = list.length; i < count; ++i) {
-          var argument = list[i];
-          this._allocateNamingGroupIndex(argument);
-          this._unionVariableWithFunction(argument, $function);
-        }
-
-        this._unionVariableWithFunction($function, this._enclosingFunction);
+        this._patchLambda(node);
         break;
       }
 
@@ -4996,6 +5078,59 @@
         break;
       }
     }
+  };
+
+  // The "break" statement inside a switch should break out of the enclosing
+  // loop:
+  //
+  //   while true {
+  //     switch x {
+  //       case 0 {
+  //         break
+  //       }
+  //     }
+  //   }
+  //
+  // becomes:
+  //
+  //   label: while (true) {
+  //     switch (x) {
+  //       case 0: {
+  //         break label;
+  //       }
+  //     }
+  //   }
+  //
+  Skew.JavaScriptEmitter.prototype._patchBreak = function(node) {
+    var loop = this._enclosingLoop;
+
+    for (var parent = node.parent(); parent !== loop; parent = parent.parent()) {
+      if (parent.kind === Skew.NodeKind.SWITCH) {
+        var label = in_IntMap.get(this._loopLabels, loop.id, null);
+
+        if (label === null) {
+          label = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, this._enclosingFunction.scope.generateName('label'));
+          this._allocateNamingGroupIndex(label);
+          this._unionVariableWithFunction(label, this._enclosingFunction);
+          this._loopLabels[loop.id] = label;
+        }
+
+        this._loopLabels[node.id] = label;
+        break;
+      }
+    }
+  };
+
+  Skew.JavaScriptEmitter.prototype._patchLambda = function(node) {
+    var $function = node.symbol.asFunctionSymbol();
+
+    for (var i = 0, list = $function.$arguments, count = list.length; i < count; ++i) {
+      var argument = list[i];
+      this._allocateNamingGroupIndex(argument);
+      this._unionVariableWithFunction(argument, $function);
+    }
+
+    this._unionVariableWithFunction($function, this._enclosingFunction);
   };
 
   Skew.JavaScriptEmitter.prototype._patchTry = function(node) {
@@ -6360,6 +6495,7 @@
   // Factory functions
   // Getters, most of which should be inlineable when asserts are skipped in release
   Skew.Node = function(kind) {
+    this.id = Skew.Node._createID();
     this.kind = kind;
     this.flags = 0;
     this.range = null;
@@ -6748,6 +6884,11 @@
       parent.insertChildBefore(node, this.remove());
       parent.insertChildBefore(nextSibling, node.remove());
     }
+  };
+
+  Skew.Node._createID = function() {
+    ++Skew.Node._nextID;
+    return Skew.Node._nextID;
   };
 
   Skew.Node.prototype.isEmptySequence = function() {
@@ -15156,13 +15297,12 @@
     else if (symbol.kind === Skew.SymbolKind.PARAMETER_OBJECT) {
       var parent = scope;
       var isValid = false;
-      var stop = false;
 
-      while (parent !== null) {
+      label: while (parent !== null) {
         switch (parent.kind()) {
           case Skew.ScopeKind.OBJECT: {
             isValid = parent.asObjectScope().symbol === symbol.parent;
-            stop = true;
+            break label;
             break;
           }
 
@@ -15171,7 +15311,7 @@
 
             if ($function.kind !== Skew.SymbolKind.FUNCTION_LOCAL) {
               isValid = $function.parent === symbol.parent;
-              stop = true;
+              break label;
             }
             break;
           }
@@ -15179,14 +15319,9 @@
           case Skew.ScopeKind.VARIABLE: {
             var variable1 = parent.asVariableScope().symbol;
             isValid = variable1.kind === Skew.SymbolKind.VARIABLE_INSTANCE && variable1.parent === symbol.parent;
-            stop = true;
+            break label;
             break;
           }
-        }
-
-        // TODO: Should be able to use "break" above
-        if (stop) {
-          break;
         }
 
         parent = parent.parent;
@@ -17239,6 +17374,7 @@
   Skew.NodeKind.strings = ['ANNOTATION', 'BLOCK', 'CASE', 'CATCH', 'VARIABLE', 'BREAK', 'CONTINUE', 'EXPRESSION', 'FOR', 'FOREACH', 'IF', 'RETURN', 'SWITCH', 'THROW', 'TRY', 'VARIABLES', 'WHILE', 'ASSIGN_INDEX', 'CALL', 'CAST', 'CONSTANT', 'DOT', 'DYNAMIC', 'HOOK', 'INDEX', 'INITIALIZER_LIST', 'INITIALIZER_MAP', 'LAMBDA', 'LAMBDA_TYPE', 'NAME', 'NULL', 'PAIR', 'PARAMETERIZE', 'SEQUENCE', 'SUPER', 'TYPE', 'COMPLEMENT', 'DECREMENT', 'INCREMENT', 'NEGATIVE', 'NOT', 'POSITIVE', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'IN', 'IS', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'POWER', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_SUBTRACT'];
   Skew.Node.IS_IMPLICIT_RETURN = 1 << 0;
   Skew.Node.IS_INSIDE_PARENTHESES = 1 << 1;
+  Skew.Node._nextID = 0;
   Skew.Parsing.expressionParser = null;
   Skew.Parsing.typeParser = null;
   Skew.Parsing.operatorOverloadTokenKinds = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_INDEX, 0), Skew.TokenKind.ASSIGN_MINUS, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_POWER, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.COMPARE, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.IN, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INDEX, 0), Skew.TokenKind.LIST, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.POWER, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SET, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.TILDE, 0);

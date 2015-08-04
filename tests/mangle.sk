@@ -796,5 +796,86 @@ def foo {
 })();
 ").jsMangle
 
+test("
+@export
+def foo {
+  while true {
+    switch dynamic.x {
+      case 0 { break }
+      case 1 { switch dynamic.y { case 0 { break } } }
+    }
+  }
+
+  for i = 0; i < 10; i++ {
+    switch dynamic.x {
+      case 0 { break }
+      case 1 { switch dynamic.y { case 0 { break } } }
+    }
+  }
+
+  for i in 0..10 {
+    switch dynamic.x {
+      case 0 { break }
+      case 1 { switch dynamic.y { case 0 { break } } }
+    }
+  }
+}
+", "
+(function() {
+  foo = function() {
+    a: for (;;) {
+      switch (x) {
+        case 0: {
+          break a;
+        }
+
+        case 1: {
+          switch (y) {
+            case 0: {
+              break a;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    c: for (var b = 0; b < 10; ++b) {
+      switch (x) {
+        case 0: {
+          break c;
+        }
+
+        case 1: {
+          switch (y) {
+            case 0: {
+              break c;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    e: for (var d = 0; d < 10; ++d) {
+      switch (x) {
+        case 0: {
+          break e;
+        }
+
+        case 1: {
+          switch (y) {
+            case 0: {
+              break e;
+            }
+          }
+          break;
+        }
+      }
+    }
+  };
+})();
+").jsMangle
+
   }
 }

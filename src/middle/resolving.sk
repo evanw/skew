@@ -2280,33 +2280,27 @@ namespace Skew.Resolving {
       else if symbol.kind == .PARAMETER_OBJECT {
         var parent = scope
         var isValid = false
-        var stop = false
 
         while parent != null {
           switch parent.kind {
             case .OBJECT {
               isValid = parent.asObjectScope.symbol == symbol.parent
-              stop = true
+              break
             }
 
             case .FUNCTION {
               var function = parent.asFunctionScope.symbol
               if function.kind != .FUNCTION_LOCAL {
                 isValid = function.parent == symbol.parent
-                stop = true
+                break
               }
             }
 
             case .VARIABLE {
               var variable = parent.asVariableScope.symbol
               isValid = variable.kind == .VARIABLE_INSTANCE && variable.parent == symbol.parent
-              stop = true
+              break
             }
-          }
-
-          # TODO: Should be able to use "break" above
-          if stop {
-            break
           }
 
           parent = parent.parent

@@ -45,6 +45,8 @@ namespace Skew {
     var _enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
     var _extends VariableSymbol = null
     var _multiply VariableSymbol = null
+    var _enclosingLoop Node = null
+    var _loopLabels IntMap<VariableSymbol> = {}
 
     # Source map support
     var _sourceMap = false
@@ -684,7 +686,11 @@ namespace Skew {
         }
 
         case .BREAK {
+          var label = _loopLabels.get(node.id, null)
           _emit(_indent + "break")
+          if label != null {
+            _emit(" " + _mangleName(label))
+          }
           _emitSemicolonAfterStatement
         }
 
@@ -715,7 +721,9 @@ namespace Skew {
           var setup = node.forSetup
           var test = node.forTest
           var update = node.forUpdate
-          _emit(_indent + "for" + _space + "(")
+          _emit(_indent)
+          _emitLoopLabel(node)
+          _emit("for" + _space + "(")
           if !setup.isEmptySequence {
             if setup.kind == .VARIABLES {
               _emitVariables(setup)
@@ -723,12 +731,14 @@ namespace Skew {
               _emitExpression(setup, .LOWEST)
             }
           }
-          _emit(";" + _space)
+          _emit(";")
           if !test.isEmptySequence {
+            _emit(_space)
             _emitExpression(test, .LOWEST)
           }
-          _emit(";" + _space)
+          _emit(";")
           if !update.isEmptySequence {
+            _emit(_space)
             _emitExpression(update, .LOWEST)
           }
           _emit(")")
@@ -737,7 +747,9 @@ namespace Skew {
         }
 
         case .FOREACH {
-          _emit(_indent + "for" + _space + "(var " + _mangleName(node.symbol) + " in ")
+          _emit(_indent)
+          _emitLoopLabel(node)
+          _emit("for" + _space + "(var " + _mangleName(node.symbol) + " in ")
           _emitExpression(node.foreachValue, .LOWEST)
           _emit(")")
           _emitBlock(node.foreachBlock, .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
@@ -817,7 +829,9 @@ namespace Skew {
         }
 
         case .WHILE {
-          _emit(_indent + "while" + _space + "(")
+          _emit(_indent)
+          _emitLoopLabel(node)
+          _emit("while" + _space + "(")
           _emitExpression(node.whileTest, .LOWEST)
           _emit(")")
           _emitBlock(node.whileBlock, .AFTER_PARENTHESIS, .CAN_OMIT_BRACES)
@@ -827,6 +841,13 @@ namespace Skew {
         default {
           assert(false)
         }
+      }
+    }
+
+    def _emitLoopLabel(node Node) {
+      var label = _loopLabels.get(node.id, null)
+      if label != null {
+        _emit(_mangleName(label) + ":" + _space)
       }
     }
 
@@ -1264,6 +1285,7 @@ namespace Skew {
       }
 
       var oldEnclosingFunction = _enclosingFunction
+      var oldLoop = _enclosingLoop
       var symbol = node.symbol
       var kind = node.kind
 
@@ -1276,6 +1298,8 @@ namespace Skew {
 
       if kind == .LAMBDA {
         _enclosingFunction = symbol.asFunctionSymbol
+      } else if kind.isLoop {
+        _enclosingLoop = node
       }
 
       for child = node.firstChild; child != null; child = child.nextSibling {
@@ -1284,9 +1308,15 @@ namespace Skew {
 
       if kind == .LAMBDA {
         _enclosingFunction = oldEnclosingFunction
+      } else if kind.isLoop {
+        _enclosingLoop = oldLoop
       }
 
       switch kind {
+        case .BREAK {
+          _patchBreak(node)
+        }
+
         case .CONSTANT {
           if _mangle && node.content.kind == .BOOL {
             node.become(Node.createUnary(.NOT, Node.createInt(node.asBool ? 0 : 1)))
@@ -1348,12 +1378,7 @@ namespace Skew {
         }
 
         case .LAMBDA {
-          var function = symbol.asFunctionSymbol
-          for argument in function.arguments {
-            _allocateNamingGroupIndex(argument)
-            _unionVariableWithFunction(argument, function)
-          }
-          _unionVariableWithFunction(function, _enclosingFunction)
+          _patchLambda(node)
         }
 
         case .NAME {
@@ -1376,6 +1401,53 @@ namespace Skew {
           }
         }
       }
+    }
+
+    # The "break" statement inside a switch should break out of the enclosing
+    # loop:
+    #
+    #   while true {
+    #     switch x {
+    #       case 0 {
+    #         break
+    #       }
+    #     }
+    #   }
+    #
+    # becomes:
+    #
+    #   label: while (true) {
+    #     switch (x) {
+    #       case 0: {
+    #         break label;
+    #       }
+    #     }
+    #   }
+    #
+    def _patchBreak(node Node) {
+      var loop = _enclosingLoop
+      for parent = node.parent; parent != loop; parent = parent.parent {
+        if parent.kind == .SWITCH {
+          var label = _loopLabels.get(loop.id, null)
+          if label == null {
+            label = VariableSymbol.new(.VARIABLE_LOCAL, _enclosingFunction.scope.generateName("label"))
+            _allocateNamingGroupIndex(label)
+            _unionVariableWithFunction(label, _enclosingFunction)
+            _loopLabels[loop.id] = label
+          }
+          _loopLabels[node.id] = label
+          break
+        }
+      }
+    }
+
+    def _patchLambda(node Node) {
+      var function = node.symbol.asFunctionSymbol
+      for argument in function.arguments {
+        _allocateNamingGroupIndex(argument)
+        _unionVariableWithFunction(argument, function)
+      }
+      _unionVariableWithFunction(function, _enclosingFunction)
     }
 
     def _patchTry(node Node) {
