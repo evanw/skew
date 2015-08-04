@@ -15047,9 +15047,31 @@
       }
     }
 
-    // Only infer non-void return types if there's no type context
-    else if (symbol.returnType === null) {
-      symbol.flags |= Skew.Symbol.SHOULD_INFER_RETURN_TYPE;
+    else {
+      // Only infer non-void return types if there's no type context
+      if (symbol.returnType === null) {
+        symbol.flags |= Skew.Symbol.SHOULD_INFER_RETURN_TYPE;
+      }
+
+      // Take argument types from call argument values for immediately-invoked
+      // function expressions:
+      //
+      //   var sum = ((a, b) => a + b)(1, 2)
+      //
+      if (Skew.Resolving.Resolver.isCallValue(node) && node.parent().childCount() === (symbol.$arguments.length + 1 | 0)) {
+        var child = node.nextSibling();
+
+        for (var i2 = 0, count1 = symbol.$arguments.length; i2 < count1; ++i2) {
+          var argument1 = symbol.$arguments[i2];
+
+          if (argument1.type === null) {
+            this.resolveAsParameterizedExpression(child, scope);
+            argument1.type = new Skew.Node(Skew.NodeKind.TYPE).withType(child.resolvedType);
+          }
+
+          child = child.nextSibling();
+        }
+      }
     }
 
     this.resolveFunction(symbol);
@@ -15058,9 +15080,9 @@
     var argumentTypes = [];
     var returnType = symbol.returnType;
 
-    for (var i1 = 0, list = symbol.$arguments, count1 = list.length; i1 < count1; ++i1) {
-      var argument1 = list[i1];
-      argumentTypes.push(argument1.resolvedType);
+    for (var i1 = 0, list = symbol.$arguments, count2 = list.length; i1 < count2; ++i1) {
+      var argument2 = list[i1];
+      argumentTypes.push(argument2.resolvedType);
     }
 
     node.resolvedType = this.cache.createLambdaType(argumentTypes, returnType !== null ? returnType.resolvedType : null);

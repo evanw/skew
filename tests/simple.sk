@@ -3563,5 +3563,15 @@ def bar
     ~~~
 ")
 
+test("
+def main {
+  ((a, b) => a + b)(1, false)
+}
+", "
+<stdin>:2:18: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  ((a, b) => a + b)(1, false)
+                 ^
+")
+
   }
 }
