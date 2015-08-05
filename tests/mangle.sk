@@ -857,16 +857,16 @@ def foo {
       }
     }
 
-    e: for (var d = 0; d < 10; ++d) {
+    f: for (var d = 0; d < 10; ++d) {
       switch (x) {
         case 0: {
-          break e;
+          break f;
         }
 
         case 1: {
           switch (y) {
             case 0: {
-              break e;
+              break f;
             }
           }
           break;

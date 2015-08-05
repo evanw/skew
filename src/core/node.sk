@@ -156,6 +156,11 @@ namespace Skew {
     # source code. It's used for warnings about C-style syntax in conditional
     # statements and to call a lambda returned from a getter.
     const IS_INSIDE_PARENTHESES = 1 << 1
+
+    # This flag is only for blocks. A simple control flow analysis is run
+    # during code resolution and blocks where control flow reaches the end of
+    # the block have this flag set.
+    const HAS_CONTROL_FLOW_AT_END = 1 << 2
   }
 
   # Nodes represent executable code (variable initializers and function bodies)
@@ -256,6 +261,10 @@ namespace Skew {
 
     def isInsideParentheses bool {
       return (flags & IS_INSIDE_PARENTHESES) != 0
+    }
+
+    def hasControlFlowAtEnd bool {
+      return (flags & HAS_CONTROL_FLOW_AT_END) != 0
     }
 
     # This is cheaper than childCount == 0
@@ -554,36 +563,6 @@ namespace Skew {
 
     def isNumberLessThanZero bool {
       return isInt && asInt < 0 || isDouble && asDouble < 0
-    }
-
-    def blockAlwaysEndsWithReturn bool {
-      assert(kind == .BLOCK)
-
-      # This checks children in reverse since return statements are almost always last
-      for child = _lastChild; child != null; child = child._previousSibling {
-        switch child.kind {
-          case .RETURN {
-            return true
-          }
-
-          case .IF {
-            var test = child.ifTest
-            var trueBlock = child.ifTrue
-            var falseBlock = child.ifFalse
-            if (test.isTrue || (falseBlock != null && falseBlock.blockAlwaysEndsWithReturn)) && (test.isFalse || trueBlock.blockAlwaysEndsWithReturn) {
-              return true
-            }
-          }
-
-          case .WHILE {
-            if child.whileTest.isTrue {
-              return true
-            }
-          }
-        }
-      }
-
-      return false
     }
 
     def hasNoSideEffects bool {

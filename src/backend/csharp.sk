@@ -604,7 +604,7 @@ namespace Skew {
             _emit("\n" + _indent + "{\n")
             _increaseIndent
             _emitStatements(block)
-            if !block.blockAlwaysEndsWithReturn {
+            if block.hasControlFlowAtEnd {
               _emit(_indent + "break;\n")
             }
             _decreaseIndent

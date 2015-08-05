@@ -1787,7 +1787,7 @@
           this._increaseIndent();
           this._emitStatements(block);
 
-          if (!block.blockAlwaysEndsWithReturn()) {
+          if (block.hasControlFlowAtEnd()) {
             this._emit(this._indent + 'break;\n');
           }
 
@@ -2781,7 +2781,7 @@
           this._increaseIndent();
           this._emitStatements(block);
 
-          if (!block.blockAlwaysEndsWithReturn()) {
+          if (block.hasControlFlowAtEnd()) {
             this._emit(this._indent + 'break;\n');
           }
 
@@ -4360,7 +4360,7 @@
 
           this._emitStatements(block);
 
-          if (!block.blockAlwaysEndsWithReturn()) {
+          if (block.hasControlFlowAtEnd()) {
             this._emitSemicolonIfNeeded();
             this._emit(this._indent + 'break');
             this._emitSemicolonAfterStatement();
@@ -6600,6 +6600,10 @@
     return (this.flags & Skew.Node.IS_INSIDE_PARENTHESES) !== 0;
   };
 
+  Skew.Node.prototype.hasControlFlowAtEnd = function() {
+    return (this.flags & Skew.Node.HAS_CONTROL_FLOW_AT_END) !== 0;
+  };
+
   // This is cheaper than childCount == 0
   Skew.Node.prototype.hasChildren = function() {
     return this._firstChild !== null;
@@ -6913,39 +6917,6 @@
 
   Skew.Node.prototype.isNumberLessThanZero = function() {
     return this.isInt() && this.asInt() < 0 || this.isDouble() && this.asDouble() < 0;
-  };
-
-  Skew.Node.prototype.blockAlwaysEndsWithReturn = function() {
-    assert(this.kind === Skew.NodeKind.BLOCK);
-
-    // This checks children in reverse since return statements are almost always last
-    for (var child = this._lastChild; child !== null; child = child._previousSibling) {
-      switch (child.kind) {
-        case Skew.NodeKind.RETURN: {
-          return true;
-        }
-
-        case Skew.NodeKind.IF: {
-          var test = child.ifTest();
-          var trueBlock = child.ifTrue();
-          var falseBlock = child.ifFalse();
-
-          if ((test.isTrue() || falseBlock !== null && falseBlock.blockAlwaysEndsWithReturn()) && (test.isFalse() || trueBlock.blockAlwaysEndsWithReturn())) {
-            return true;
-          }
-          break;
-        }
-
-        case Skew.NodeKind.WHILE: {
-          if (child.whileTest().isTrue()) {
-            return true;
-          }
-          break;
-        }
-      }
-    }
-
-    return false;
   };
 
   Skew.Node.prototype.hasNoSideEffects = function() {
@@ -10978,6 +10949,116 @@
     return builder.toString();
   };
 
+  // This does a simple control flow analysis without constructing a full
+  // control flow graph. The result of this analysis is setting the flag
+  // HAS_CONTROL_FLOW_AT_END on all blocks where control flow reaches the end.
+  //
+  // It makes a few assumptions around exceptions to make life easier. Normal
+  // code without throw statements is assumed not to throw. For example, all
+  // property accesses are assumed to succeed and not throw null pointer errors.
+  // This is mostly consistent with how C++ operates for better or worse, and
+  // is also consistent with how people read code. It also assumes flow always
+  // can enter every catch block. Otherwise, why is it there?
+  Skew.ControlFlowAnalyzer = function() {
+    this._isLoopBreakTarget = [];
+    this._isControlFlowLive = [];
+  };
+
+  Skew.ControlFlowAnalyzer.prototype.pushBlock = function(node) {
+    var parent = node.parent();
+
+    // Push control flow
+    this._isControlFlowLive.push(this._isControlFlowLive.length === 0 || in_List.last(this._isControlFlowLive));
+
+    // Push loop info
+    if (parent !== null && Skew.NodeKind.isLoop(parent.kind)) {
+      this._isLoopBreakTarget.push(false);
+    }
+  };
+
+  Skew.ControlFlowAnalyzer.prototype.popBlock = function(node) {
+    var parent = node.parent();
+
+    // Pop control flow
+    var isLive = this._isControlFlowLive.pop();
+
+    if (isLive) {
+      node.flags |= Skew.Node.HAS_CONTROL_FLOW_AT_END;
+    }
+
+    // Pop loop info
+    if (parent !== null && Skew.NodeKind.isLoop(parent.kind) && !this._isLoopBreakTarget.pop() && (parent.kind === Skew.NodeKind.WHILE && parent.whileTest().isTrue() || parent.kind === Skew.NodeKind.FOR && parent.forTest().isTrue())) {
+      in_List.setLast(this._isControlFlowLive, false);
+    }
+  };
+
+  Skew.ControlFlowAnalyzer.prototype.visitStatementInPostOrder = function(node) {
+    if (!in_List.last(this._isControlFlowLive)) {
+      return;
+    }
+
+    switch (node.kind) {
+      case Skew.NodeKind.BREAK: {
+        if (!(this._isLoopBreakTarget.length === 0)) {
+          in_List.setLast(this._isLoopBreakTarget, true);
+        }
+
+        in_List.setLast(this._isControlFlowLive, false);
+        break;
+      }
+
+      case Skew.NodeKind.RETURN:
+      case Skew.NodeKind.THROW:
+      case Skew.NodeKind.CONTINUE: {
+        in_List.setLast(this._isControlFlowLive, false);
+        break;
+      }
+
+      case Skew.NodeKind.IF: {
+        var test = node.ifTest();
+        var trueBlock = node.ifTrue();
+        var falseBlock = node.ifFalse();
+
+        if (test.isTrue()) {
+          if (!trueBlock.hasControlFlowAtEnd()) {
+            in_List.setLast(this._isControlFlowLive, false);
+          }
+        }
+
+        else if (test.isFalse() && falseBlock !== null) {
+          if (!falseBlock.hasControlFlowAtEnd()) {
+            in_List.setLast(this._isControlFlowLive, false);
+          }
+        }
+
+        else if (trueBlock !== null && falseBlock !== null) {
+          if (!trueBlock.hasControlFlowAtEnd() && !falseBlock.hasControlFlowAtEnd()) {
+            in_List.setLast(this._isControlFlowLive, false);
+          }
+        }
+        break;
+      }
+
+      case Skew.NodeKind.SWITCH: {
+        var child = node.switchValue().nextSibling();
+        var foundDefaultCase = false;
+
+        while (child !== null && !child.caseBlock().hasControlFlowAtEnd()) {
+          if (child.hasOneChild()) {
+            foundDefaultCase = true;
+          }
+
+          child = child.nextSibling();
+        }
+
+        if (child === null && foundDefaultCase) {
+          in_List.setLast(this._isControlFlowLive, false);
+        }
+        break;
+      }
+    }
+  };
+
   Skew.Folding = {};
 
   Skew.Folding.ConstantLookup = function() {
@@ -12671,6 +12752,7 @@
     this.log = log;
     this.foreachLoops = [];
     this.localVariableStatistics = Object.create(null);
+    this.controlFlow = new Skew.ControlFlowAnalyzer();
     this.collectedSwitchStatements = null;
     this.constantFolder = null;
     this.isMergingGuards = true;
@@ -13632,7 +13714,7 @@
       if (symbol.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
         var returnType = symbol.resolvedType.returnType;
 
-        if (returnType !== null && returnType !== Skew.Type.DYNAMIC && !block.blockAlwaysEndsWithReturn()) {
+        if (returnType !== null && returnType !== Skew.Type.DYNAMIC && block.hasControlFlowAtEnd()) {
           this.log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType);
         }
       }
@@ -13922,6 +14004,16 @@
         break;
       }
 
+      case Skew.NodeKind.COMPLEMENT:
+      case Skew.NodeKind.DECREMENT:
+      case Skew.NodeKind.INCREMENT:
+      case Skew.NodeKind.NEGATIVE:
+      case Skew.NodeKind.NOT:
+      case Skew.NodeKind.POSITIVE: {
+        this.resolveOperatorOverload(node, scope);
+        break;
+      }
+
       case Skew.NodeKind.CONSTANT: {
         this.resolveConstant(node, scope);
         break;
@@ -13988,11 +14080,7 @@
       }
 
       default: {
-        if (Skew.NodeKind.isUnary(node.kind)) {
-          this.resolveOperatorOverload(node, scope);
-        }
-
-        else if (Skew.NodeKind.isBinary(node.kind)) {
+        if (Skew.NodeKind.isBinary(node.kind)) {
           this.resolveBinary(node, scope);
         }
 
@@ -14283,6 +14371,7 @@
 
   Skew.Resolving.Resolver.prototype.resolveBlock = function(node, scope) {
     assert(node.kind === Skew.NodeKind.BLOCK);
+    this.controlFlow.pushBlock(node);
 
     for (var child = node.firstChild(), next = null; child !== null; child = next) {
       next = child.nextSibling();
@@ -14305,6 +14394,7 @@
       }
 
       this.resolveNode(child, scope, null);
+      this.controlFlow.visitStatementInPostOrder(child);
 
       // The "@skip" annotation removes function calls after type checking
       if (child.kind === Skew.NodeKind.EXPRESSION) {
@@ -14315,6 +14405,8 @@
         }
       }
     }
+
+    this.controlFlow.popBlock(node);
   };
 
   Skew.Resolving.Resolver.prototype.resolvePair = function(node, scope) {
@@ -15321,7 +15413,6 @@
           case Skew.ScopeKind.OBJECT: {
             isValid = parent.asObjectScope().symbol === symbol.parent;
             break label;
-            break;
           }
 
           case Skew.ScopeKind.FUNCTION: {
@@ -15338,7 +15429,6 @@
             var variable1 = parent.asVariableScope().symbol;
             isValid = variable1.kind === Skew.SymbolKind.VARIABLE_INSTANCE && variable1.parent === symbol.parent;
             break label;
-            break;
           }
         }
 
@@ -17255,6 +17345,10 @@
 
   var in_List = {};
 
+  in_List.setLast = function(self, x) {
+    self[self.length - 1 | 0] = x;
+  };
+
   in_List.last = function(self) {
     return self[self.length - 1 | 0];
   };
@@ -17400,6 +17494,11 @@
   // source code. It's used for warnings about C-style syntax in conditional
   // statements and to call a lambda returned from a getter.
   Skew.Node.IS_INSIDE_PARENTHESES = 1 << 1;
+
+  // This flag is only for blocks. A simple control flow analysis is run
+  // during code resolution and blocks where control flow reaches the end of
+  // the block have this flag set.
+  Skew.Node.HAS_CONTROL_FLOW_AT_END = 1 << 2;
   Skew.Node._nextID = 0;
   Skew.Parsing.expressionParser = null;
   Skew.Parsing.typeParser = null;

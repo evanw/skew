@@ -791,7 +791,7 @@ namespace Skew {
               _increaseIndent
             }
             _emitStatements(block)
-            if !block.blockAlwaysEndsWithReturn {
+            if block.hasControlFlowAtEnd {
               _emitSemicolonIfNeeded
               _emit(_indent + "break")
               _emitSemicolonAfterStatement

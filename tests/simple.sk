@@ -3335,6 +3335,81 @@ def foo int {
 ")
 
 test("
+def foo int {
+  while true {
+    break
+  }
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+def foo int {
+    ~~~
+")
+
+test("
+def foo int {
+  for i = 0; true; i = i + 1 {}
+}
+", "
+")
+
+test("
+def foo int {
+  for i = 0; true; i = i + 1 {
+    return 0
+  }
+}
+", "
+")
+
+test("
+def foo int {
+  for i = 0; true; i = i + 1 {
+    break
+  }
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+def foo int {
+    ~~~
+")
+
+test("
+def foo int {
+  switch dynamic.bar {
+    case 0 { return 0 }
+    default { return 0 }
+  }
+}
+", "
+")
+
+test("
+def foo int {
+  switch dynamic.bar {
+    case 0 { return 0 }
+    default {}
+  }
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+def foo int {
+    ~~~
+")
+
+test("
+def foo int {
+  switch dynamic.bar {
+    case 0 { return 0 }
+  }
+}
+", "
+<stdin>:1:5: error: All control paths for \"foo\" must return a value of type \"int\"
+def foo int {
+    ~~~
+")
+
+test("
 def main {
   0--
   0 += 1

@@ -1,0 +1,104 @@
+namespace Skew {
+  # This does a simple control flow analysis without constructing a full
+  # control flow graph. The result of this analysis is setting the flag
+  # HAS_CONTROL_FLOW_AT_END on all blocks where control flow reaches the end.
+  #
+  # It makes a few assumptions around exceptions to make life easier. Normal
+  # code without throw statements is assumed not to throw. For example, all
+  # property accesses are assumed to succeed and not throw null pointer errors.
+  # This is mostly consistent with how C++ operates for better or worse, and
+  # is also consistent with how people read code. It also assumes flow always
+  # can enter every catch block. Otherwise, why is it there?
+  class ControlFlowAnalyzer {
+    var _isLoopBreakTarget List<bool> = []
+    var _isControlFlowLive List<bool> = []
+
+    def pushBlock(node Node) {
+      var parent = node.parent
+
+      # Push control flow
+      _isControlFlowLive.append(_isControlFlowLive.isEmpty || _isControlFlowLive.last)
+
+      # Push loop info
+      if parent != null && parent.kind.isLoop {
+        _isLoopBreakTarget.append(false)
+      }
+    }
+
+    def popBlock(node Node) {
+      var parent = node.parent
+
+      # Pop control flow
+      var isLive = _isControlFlowLive.takeLast
+      if isLive {
+        node.flags |= Node.HAS_CONTROL_FLOW_AT_END
+      }
+
+      # Pop loop info
+      if parent != null && parent.kind.isLoop && !_isLoopBreakTarget.takeLast && (
+          parent.kind == .WHILE && parent.whileTest.isTrue ||
+          parent.kind == .FOR && parent.forTest.isTrue) {
+        _isControlFlowLive.last = false
+      }
+    }
+
+    def visitStatementInPostOrder(node Node) {
+      if !_isControlFlowLive.last {
+        return
+      }
+
+      switch node.kind {
+        case .BREAK {
+          if !_isLoopBreakTarget.isEmpty {
+            _isLoopBreakTarget.last = true
+          }
+          _isControlFlowLive.last = false
+        }
+
+        case .RETURN, .THROW, .CONTINUE {
+          _isControlFlowLive.last = false
+        }
+
+        case .IF {
+          var test = node.ifTest
+          var trueBlock = node.ifTrue
+          var falseBlock = node.ifFalse
+
+          if test.isTrue {
+            if !trueBlock.hasControlFlowAtEnd {
+              _isControlFlowLive.last = false
+            }
+          }
+
+          else if test.isFalse && falseBlock != null {
+            if !falseBlock.hasControlFlowAtEnd {
+              _isControlFlowLive.last = false
+            }
+          }
+
+          else if trueBlock != null && falseBlock != null {
+            if !trueBlock.hasControlFlowAtEnd && !falseBlock.hasControlFlowAtEnd {
+              _isControlFlowLive.last = false
+            }
+          }
+        }
+
+        case .SWITCH {
+          var child = node.switchValue.nextSibling
+          var foundDefaultCase = false
+
+          while child != null && !child.caseBlock.hasControlFlowAtEnd {
+            if child.hasOneChild {
+              foundDefaultCase = true
+            }
+            child = child.nextSibling
+          }
+
+          if child == null && foundDefaultCase {
+            _isControlFlowLive.last = false
+          }
+        }
+      }
+    }
+  }
+}

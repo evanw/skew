@@ -37,6 +37,7 @@ namespace Skew.Resolving {
     const log Log
     const foreachLoops List<Node> = []
     const localVariableStatistics IntMap<LocalVariableStatistics> = {}
+    var controlFlow = ControlFlowAnalyzer.new
     var collectedSwitchStatements List<Node> = null
     var constantFolder Folding.ConstantFolder = null
     var isMergingGuards = true
@@ -896,7 +897,7 @@ namespace Skew.Resolving {
         # Missing a return statement is an error
         if symbol.kind != .FUNCTION_CONSTRUCTOR {
           var returnType = symbol.resolvedType.returnType
-          if returnType != null && returnType != .DYNAMIC && !block.blockAlwaysEndsWithReturn {
+          if returnType != null && returnType != .DYNAMIC && block.hasControlFlowAtEnd {
             log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
           }
         }
@@ -1102,6 +1103,7 @@ namespace Skew.Resolving {
         case .ASSIGN_INDEX { resolveOperatorOverload(node, scope) }
         case .CALL { resolveCall(node, scope) }
         case .CAST { resolveCast(node, scope, context) }
+        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { resolveOperatorOverload(node, scope) }
         case .CONSTANT { resolveConstant(node, scope) }
         case .DOT { resolveDot(node, scope, context) }
         case .DYNAMIC {}
@@ -1117,8 +1119,7 @@ namespace Skew.Resolving {
         case .SUPER { resolveSuper(node, scope) }
 
         default {
-          if node.kind.isUnary { resolveOperatorOverload(node, scope) }
-          else if node.kind.isBinary { resolveBinary(node, scope) }
+          if node.kind.isBinary { resolveBinary(node, scope) }
           else { assert(false) }
         }
       }
@@ -1359,6 +1360,7 @@ namespace Skew.Resolving {
 
     def resolveBlock(node Node, scope Scope) {
       assert(node.kind == .BLOCK)
+      controlFlow.pushBlock(node)
 
       for child = node.firstChild, next Node = null; child != null; child = next {
         next = child.nextSibling
@@ -1380,6 +1382,7 @@ namespace Skew.Resolving {
         }
 
         resolveNode(child, scope, null)
+        controlFlow.visitStatementInPostOrder(child)
 
         # The "@skip" annotation removes function calls after type checking
         if child.kind == .EXPRESSION {
@@ -1389,6 +1392,8 @@ namespace Skew.Resolving {
           }
         }
       }
+
+      controlFlow.popBlock(node)
     }
 
     def resolvePair(node Node, scope Scope) {
