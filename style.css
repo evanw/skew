@@ -1,0 +1,36 @@
+body {
+  font: 12px/15px 'Lucida Grande', sans-serif;
+  margin: 20px;
+}
+
+textarea {
+  font: 12px Monaco, monospace;
+  width: 600px;
+}
+
+div {
+  display: inline-block;
+  vertical-align: top;
+  margin: 20px;
+}
+
+select {
+  width: 100px;
+}
+
+#compileTime {
+  float: right;
+}
+
+label {
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: -moz-none;
+  margin-right: 10px;
+}
+
+#optionArea {
+  display: block;
+  margin-top: 10px;
+  width: 600px;
+}
