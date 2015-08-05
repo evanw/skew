@@ -29,7 +29,7 @@ namespace Skew.Renaming {
         }
 
         else if isInvalidIdentifier(function.name) {
-          function.name = scope.generateName("_")
+          function.name = scope.generateName(generateValidIdentifier(function.name))
         }
 
         else if function.overloaded != null && function.overloaded.symbols.count > 1 {
@@ -71,6 +71,20 @@ namespace Skew.Renaming {
       }
     }
     return false
+  }
+
+  def generateValidIdentifier(name string) string {
+    var text = ""
+    for i in 0..name.count {
+      var c = name[i]
+      if isAlpha(c) || isNumber(c) {
+        text += name.get(i)
+      }
+    }
+    if name.endsWith("=") {
+      return "set" + text.slice(0, 1).toUpperCase + text.slice(1)
+    }
+    return text == "" || !isAlpha(text[0]) ? "_" + text : text
   }
 
   const unaryPrefixes = {

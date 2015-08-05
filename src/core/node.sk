@@ -147,7 +147,14 @@ namespace Skew {
 
   # Flags
   namespace Node {
+    # An implicit return is a return statement inside an expression lambda. For
+    # example, the lambda "x => x" is compiled into "x => { return x }" where
+    # the return statement has this flag set.
     const IS_IMPLICIT_RETURN = 1 << 0
+
+    # This flag marks nodes that were wrapped in parentheses in the original
+    # source code. It's used for warnings about C-style syntax in conditional
+    # statements and to call a lambda returned from a getter.
     const IS_INSIDE_PARENTHESES = 1 << 1
   }
 

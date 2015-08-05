@@ -2611,7 +2611,7 @@ namespace Skew.Resolving {
       }
 
       # Forbid bare function references
-      if node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction && kind != .FUNCTION_ANNOTATION &&
+      if !symbol.isSetter && node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction && kind != .FUNCTION_ANNOTATION &&
           !isCallValue(node) && (parent == null || parent.kind != .PARAMETERIZE || !isCallValue(parent)) {
         log.semanticErrorMustCallFunction(node.internalRangeOrRange, symbol.name)
         node.resolvedType = .DYNAMIC

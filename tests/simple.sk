@@ -3573,5 +3573,19 @@ def main {
                  ^
 ")
 
+test("
+class Foo {
+  def foo=(x int) {}
+}
+
+def main {
+  Foo.new.foo = false
+}
+", "
+<stdin>:6:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  Foo.new.foo = false
+                ~~~~~
+")
+
   }
 }

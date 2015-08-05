@@ -288,6 +288,9 @@ class List<T> {
   @rename(\"unshift\") if TARGET == .JAVASCRIPT
   def prepend(x T)
   def prepend(x List<T>)
+
+  def first=(x T) { self[0] = x }
+  def last=(x T) { self[count - 1] = x }
 }
 
 @import

@@ -724,7 +724,7 @@ namespace Skew {
       if node.kind.isLoop {
         var label = _loopLabels.get(node.id, null)
         if label != null {
-          _emit(_indent + _mangleName(label) + ":\n")
+          _emit(_indent + _mangleName(label) + (node.nextSibling != null ? ":\n" : ":;\n"))
         }
       }
     }

@@ -426,7 +426,7 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    for (; x; ) {
+    for (; x;) {
       if (y) {
         return;
       }
@@ -495,7 +495,7 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    for (; x; ) {
+    for (; x;) {
       if (y) {
         z();
       }
@@ -517,7 +517,7 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    for (; x; ) {
+    for (; x;) {
       y || (z(), z());
     }
   };
@@ -538,7 +538,7 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    for (; x; ) {
+    for (; x;) {
       y || (z(), y || z());
     }
   };
@@ -561,7 +561,7 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    for (; x; ) {
+    for (; x;) {
       y && (z(), y || (z(), z()));
     }
   };
@@ -585,7 +585,7 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    for (; x; ) {
+    for (; x;) {
       if (y) {
         if (z(), y) {
           continue;
@@ -616,7 +616,7 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    for (; x; ) {
+    for (; x;) {
       y ? z() : (z(), z());
     }
   };
@@ -654,13 +654,13 @@ def bar {
 ", "
 (function() {
   foo = function() {
-    for (; x; ) {
+    for (; x;) {
       a(), b(), c() && (d() || (e(), f()));
     }
   };
 
   bar = function() {
-    for (; x; ) {
+    for (; x;) {
       if (a(), b(), c()) {
         if (d()) {
           continue;
@@ -717,7 +717,7 @@ class Foo {
   };
 
   Foo.prototype.bar = function() {
-    for (var a = this, b = get(); ; ) {
+    for (var a = this, b = get();;) {
       return function() {
         return a.x + b;
       };
@@ -725,7 +725,7 @@ class Foo {
   };
 
   Foo.prototype.baz = function() {
-    for (var a = this; ; ) {
+    for (var a = this;;) {
       return function() {
         return a.x;
       };
@@ -765,12 +765,12 @@ def bar {
 ", "
 (function() {
   foo = function() {
-    for (; a(), !b(); ) {
+    for (; a(), !b();) {
     }
   };
 
   bar = function() {
-    for (; a() && (b(), !c()); ) {
+    for (; a() && (b(), !c());) {
     }
   };
 })();
