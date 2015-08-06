@@ -25,9 +25,11 @@ def main dynamic {
   return -dynamic.a
   return ~dynamic.a
   return !dynamic.a
+  return []
+  return {}
 }
 ", "
-(function(){main=function(){a(b+ +c);a(b+-c);a(b-+c);a(b- -c);return'';return a;return a+b;return-a;return~a;return!a}})();
+(function(){main=function(){a(b+ +c);a(b+-c);a(b-+c);a(b- -c);return'';return a;return a+b;return-a;return~a;return!a;return[];return{}}})();
 ").jsMinify
 
 # Check for whitespace with numeric literals

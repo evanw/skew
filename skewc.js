@@ -4205,7 +4205,7 @@
   };
 
   Skew.JavaScriptEmitter.prototype._emitSpaceBeforeKeyword = function(node) {
-    if (!this._minify || !Skew.NodeKind.isUnary(node.kind) && !node.isString() && !node.isNumberLessThanZero()) {
+    if (!this._minify || !Skew.NodeKind.isUnary(node.kind) && !node.isString() && !node.isNumberLessThanZero() && !Skew.NodeKind.isInitializer(node.kind)) {
       this._emit(' ');
     }
   };
@@ -4969,6 +4969,13 @@
     }
 
     switch (kind) {
+      case Skew.NodeKind.PAIR: {
+        if (this._mangle && Skew.JavaScriptEmitter._isIdentifierString(node.firstValue())) {
+          node.firstValue().kind = Skew.NodeKind.NAME;
+        }
+        break;
+      }
+
       case Skew.NodeKind.BREAK: {
         this._patchBreak(node);
         break;
@@ -5716,7 +5723,7 @@
               }
             }
 
-            // "switch a { case b { return } default { c } }" => "switch a { case b { return } } c"
+            // "switch (a) { case b: return; default: c; break; }" => "switch (a) { case b: return; } c;"
             if (!hasFlowAtEnd) {
               while (defaultBlock.hasChildren()) {
                 node.insertChildAfter(child, defaultBlock.lastChild().remove());

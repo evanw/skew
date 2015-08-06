@@ -877,17 +877,24 @@ def foo {
 })();
 ").jsMangle
 
+# Test moving the default case outside the switch statement
 test("
 @export
 def foo {
   switch dynamic.a {
     case 0 { return }
-    default { dynamic.b() }
+    default {
+      dynamic.b1()
+      dynamic.b2()
+    }
   }
 
   switch dynamic.a {
     case 0 { dynamic.c() }
-    default { dynamic.d() }
+    default {
+      dynamic.d1()
+      dynamic.d2()
+    }
   }
 
   dynamic.e()
@@ -901,7 +908,7 @@ def foo {
       }
     }
 
-    b();
+    b1(), b2();
 
     switch (a) {
       case 0: {
@@ -910,12 +917,26 @@ def foo {
       }
 
       default: {
-        d();
+        d1(), d2();
         break;
       }
     }
 
     e();
+  };
+})();
+").jsMangle
+
+# Test inline identifiers in object literals
+test("
+@export
+def foo dynamic {
+  return {\"a\": 0, \"0\": 0, \" \": 0}
+}
+", "
+(function() {
+  foo = function() {
+    return {a: 0, '0': 0, ' ': 0};
   };
 })();
 ").jsMangle

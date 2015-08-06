@@ -666,7 +666,7 @@ namespace Skew {
     }
 
     def _emitSpaceBeforeKeyword(node Node) {
-      if !_minify || !node.kind.isUnary && !node.isString && !node.isNumberLessThanZero {
+      if !_minify || !node.kind.isUnary && !node.isString && !node.isNumberLessThanZero && !node.kind.isInitializer {
         _emit(" ")
       }
     }
@@ -1313,6 +1313,12 @@ namespace Skew {
       }
 
       switch kind {
+        case .PAIR {
+          if _mangle && _isIdentifierString(node.firstValue) {
+            node.firstValue.kind = .NAME
+          }
+        }
+
         case .BREAK {
           _patchBreak(node)
         }
@@ -2004,7 +2010,7 @@ namespace Skew {
                 }
               }
 
-              # "switch a { case b { return } default { c } }" => "switch a { case b { return } } c"
+              # "switch (a) { case b: return; default: c; break; }" => "switch (a) { case b: return; } c;"
               if !hasFlowAtEnd {
                 while defaultBlock.hasChildren {
                   node.insertChildAfter(child, defaultBlock.lastChild.remove)
