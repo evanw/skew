@@ -877,5 +877,48 @@ def foo {
 })();
 ").jsMangle
 
+test("
+@export
+def foo {
+  switch dynamic.a {
+    case 0 { return }
+    default { dynamic.b() }
+  }
+
+  switch dynamic.a {
+    case 0 { dynamic.c() }
+    default { dynamic.d() }
+  }
+
+  dynamic.e()
+}
+", "
+(function() {
+  foo = function() {
+    switch (a) {
+      case 0: {
+        return;
+      }
+    }
+
+    b();
+
+    switch (a) {
+      case 0: {
+        c();
+        break;
+      }
+
+      default: {
+        d();
+        break;
+      }
+    }
+
+    e();
+  };
+})();
+").jsMangle
+
   }
 }

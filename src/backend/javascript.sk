@@ -1989,6 +1989,30 @@ namespace Skew {
               setup.replaceWith(Node.createSequence(previous.remove.expressionValue.remove, setup.cloneAndStealChildren))
             }
           }
+
+          case .SWITCH {
+            # The default case is always the last one
+            var defaultCase = child.lastChild
+            if defaultCase.hasOneChild {
+              var defaultBlock = defaultCase.caseBlock
+              var hasFlowAtEnd = false
+
+              # See if any non-default case will flow past the end of the switch block
+              for caseChild = child.switchValue.nextSibling; caseChild != defaultCase; caseChild = caseChild.nextSibling {
+                if caseChild.caseBlock.hasControlFlowAtEnd {
+                  hasFlowAtEnd = true
+                }
+              }
+
+              # "switch a { case b { return } default { c } }" => "switch a { case b { return } } c"
+              if !hasFlowAtEnd {
+                while defaultBlock.hasChildren {
+                  node.insertChildAfter(child, defaultBlock.lastChild.remove)
+                }
+                defaultCase.remove
+              }
+            }
+          }
         }
       }
     }
