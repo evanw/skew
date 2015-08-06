@@ -3662,5 +3662,28 @@ def main {
                 ~~~~~
 ")
 
+test("
+@entry
+def main {
+  for i = 0, b = false; true; 0, 1 {}
+}
+", "
+<stdin>:3:14: error: Expected loop variable \"b\" to be of type \"int\" instead of type \"bool\"
+  for i = 0, b = false; true; 0, 1 {}
+             ^
+<stdin>:3:31: warning: Unused expression
+  for i = 0, b = false; true; 0, 1 {}
+                              ^
+<stdin>:3:34: warning: Unused expression
+  for i = 0, b = false; true; 0, 1 {}
+                                 ^
+<stdin>:3:7: warning: Local variable \"i\" is never read
+  for i = 0, b = false; true; 0, 1 {}
+      ^
+<stdin>:3:14: warning: Local variable \"b\" is never read
+  for i = 0, b = false; true; 0, 1 {}
+             ^
+")
+
   }
 }

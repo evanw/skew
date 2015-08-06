@@ -10205,6 +10205,10 @@
     this.error(range, 'The default case in a switch statement must come last');
   };
 
+  Skew.Log.prototype.semanticErrorForLoopDifferentType = function(range, name, found, expected) {
+    this.error(range, 'Expected loop variable "' + name + '" to be of type "' + expected.toString() + '" instead of type "' + found.toString() + '"');
+  };
+
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
     this.error(range, 'Use "--define:' + name + '=___" to provide a value');
   };
@@ -14428,10 +14432,24 @@
 
   Skew.Resolving.Resolver.prototype.resolveFor = function(node, scope) {
     var setup = node.forSetup();
+    var update = node.forUpdate();
     scope = new Skew.LocalScope(scope, Skew.LocalType.LOOP);
 
     if (setup.kind === Skew.NodeKind.VARIABLES) {
       this.resolveNode(setup, scope, null);
+
+      // All for loop variables must have the same type. This is a requirement
+      // for one-to-one code emission in the languages we want to target.
+      var type = setup.firstChild().symbol.resolvedType;
+
+      for (var child = setup.firstChild().nextSibling(); child !== null; child = child.nextSibling()) {
+        var symbol = child.symbol;
+
+        if (symbol.resolvedType !== type) {
+          this.log.semanticErrorForLoopDifferentType(symbol.range, symbol.name, symbol.resolvedType, type);
+          break;
+        }
+      }
     }
 
     else {
@@ -14439,7 +14457,14 @@
     }
 
     this.resolveAsParameterizedExpressionWithConversion(node.forTest(), scope, this.cache.boolType);
-    this.resolveAsParameterizedExpression(node.forUpdate(), scope);
+    this.resolveAsParameterizedExpression(update, scope);
+
+    if (update.kind === Skew.NodeKind.SEQUENCE) {
+      for (var child1 = update.firstChild(); child1 !== null; child1 = child1.nextSibling()) {
+        this.checkUnusedExpression(child1);
+      }
+    }
+
     this.resolveBlock(node.forBlock(), scope);
   };
 

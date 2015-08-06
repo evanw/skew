@@ -1415,14 +1415,31 @@ namespace Skew.Resolving {
 
     def resolveFor(node Node, scope Scope) {
       var setup = node.forSetup
+      var update = node.forUpdate
       scope = LocalScope.new(scope, .LOOP)
       if setup.kind == .VARIABLES {
         resolveNode(setup, scope, null)
+
+        # All for loop variables must have the same type. This is a requirement
+        # for one-to-one code emission in the languages we want to target.
+        var type = setup.firstChild.symbol.resolvedType
+        for child = setup.firstChild.nextSibling; child != null; child = child.nextSibling {
+          var symbol = child.symbol
+          if symbol.resolvedType != type {
+            log.semanticErrorForLoopDifferentType(symbol.range, symbol.name, symbol.resolvedType, type)
+            break
+          }
+        }
       } else {
         resolveAsParameterizedExpression(setup, scope)
       }
       resolveAsParameterizedExpressionWithConversion(node.forTest, scope, cache.boolType)
-      resolveAsParameterizedExpression(node.forUpdate, scope)
+      resolveAsParameterizedExpression(update, scope)
+      if update.kind == .SEQUENCE {
+        for child = update.firstChild; child != null; child = child.nextSibling {
+          checkUnusedExpression(child)
+        }
+      }
       resolveBlock(node.forBlock, scope)
     }
 
