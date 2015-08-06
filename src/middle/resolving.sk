@@ -38,7 +38,6 @@ namespace Skew.Resolving {
     const foreachLoops List<Node> = []
     const localVariableStatistics IntMap<LocalVariableStatistics> = {}
     var controlFlow = ControlFlowAnalyzer.new
-    var collectedSwitchStatements List<Node> = null
     var constantFolder Folding.ConstantFolder = null
     var isMergingGuards = true
 
@@ -886,13 +885,7 @@ namespace Skew.Resolving {
           }
         }
 
-        # Convert switch statements to if chains after each function since we know what the scope is
-        var old = collectedSwitchStatements
         resolveNode(block, scope, null)
-        if collectedSwitchStatements != null {
-          checkSwitchStatements(collectedSwitchStatements, symbol.scope)
-        }
-        collectedSwitchStatements = old
 
         # Missing a return statement is an error
         if symbol.kind != .FUNCTION_CONSTRUCTOR {
@@ -1546,6 +1539,9 @@ namespace Skew.Resolving {
     }
 
     def resolveSwitch(node Node, scope Scope) {
+      var duplicateCases IntMap<Range> = {}
+      var mustEnsureConstantIntegers = options.target.requiresIntegerSwitchStatements
+      var allValuesAreIntegers = true
       var value = node.switchValue
       resolveAsParameterizedExpression(value, scope)
 
@@ -1555,6 +1551,39 @@ namespace Skew.Resolving {
         # Resolve all case values
         for caseValue = child.firstChild; caseValue != block; caseValue = caseValue.nextSibling {
           resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType)
+
+          var symbol = caseValue.symbol
+          var integer = 0
+
+          # Check for a constant variable, which may just be read-only with a
+          # value determined at runtime
+          if symbol != null && (mustEnsureConstantIntegers ? symbol.kind == .VARIABLE_ENUM : symbol.kind.isVariable && symbol.isConst) {
+            var constant = constantFolder.constantLookup.constantForSymbol(symbol.asVariableSymbol)
+            if constant == null || constant.kind != .INT {
+              allValuesAreIntegers = false
+              continue
+            }
+            integer = constant.asInt
+          }
+
+          # Fall back to the constant folder only as a last resort because it
+          # mutates the syntax tree and harms readability
+          else {
+            constantFolder.foldConstants(caseValue)
+            if !caseValue.isInt {
+              allValuesAreIntegers = false
+              continue
+            }
+            integer = caseValue.asInt
+          }
+
+          # Duplicate case detection
+          var previous = duplicateCases.get(integer, null)
+          if previous != null {
+            log.semanticErrorDuplicateCase(caseValue.range, previous)
+          } else {
+            duplicateCases[integer] = caseValue.range
+          }
         }
 
         # The default case must be last, makes changing into an if chain easier later
@@ -1565,11 +1594,11 @@ namespace Skew.Resolving {
         resolveBlock(block, LocalScope.new(scope, .NORMAL))
       }
 
-      # Collect switch statements until the end of the function
-      if collectedSwitchStatements == null {
-        collectedSwitchStatements = []
+      # Fall back to an if statement if the case values aren't compile-time
+      # integer constants, which is requried by many language targets
+      if !allValuesAreIntegers && mustEnsureConstantIntegers {
+        convertSwitchToIfChain(node, scope)
       }
-      collectedSwitchStatements.append(node)
     }
 
     def resolveThrow(node Node, scope Scope) {
@@ -2642,30 +2671,37 @@ namespace Skew.Resolving {
       return false
     }
 
-    def checkSwitchStatements(nodes List<Node>, scope Scope) {
-      if options.target.requiresIntegerSwitchStatements {
-        for node in nodes {
-          var isAllInts = true
+    def convertSwitchToIfChain(node Node, scope Scope) {
+      var variable = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("value"))
+      var value = node.switchValue.remove
+      var block Node = null
 
-          # Attempt to convert each case value to a constant
-          for child = node.switchValue.nextSibling; child != null; child = child.nextSibling {
-            var block = child.caseBlock
-            for caseValue = child.firstChild; caseValue != block; caseValue = caseValue.nextSibling {
-              if caseValue.symbol == null || caseValue.symbol.kind != .VARIABLE_ENUM {
-                constantFolder.foldConstants(caseValue)
-                if !caseValue.isInt {
-                  isAllInts = false
-                }
-              }
-            }
-          }
+      # Stash the variable being switched over so it's only evaluated once
+      variable.resolvedType = value.resolvedType
+      variable.value = value
+      variable.state = .INITIALIZED
+      node.parent.insertChildBefore(node, Node.createVariables.appendChild(Node.createVariable(variable)))
 
-          # Fall back to an if statement if the case values aren't compile-time
-          # integer constants, which is requried by many language targets
-          if !isAllInts {
-            convertSwitchToIfChain(node, scope)
-          }
+      # Build the chain in reverse starting with the last case
+      for child = node.lastChild; child != null; child = child.previousSibling {
+        var caseBlock = child.caseBlock.remove
+        var test Node = null
+
+        # Combine adjacent cases in a "||" chain
+        while child.hasChildren {
+          var caseValue = Node.createBinary(.EQUAL, Node.createSymbolReference(variable), child.firstChild.remove).withType(cache.boolType)
+          test = test != null ? Node.createBinary(.LOGICAL_OR, test, caseValue).withType(cache.boolType) : caseValue
         }
+
+        # Chain if-else statements together
+        block = test != null ? Node.createBlock.appendChild(Node.createIf(test, caseBlock, block)) : caseBlock
+      }
+
+      # Replace the switch statement with the if chain
+      if block != null {
+        node.replaceWithChildrenFrom(block)
+      } else {
+        node.remove
       }
     }
   }
@@ -2723,40 +2759,6 @@ namespace Skew.Resolving {
         overloaded.scope = overloaded.parent.scope
         symbol.overloaded = overloaded
         overloaded.scope.asObjectScope.symbol.members[symbol.name] = overloaded
-      }
-    }
-
-    def convertSwitchToIfChain(node Node, scope Scope) {
-      var variable = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("value"))
-      var value = node.switchValue.remove
-      var block Node = null
-
-      # Stash the variable being switched over so it's only evaluated once
-      variable.resolvedType = value.resolvedType
-      variable.value = value
-      variable.state = .INITIALIZED
-      node.parent.insertChildBefore(node, Node.createVariables.appendChild(Node.createVariable(variable)))
-
-      # Build the chain in reverse starting with the last case
-      for child = node.lastChild; child != null; child = child.previousSibling {
-        var caseBlock = child.caseBlock.remove
-        var test Node = null
-
-        # Combine adjacent cases in a "||" chain
-        while child.hasChildren {
-          var caseValue = Node.createBinary(.EQUAL, Node.createSymbolReference(variable), child.firstChild.remove)
-          test = test != null ? Node.createBinary(.LOGICAL_OR, test, caseValue) : caseValue
-        }
-
-        # Chain if-else statements together
-        block = test != null ? Node.createBlock.appendChild(Node.createIf(test, caseBlock, block)) : caseBlock
-      }
-
-      # Replace the switch statement with the if chain
-      if block != null {
-        node.replaceWithChildrenFrom(block)
-      } else {
-        node.remove
       }
     }
   }

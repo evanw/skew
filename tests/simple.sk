@@ -2287,6 +2287,71 @@ def main {
 <stdin>:9:10: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
     case 0 {}
          ^
+<stdin>:9:10: error: Duplicate case value
+    case 0 {}
+         ^
+<stdin>:8:10: note: The first occurrence is here
+    case .FOO, .BAR, .BAZ {}
+         ~~~~
+")
+
+test("
+def main(x Foo) {
+  switch 0 {
+    case 0, 1, 2 {}
+    case 0, 2 {}
+    case 1 {}
+  }
+
+  switch x {
+    case .FOO, .BAR, .BAZ {}
+    case .FOO, .BAZ {}
+    case .BAR {}
+  }
+}
+
+enum Foo {
+  FOO
+  BAR
+  BAZ
+}
+", "
+<stdin>:4:10: error: Duplicate case value
+    case 0, 2 {}
+         ^
+<stdin>:3:10: note: The first occurrence is here
+    case 0, 1, 2 {}
+         ^
+<stdin>:4:13: error: Duplicate case value
+    case 0, 2 {}
+            ^
+<stdin>:3:16: note: The first occurrence is here
+    case 0, 1, 2 {}
+               ^
+<stdin>:5:10: error: Duplicate case value
+    case 1 {}
+         ^
+<stdin>:3:13: note: The first occurrence is here
+    case 0, 1, 2 {}
+            ^
+<stdin>:10:10: error: Duplicate case value
+    case .FOO, .BAZ {}
+         ~~~~
+<stdin>:9:10: note: The first occurrence is here
+    case .FOO, .BAR, .BAZ {}
+         ~~~~
+<stdin>:10:16: error: Duplicate case value
+    case .FOO, .BAZ {}
+               ~~~~
+<stdin>:9:22: note: The first occurrence is here
+    case .FOO, .BAR, .BAZ {}
+                     ~~~~
+<stdin>:11:10: error: Duplicate case value
+    case .BAR {}
+         ~~~~
+<stdin>:9:16: note: The first occurrence is here
+    case .FOO, .BAR, .BAZ {}
+               ~~~~
 ")
 
 test("
@@ -3663,24 +3728,23 @@ def main {
 ")
 
 test("
-@entry
 def main {
   for i = 0, b = false; true; 0, 1 {}
 }
 ", "
-<stdin>:3:14: error: Expected loop variable \"b\" to be of type \"int\" instead of type \"bool\"
+<stdin>:2:14: error: Expected loop variable \"b\" to be of type \"int\" instead of type \"bool\"
   for i = 0, b = false; true; 0, 1 {}
              ^
-<stdin>:3:31: warning: Unused expression
+<stdin>:2:31: warning: Unused expression
   for i = 0, b = false; true; 0, 1 {}
                               ^
-<stdin>:3:34: warning: Unused expression
+<stdin>:2:34: warning: Unused expression
   for i = 0, b = false; true; 0, 1 {}
                                  ^
-<stdin>:3:7: warning: Local variable \"i\" is never read
+<stdin>:2:7: warning: Local variable \"i\" is never read
   for i = 0, b = false; true; 0, 1 {}
       ^
-<stdin>:3:14: warning: Local variable \"b\" is never read
+<stdin>:2:14: warning: Local variable \"b\" is never read
   for i = 0, b = false; true; 0, 1 {}
              ^
 ")

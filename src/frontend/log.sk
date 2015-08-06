@@ -481,5 +481,12 @@ namespace Skew {
     def semanticErrorForLoopDifferentType(range Range, name string, found Type, expected Type) {
       error(range, "Expected loop variable \"" + name + "\" to be of type \"" + expected.toString + "\" instead of type \"" + found.toString + "\"")
     }
+
+    def semanticErrorDuplicateCase(range Range, previous Range) {
+      error(range, "Duplicate case value")
+      if previous != null {
+        note(previous, "The first occurrence is here")
+      }
+    }
   }
 }

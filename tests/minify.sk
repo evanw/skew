@@ -129,5 +129,24 @@ def main {
 (function(){main=function(){if(a()){while(true)if(b())break}else c()}})();
 ").jsMinify
 
+# Check that minification doesn't remove constants in switch statements unless necessary
+test("
+@export
+const C = 2
+
+@export
+def main(x int, y Foo) {
+  switch x {
+    case C { dynamic.a() }
+    case C + 3 { dynamic.a() }
+  }
+  switch y { case .FOO { dynamic.b() } }
+}
+
+enum Foo { FOO }
+", "
+(function(){main=function(x,y){switch(x){case C:a();break;case 5:a();break}switch(y){case Foo.FOO:b();break}};var Foo={FOO:0};C=2})();
+").jsMinify
+
   }
 }

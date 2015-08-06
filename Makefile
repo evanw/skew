@@ -54,10 +54,10 @@ check-js: | build
 
 check-cs: | build
 	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
-	mcs build/skewc.cs
-	mono build/skewc.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc2.cs
-	mcs build/skewc2.cs
-	mono build/skewc2.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc3.cs
+	mcs -debug build/skewc.cs
+	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc2.cs
+	mcs -debug build/skewc2.cs
+	mono --debug build/skewc2.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc3.cs
 	cmp -s build/skewc2.cs build/skewc3.cs
 
 release: compile-browser | build

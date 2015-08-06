@@ -10209,6 +10209,14 @@
     this.error(range, 'Expected loop variable "' + name + '" to be of type "' + expected.toString() + '" instead of type "' + found.toString() + '"');
   };
 
+  Skew.Log.prototype.semanticErrorDuplicateCase = function(range, previous) {
+    this.error(range, 'Duplicate case value');
+
+    if (previous !== null) {
+      this.note(previous, 'The first occurrence is here');
+    }
+  };
+
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
     this.error(range, 'Use "--define:' + name + '=___" to provide a value');
   };
@@ -12757,7 +12765,6 @@
     this.foreachLoops = [];
     this.localVariableStatistics = Object.create(null);
     this.controlFlow = new Skew.ControlFlowAnalyzer();
-    this.collectedSwitchStatements = null;
     this.constantFolder = null;
     this.isMergingGuards = true;
   };
@@ -13704,15 +13711,7 @@
         }
       }
 
-      // Convert switch statements to if chains after each function since we know what the scope is
-      var old = this.collectedSwitchStatements;
       this.resolveNode(block, scope, null);
-
-      if (this.collectedSwitchStatements !== null) {
-        this.checkSwitchStatements(this.collectedSwitchStatements, symbol.scope);
-      }
-
-      this.collectedSwitchStatements = old;
 
       // Missing a return statement is an error
       if (symbol.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
@@ -14572,6 +14571,9 @@
   };
 
   Skew.Resolving.Resolver.prototype.resolveSwitch = function(node, scope) {
+    var duplicateCases = Object.create(null);
+    var mustEnsureConstantIntegers = this.options.target.requiresIntegerSwitchStatements();
+    var allValuesAreIntegers = true;
     var value = node.switchValue();
     this.resolveAsParameterizedExpression(value, scope);
 
@@ -14581,6 +14583,45 @@
       // Resolve all case values
       for (var caseValue = child.firstChild(); caseValue !== block; caseValue = caseValue.nextSibling()) {
         this.resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType);
+        var symbol = caseValue.symbol;
+        var integer = 0;
+
+        // Check for a constant variable, which may just be read-only with a
+        // value determined at runtime
+        if (symbol !== null && (mustEnsureConstantIntegers ? symbol.kind === Skew.SymbolKind.VARIABLE_ENUM : Skew.SymbolKind.isVariable(symbol.kind) && symbol.isConst())) {
+          var constant = this.constantFolder.constantLookup.constantForSymbol(symbol.asVariableSymbol());
+
+          if (constant === null || constant.kind() !== Skew.ContentKind.INT) {
+            allValuesAreIntegers = false;
+            continue;
+          }
+
+          integer = constant.asInt();
+        }
+
+        // Fall back to the constant folder only as a last resort because it
+        // mutates the syntax tree and harms readability
+        else {
+          this.constantFolder.foldConstants(caseValue);
+
+          if (!caseValue.isInt()) {
+            allValuesAreIntegers = false;
+            continue;
+          }
+
+          integer = caseValue.asInt();
+        }
+
+        // Duplicate case detection
+        var previous = in_IntMap.get(duplicateCases, integer, null);
+
+        if (previous !== null) {
+          this.log.semanticErrorDuplicateCase(caseValue.range, previous);
+        }
+
+        else {
+          duplicateCases[integer] = caseValue.range;
+        }
       }
 
       // The default case must be last, makes changing into an if chain easier later
@@ -14591,12 +14632,11 @@
       this.resolveBlock(block, new Skew.LocalScope(scope, Skew.LocalType.NORMAL));
     }
 
-    // Collect switch statements until the end of the function
-    if (this.collectedSwitchStatements === null) {
-      this.collectedSwitchStatements = [];
+    // Fall back to an if statement if the case values aren't compile-time
+    // integer constants, which is requried by many language targets
+    if (!allValuesAreIntegers && mustEnsureConstantIntegers) {
+      this.convertSwitchToIfChain(node, scope);
     }
-
-    this.collectedSwitchStatements.push(node);
   };
 
   Skew.Resolving.Resolver.prototype.resolveThrow = function(node, scope) {
@@ -15802,33 +15842,39 @@
     return false;
   };
 
-  Skew.Resolving.Resolver.prototype.checkSwitchStatements = function(nodes, scope) {
-    if (this.options.target.requiresIntegerSwitchStatements()) {
-      for (var i = 0, list = nodes, count = list.length; i < count; ++i) {
-        var node = list[i];
-        var isAllInts = true;
+  Skew.Resolving.Resolver.prototype.convertSwitchToIfChain = function(node, scope) {
+    var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('value'));
+    var value = node.switchValue().remove();
+    var block = null;
 
-        // Attempt to convert each case value to a constant
-        for (var child = node.switchValue().nextSibling(); child !== null; child = child.nextSibling()) {
-          var block = child.caseBlock();
+    // Stash the variable being switched over so it's only evaluated once
+    variable.resolvedType = value.resolvedType;
+    variable.value = value;
+    variable.state = Skew.SymbolState.INITIALIZED;
+    node.parent().insertChildBefore(node, new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(variable)));
 
-          for (var caseValue = child.firstChild(); caseValue !== block; caseValue = caseValue.nextSibling()) {
-            if (caseValue.symbol === null || caseValue.symbol.kind !== Skew.SymbolKind.VARIABLE_ENUM) {
-              this.constantFolder.foldConstants(caseValue);
+    // Build the chain in reverse starting with the last case
+    for (var child = node.lastChild(); child !== null; child = child.previousSibling()) {
+      var caseBlock = child.caseBlock().remove();
+      var test = null;
 
-              if (!caseValue.isInt()) {
-                isAllInts = false;
-              }
-            }
-          }
-        }
-
-        // Fall back to an if statement if the case values aren't compile-time
-        // integer constants, which is requried by many language targets
-        if (!isAllInts) {
-          Skew.Resolving.Resolver.convertSwitchToIfChain(node, scope);
-        }
+      // Combine adjacent cases in a "||" chain
+      while (child.hasChildren()) {
+        var caseValue = Skew.Node.createBinary(Skew.NodeKind.EQUAL, Skew.Node.createSymbolReference(variable), child.firstChild().remove()).withType(this.cache.boolType);
+        test = test !== null ? Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test, caseValue).withType(this.cache.boolType) : caseValue;
       }
+
+      // Chain if-else statements together
+      block = test !== null ? new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createIf(test, caseBlock, block)) : caseBlock;
+    }
+
+    // Replace the switch statement with the if chain
+    if (block !== null) {
+      node.replaceWithChildrenFrom(block);
+    }
+
+    else {
+      node.remove();
     }
   };
 
@@ -15866,42 +15912,6 @@
       overloaded.scope = overloaded.parent.scope;
       symbol.overloaded = overloaded;
       overloaded.scope.asObjectScope().symbol.members[symbol.name] = overloaded;
-    }
-  };
-
-  Skew.Resolving.Resolver.convertSwitchToIfChain = function(node, scope) {
-    var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('value'));
-    var value = node.switchValue().remove();
-    var block = null;
-
-    // Stash the variable being switched over so it's only evaluated once
-    variable.resolvedType = value.resolvedType;
-    variable.value = value;
-    variable.state = Skew.SymbolState.INITIALIZED;
-    node.parent().insertChildBefore(node, new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(variable)));
-
-    // Build the chain in reverse starting with the last case
-    for (var child = node.lastChild(); child !== null; child = child.previousSibling()) {
-      var caseBlock = child.caseBlock().remove();
-      var test = null;
-
-      // Combine adjacent cases in a "||" chain
-      while (child.hasChildren()) {
-        var caseValue = Skew.Node.createBinary(Skew.NodeKind.EQUAL, Skew.Node.createSymbolReference(variable), child.firstChild().remove());
-        test = test !== null ? Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test, caseValue) : caseValue;
-      }
-
-      // Chain if-else statements together
-      block = test !== null ? new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createIf(test, caseBlock, block)) : caseBlock;
-    }
-
-    // Replace the switch statement with the if chain
-    if (block !== null) {
-      node.replaceWithChildrenFrom(block);
-    }
-
-    else {
-      node.remove();
     }
   };
 
@@ -17639,15 +17649,15 @@
   Skew.Symbol.SHOULD_INFER_RETURN_TYPE = 1 << 7;
 
   // Modifiers
-  Skew.Symbol.IS_DEPRECATED = 1 << 8;
-  Skew.Symbol.IS_ENTRY_POINT = 1 << 9;
-  Skew.Symbol.IS_EXPORTED = 1 << 10;
-  Skew.Symbol.IS_IMPORTED = 1 << 11;
-  Skew.Symbol.IS_PREFERRED = 1 << 12;
+  Skew.Symbol.IS_DEPRECATED = 256;
+  Skew.Symbol.IS_ENTRY_POINT = 512;
+  Skew.Symbol.IS_EXPORTED = 1024;
+  Skew.Symbol.IS_IMPORTED = 2048;
+  Skew.Symbol.IS_PREFERRED = 4096;
   Skew.Symbol.IS_PROTECTED = 1 << 13;
-  Skew.Symbol.IS_RENAMED = 1 << 14;
-  Skew.Symbol.IS_SKIPPED = 1 << 15;
-  Skew.Symbol.SHOULD_SPREAD = 1 << 16;
+  Skew.Symbol.IS_RENAMED = 16384;
+  Skew.Symbol.IS_SKIPPED = 32768;
+  Skew.Symbol.SHOULD_SPREAD = 65536;
 
   // Pass-specific flags
   Skew.Symbol.IS_MERGED = 1 << 17;
