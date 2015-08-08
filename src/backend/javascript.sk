@@ -1838,6 +1838,13 @@ namespace Skew {
           node.become(Node.createBinary(trueValue.kind, hook, trueRight.remove))
         }
       }
+
+      # "(a, b) ? c : d" => "a, b ? c : d"
+      if test.kind == .SEQUENCE {
+        node.prependChild(test.remove.lastChild.remove)
+        test.appendChild(node.cloneAndStealChildren)
+        node.become(test)
+      }
     }
 
     def _peepholeMangleAssignIndex(node Node) {

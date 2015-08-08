@@ -941,5 +941,28 @@ def foo dynamic {
 })();
 ").jsMangle
 
+# Test sequence hook rotation
+test("
+@export
+def foo dynamic {
+  return () bool => {
+    dynamic.x()
+    if dynamic.q {
+      dynamic.x()
+      return true
+    }
+    return false
+  }
+}
+", "
+(function() {
+  foo = function() {
+    return function() {
+      return x(), q ? (x(), !0) : !1;
+    };
+  };
+})();
+").jsMangle
+
   }
 }

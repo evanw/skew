@@ -5370,6 +5370,13 @@
         node.become(Skew.Node.createBinary(trueValue.kind, hook1, trueRight.remove()));
       }
     }
+
+    // "(a, b) ? c : d" => "a, b ? c : d"
+    if (test.kind === Skew.NodeKind.SEQUENCE) {
+      node.prependChild(test.remove().lastChild().remove());
+      test.appendChild(node.cloneAndStealChildren());
+      node.become(test);
+    }
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleAssignIndex = function(node) {
