@@ -1,6 +1,16 @@
 namespace Skew {
-  def mergingPass(log Log, global ObjectSymbol) {
-    Merging.mergeObject(log, null, global, global)
+  enum PassKind {
+    MERGING
+  }
+
+  class MergingPass : Pass {
+    over kind PassKind {
+      return .MERGING
+    }
+
+    over run(context PassContext) {
+      Merging.mergeObject(context.log, null, context.global, context.global)
+    }
   }
 }
 

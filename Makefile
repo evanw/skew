@@ -6,7 +6,7 @@ SOURCES += src/lib/unicode.sk
 SOURCES += src/middle/*.sk
 
 SOURCES_SKEWC += $(SOURCES)
-SOURCES_SKEWC += src/driver/node.sk
+SOURCES_SKEWC += src/driver/nodejs.sk
 SOURCES_SKEWC += src/driver/options.sk
 SOURCES_SKEWC += src/lib/io.sk
 SOURCES_SKEWC += src/lib/terminal.sk

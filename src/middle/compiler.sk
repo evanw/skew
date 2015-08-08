@@ -29,6 +29,21 @@ namespace Skew {
     var outputDirectory = ""
     var outputFile = ""
     var target = CompilerTarget.new
+    var passes = [
+      LexingPass.new,
+      TokenProcessingPass.new,
+      ParsingPass.new,
+      MergingPass.new,
+      ResolvingPass.new,
+      CallGraphPass.new,
+      GlobalizingPass.new,
+      MotionPass.new,
+      RenamingPass.new,
+      FoldingPass.new.onlyRunWhen(options => options.foldAllConstants),
+      InliningPass.new.onlyRunWhen(options => options.inlineAllFunctions),
+      FoldingPass.new.onlyRunWhen(options => options.inlineAllFunctions && options.foldAllConstants),
+      EmittingPass.new,
+    ]
 
     def define(name string, value string) {
       var range = Source.new("<internal>", "--define:" + name + "=" + value).entireRange
@@ -62,43 +77,56 @@ namespace Skew {
     }
   }
 
-  class CompilerResult {
+  enum PassKind {
+  }
+
+  class PassContext {
+    var log Log
+    var options CompilerOptions
+    var inputs List<Source>
     var cache = TypeCache.new
     var global = ObjectSymbol.new(.OBJECT_GLOBAL, "<global>")
+    var callGraph CallGraph = null
+    var tokens List<List<Token>> = []
     var outputs List<Source> = []
+  }
 
-    # Timers for help tuning performance
-    var callGraphTimer = Timer.new
-    var emitTimer = Timer.new
-    var foldingTimer = Timer.new
-    var globalizeTimer = Timer.new
-    var inliningTimer = Timer.new
-    var motionTimer = Timer.new
-    var optimizingTimer = Timer.new
-    var parsingTimer = Timer.new
-    var renamingTimer = Timer.new
-    var resolvingTimer = Timer.new
-    var tokenizingTimer = Timer.new
-    var totalTimer = Timer.new
+  class Pass {
+    var _shouldRun fn(CompilerOptions) bool = null
+
+    def kind PassKind
+    def run(context PassContext)
+
+    def shouldRun(options CompilerOptions) bool {
+      return _shouldRun != null ? _shouldRun(options) : true
+    }
+
+    def onlyRunWhen(callback fn(CompilerOptions) bool) Pass {
+      _shouldRun = callback
+      return self
+    }
+  }
+
+  class PassTimer {
+    var kind PassKind
+    var timer = Timer.new
+  }
+
+  class CompilerResult {
+    var cache TypeCache
+    var global ObjectSymbol
+    var outputs List<Source>
+    var passTimers List<PassTimer>
+    var totalTimer Timer
 
     def statistics string {
       var builder = StringBuilder.new
 
       # Compilation time
-      builder.append("Total compile time: " + totalTimer.elapsedMilliseconds)
-      if !tokenizingTimer.isZero { builder.append("\n  Tokenizing: " + tokenizingTimer.elapsedMilliseconds) }
-      if !parsingTimer.isZero { builder.append("\n  Parsing: " + parsingTimer.elapsedMilliseconds) }
-      if !resolvingTimer.isZero { builder.append("\n  Resolving: " + resolvingTimer.elapsedMilliseconds) }
-      if !optimizingTimer.isZero {
-        builder.append("\n  Optimizing: " + optimizingTimer.elapsedMilliseconds)
-        builder.append("\n    Call graph: " + callGraphTimer.elapsedMilliseconds)
-        builder.append("\n    Globalize: " + globalizeTimer.elapsedMilliseconds)
-        builder.append("\n    Motion: " + motionTimer.elapsedMilliseconds)
-        builder.append("\n    Renaming: " + renamingTimer.elapsedMilliseconds)
-        builder.append("\n    Folding: " + foldingTimer.elapsedMilliseconds)
-        builder.append("\n    Inlining: " + inliningTimer.elapsedMilliseconds)
+      builder.append("Total time: " + totalTimer.elapsedMilliseconds)
+      for passTimer in passTimers {
+        builder.append("\n  " + passTimer.kind.toString + ": " + passTimer.timer.elapsedMilliseconds)
       }
-      if !emitTimer.isZero { builder.append("\n  Emit: " + emitTimer.elapsedMilliseconds) }
 
       # Sources
       var totalBytes = 0
@@ -118,104 +146,37 @@ namespace Skew {
     }
   }
 
-  def compile(log Log, options CompilerOptions, sources List<Source>) CompilerResult {
-    var debug = false
-    var result = CompilerResult.new
-    result.totalTimer.start
-
-    options.target.includeSources(sources)
+  def compile(log Log, options CompilerOptions, inputs List<Source>) CompilerResult {
+    options.target.includeSources(inputs)
     options.target.editOptions(options)
-    sources.prepend(Source.new("<native>", NATIVE_LIBRARY))
+    inputs.prepend(Source.new("<native>", NATIVE_LIBRARY))
 
-    for source in sources {
-      result.tokenizingTimer.start
-      var tokens = tokenize(log, source)
-      prepareTokens(tokens)
-      result.tokenizingTimer.stop
-      result.parsingTimer.start
-      parseFile(log, tokens, result.global)
-      result.parsingTimer.stop
-    }
+    var context = PassContext.new(log, options, inputs)
+    var passTimers List<PassTimer> = []
+    var totalTimer = Timer.new
+    totalTimer.start
 
-    # Merging pass, errors stop compilation
-    if !log.hasErrors {
-      mergingPass(log, result.global)
+    # Run all passes, errors stop compilation
+    for pass in options.passes {
+      if log.hasErrors {
+        break
+      }
+      var passTimer = PassTimer.new(pass.kind)
+      passTimers.append(passTimer)
+      passTimer.timer.start
+      if pass.shouldRun(options) {
+        pass.run(context)
+      }
+      passTimer.timer.stop
 
-      # Resolving pass, errors stop compilation
-      if !log.hasErrors {
-        result.resolvingTimer.start
-        resolvingPass(log, result.global, result.cache, options)
-        result.resolvingTimer.stop
-        if debug { _verifyHierarchy(result.global) }
-
-        # Prepare for emission, code is error-free at this point
-        if !log.hasErrors {
-          if options.target.runPostResolvePasses {
-            result.optimizingTimer.start
-
-            result.callGraphTimer.start
-            var graph = CallGraph.new(result.global)
-            result.callGraphTimer.stop
-
-            # Make certain functions global
-            result.globalizeTimer.start
-            globalizingPass(result.global, graph, options)
-            result.globalizeTimer.stop
-            if debug { _verifyHierarchy(result.global) }
-
-            # Move symbols around
-            result.motionTimer.start
-            motionPass(result.global, options)
-            result.motionTimer.stop
-            if debug { _verifyHierarchy(result.global) }
-
-            # Give overloaded functions unique names, rename operator overloads
-            result.renamingTimer.start
-            renamingPass(result.global)
-            result.renamingTimer.stop
-            if debug { _verifyHierarchy(result.global) }
-
-            # Partial evaluation before inlining to make more functions inlineable by removing dead code
-            if options.foldAllConstants {
-              result.foldingTimer.start
-              foldingPass(result.global, result.cache)
-              result.foldingTimer.stop
-              if debug { _verifyHierarchy(result.global) }
-            }
-
-            # Function inlining
-            if options.inlineAllFunctions {
-              result.inliningTimer.start
-              inliningPass(graph)
-              result.inliningTimer.stop
-              if debug { _verifyHierarchy(result.global) }
-
-              # Partial evaluation after inlining will simplify inlined expressions
-              if options.foldAllConstants {
-                result.foldingTimer.start
-                foldingPass(result.global, result.cache)
-                result.foldingTimer.stop
-                if debug { _verifyHierarchy(result.global) }
-              }
-            }
-
-            result.optimizingTimer.stop
-          }
-
-          # Emit in the target language
-          var emitter = options.target.createEmitter(options, result.cache)
-          if emitter != null {
-            result.emitTimer.start
-            emitter.visit(result.global)
-            result.emitTimer.stop
-            result.outputs = emitter.sources
-          }
-        }
+      # This is expensive but can be used for debugging
+      if false {
+        _verifyHierarchy(context.global)
       }
     }
 
-    result.totalTimer.stop
-    return result
+    totalTimer.stop
+    return CompilerResult.new(context.cache, context.global, context.outputs, passTimers, totalTimer)
   }
 
   def _verifyHierarchy(symbol ObjectSymbol) {

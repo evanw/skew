@@ -1,7 +1,17 @@
 namespace Skew {
-  def renamingPass(global ObjectSymbol) {
-    Renaming.renameObject(global)
-    Renaming.useOverriddenNames(global) # Use a second pass to avoid ordering issues
+  enum PassKind {
+    RENAMING
+  }
+
+  class RenamingPass : Pass {
+    over kind PassKind {
+      return .RENAMING
+    }
+
+    over run(context PassContext) {
+      Renaming.renameObject(context.global)
+      Renaming.useOverriddenNames(context.global) # Use a second pass to avoid ordering issues
+    }
   }
 }
 

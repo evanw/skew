@@ -1,4 +1,18 @@
 namespace Skew {
+  enum PassKind {
+    CALL_GRAPH
+  }
+
+  class CallGraphPass : Pass {
+    over kind PassKind {
+      return .CALL_GRAPH
+    }
+
+    over run(context PassContext) {
+      context.callGraph = CallGraph.new(context.global)
+    }
+  }
+
   class CallSite {
     const callNode Node
     const enclosingSymbol Symbol

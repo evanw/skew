@@ -1,11 +1,18 @@
 namespace Skew {
-  def parseFile(log Log, tokens List<Token>, global ObjectSymbol) {
-    if Parsing.expressionParser == null { Parsing.expressionParser = Parsing.createExpressionParser }
-    if Parsing.typeParser == null { Parsing.typeParser = Parsing.createTypeParser }
+  enum PassKind {
+    PARSING
+  }
 
-    var context = ParserContext.new(log, tokens)
-    Parsing.parseSymbols(context, global, null)
-    context.expect(.END_OF_FILE)
+  class ParsingPass : Pass {
+    over kind PassKind {
+      return .PARSING
+    }
+
+    over run(context PassContext) {
+      for tokens in context.tokens {
+        Parsing.parseFile(context.log, tokens, context.global)
+      }
+    }
   }
 }
 
@@ -1485,5 +1492,14 @@ namespace Skew.Parsing {
     }
 
     return pratt
+  }
+
+  def parseFile(log Log, tokens List<Token>, global ObjectSymbol) {
+    if expressionParser == null { expressionParser = createExpressionParser }
+    if typeParser == null { typeParser = createTypeParser }
+
+    var context = ParserContext.new(log, tokens)
+    parseSymbols(context, global, null)
+    context.expect(.END_OF_FILE)
   }
 }

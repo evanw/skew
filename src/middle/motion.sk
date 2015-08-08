@@ -1,11 +1,21 @@
 namespace Skew {
-  def motionPass(global ObjectSymbol, options CompilerOptions) {
-    var namespaces = IntMap<Motion.Namespace>.new
-    Motion.symbolMotion(global, options, namespaces)
+  enum PassKind {
+    MOTION
+  }
 
-    # Avoid mutation during the iteration above
-    for pair in namespaces.values {
-      pair.parent.objects.append(pair.child)
+  class MotionPass : Pass {
+    over kind PassKind {
+      return .MOTION
+    }
+
+    over run(context PassContext) {
+      var namespaces = IntMap<Motion.Namespace>.new
+      Motion.symbolMotion(context.global, context.options, namespaces)
+
+      # Avoid mutation during the iteration above
+      for pair in namespaces.values {
+        pair.parent.objects.append(pair.child)
+      }
     }
   }
 }

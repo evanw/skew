@@ -1,6 +1,16 @@
 namespace Skew {
-  def foldingPass(global ObjectSymbol, cache TypeCache) {
-    Folding.ConstantFolder.new(cache, Folding.ConstantCache.new).visitObject(global)
+  enum PassKind {
+    FOLDING
+  }
+
+  class FoldingPass : Pass {
+    over kind PassKind {
+      return .FOLDING
+    }
+
+    over run(context PassContext) {
+      Folding.ConstantFolder.new(context.cache, Folding.ConstantCache.new).visitObject(context.global)
+    }
   }
 }
 

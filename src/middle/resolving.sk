@@ -1,13 +1,23 @@
 namespace Skew {
-  def resolvingPass(log Log, global ObjectSymbol, cache TypeCache, options CompilerOptions) {
-    cache.loadGlobals(log, global)
-    if !log.hasErrors {
-      var resolver = Resolving.Resolver.new(global, options, options.defines.clone, cache, log)
-      resolver.constantFolder = Folding.ConstantFolder.new(cache, Resolving.ConstantResolver.new(resolver))
-      resolver.initializeGlobals
-      resolver.iterativelyMergeGuards
-      resolver.resolveGlobal
-      resolver.removeObsoleteFunctions(global)
+  enum PassKind {
+    RESOLVING
+  }
+
+  class ResolvingPass : Pass {
+    over kind PassKind {
+      return .RESOLVING
+    }
+
+    over run(context PassContext) {
+      context.cache.loadGlobals(context.log, context.global)
+      if !context.log.hasErrors {
+        var resolver = Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log)
+        resolver.constantFolder = Folding.ConstantFolder.new(context.cache, Resolving.ConstantResolver.new(resolver))
+        resolver.initializeGlobals
+        resolver.iterativelyMergeGuards
+        resolver.resolveGlobal
+        resolver.removeObsoleteFunctions(context.global)
+      }
     }
   }
 }

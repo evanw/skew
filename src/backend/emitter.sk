@@ -1,4 +1,22 @@
 namespace Skew {
+  enum PassKind {
+    EMITTING
+  }
+
+  class EmittingPass : Pass {
+    over kind PassKind {
+      return .EMITTING
+    }
+
+    over run(context PassContext) {
+      var emitter = context.options.target.createEmitter(context.options, context.cache)
+      if emitter != null {
+        emitter.visit(context.global)
+        context.outputs = emitter.sources
+      }
+    }
+  }
+
   enum EmitMode {
     ALWAYS_EMIT
     SKIP_IF_EMPTY

@@ -1,8 +1,18 @@
 namespace Skew {
-  def inliningPass(callGraph CallGraph) {
-    var graph = Inlining.InliningGraph.new(callGraph)
-    for info in graph.inliningInfo {
-      Inlining.inlineSymbol(graph, info)
+  enum PassKind {
+    INLINING
+  }
+
+  class InliningPass : Pass {
+    over kind PassKind {
+      return .INLINING
+    }
+
+    over run(context PassContext) {
+      var graph = Inlining.InliningGraph.new(context.callGraph)
+      for info in graph.inliningInfo {
+        Inlining.inlineSymbol(graph, info)
+      }
     }
   }
 }

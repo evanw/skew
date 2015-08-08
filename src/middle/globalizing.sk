@@ -1,37 +1,47 @@
 namespace Skew {
-  def globalizingPass(global ObjectSymbol, graph CallGraph, options CompilerOptions) {
-    var virtualLookup = options.globalizeAllFunctions ? VirtualLookup.new(global) : null
+  enum PassKind {
+    GLOBALIZING
+  }
 
-    for info in graph.callInfo {
-      var symbol = info.symbol
+  class GlobalizingPass : Pass {
+    over kind PassKind {
+      return .GLOBALIZING
+    }
 
-      # Turn certain instance functions into global functions
-      if symbol.kind == .FUNCTION_INSTANCE && (
-          symbol.parent.kind == .OBJECT_ENUM ||
-          symbol.parent.isImported && !symbol.isImported ||
-          !symbol.isImportedOrExported && virtualLookup != null && !virtualLookup.isVirtual(symbol)) {
+    over run(context PassContext) {
+      var virtualLookup = context.options.globalizeAllFunctions ? VirtualLookup.new(context.global) : null
 
-        var function = symbol.asFunctionSymbol
-        function.kind = .FUNCTION_GLOBAL
-        function.arguments.prepend(function.this)
-        function.this = null
+      for info in context.callGraph.callInfo {
+        var symbol = info.symbol
 
-        # Update all call sites
-        for callSite in info.callSites {
-          var value = callSite.callNode.callValue
+        # Turn certain instance functions into global functions
+        if symbol.kind == .FUNCTION_INSTANCE && (
+            symbol.parent.kind == .OBJECT_ENUM ||
+            symbol.parent.isImported && !symbol.isImported ||
+            !symbol.isImportedOrExported && virtualLookup != null && !virtualLookup.isVirtual(symbol)) {
 
-          # Rewrite "super(foo)" to "bar(self, foo)"
-          if value.kind == .SUPER {
-            var this = callSite.enclosingSymbol.asFunctionSymbol.this
-            value.replaceWith(Node.createSymbolReference(this))
+          var function = symbol.asFunctionSymbol
+          function.kind = .FUNCTION_GLOBAL
+          function.arguments.prepend(function.this)
+          function.this = null
+
+          # Update all call sites
+          for callSite in info.callSites {
+            var value = callSite.callNode.callValue
+
+            # Rewrite "super(foo)" to "bar(self, foo)"
+            if value.kind == .SUPER {
+              var this = callSite.enclosingSymbol.asFunctionSymbol.this
+              value.replaceWith(Node.createSymbolReference(this))
+            }
+
+            # Rewrite "self.foo(bar)" to "foo(self, bar)"
+            else {
+              value.replaceWith(value.dotTarget.remove)
+            }
+
+            callSite.callNode.prependChild(Node.createSymbolReference(function))
           }
-
-          # Rewrite "self.foo(bar)" to "foo(self, bar)"
-          else {
-            value.replaceWith(value.dotTarget.remove)
-          }
-
-          callSite.callNode.prependChild(Node.createSymbolReference(function))
         }
       }
     }

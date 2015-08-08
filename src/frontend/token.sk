@@ -1,4 +1,33 @@
 namespace Skew {
+  enum PassKind {
+    LEXING
+    TOKEN_PROCESSING
+  }
+
+  class LexingPass : Pass {
+    over kind PassKind {
+      return .LEXING
+    }
+
+    over run(context PassContext) {
+      for source in context.inputs {
+        context.tokens.append(tokenize(context.log, source))
+      }
+    }
+  }
+
+  class TokenProcessingPass : Pass {
+    over kind PassKind {
+      return .TOKEN_PROCESSING
+    }
+
+    over run(context PassContext) {
+      for tokens in context.tokens {
+        prepareTokens(tokens)
+      }
+    }
+  }
+
   class Token {
     var range Range
     var kind TokenKind
