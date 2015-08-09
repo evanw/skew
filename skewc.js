@@ -3333,9 +3333,33 @@
       this._space = '';
     }
 
+    // Load special-cased variables
+    for (var i = 0, list = global.variables, count = list.length; i < count; ++i) {
+      var variable = list[i];
+
+      if (variable.name === '__extends') {
+        this._extends = variable;
+
+        if (this._multiply !== null) {
+          break;
+        }
+      }
+
+      else if (variable.name === '__imul') {
+        this._multiply = variable;
+
+        if (this._extends !== null) {
+          break;
+        }
+      }
+    }
+
+    assert(this._extends !== null);
+    assert(this._multiply !== null);
+
     // Preprocess the code
-    this._prepareGlobal(global);
     Skew.shakingPass(global, this._cache.entryPointSymbol, Skew.ShakingMode.IGNORE_TYPES);
+    this._prepareGlobal(global);
     this._convertLambdasToFunctions(global);
     var objects = this._sortedObjects(global);
 
@@ -3353,14 +3377,14 @@
     }
 
     // Emit objects and functions
-    for (var i = 0, list = objects, count = list.length; i < count; ++i) {
-      var object = list[i];
+    for (var i1 = 0, list1 = objects, count1 = list1.length; i1 < count1; ++i1) {
+      var object = list1[i1];
       this._emitObject(object);
     }
 
     // Emit variables
-    for (var i2 = 0, list2 = objects, count2 = list2.length; i2 < count2; ++i2) {
-      var object1 = list2[i2];
+    for (var i3 = 0, list3 = objects, count3 = list3.length; i3 < count3; ++i3) {
+      var object1 = list3[i3];
       var o = object1;
       this._namespacePrefix = '';
 
@@ -3369,11 +3393,11 @@
         o = o.parent.asObjectSymbol();
       }
 
-      for (var i1 = 0, list1 = object1.variables, count1 = list1.length; i1 < count1; ++i1) {
-        var variable = list1[i1];
+      for (var i2 = 0, list2 = object1.variables, count2 = list2.length; i2 < count2; ++i2) {
+        var variable1 = list2[i2];
 
-        if (variable !== this._extends && variable !== this._multiply) {
-          this._emitVariable(variable);
+        if (variable1 !== this._extends && variable1 !== this._multiply) {
+          this._emitVariable(variable1);
         }
       }
     }
@@ -3435,30 +3459,6 @@
     var globalFunctions = [];
     var globalVariables = [];
 
-    // Load special-cased variables
-    for (var i = 0, list = global.variables, count = list.length; i < count; ++i) {
-      var variable = list[i];
-
-      if (variable.name === '__extends') {
-        this._extends = variable;
-
-        if (this._multiply !== null) {
-          break;
-        }
-      }
-
-      else if (variable.name === '__imul') {
-        this._multiply = variable;
-
-        if (this._extends !== null) {
-          break;
-        }
-      }
-    }
-
-    assert(this._extends !== null);
-    assert(this._multiply !== null);
-
     // Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
     this._patchObject(global, globalObjects, globalFunctions, globalVariables);
 
@@ -3468,19 +3468,19 @@
     }
 
     // Move internal global symbols up to the global namespace
-    for (var i1 = 0, list1 = globalObjects, count1 = list1.length; i1 < count1; ++i1) {
-      var object = list1[i1];
+    for (var i = 0, list = globalObjects, count = list.length; i < count; ++i) {
+      var object = list[i];
       object.parent = global;
     }
 
-    for (var i2 = 0, list2 = globalFunctions, count2 = list2.length; i2 < count2; ++i2) {
-      var $function = list2[i2];
+    for (var i1 = 0, list1 = globalFunctions, count1 = list1.length; i1 < count1; ++i1) {
+      var $function = list1[i1];
       $function.parent = global;
     }
 
-    for (var i3 = 0, list3 = globalVariables, count3 = list3.length; i3 < count3; ++i3) {
-      var variable1 = list3[i3];
-      variable1.parent = global;
+    for (var i2 = 0, list2 = globalVariables, count2 = list2.length; i2 < count2; ++i2) {
+      var variable = list2[i2];
+      variable.parent = global;
     }
 
     in_List.append1(global.objects, globalObjects);
@@ -3593,8 +3593,19 @@
       sortedGroups.push(new Skew.JavaScriptEmitter.SymbolGroup(group, count));
     }
 
+    // Create a total order to make builds deterministic when maps use hashing
     sortedGroups.sort(function(a, b) {
-      return b.count - a.count | 0;
+      var difference = b.count - a.count | 0;
+
+      if (difference === 0) {
+        difference = b.symbols.length - a.symbols.length | 0;
+
+        for (var i = 0; difference === 0 && i < a.symbols.length; ++i) {
+          difference = b.symbols[i].id - a.symbols[i].id | 0;
+        }
+      }
+
+      return difference;
     });
 
     for (var i5 = 0, list5 = sortedGroups, count6 = list5.length; i5 < count6; ++i5) {
@@ -3704,7 +3715,17 @@
       group.push(symbol);
     }
 
-    return in_IntMap.values(labelToGroup);
+    // Sort each resulting group to make builds deterministic when maps use hashing
+    var groups = in_IntMap.values(labelToGroup);
+
+    for (var i1 = 0, list1 = groups, count1 = list1.length; i1 < count1; ++i1) {
+      var group1 = list1[i1];
+      group1.sort(function(a, b) {
+        return a.id - b.id | 0;
+      });
+    }
+
+    return groups;
   };
 
   Skew.JavaScriptEmitter.prototype._addMapping = function(range) {
@@ -4855,6 +4876,13 @@
         break;
       }
 
+      case Skew.NodeKind.CALL: {
+        if (this._mangle) {
+          this._peepholeMangleCall(node);
+        }
+        break;
+      }
+
       case Skew.NodeKind.CAST: {
         this._patchCast(node);
         break;
@@ -4921,6 +4949,15 @@
         }
         break;
       }
+    }
+  };
+
+  Skew.JavaScriptEmitter.prototype._peepholeMangleCall = function(node) {
+    var value = node.callValue();
+    var parent = node.parent();
+
+    if (value.nextSibling() === null && value.kind === Skew.NodeKind.DOT && value.asString() === 'toString' && value.symbol !== null && value.symbol.isImportedOrExported() && parent.kind === Skew.NodeKind.ADD && (node === parent.binaryRight() || parent.binaryRight().kind === Skew.NodeKind.CONSTANT)) {
+      node.become(value.dotTarget().remove());
     }
   };
 

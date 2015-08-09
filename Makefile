@@ -42,7 +42,7 @@ replace: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js
 	node build/skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc2.js
 	node build/skewc2.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc3.js
-	cmp -s build/skewc2.js build/skewc3.js
+	diff build/skewc2.js build/skewc3.js
 	mv build/skewc3.js skewc.js
 	rm build/skewc2.js
 
@@ -50,7 +50,7 @@ check-js: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.min.js --release
 	node build/skewc.min.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc2.min.js --release
 	node build/skewc2.min.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc3.min.js --release
-	cmp -s build/skewc2.min.js build/skewc3.min.js
+	diff build/skewc2.min.js build/skewc3.min.js
 
 check-cs: | build
 	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
@@ -58,7 +58,22 @@ check-cs: | build
 	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc2.cs
 	mcs -debug build/skewc2.cs
 	mono --debug build/skewc2.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc3.cs
-	cmp -s build/skewc2.cs build/skewc3.cs
+	diff build/skewc2.cs build/skewc3.cs
+
+check-determinism: | build
+	# Debug
+	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js.js
+	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
+	mcs -debug build/skewc.cs
+	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.cs.js
+	diff build/skewc.js.js build/skewc.cs.js
+
+	# Release
+	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.js.min.js
+	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
+	mcs -debug build/skewc.cs
+	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.cs.min.js
+	diff build/skewc.js.min.js build/skewc.cs.min.js
 
 release: compile-browser | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.min.js

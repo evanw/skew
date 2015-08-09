@@ -161,12 +161,12 @@ def bar(foo int, baz fn()) {
 }
 ", "
 (function() {
-  foo = function(a, b) {
-    a < 1 && b(), a < 2 && b(), a > 1 && b(), a > 0 && b(), a ^ 1 || b(), a ^ 1 && b();
+  foo = function(b, a) {
+    b < 1 && a(), b < 2 && a(), b > 1 && a(), b > 0 && a(), b ^ 1 || a(), b ^ 1 && a();
   };
 
-  bar = function(a, b) {
-    1 < a && b(), 0 < a && b(), 1 > a && b(), 2 > a && b(), 1 ^ a || b(), 1 ^ a && b();
+  bar = function(b, a) {
+    1 < b && a(), 0 < b && a(), 1 > b && a(), 2 > b && a(), 1 ^ b || a(), 1 ^ b && a();
   };
 })();
 ").jsMangle
@@ -174,7 +174,7 @@ def bar(foo int, baz fn()) {
 # Test enum comparison special cases
 test("
 @export
-def foo(bar int, baz fn()) {
+def foo(bar Foo, baz fn()) {
   if bar as int < Foo.BAR as int { baz() }
   if bar as int <= Foo.BAR as int { baz() }
   if bar as int > Foo.BAR as int { baz() }
@@ -186,7 +186,7 @@ def foo(bar int, baz fn()) {
 }
 
 @export
-def bar(foo int, baz fn()) {
+def bar(foo Foo, baz fn()) {
   if Foo.BAR as int < foo as int { baz() }
   if Foo.BAR as int <= foo as int { baz() }
   if Foo.BAR as int > foo as int { baz() }
@@ -203,12 +203,12 @@ enum Foo {
 }
 ", "
 (function() {
-  foo = function(a, b) {
-    a < 1 && b(), a < 2 && b(), a > 1 && b(), a > 0 && b(), a || b(), a && b(), a ^ 1 || b(), a ^ 1 && b();
+  foo = function(b, a) {
+    b < 1 && a(), b < 2 && a(), b > 1 && a(), b > 0 && a(), b || a(), b && a(), b ^ 1 || a(), b ^ 1 && a();
   };
 
-  bar = function(a, b) {
-    1 < a && b(), 0 < a && b(), 1 > a && b(), 2 > a && b(), a || b(), a && b(), 1 ^ a || b(), 1 ^ a && b();
+  bar = function(b, a) {
+    1 < b && a(), 0 < b && a(), 1 > b && a(), 2 > b && a(), b || a(), b && a(), 1 ^ b || a(), 1 ^ b && a();
   };
 })();
 ").jsMangle.foldAllConstants
@@ -236,12 +236,12 @@ def bar(foo double, baz fn()) {
 }
 ", "
 (function() {
-  foo = function(a, b) {
-    a < 1 && b(), a <= 1 && b(), a > 1 && b(), a >= 1 && b(), a === 1 && b(), a !== 1 && b();
+  foo = function(b, a) {
+    b < 1 && a(), b <= 1 && a(), b > 1 && a(), b >= 1 && a(), b === 1 && a(), b !== 1 && a();
   };
 
-  bar = function(a, b) {
-    1 < a && b(), 1 <= a && b(), 1 > a && b(), 1 >= a && b(), 1 === a && b(), 1 !== a && b();
+  bar = function(b, a) {
+    1 < b && a(), 1 <= b && a(), 1 > b && a(), 1 >= b && a(), 1 === b && a(), 1 !== b && a();
   };
 })();
 ").jsMangle
@@ -710,16 +710,16 @@ class Foo {
   };
 
   Foo.prototype.foo = function() {
-    var a = this, b = get();
+    var b = this, a = get();
     return function() {
-      return a.x + b;
+      return b.x + a;
     };
   };
 
   Foo.prototype.bar = function() {
-    for (var a = this, b = get();;) {
+    for (var b = this, a = get();;) {
       return function() {
-        return a.x + b;
+        return b.x + a;
       };
     }
   };
@@ -823,16 +823,33 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    a: for (;;) {
+    e: for (;;) {
       switch (x) {
         case 0: {
-          break a;
+          break e;
         }
 
         case 1: {
           switch (y) {
             case 0: {
-              break a;
+              break e;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    d: for (var a = 0; a < 10; ++a) {
+      switch (x) {
+        case 0: {
+          break d;
+        }
+
+        case 1: {
+          switch (y) {
+            case 0: {
+              break d;
             }
           }
           break;
@@ -850,23 +867,6 @@ def foo {
           switch (y) {
             case 0: {
               break c;
-            }
-          }
-          break;
-        }
-      }
-    }
-
-    f: for (var d = 0; d < 10; ++d) {
-      switch (x) {
-        case 0: {
-          break f;
-        }
-
-        case 1: {
-          switch (y) {
-            case 0: {
-              break f;
             }
           }
           break;
@@ -960,6 +960,48 @@ def foo dynamic {
     return function() {
       return x(), q ? (x(), !0) : !1;
     };
+  };
+})();
+").jsMangle
+
+# Test toString() removal
+test("
+@export
+def foo(x int, f Foo, b Bar) {
+  var z = Baz.new
+  dynamic.t(\"\" + x.toString)
+  dynamic.t(x.toString + \"\")
+  dynamic.t(x.toString + x.toString)
+  dynamic.t(f.toString + \"\")
+  dynamic.t(b.toString(0) + \"\")
+  dynamic.t(z.toString + \"\")
+}
+
+@import
+class Foo {
+  def toString string
+}
+
+@import
+class Bar {
+  def toString(x int) string
+}
+
+class Baz {
+  def toString string { return \"\" }
+}
+", "
+(function() {
+  foo = function(a, f, e) {
+    var d = new g();
+    t('' + a), t(a + ''), t(a.toString() + a), t(f + ''), t(e.toString(0) + ''), t(d.c() + '');
+  };
+
+  function g() {
+  }
+
+  g.prototype.c = function() {
+    return '';
   };
 })();
 ").jsMangle

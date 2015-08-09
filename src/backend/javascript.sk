@@ -88,9 +88,22 @@ namespace Skew {
         _space = ""
       }
 
+      # Load special-cased variables
+      for variable in global.variables {
+        if variable.name == "__extends" {
+          _extends = variable
+          if _multiply != null { break }
+        } else if variable.name == "__imul" {
+          _multiply = variable
+          if _extends != null { break }
+        }
+      }
+      assert(_extends != null)
+      assert(_multiply != null)
+
       # Preprocess the code
-      _prepareGlobal(global)
       shakingPass(global, _cache.entryPointSymbol, .IGNORE_TYPES)
+      _prepareGlobal(global)
       _convertLambdasToFunctions(global)
       var objects = _sortedObjects(global)
 
@@ -174,19 +187,6 @@ namespace Skew {
       var globalObjects List<ObjectSymbol> = []
       var globalFunctions List<FunctionSymbol> = []
       var globalVariables List<VariableSymbol> = []
-
-      # Load special-cased variables
-      for variable in global.variables {
-        if variable.name == "__extends" {
-          _extends = variable
-          if _multiply != null { break }
-        } else if variable.name == "__imul" {
-          _multiply = variable
-          if _extends != null { break }
-        }
-      }
-      assert(_extends != null)
-      assert(_multiply != null)
 
       # Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
       _patchObject(global, globalObjects, globalFunctions, globalVariables)
@@ -291,7 +291,19 @@ namespace Skew {
         }
         sortedGroups.append(SymbolGroup.new(group, count))
       }
-      sortedGroups.sort((a, b) => b.count - a.count)
+
+      # Create a total order to make builds deterministic when maps use hashing
+      sortedGroups.sort((a SymbolGroup, b SymbolGroup) => {
+        var difference = b.count <=> a.count
+        if difference == 0 {
+          difference = b.symbols.count <=> a.symbols.count
+          for i = 0; difference == 0 && i < a.symbols.count; i++ {
+            difference = b.symbols[i].id <=> a.symbols[i].id
+          }
+        }
+        return difference
+      })
+
       for group in sortedGroups {
         var name = ""
         for symbol in group.symbols {
@@ -376,7 +388,13 @@ namespace Skew {
         }
         group.append(symbol)
       }
-      return labelToGroup.values
+
+      # Sort each resulting group to make builds deterministic when maps use hashing
+      var groups = labelToGroup.values
+      for group in groups {
+        group.sort((a, b) => a.id <=> b.id)
+      }
+      return groups
     }
 
     def _addMapping(range Range) {
@@ -1351,6 +1369,12 @@ namespace Skew {
           }
         }
 
+        case .CALL {
+          if _mangle {
+            _peepholeMangleCall(node)
+          }
+        }
+
         case .CAST {
           _patchCast(node)
         }
@@ -1406,6 +1430,17 @@ namespace Skew {
             _peepholeMangleBinary(node)
           }
         }
+      }
+    }
+
+    def _peepholeMangleCall(node Node) {
+      var value = node.callValue
+      var parent = node.parent
+
+      if value.nextSibling == null && value.kind == .DOT && value.asString == "toString" &&
+          value.symbol != null && value.symbol.isImportedOrExported && parent.kind == .ADD &&
+          (node == parent.binaryRight || parent.binaryRight.kind == .CONSTANT) {
+        node.become(value.dotTarget.remove)
       }
     }
 
