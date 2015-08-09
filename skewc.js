@@ -4405,16 +4405,26 @@
       }
 
       case Skew.NodeKind.CONSTANT: {
+        var wrap = precedence === Skew.Precedence.MEMBER && (node.content.kind() === Skew.ContentKind.INT || node.content.kind() === Skew.ContentKind.DOUBLE);
+
+        if (wrap) {
+          this._emit('(');
+        }
+
         this._emitContent(node.content);
+
+        if (wrap) {
+          this._emit(')');
+        }
         break;
       }
 
       case Skew.NodeKind.CALL: {
         var value = node.callValue();
         var call = value.kind === Skew.NodeKind.SUPER;
-        var wrap = value.kind === Skew.NodeKind.LAMBDA && node.parent() !== null && node.parent().kind === Skew.NodeKind.EXPRESSION;
+        var wrap1 = value.kind === Skew.NodeKind.LAMBDA && node.parent() !== null && node.parent().kind === Skew.NodeKind.EXPRESSION;
 
-        if (wrap) {
+        if (wrap1) {
           this._emit('(');
         }
 
@@ -4435,7 +4445,7 @@
           }
         }
 
-        if (wrap) {
+        if (wrap1) {
           this._emit(')');
         }
 

@@ -958,7 +958,14 @@ namespace Skew {
         }
 
         case .CONSTANT {
+          var wrap = precedence == .MEMBER && (node.content.kind == .INT || node.content.kind == .DOUBLE)
+          if wrap {
+            _emit("(")
+          }
           _emitContent(node.content)
+          if wrap {
+            _emit(")")
+          }
         }
 
         case .CALL {

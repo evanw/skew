@@ -150,5 +150,14 @@ enum Foo { FOO }
 (function(){main=function(x,y){switch(x){case C:a();break;case 5:a();break}switch(y){case Foo.FOO:b();break}};var Foo={FOO:0};C=2})();
 ").jsMinify
 
+test("
+@export
+def foo string {
+  return 0.toString
+}
+", "
+(function(){foo=function(){return (0).toString()}})();
+").jsMinify
+
   }
 }
