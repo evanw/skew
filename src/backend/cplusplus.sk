@@ -6,6 +6,7 @@ namespace Skew {
     over moveEverythingOffEnums bool { return true }
     over requiresIntegerSwitchStatements bool { return true }
     over supportsListForeach bool { return true }
+    over needsLambdaLifting bool { return true }
     over editOptions(options CompilerOptions) { options.define("TARGET", "CPLUSPLUS") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-cpp>", NATIVE_LIBRARY_CPP)) }
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return CPlusPlusEmitter.new(options, cache) }
@@ -22,7 +23,7 @@ namespace Skew {
 
     over visit(global ObjectSymbol) {
       # Avoid emitting unnecessary stuff
-      # shakingPass(global, _cache.entryPointSymbol, .USE_TYPES)
+      shakingPass(global, _cache.entryPointSymbol, .USE_TYPES)
       _markVirtualFunctions(global)
       var sorted = _sortedObjects(global)
 
@@ -909,7 +910,7 @@ namespace Skew {
 
   namespace CPlusPlusEmitter {
     def _isCompactNodeKind(kind NodeKind) bool {
-      return kind == .EXPRESSION || kind == .VARIABLE || kind.isJump
+      return kind == .EXPRESSION || kind == .VARIABLES || kind.isJump
     }
 
     def _fullName(symbol Symbol) string {

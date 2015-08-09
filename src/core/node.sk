@@ -666,6 +666,39 @@ namespace Skew {
       become(createUnary(.NOT, cloneAndStealChildren).withType(cache.boolType))
     }
 
+    def replaceVariableWith(node Node) Node {
+      assert(kind == .VARIABLE)
+      assert(parent != null)
+      assert(parent.kind == .VARIABLES)
+
+      # "var x = 0" becomes "node"
+      if _previousSibling == null && _nextSibling == null {
+        parent.replaceWith(node)
+      }
+
+      # "var x = 0, y = 0" becomes "node; var y = 0"
+      else if _previousSibling == null {
+        parent._parent.insertChildBefore(parent, node)
+      }
+
+      # "var x = 0, y = 0" becomes "var x = 0; node"
+      else if _nextSibling == null {
+        parent._parent.insertChildAfter(parent, node)
+      }
+
+      # "var x = 0, y = 0, z = 0" becomes "var x = 0; node; var z = 0"
+      else {
+        var variables = Node.createVariables
+        parent._parent.insertChildAfter(parent, node)
+        parent._parent.insertChildAfter(node, variables)
+        while _nextSibling != null {
+          variables.appendChild(_nextSibling.remove)
+        }
+      }
+
+      return remove
+    }
+
     # "a + (b + c)" => "(a + b) + c"
     def rotateBinaryRightToLeft {
       assert(kind == binaryRight.kind)
@@ -920,6 +953,10 @@ namespace Skew {
 
     def createMemberReference(target Node, member Symbol) Node {
       return createDot(target, member.name).withSymbol(member).withType(member.resolvedType)
+    }
+
+    def createSymbolCall(symbol Symbol) Node {
+      return createCall(createSymbolReference(symbol)).withSymbol(symbol).withType(symbol.resolvedType.returnType)
     }
   }
 
@@ -1236,6 +1273,13 @@ namespace Skew {
       assert(childCount == 3)
       assert(_lastChild.kind.isExpression)
       return _lastChild
+    }
+
+    def lambdaBlock Node {
+      assert(kind == .LAMBDA)
+      assert(childCount == 1)
+      assert(_firstChild.kind == .BLOCK)
+      return _firstChild
     }
 
     def lambdaReturnType Node {

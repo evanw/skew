@@ -5,7 +5,7 @@ const __extends = (derived dynamic, base dynamic) => {
   derived.prototype.constructor = derived
 }
 
-const __imul = dynamic.Math.imul ? dynamic.Math.imul : (a int, b int) int => {
+const __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) => {
   const ah dynamic = (a >> 16) & 65535
   const bh dynamic = (b >> 16) & 65535
   const al dynamic = a & 65535

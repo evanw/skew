@@ -7,6 +7,7 @@ namespace Skew {
     def requiresIntegerSwitchStatements bool { return false }
     def supportsListForeach bool { return false }
     def supportsNestedTypes bool { return false }
+    def needsLambdaLifting bool { return false }
     def editOptions(options CompilerOptions) {}
     def includeSources(sources List<Source>) {}
     def createEmitter(options CompilerOptions, cache TypeCache) Emitter { return null }
@@ -35,6 +36,9 @@ namespace Skew {
       ParsingPass.new,
       MergingPass.new,
       ResolvingPass.new,
+      LambdaLiftingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.target.needsLambdaLifting),
+
+      # The call graph is used as a shortcut so the tree only needs to be scanned once for all call-based optimizations
       CallGraphPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
       GlobalizingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
       MotionPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
@@ -161,17 +165,17 @@ namespace Skew {
       if log.hasErrors {
         break
       }
-      var passTimer = PassTimer.new(pass.kind)
-      passTimers.append(passTimer)
-      passTimer.timer.start
       if pass.shouldRun(options) {
+        var passTimer = PassTimer.new(pass.kind)
+        passTimers.append(passTimer)
+        passTimer.timer.start
         pass.run(context)
-      }
-      passTimer.timer.stop
+        passTimer.timer.stop
 
-      # This is expensive but can be used for debugging
-      if false {
-        _verifyHierarchy(context.global)
+        # This is expensive but can be used for debugging
+        if false {
+          _verifyHierarchy(context.global)
+        }
       }
     }
 

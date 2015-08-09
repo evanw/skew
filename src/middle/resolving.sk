@@ -266,6 +266,7 @@ namespace Skew.Resolving {
             nextEnumValue++
           }
         }
+        symbol.flags |= Symbol.IS_VALUE_TYPE
       }
 
       resolveAnnotations(symbol)
