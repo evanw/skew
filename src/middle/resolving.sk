@@ -200,7 +200,7 @@ namespace Skew.Resolving {
       var annotations = symbol.annotations
 
       # The import/export annotations are inherited, except import isn't inherited for implemented functions
-      if parent != null && (symbol.kind.isVariable || symbol.kind.isFunction) {
+      if parent != null {
         symbol.flags |= parent.flags & (symbol.kind.isFunction && symbol.asFunctionSymbol.block != null ? Symbol.IS_EXPORTED : Symbol.IS_IMPORTED | Symbol.IS_EXPORTED)
       }
 
@@ -1223,7 +1223,7 @@ namespace Skew.Resolving {
         while scope != null {
           if scope.kind == .OBJECT {
             var object = scope.asObjectScope.symbol
-            if object == symbol.parent || object.hasBaseClass(symbol.parent) {
+            if object.isSameOrHasBaseClass(symbol.parent) {
               return
             }
           }
@@ -1237,7 +1237,7 @@ namespace Skew.Resolving {
         for annotation in symbol.annotations {
           if annotation.symbol != null && annotation.symbol.fullName == "@deprecated" {
             var value = annotation.annotationValue
-            if value.kind == .CALL && value.childCount == 2 {
+            if value.kind == .CALL && value.hasTwoChildren {
               var last = value.lastChild
               if last.kind == .CONSTANT && last.content.kind == .STRING {
                 log.warning(range, last.content.asString)
@@ -1342,7 +1342,7 @@ namespace Skew.Resolving {
         symbol.flags |= flag
 
         # Store the new name for later
-        if flag == Symbol.IS_RENAMED && value.childCount == 2 {
+        if flag == Symbol.IS_RENAMED && value.hasTwoChildren {
           symbol.rename = value.lastChild.asString
         }
       }
@@ -2330,7 +2330,7 @@ namespace Skew.Resolving {
       # Automatically insert "self." before instance symbols
       if symbol.kind.isOnInstances {
         var variable = enclosingFunction != null ? enclosingFunction.symbol.this : null
-        if variable != null {
+        if variable != null && enclosingFunction.symbol.parent.asObjectSymbol.isSameOrHasBaseClass(symbol.parent) {
           node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range))
         } else {
           log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)

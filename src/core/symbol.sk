@@ -263,6 +263,10 @@ namespace Skew {
     def hasBaseClass(symbol Symbol) bool {
       return baseClass != null && (baseClass == symbol || baseClass.hasBaseClass(symbol))
     }
+
+    def isSameOrHasBaseClass(symbol Symbol) bool {
+      return self == symbol || hasBaseClass(symbol)
+    }
   }
 
   class FunctionSymbol : Symbol {

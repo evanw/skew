@@ -1253,6 +1253,31 @@ def main(foo Foo<int>) {
 ")
 
 test("
+class Foo {
+  class Bar { def bar int { return foo + baz } }
+  def baz int { return 0 }
+  var foo = 0
+}
+", "
+<stdin>:2:36: error: Cannot access instance member \"foo\" from a global context
+  class Bar { def bar int { return foo + baz } }
+                                   ~~~
+<stdin>:2:42: error: Cannot access instance member \"baz\" from a global context
+  class Bar { def bar int { return foo + baz } }
+                                         ~~~
+")
+
+test("
+class Foo { class Bar {} }
+namespace Foo {
+  namespace Bar { def bar int { return foo + baz } }
+  def baz int { return 0 }
+  var foo = 0
+}
+", "
+")
+
+test("
 class Foo : int {}
 class Bar : fn() {}
 class Baz : Baz {}

@@ -6529,6 +6529,11 @@
     return this.hasChildren() && this._firstChild === this._lastChild;
   };
 
+  // This is cheaper than childCount == 2
+  Skew.Node.prototype.hasTwoChildren = function() {
+    return this.hasChildren() && this._firstChild.nextSibling() === this._lastChild;
+  };
+
   Skew.Node.prototype.childCount = function() {
     var count = 0;
 
@@ -9528,6 +9533,10 @@
 
   Skew.ObjectSymbol.prototype.hasBaseClass = function(symbol) {
     return this.baseClass !== null && (this.baseClass === symbol || this.baseClass.hasBaseClass(symbol));
+  };
+
+  Skew.ObjectSymbol.prototype.isSameOrHasBaseClass = function(symbol) {
+    return this === symbol || this.hasBaseClass(symbol);
   };
 
   Skew.FunctionSymbol = function(kind, name) {
@@ -13090,7 +13099,7 @@
     var annotations = symbol.annotations;
 
     // The import/export annotations are inherited, except import isn't inherited for implemented functions
-    if (parent !== null && (Skew.SymbolKind.isVariable(symbol.kind) || Skew.SymbolKind.isFunction(symbol.kind))) {
+    if (parent !== null) {
       symbol.flags |= parent.flags & (Skew.SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().block !== null ? Skew.Symbol.IS_EXPORTED : Skew.Symbol.IS_IMPORTED | Skew.Symbol.IS_EXPORTED);
     }
 
@@ -14343,7 +14352,7 @@
         if (scope.kind() === Skew.ScopeKind.OBJECT) {
           var object = scope.asObjectScope().symbol;
 
-          if (object === symbol.parent || object.hasBaseClass(symbol.parent)) {
+          if (object.isSameOrHasBaseClass(symbol.parent)) {
             return;
           }
         }
@@ -14362,7 +14371,7 @@
         if (annotation.symbol !== null && annotation.symbol.fullName() === '@deprecated') {
           var value = annotation.annotationValue();
 
-          if (value.kind === Skew.NodeKind.CALL && value.childCount() === 2) {
+          if (value.kind === Skew.NodeKind.CALL && value.hasTwoChildren()) {
             var last = value.lastChild();
 
             if (last.kind === Skew.NodeKind.CONSTANT && last.content.kind() === Skew.ContentKind.STRING) {
@@ -14501,7 +14510,7 @@
       symbol.flags |= flag;
 
       // Store the new name for later
-      if (flag === Skew.Symbol.IS_RENAMED && value.childCount() === 2) {
+      if (flag === Skew.Symbol.IS_RENAMED && value.hasTwoChildren()) {
         symbol.rename = value.lastChild().asString();
       }
     }
@@ -15607,7 +15616,7 @@
     if (Skew.SymbolKind.isOnInstances(symbol.kind)) {
       var variable = enclosingFunction !== null ? enclosingFunction.symbol.$this : null;
 
-      if (variable !== null) {
+      if (variable !== null && enclosingFunction.symbol.parent.asObjectSymbol().isSameOrHasBaseClass(symbol.parent)) {
         node.become(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name)).appendChild(Skew.Node.createSymbolReference(variable)).withRange(node.range));
       }
 
