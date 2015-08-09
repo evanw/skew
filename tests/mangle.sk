@@ -1006,5 +1006,21 @@ class Baz {
 })();
 ").jsMangle
 
+# Make sure folding doesn't leave extra variables in this case
+test("
+@export
+def foo int {
+  var a = 0, b = 0
+  var c = 0
+  return a + b + c
+}
+", "
+(function() {
+  foo = function() {
+    return 0;
+  };
+})();
+").jsMangle.foldAllConstants
+
   }
 }

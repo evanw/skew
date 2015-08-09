@@ -11465,8 +11465,9 @@
 
   Skew.Folding.ConstantFolder.prototype.foldVariables = function(node) {
     // Remove symbols entirely that are being inlined everywhere
-    for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
+    for (var child = node.firstChild(), next = null; child !== null; child = next) {
       assert(child.kind === Skew.NodeKind.VARIABLE);
+      next = child.nextSibling();
       var symbol = child.symbol.asVariableSymbol();
 
       if (symbol.isConst() && this.constantLookup.constantForSymbol(symbol) !== null) {
@@ -11481,7 +11482,8 @@
   };
 
   Skew.Folding.ConstantFolder.prototype.foldBlock = function(node) {
-    for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
+    for (var child = node.firstChild(), next = null; child !== null; child = next) {
+      next = child.nextSibling();
       var kind = child.kind;
 
       // Remove everything after a jump

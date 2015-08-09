@@ -253,8 +253,9 @@ namespace Skew.Folding {
 
     def foldVariables(node Node) {
       # Remove symbols entirely that are being inlined everywhere
-      for child = node.firstChild; child != null; child = child.nextSibling {
+      for child = node.firstChild, next Node = null; child != null; child = next {
         assert(child.kind == .VARIABLE)
+        next = child.nextSibling
         var symbol = child.symbol.asVariableSymbol
         if symbol.isConst && constantLookup.constantForSymbol(symbol) != null {
           child.remove
@@ -268,7 +269,8 @@ namespace Skew.Folding {
     }
 
     def foldBlock(node Node) {
-      for child = node.firstChild; child != null; child = child.nextSibling {
+      for child = node.firstChild, next Node = null; child != null; child = next {
+        next = child.nextSibling
         var kind = child.kind
 
         # Remove everything after a jump
