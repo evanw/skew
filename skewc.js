@@ -456,22 +456,26 @@
 
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
       var $function = list1[i1];
-      Skew._verifyHierarchy2($function.block, null);
+
+      if ($function.block !== null) {
+        Skew._verifyHierarchy2($function.block, null);
+      }
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
       var variable = list2[i2];
-      Skew._verifyHierarchy2(variable.value, null);
+
+      if (variable.value !== null) {
+        Skew._verifyHierarchy2(variable.value, null);
+      }
     }
   };
 
   Skew._verifyHierarchy2 = function(node, parent) {
-    if (node !== null) {
-      assert(node.parent() === parent);
+    assert(node.parent() === parent);
 
-      for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
-        Skew._verifyHierarchy2(child, node);
-      }
+    for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
+      Skew._verifyHierarchy2(child, node);
     }
   };
 
@@ -3496,6 +3500,11 @@
     $function.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
     $function.parent = variable.parent;
     $function.name = variable.name;
+
+    if ($function.block.parent() !== null) {
+      $function.block.remove();
+    }
+
     return $function;
   };
 
@@ -10636,6 +10645,10 @@
   Skew.CompilerTarget = function() {
   };
 
+  Skew.CompilerTarget.prototype.runPostResolvePasses = function() {
+    return false;
+  };
+
   Skew.CompilerTarget.prototype.moveEverythingOffEnums = function() {
     return false;
   };
@@ -10668,6 +10681,10 @@
 
   __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
 
+  Skew.CPlusPlusTarget.prototype.runPostResolvePasses = function() {
+    return true;
+  };
+
   Skew.CPlusPlusTarget.prototype.moveEverythingOffEnums = function() {
     return true;
   };
@@ -10698,6 +10715,10 @@
 
   __extends(Skew.JavaScriptTarget, Skew.CompilerTarget);
 
+  Skew.JavaScriptTarget.prototype.runPostResolvePasses = function() {
+    return true;
+  };
+
   Skew.JavaScriptTarget.prototype.supportsNestedTypes = function() {
     return true;
   };
@@ -10719,6 +10740,10 @@
   };
 
   __extends(Skew.CSharpTarget, Skew.CompilerTarget);
+
+  Skew.CSharpTarget.prototype.runPostResolvePasses = function() {
+    return true;
+  };
 
   Skew.CSharpTarget.prototype.moveEverythingOffEnums = function() {
     return true;
@@ -10754,6 +10779,10 @@
 
   __extends(Skew.LispTreeTarget, Skew.CompilerTarget);
 
+  Skew.LispTreeTarget.prototype.runPostResolvePasses = function() {
+    return false;
+  };
+
   Skew.LispTreeTarget.prototype.createEmitter = function(options, cache) {
     return new Skew.LispTreeEmitter(options);
   };
@@ -10775,12 +10804,20 @@
     this.outputDirectory = '';
     this.outputFile = '';
     this.target = new Skew.CompilerTarget();
-    this.passes = [new Skew.LexingPass(), new Skew.TokenProcessingPass(), new Skew.ParsingPass(), new Skew.MergingPass(), new Skew.ResolvingPass(), new Skew.CallGraphPass(), new Skew.GlobalizingPass(), new Skew.MotionPass(), new Skew.RenamingPass(), new Skew.FoldingPass().onlyRunWhen(function(options) {
-      return options.foldAllConstants;
-    }), new Skew.InliningPass().onlyRunWhen(function(options) {
-      return options.inlineAllFunctions;
+    this.passes = [new Skew.LexingPass(), new Skew.TokenProcessingPass(), new Skew.ParsingPass(), new Skew.MergingPass(), new Skew.ResolvingPass(), new Skew.CallGraphPass().onlyRunWhen(function(options) {
+      return options.target.runPostResolvePasses();
+    }), new Skew.GlobalizingPass().onlyRunWhen(function(options) {
+      return options.target.runPostResolvePasses();
+    }), new Skew.MotionPass().onlyRunWhen(function(options) {
+      return options.target.runPostResolvePasses();
+    }), new Skew.RenamingPass().onlyRunWhen(function(options) {
+      return options.target.runPostResolvePasses();
     }), new Skew.FoldingPass().onlyRunWhen(function(options) {
-      return options.inlineAllFunctions && options.foldAllConstants;
+      return options.target.runPostResolvePasses() && options.foldAllConstants;
+    }), new Skew.InliningPass().onlyRunWhen(function(options) {
+      return options.target.runPostResolvePasses() && options.inlineAllFunctions;
+    }), new Skew.FoldingPass().onlyRunWhen(function(options) {
+      return options.target.runPostResolvePasses() && options.inlineAllFunctions && options.foldAllConstants;
     }), new Skew.EmittingPass()];
   };
 

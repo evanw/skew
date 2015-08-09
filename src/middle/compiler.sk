@@ -35,13 +35,13 @@ namespace Skew {
       ParsingPass.new,
       MergingPass.new,
       ResolvingPass.new,
-      CallGraphPass.new,
-      GlobalizingPass.new,
-      MotionPass.new,
-      RenamingPass.new,
-      FoldingPass.new.onlyRunWhen(options => options.foldAllConstants),
-      InliningPass.new.onlyRunWhen(options => options.inlineAllFunctions),
-      FoldingPass.new.onlyRunWhen(options => options.inlineAllFunctions && options.foldAllConstants),
+      CallGraphPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
+      GlobalizingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
+      MotionPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
+      RenamingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
+      FoldingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.foldAllConstants),
+      InliningPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.inlineAllFunctions),
+      FoldingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.inlineAllFunctions && options.foldAllConstants),
       EmittingPass.new,
     ]
 
@@ -185,20 +185,23 @@ namespace Skew {
     }
 
     for function in symbol.functions {
-      _verifyHierarchy(function.block, null)
+      if function.block != null {
+        _verifyHierarchy(function.block, null)
+      }
     }
 
     for variable in symbol.variables {
-      _verifyHierarchy(variable.value, null)
+      if variable.value != null {
+        _verifyHierarchy(variable.value, null)
+      }
     }
   }
 
   def _verifyHierarchy(node Node, parent Node) {
-    if node != null {
-      assert(node.parent == parent)
-      for child = node.firstChild; child != null; child = child.nextSibling {
-        _verifyHierarchy(child, node)
-      }
+    assert(node.parent == parent)
+
+    for child = node.firstChild; child != null; child = child.nextSibling {
+      _verifyHierarchy(child, node)
     }
   }
 }

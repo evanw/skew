@@ -213,6 +213,9 @@ namespace Skew {
       function.kind = .FUNCTION_GLOBAL
       function.parent = variable.parent
       function.name = variable.name
+      if function.block.parent != null {
+        function.block.remove
+      }
       return function
     }
 
