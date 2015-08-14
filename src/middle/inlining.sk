@@ -87,12 +87,20 @@ namespace Skew.Inlining {
           }
         }
 
-        var clone = info.inlineValue.clone.withType(node.resolvedType)
+        var clone = info.inlineValue.clone
         var value = node.firstChild.remove
         var values List<Node> = []
         while node.hasChildren {
           values.append(node.firstChild.remove)
         }
+
+        # Make sure not to update the type if the function dynamic because the
+        # expression inside the function may have a more specific type that is
+        # necessary during code generation
+        if node.resolvedType != .DYNAMIC {
+          clone.resolvedType = node.resolvedType
+        }
+
         assert(value.kind == .NAME && value.symbol == info.symbol)
         node.become(clone)
         recursivelySubstituteArguments(node, info.symbol.arguments, values)

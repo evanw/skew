@@ -73,11 +73,27 @@ class string {
   def join(parts List<string>) string {
     return (parts as dynamic).join(self)
   }
+
+  def codeUnits List<int> {
+    var result List<int> = []
+    for i in 0..count {
+      result.append(self[i])
+    }
+    return result
+  }
 }
 
 namespace string {
-  def fromCodeUnit(x int) string {
-    return dynamic.String.fromCharCode(x)
+  def fromCodeUnit(codeUnit int) string {
+    return dynamic.String.fromCharCode(codeUnit)
+  }
+
+  def fromCodeUnits(codeUnits List<int>) string {
+    var result = \"\"
+    for codeUnit in codeUnits {
+      result += string.fromCodeUnit(codeUnit)
+    }
+    return result
   }
 }
 

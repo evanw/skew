@@ -55,7 +55,7 @@ namespace Unicode {
         if index >= stop { return -1 }
         var a = value[index]
         index++
-        if a < 0xD800 { return a }
+        if a < 0xD800 || a >= 0xDC00 { return a }
         if index >= stop { return -1 }
         var b = value[index]
         index++

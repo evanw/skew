@@ -60,11 +60,27 @@ class string {
   def slice(start int, end int) string {
     return (self as dynamic).Substring(start, end - start)
   }
+
+  def codeUnits List<int> {
+    var result List<int> = []
+    for i in 0..count {
+      result.append(self[i])
+    }
+    return result
+  }
 }
 
 namespace string {
   def fromCodeUnit(codeUnit int) string {
     return dynamic.string.new(codeUnit as dynamic.char, 1)
+  }
+
+  def fromCodeUnits(codeUnits List<int>) string {
+    var builder = StringBuilder.new
+    for codeUnit in codeUnits {
+      builder.append(codeUnit as dynamic.char)
+    }
+    return builder.toString
   }
 }
 
