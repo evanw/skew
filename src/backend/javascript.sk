@@ -296,7 +296,7 @@ namespace Skew {
       }
 
       # Create a total order to make builds deterministic when maps use hashing
-      sortedGroups.sort((a SymbolGroup, b SymbolGroup) => {
+      sortedGroups.sort((a, b) => {
         var difference = b.count <=> a.count
         if difference == 0 {
           difference = b.symbols.count <=> a.symbols.count
@@ -2264,7 +2264,7 @@ namespace Skew {
 
     def _shouldRenameSymbol(symbol Symbol) bool {
       # Don't rename annotations since "@rename" is used for renaming and is identified by name
-      return !symbol.isImportedOrExported && symbol.kind != .FUNCTION_ANNOTATION
+      return !symbol.isImportedOrExported && symbol.kind != .FUNCTION_ANNOTATION && symbol.kind != .OBJECT_GLOBAL && symbol.kind != .FUNCTION_LOCAL
     }
 
     def _mangleName(symbol Symbol) string {

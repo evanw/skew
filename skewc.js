@@ -5897,7 +5897,7 @@
 
   Skew.JavaScriptEmitter._shouldRenameSymbol = function(symbol) {
     // Don't rename annotations since "@rename" is used for renaming and is identified by name
-    return !symbol.isImportedOrExported() && symbol.kind !== Skew.SymbolKind.FUNCTION_ANNOTATION;
+    return !symbol.isImportedOrExported() && symbol.kind !== Skew.SymbolKind.FUNCTION_ANNOTATION && symbol.kind !== Skew.SymbolKind.OBJECT_GLOBAL && symbol.kind !== Skew.SymbolKind.FUNCTION_LOCAL;
   };
 
   Skew.JavaScriptEmitter._mangleName = function(symbol) {
