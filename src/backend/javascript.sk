@@ -38,6 +38,7 @@ namespace Skew {
 
     const _options CompilerOptions
     const _cache TypeCache
+    var _needsExtends = false
     var _needsMultiply = false
     var _namespacePrefix = ""
     var _previousNode Node = null
@@ -102,6 +103,7 @@ namespace Skew {
       assert(_multiply != null)
 
       # Preprocess the code
+      if _mangle { _liftGlobals(global) }
       shakingPass(global, _cache.entryPointSymbol, .IGNORE_TYPES)
       _prepareGlobal(global)
       _convertLambdasToFunctions(global)
@@ -112,7 +114,7 @@ namespace Skew {
       _increaseIndent
 
       # Emit special-cased variables that must come first
-      if _needsExtends(objects) { _emitFunction(_convertLambdaToFunction(_extends)) }
+      if _needsExtends { _emitFunction(_convertLambdaToFunction(_extends)) }
       if _needsMultiply { _emitVariable(_multiply) }
 
       # Emit objects and functions
@@ -183,26 +185,71 @@ namespace Skew {
       super(text)
     }
 
-    def _prepareGlobal(global ObjectSymbol) {
+    def _liftGlobals(global ObjectSymbol) {
       var globalObjects List<ObjectSymbol> = []
       var globalFunctions List<FunctionSymbol> = []
       var globalVariables List<VariableSymbol> = []
 
+      _liftGlobals(global, globalObjects, globalFunctions, globalVariables)
+
+      for object in globalObjects { object.parent = global }
+      for function in globalFunctions { function.parent = global }
+      for variable in globalVariables { variable.parent = global }
+
+      global.objects.append(globalObjects)
+      global.functions.append(globalFunctions)
+      global.variables.append(globalVariables)
+    }
+
+    def _liftGlobals(symbol ObjectSymbol, globalObjects List<ObjectSymbol>, globalFunctions List<FunctionSymbol>, globalVariables List<VariableSymbol>) {
+      var shouldLiftGlobals = symbol.parent != null
+
+      # Scan over child objects
+      symbol.objects.removeIf(object => {
+        _liftGlobals(object, globalObjects, globalFunctions, globalVariables)
+        if shouldLiftGlobals && !object.isImportedOrExported {
+          globalObjects.append(object)
+          return true
+        }
+        return false
+      })
+
+      symbol.functions.removeIf(function => {
+        if shouldLiftGlobals && function.kind == .FUNCTION_GLOBAL && !function.isImportedOrExported {
+          globalFunctions.append(function)
+          return true
+        }
+        return false
+      })
+
+      # Scan over child variables
+      symbol.variables.removeIf(variable => {
+        if shouldLiftGlobals && variable.kind == .VARIABLE_GLOBAL && !variable.isImportedOrExported {
+          globalVariables.append(variable)
+          return true
+        }
+        return false
+      })
+    }
+
+    def _prepareGlobal(global ObjectSymbol) {
       # Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
-      _patchObject(global, globalObjects, globalFunctions, globalVariables)
+      _patchObject(global)
 
       # Skip everything below if we aren't mangling
       if !_mangle {
         return
       }
 
-      # Move internal global symbols up to the global namespace
-      for object in globalObjects { object.parent = global }
-      for function in globalFunctions { function.parent = global }
-      for variable in globalVariables { variable.parent = global }
-      global.objects.append(globalObjects)
-      global.functions.append(globalFunctions)
-      global.variables.append(globalVariables)
+      # These will be culled by tree shaking regardless of whether they are needed
+      if _needsExtends {
+        _allocateNamingGroupIndex(_extends)
+        _patchNode(_extends.value)
+      }
+      if _needsMultiply {
+        _allocateNamingGroupIndex(_multiply)
+        _patchNode(_multiply.value)
+      }
 
       # Rename symbols based on frequency for better compression
       _renameSymbols
@@ -1163,26 +1210,22 @@ namespace Skew {
       }
     }
 
-    def _patchObject(symbol ObjectSymbol, globalObjects List<ObjectSymbol>, globalFunctions List<FunctionSymbol>, globalVariables List<VariableSymbol>) {
-      var shouldLiftGlobals = _mangle && symbol.parent != null
+    def _patchObject(symbol ObjectSymbol) {
       _allocateNamingGroupIndex(symbol)
 
+      # Subclasses need the extension stub
+      if !symbol.isImported && symbol.baseClass != null {
+        _needsExtends = true
+      }
+
       # Scan over child objects
-      symbol.objects.removeIf(object => {
-        _patchObject(object, globalObjects, globalFunctions, globalVariables)
-
-        # When mangling, filter out all internal objects and move them to the global namespace
-        if shouldLiftGlobals && !object.isImportedOrExported {
-          globalObjects.append(object)
-          return true
-        }
-
-        return false
-      })
+      for object in symbol.objects {
+        _patchObject(object)
+      }
 
       # Scan over child functions
       var isPrimaryConstructor = true
-      symbol.functions.removeIf(function => {
+      for function in symbol.functions {
         var block = function.block
         var this = function.this
         _allocateNamingGroupIndex(function)
@@ -1233,12 +1276,6 @@ namespace Skew {
           _unionVariableWithFunction(argument, function)
         }
 
-        # When mangling, filter out all internal global functions and move them to the global namespace
-        if shouldLiftGlobals && function.kind == .FUNCTION_GLOBAL && !function.isImportedOrExported {
-          globalFunctions.append(function)
-          return true
-        }
-
         # Rename extra constructors overloads so they don't conflict
         if function.kind == .FUNCTION_CONSTRUCTOR {
           if isPrimaryConstructor {
@@ -1246,23 +1283,13 @@ namespace Skew {
             isPrimaryConstructor = false
           }
         }
-
-        return false
-      })
+      }
 
       # Scan over child variables
-      symbol.variables.removeIf(variable => {
+      for variable in symbol.variables {
         _allocateNamingGroupIndex(variable)
         _patchNode(variable.value)
-
-        # When mangling, filter out all internal global variables and move them to the global namespace
-        if shouldLiftGlobals && variable.kind == .VARIABLE_GLOBAL && !variable.isImportedOrExported {
-          globalVariables.append(variable)
-          return true
-        }
-
-        return false
-      })
+      }
     }
 
     def _createIntBinary(kind NodeKind, left Node, right Node) Node {
@@ -1319,9 +1346,7 @@ namespace Skew {
 
       if _mangle && symbol != null {
         _allocateNamingGroupIndex(symbol)
-        if node.kind != .TYPE {
-          _symbolCounts[symbol.id] = _symbolCounts.get(symbol.id, 0) + 1
-        }
+        _symbolCounts[symbol.id] = _symbolCounts.get(symbol.id, 0) + 1
       }
 
       if kind == .LAMBDA {
@@ -1330,8 +1355,12 @@ namespace Skew {
         _enclosingLoop = node
       }
 
-      for child = node.firstChild; child != null; child = child.nextSibling {
-        _patchNode(child)
+      if kind == .CAST {
+        _patchNode(node.castValue)
+      } else {
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          _patchNode(child)
+        }
       }
 
       if kind == .LAMBDA {
@@ -2276,15 +2305,6 @@ namespace Skew {
         return "$" + symbol.name
       }
       return symbol.nameWithRenaming
-    }
-
-    def _needsExtends(objects List<ObjectSymbol>) bool {
-      for object in objects {
-        if !object.isImported && object.baseClass != null {
-          return true
-        }
-      }
-      return false
     }
 
     def _computeNamespacePrefix(symbol ObjectSymbol) string {

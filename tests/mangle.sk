@@ -1022,5 +1022,65 @@ def foo int {
 })();
 ").jsMangle.foldAllConstants
 
+# Make sure special runtime function names and definitions are mangled
+test("
+class Foo {}
+class Bar : Foo {}
+
+@entry
+def main(args List<string>) int {
+  Bar.new
+  return args.count * 100
+}
+", "
+(function() {
+  function m(a, c) {
+    a.prototype = Object.create(c.prototype), a.prototype.constructor = a;
+  }
+
+  var l = Math.imul || function(a, c) {
+    var h = a >> 16 & 65535, g = c >> 16 & 65535, e = a & 65535, d = c & 65535;
+    return e * d + (h * d + e * g << 16) | 0;
+  };
+
+  function i(a) {
+    return new j(), l(f(a), 100);
+  }
+
+  function f(a) {
+    return a.length;
+  }
+
+  function k() {
+  }
+
+  function j() {
+    k.call(this);
+  }
+
+  m(j, k);
+
+  process.exit(i(process.argv.slice(2)));
+})();
+").jsMangle
+
+# Make sure casting doesn't cause the enum declaration to be emitted
+test("
+enum Foo { FOO }
+
+@entry
+def main int {
+  return 0 as Foo
+}
+", "
+(function() {
+  function a() {
+    return 0;
+  }
+
+  process.exit(a());
+})();
+").jsMangle
+
   }
 }

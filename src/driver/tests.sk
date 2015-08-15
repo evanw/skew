@@ -109,10 +109,13 @@ namespace Skew.Tests {
 
   @entry
   def main int {
-    testFormatting
+    # End-to-end tests
     testMangle
     testMinify
     testSimple
+
+    # Unit tests
+    testFormatting
     testUnicode
 
     var report = Unit.TerminalReport.new

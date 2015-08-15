@@ -3294,6 +3294,7 @@
     Skew.Emitter.call(this);
     this._options = _options;
     this._cache = _cache;
+    this._needsExtends = false;
     this._needsMultiply = false;
     this._namespacePrefix = '';
     this._previousNode = null;
@@ -3361,6 +3362,10 @@
     assert(this._multiply !== null);
 
     // Preprocess the code
+    if (this._mangle) {
+      this._liftGlobals1(global);
+    }
+
     Skew.shakingPass(global, this._cache.entryPointSymbol, Skew.ShakingMode.IGNORE_TYPES);
     this._prepareGlobal(global);
     this._convertLambdasToFunctions(global);
@@ -3371,7 +3376,7 @@
     this._increaseIndent();
 
     // Emit special-cased variables that must come first
-    if (Skew.JavaScriptEmitter._needsExtends(objects)) {
+    if (this._needsExtends) {
       this._emitFunction(this._convertLambdaToFunction(this._extends));
     }
 
@@ -3457,20 +3462,12 @@
     Skew.Emitter.prototype._emit.call(this, text);
   };
 
-  Skew.JavaScriptEmitter.prototype._prepareGlobal = function(global) {
+  Skew.JavaScriptEmitter.prototype._liftGlobals1 = function(global) {
     var globalObjects = [];
     var globalFunctions = [];
     var globalVariables = [];
+    this._liftGlobals2(global, globalObjects, globalFunctions, globalVariables);
 
-    // Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
-    this._patchObject(global, globalObjects, globalFunctions, globalVariables);
-
-    // Skip everything below if we aren't mangling
-    if (!this._mangle) {
-      return;
-    }
-
-    // Move internal global symbols up to the global namespace
     for (var i = 0, list = globalObjects, count = list.length; i < count; ++i) {
       var object = list[i];
       object.parent = global;
@@ -3489,6 +3486,62 @@
     in_List.append1(global.objects, globalObjects);
     in_List.append1(global.functions, globalFunctions);
     in_List.append1(global.variables, globalVariables);
+  };
+
+  Skew.JavaScriptEmitter.prototype._liftGlobals2 = function(symbol, globalObjects, globalFunctions, globalVariables) {
+    var self = this;
+    var shouldLiftGlobals = symbol.parent !== null;
+
+    // Scan over child objects
+    in_List.removeIf(symbol.objects, function(object) {
+      self._liftGlobals2(object, globalObjects, globalFunctions, globalVariables);
+
+      if (shouldLiftGlobals && !object.isImportedOrExported()) {
+        globalObjects.push(object);
+        return true;
+      }
+
+      return false;
+    });
+    in_List.removeIf(symbol.functions, function($function) {
+      if (shouldLiftGlobals && $function.kind === Skew.SymbolKind.FUNCTION_GLOBAL && !$function.isImportedOrExported()) {
+        globalFunctions.push($function);
+        return true;
+      }
+
+      return false;
+    });
+
+    // Scan over child variables
+    in_List.removeIf(symbol.variables, function(variable) {
+      if (shouldLiftGlobals && variable.kind === Skew.SymbolKind.VARIABLE_GLOBAL && !variable.isImportedOrExported()) {
+        globalVariables.push(variable);
+        return true;
+      }
+
+      return false;
+    });
+  };
+
+  Skew.JavaScriptEmitter.prototype._prepareGlobal = function(global) {
+    // Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
+    this._patchObject(global);
+
+    // Skip everything below if we aren't mangling
+    if (!this._mangle) {
+      return;
+    }
+
+    // These will be culled by tree shaking regardless of whether they are needed
+    if (this._needsExtends) {
+      this._allocateNamingGroupIndex(this._extends);
+      this._patchNode(this._extends.value);
+    }
+
+    if (this._needsMultiply) {
+      this._allocateNamingGroupIndex(this._multiply);
+      this._patchNode(this._multiply.value);
+    }
 
     // Rename symbols based on frequency for better compression
     this._renameSymbols();
@@ -4652,41 +4705,39 @@
     }
   };
 
-  Skew.JavaScriptEmitter.prototype._patchObject = function(symbol, globalObjects, globalFunctions, globalVariables) {
-    var self = this;
-    var shouldLiftGlobals = self._mangle && symbol.parent !== null;
-    self._allocateNamingGroupIndex(symbol);
+  Skew.JavaScriptEmitter.prototype._patchObject = function(symbol) {
+    this._allocateNamingGroupIndex(symbol);
+
+    // Subclasses need the extension stub
+    if (!symbol.isImported() && symbol.baseClass !== null) {
+      this._needsExtends = true;
+    }
 
     // Scan over child objects
-    in_List.removeIf(symbol.objects, function(object) {
-      self._patchObject(object, globalObjects, globalFunctions, globalVariables);
-
-      // When mangling, filter out all internal objects and move them to the global namespace
-      if (shouldLiftGlobals && !object.isImportedOrExported()) {
-        globalObjects.push(object);
-        return true;
-      }
-
-      return false;
-    });
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      this._patchObject(object);
+    }
 
     // Scan over child functions
     var isPrimaryConstructor = true;
-    in_List.removeIf(symbol.functions, function($function) {
+
+    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
+      var $function = list2[i2];
       var block = $function.block;
       var $this = $function.$this;
-      self._allocateNamingGroupIndex($function);
+      this._allocateNamingGroupIndex($function);
 
       // Check to see if we need an explicit "self" parameter while patching the block
-      self._needsSelf = false;
-      self._currentSelf = $this;
-      self._enclosingFunction = $function;
-      self._patchNode(block);
-      self._enclosingFunction = null;
+      this._needsSelf = false;
+      this._currentSelf = $this;
+      this._enclosingFunction = $function;
+      this._patchNode(block);
+      this._enclosingFunction = null;
 
       // Only insert the "self" variable if required to handle capture inside lambdas
-      if (self._needsSelf) {
-        self._unionVariableWithFunction($this, $function);
+      if (this._needsSelf) {
+        this._unionVariableWithFunction($this, $function);
 
         if (block !== null) {
           var variable = Skew.Node.createVariable($this);
@@ -4694,7 +4745,7 @@
           $this.value = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('this'));
 
           // When mangling, add the "self" variable to an existing variable statement if present
-          if (self._mangle && block.hasChildren()) {
+          if (this._mangle && block.hasChildren()) {
             var firstChild = block.firstChild();
 
             if (firstChild.kind === Skew.NodeKind.VARIABLES) {
@@ -4726,16 +4777,10 @@
         $this.flags |= Skew.Symbol.IS_EXPORTED;
       }
 
-      for (var i = 0, list = $function.$arguments, count = list.length; i < count; ++i) {
-        var argument = list[i];
-        self._allocateNamingGroupIndex(argument);
-        self._unionVariableWithFunction(argument, $function);
-      }
-
-      // When mangling, filter out all internal global functions and move them to the global namespace
-      if (shouldLiftGlobals && $function.kind === Skew.SymbolKind.FUNCTION_GLOBAL && !$function.isImportedOrExported()) {
-        globalFunctions.push($function);
-        return true;
+      for (var i1 = 0, list1 = $function.$arguments, count1 = list1.length; i1 < count1; ++i1) {
+        var argument = list1[i1];
+        this._allocateNamingGroupIndex(argument);
+        this._unionVariableWithFunction(argument, $function);
       }
 
       // Rename extra constructors overloads so they don't conflict
@@ -4745,23 +4790,14 @@
           isPrimaryConstructor = false;
         }
       }
-
-      return false;
-    });
+    }
 
     // Scan over child variables
-    in_List.removeIf(symbol.variables, function(variable) {
-      self._allocateNamingGroupIndex(variable);
-      self._patchNode(variable.value);
-
-      // When mangling, filter out all internal global variables and move them to the global namespace
-      if (shouldLiftGlobals && variable.kind === Skew.SymbolKind.VARIABLE_GLOBAL && !variable.isImportedOrExported()) {
-        globalVariables.push(variable);
-        return true;
-      }
-
-      return false;
-    });
+    for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; ++i3) {
+      var variable1 = list3[i3];
+      this._allocateNamingGroupIndex(variable1);
+      this._patchNode(variable1.value);
+    }
   };
 
   Skew.JavaScriptEmitter.prototype._createIntBinary = function(kind, left, right) {
@@ -4818,10 +4854,7 @@
 
     if (this._mangle && symbol !== null) {
       this._allocateNamingGroupIndex(symbol);
-
-      if (node.kind !== Skew.NodeKind.TYPE) {
-        this._symbolCounts[symbol.id] = in_IntMap.get(this._symbolCounts, symbol.id, 0) + 1 | 0;
-      }
+      this._symbolCounts[symbol.id] = in_IntMap.get(this._symbolCounts, symbol.id, 0) + 1 | 0;
     }
 
     if (kind === Skew.NodeKind.LAMBDA) {
@@ -4832,8 +4865,14 @@
       this._enclosingLoop = node;
     }
 
-    for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
-      this._patchNode(child);
+    if (kind === Skew.NodeKind.CAST) {
+      this._patchNode(node.castValue());
+    }
+
+    else {
+      for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
+        this._patchNode(child);
+      }
     }
 
     if (kind === Skew.NodeKind.LAMBDA) {
@@ -5910,18 +5949,6 @@
     }
 
     return symbol.nameWithRenaming();
-  };
-
-  Skew.JavaScriptEmitter._needsExtends = function(objects) {
-    for (var i = 0, list = objects, count = list.length; i < count; ++i) {
-      var object = list[i];
-
-      if (!object.isImported() && object.baseClass !== null) {
-        return true;
-      }
-    }
-
-    return false;
   };
 
   Skew.JavaScriptEmitter._computeNamespacePrefix = function(symbol) {
@@ -16882,8 +16909,15 @@
       return;
     }
 
-    for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
-      this._visitNode(child);
+    if (node.kind === Skew.NodeKind.CAST) {
+      this._visitNode(node.castValue());
+      this._visitType(node.castType().resolvedType);
+    }
+
+    else {
+      for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
+        this._visitNode(child);
+      }
     }
 
     if (node.symbol !== null) {

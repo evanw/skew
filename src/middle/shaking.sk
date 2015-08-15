@@ -168,8 +168,13 @@ namespace Skew {
         return
       }
 
-      for child = node.firstChild; child != null; child = child.nextSibling {
-        _visitNode(child)
+      if node.kind == .CAST {
+        _visitNode(node.castValue)
+        _visitType(node.castType.resolvedType)
+      } else {
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          _visitNode(child)
+        }
       }
 
       if node.symbol != null {
