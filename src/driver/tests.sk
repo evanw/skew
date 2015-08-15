@@ -10,7 +10,7 @@ namespace Skew.Tests {
       var result = compile(log, _options, [Source.new("<stdin>", _input)])
       var output = result.outputs.isEmpty ? log.toString : "\n".join(
         result.outputs.map<string>(source => (source.name == "" ? "" : "[" + source.name + "]\n") + source.contents))
-      expectString(trim(_expected), trim(output))
+      expectString(trimNewlines(_expected), trimNewlines(output))
     }
 
     def jsMangle CompilerTest {
@@ -45,7 +45,7 @@ namespace Skew.Tests {
     over run {
       rename(compactWhitespace(_input))
       var formatted = Range.new(Source.new("<stdin>", _input), _start, _end).format(_maxLength)
-      expectString(trim(_expected), trim(formatted.line + "\n" + formatted.range))
+      expectString(trimNewlines(_expected), trimNewlines(formatted.line + "\n" + formatted.range))
     }
 
     const _input string
@@ -63,18 +63,14 @@ namespace Skew.Tests {
     const _callback fn(fn(string, string))
   }
 
-  def isSpace(c int) bool {
-    return c == ' ' || c == '\n'
-  }
-
-  def trim(text string) string {
+  def trimNewlines(text string) string {
     var length = text.count
     var start = 0
     var end = length
-    while start < length && isSpace(text[start]) {
+    while start < length && text[start] == '\n' {
       start++
     }
-    while start < end && isSpace(text[end - 1]) {
+    while start < end && text[end - 1] == '\n' {
       end--
     }
     return text.slice(start, end)
@@ -84,7 +80,8 @@ namespace Skew.Tests {
     var wasSpace = false
     var result = ""
     for i in 0..text.count {
-      if !isSpace(text[i]) {
+      var c = text[i]
+      if c != '\n' && c != ' ' && c != '\t' {
         result += text.get(i)
         wasSpace = false
       } else if !wasSpace {
@@ -96,11 +93,11 @@ namespace Skew.Tests {
   }
 
   def test(input string, expected string) CompilerTest {
-    return CompilerTest.new(trim(input), expected)
+    return CompilerTest.new(trimNewlines(input), expected)
   }
 
   def testFormat(input string, expected string, start int, end int, maxLength int) {
-    FormatTest.new(trim(input), expected, start, end, maxLength)
+    FormatTest.new(trimNewlines(input), expected, start, end, maxLength)
   }
 
   def testSimple(name string, callback fn(fn(string, string))) {

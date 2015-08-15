@@ -23,19 +23,41 @@ namespace Skew {
       var start = source.indexToLineColumn(self.start)
       var end = source.indexToLineColumn(self.end)
       var line = source.contentsOfLine(start.line)
-      var length = line.count
+      var startColumn = start.column
+      var endColumn = end.line == start.line ? end.column : line.count
 
       # Use a unicode iterator to count the actual code points so they don't get sliced through the middle
       var iterator = Unicode.StringIterator.INSTANCE.reset(line, 0)
-      var a = iterator.countCodePointsUntil(start.column)
-      var b = a + iterator.countCodePointsUntil(end.line == start.line ? end.column : length)
-      var count = b + iterator.countCodePointsUntil(length)
+      var codePoints List<int> = []
+      var a = 0
+      var b = 0
+
+      # Expand tabs into spaces
+      while true {
+        if iterator.index == startColumn {
+          a = codePoints.count
+        }
+        if iterator.index == endColumn {
+          b = codePoints.count
+        }
+        var codePoint = iterator.nextCodePoint
+        if codePoint < 0 {
+          break
+        }
+        if codePoint == '\t' {
+          for space in 0..8 - codePoints.count % 8 {
+            codePoints.append(' ')
+          }
+        } else {
+          codePoints.append(codePoint)
+        }
+      }
 
       # Ensure the line length doesn't exceed maxLength
+      var count = codePoints.count
       if maxLength > 0 && count > maxLength {
         var centeredWidth = Math.min(b - a, maxLength / 2)
         var centeredStart = Math.max((maxLength - centeredWidth) / 2, 3)
-        var codePoints = line.codePoints
 
         # Left aligned
         if a < centeredStart {
@@ -63,6 +85,8 @@ namespace Skew {
             b = maxLength - 3
           }
         }
+      } else {
+        line = string.fromCodePoints(codePoints)
       }
 
       return FormattedRange.new(line, " ".repeat(a) + (b - a < 2 ? "^" : "~".repeat(b - a)))

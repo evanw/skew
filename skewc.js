@@ -10508,19 +10508,48 @@
     var start = this.source.indexToLineColumn(this.start);
     var end = this.source.indexToLineColumn(this.end);
     var line = this.source.contentsOfLine(start.line);
-    var length = line.length;
+    var startColumn = start.column;
+    var endColumn = end.line === start.line ? end.column : line.length;
 
     // Use a unicode iterator to count the actual code points so they don't get sliced through the middle
     var iterator = Unicode.StringIterator.INSTANCE.reset(line, 0);
-    var a = iterator.countCodePointsUntil(start.column);
-    var b = a + iterator.countCodePointsUntil(end.line === start.line ? end.column : length) | 0;
-    var count = b + iterator.countCodePointsUntil(length) | 0;
+    var codePoints = [];
+    var a = 0;
+    var b = 0;
+
+    // Expand tabs into spaces
+    while (true) {
+      if (iterator.index === startColumn) {
+        a = codePoints.length;
+      }
+
+      if (iterator.index === endColumn) {
+        b = codePoints.length;
+      }
+
+      var codePoint = iterator.nextCodePoint();
+
+      if (codePoint < 0) {
+        break;
+      }
+
+      if (codePoint === 9) {
+        for (var space = 0, count1 = 8 - (codePoints.length % 8 | 0) | 0; space < count1; ++space) {
+          codePoints.push(32);
+        }
+      }
+
+      else {
+        codePoints.push(codePoint);
+      }
+    }
 
     // Ensure the line length doesn't exceed maxLength
+    var count = codePoints.length;
+
     if (maxLength > 0 && count > maxLength) {
       var centeredWidth = Math.min(b - a | 0, maxLength / 2 | 0);
       var centeredStart = Math.max((maxLength - centeredWidth | 0) / 2 | 0, 3);
-      var codePoints = in_string.codePoints(line);
 
       // Left aligned
       if (a < centeredStart) {
@@ -10550,6 +10579,10 @@
           b = maxLength - 3 | 0;
         }
       }
+    }
+
+    else {
+      line = in_string.fromCodePoints(codePoints);
     }
 
     return new Skew.FormattedRange(line, in_string.repeat(' ', a) + ((b - a | 0) < 2 ? '^' : in_string.repeat('~', b - a | 0)));
@@ -17831,16 +17864,6 @@
     return this;
   };
 
-  Unicode.StringIterator.prototype.countCodePointsUntil = function(stop) {
-    var count = 0;
-
-    while (this.index < stop && this.nextCodePoint() >= 0) {
-      ++count;
-    }
-
-    return count;
-  };
-
   Unicode.StringIterator.prototype.nextCodePoint = function() {
     if (this.index >= this.stop) {
       return -1;
@@ -17930,22 +17953,6 @@
     }
 
     return result;
-  };
-
-  in_string.codePoints = function(self) {
-    var codePoints = [];
-    var instance = Unicode.StringIterator.INSTANCE;
-    instance.reset(self, 0);
-
-    while (true) {
-      var codePoint = instance.nextCodePoint();
-
-      if (codePoint < 0) {
-        return codePoints;
-      }
-
-      codePoints.push(codePoint);
-    }
   };
 
   in_string.fromCodePoints = function(codePoints) {

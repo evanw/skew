@@ -106,5 +106,19 @@ testFormat("
    ~~~~
 ", "😄😉😍😗😜".count, "😄😉😍😗😜😔😞😢😭😪😥😰😅😓😩".count, 10)
 
+testFormat("
+\ta\tab\tabc\tabcd\tabcde\tabcdef\tabcdefg\tabcdefgh\tx
+", "
+        a       ab      abc     abcd    abcde   abcdef  abcdefg abcdefgh        x
+~~~~~~~~
+", 0, 1, 0)
+
+testFormat("
+\t0\t1\t2\t3\t4
+", "
+...  2       3       4
+              ~~~~~~~
+", 8, 9, 22)
+
   }
 }
