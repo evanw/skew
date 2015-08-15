@@ -161,12 +161,12 @@ def bar(foo int, baz fn()) {
 }
 ", "
 (function() {
-  foo = function(b, a) {
-    b < 1 && a(), b < 2 && a(), b > 1 && a(), b > 0 && a(), b ^ 1 || a(), b ^ 1 && a();
+  foo = function(a, b) {
+    a < 1 && b(), a < 2 && b(), a > 1 && b(), a > 0 && b(), a ^ 1 || b(), a ^ 1 && b();
   };
 
-  bar = function(b, a) {
-    1 < b && a(), 0 < b && a(), 1 > b && a(), 2 > b && a(), 1 ^ b || a(), 1 ^ b && a();
+  bar = function(a, b) {
+    1 < a && b(), 0 < a && b(), 1 > a && b(), 2 > a && b(), 1 ^ a || b(), 1 ^ a && b();
   };
 })();
 ").jsMangle
@@ -203,12 +203,12 @@ enum Foo {
 }
 ", "
 (function() {
-  foo = function(b, a) {
-    b < 1 && a(), b < 2 && a(), b > 1 && a(), b > 0 && a(), b || a(), b && a(), b ^ 1 || a(), b ^ 1 && a();
+  foo = function(a, b) {
+    a < 1 && b(), a < 2 && b(), a > 1 && b(), a > 0 && b(), a || b(), a && b(), a ^ 1 || b(), a ^ 1 && b();
   };
 
-  bar = function(b, a) {
-    1 < b && a(), 0 < b && a(), 1 > b && a(), 2 > b && a(), b || a(), b && a(), 1 ^ b || a(), 1 ^ b && a();
+  bar = function(a, b) {
+    1 < a && b(), 0 < a && b(), 1 > a && b(), 2 > a && b(), a || b(), a && b(), 1 ^ a || b(), 1 ^ a && b();
   };
 })();
 ").jsMangle.foldAllConstants
@@ -236,12 +236,12 @@ def bar(foo double, baz fn()) {
 }
 ", "
 (function() {
-  foo = function(b, a) {
-    b < 1 && a(), b <= 1 && a(), b > 1 && a(), b >= 1 && a(), b === 1 && a(), b !== 1 && a();
+  foo = function(a, b) {
+    a < 1 && b(), a <= 1 && b(), a > 1 && b(), a >= 1 && b(), a === 1 && b(), a !== 1 && b();
   };
 
-  bar = function(b, a) {
-    1 < b && a(), 1 <= b && a(), 1 > b && a(), 1 >= b && a(), 1 === b && a(), 1 !== b && a();
+  bar = function(a, b) {
+    1 < a && b(), 1 <= a && b(), 1 > a && b(), 1 >= a && b(), 1 === a && b(), 1 !== a && b();
   };
 })();
 ").jsMangle
@@ -823,16 +823,16 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    e: for (;;) {
+    c: for (;;) {
       switch (x) {
         case 0: {
-          break e;
+          break c;
         }
 
         case 1: {
           switch (y) {
             case 0: {
-              break e;
+              break c;
             }
           }
           break;
@@ -857,16 +857,16 @@ def foo {
       }
     }
 
-    c: for (var b = 0; b < 10; ++b) {
+    e: for (var b = 0; b < 10; ++b) {
       switch (x) {
         case 0: {
-          break c;
+          break e;
         }
 
         case 1: {
           switch (y) {
             case 0: {
-              break c;
+              break e;
             }
           }
           break;
@@ -992,9 +992,9 @@ class Baz {
 }
 ", "
 (function() {
-  foo = function(a, f, e) {
-    var d = new g();
-    t('' + a), t(a + ''), t(a.toString() + a), t(f + ''), t(e.toString(0) + ''), t(d.c() + '');
+  foo = function(a, e, f) {
+    var b = new g();
+    t('' + a), t(a + ''), t(a.toString() + a), t(e + ''), t(f.toString(0) + ''), t(b.c() + '');
   };
 
   function g() {
@@ -1034,33 +1034,33 @@ def main(args List<string>) int {
 }
 ", "
 (function() {
-  function m(a, c) {
+  function i(a, c) {
     a.prototype = Object.create(c.prototype), a.prototype.constructor = a;
   }
 
-  var l = Math.imul || function(a, c) {
-    var h = a >> 16 & 65535, g = c >> 16 & 65535, e = a & 65535, d = c & 65535;
-    return e * d + (h * d + e * g << 16) | 0;
+  var j = Math.imul || function(a, c) {
+    var f = a >> 16 & 65535, g = c >> 16 & 65535, d = a & 65535, e = c & 65535;
+    return d * e + (f * e + d * g << 16) | 0;
   };
 
-  function i(a) {
-    return new j(), l(f(a), 100);
+  function m(a) {
+    return new l(), j(h(a), 100);
   }
 
-  function f(a) {
+  function h(a) {
     return a.length;
   }
 
   function k() {
   }
 
-  function j() {
+  function l() {
     k.call(this);
   }
 
-  m(j, k);
+  i(l, k);
 
-  process.exit(i(process.argv.slice(2)));
+  process.exit(m(process.argv.slice(2)));
 })();
 ").jsMangle
 
@@ -1079,6 +1079,127 @@ def main int {
   }
 
   process.exit(a());
+})();
+").jsMangle
+
+# Make sure constant folding folds string lengths
+test("
+@export
+def foo int {
+  return \"abc\".count
+}
+", "
+(function() {
+  foo = function() {
+    return 3;
+  };
+})();
+").jsMangle.foldAllConstants
+
+# Lock down the name generation algorithm
+test("
+@import {
+  def x int
+  def y
+}
+
+@entry
+def main {
+  var a0 = x, a1 = x, a2 = x, a3 = x, a4 = x, a5 = x, a6 = x, a7 = x, a8 = x, a9 = x
+  y
+  var b0 = x, b1 = x, b2 = x, b3 = x, b4 = x, b5 = x, b6 = x, b7 = x, b8 = x, b9 = x
+  y
+  var c0 = x, c1 = x, c2 = x, c3 = x, c4 = x, c5 = x, c6 = x, c7 = x, c8 = x, c9 = x
+  y
+  var d0 = x, d1 = x, d2 = x, d3 = x, d4 = x, d5 = x, d6 = x, d7 = x, d8 = x, d9 = x
+  y
+  var e0 = x, e1 = x, e2 = x, e3 = x, e4 = x, e5 = x, e6 = x, e7 = x, e8 = x, e9 = x
+  y
+  var f0 = x, f1 = x, f2 = x, f3 = x, f4 = x, f5 = x, f6 = x, f7 = x, f8 = x, f9 = x
+  y
+  var g0 = x, g1 = x, g2 = x, g3 = x, g4 = x, g5 = x, g6 = x, g7 = x, g8 = x, g9 = x
+  y
+  var h0 = x, h1 = x, h2 = x, h3 = x, h4 = x, h5 = x, h6 = x, h7 = x, h8 = x, h9 = x
+  y
+  var i0 = x, i1 = x, i2 = x, i3 = x, i4 = x, i5 = x, i6 = x, i7 = x, i8 = x, i9 = x
+  y
+  var j0 = x, j1 = x, j2 = x, j3 = x, j4 = x, j5 = x, j6 = x, j7 = x, j8 = x, j9 = x
+  y
+  var k0 = x, k1 = x, k2 = x, k3 = x, k4 = x, k5 = x, k6 = x, k7 = x, k8 = x, k9 = x
+}
+", "
+(function() {
+  function eb() {
+    var a = x(), b = x(), c = x(), d = x(), e = x(), f = x(), g = x(), h = x(), i = x(), j = x();
+    y();
+    var k = x(), l = x(), m = x(), n = x(), o = x(), p = x(), q = x(), r = x(), s = x(), t = x();
+    y();
+    var u = x(), v = x(), w = x(), z = x(), A = x(), B = x(), C = x(), D = x(), E = x(), F = x();
+    y();
+    var G = x(), H = x(), I = x(), J = x(), K = x(), L = x(), M = x(), N = x(), O = x(), P = x();
+    y();
+    var Q = x(), R = x(), S = x(), T = x(), U = x(), V = x(), W = x(), X = x(), Y = x(), Z = x();
+    y();
+    var _ = x(), $ = x(), aa = x(), ba = x(), ca = x(), da = x(), ea = x(), fa = x(), ga = x(), ha = x();
+    y();
+    var ia = x(), ja = x(), ka = x(), la = x(), ma = x(), na = x(), oa = x(), pa = x(), qa = x(), ra = x();
+    y();
+    var sa = x(), ta = x(), ua = x(), va = x(), wa = x(), xa = x(), ya = x(), za = x(), Aa = x(), Ba = x();
+    y();
+    var Ca = x(), Da = x(), Ea = x(), Fa = x(), Ga = x(), Ha = x(), Ia = x(), Ja = x(), Ka = x(), La = x();
+    y();
+    var Ma = x(), Na = x(), Oa = x(), Pa = x(), Qa = x(), Ra = x(), Sa = x(), Ta = x(), Ua = x(), Va = x();
+    y();
+    var Wa = x(), Xa = x(), Ya = x(), Za = x(), _a = x(), $a = x(), ab = x(), bb = x(), cb = x(), db = x();
+  }
+
+  eb();
+})();
+").jsMangle
+
+# Make sure it's possible to not clobber over jQuery
+test("
+@import {
+  def x int
+  def y
+
+  @rename(\"$\")
+  var jQuery dynamic
+}
+
+@entry
+def main {
+  var a0 = x, a1 = x, a2 = x, a3 = x, a4 = x, a5 = x, a6 = x, a7 = x, a8 = x, a9 = x
+  y
+  var b0 = x, b1 = x, b2 = x, b3 = x, b4 = x, b5 = x, b6 = x, b7 = x, b8 = x, b9 = x
+  y
+  var c0 = x, c1 = x, c2 = x, c3 = x, c4 = x, c5 = x, c6 = x, c7 = x, c8 = x, c9 = x
+  y
+  var d0 = x, d1 = x, d2 = x, d3 = x, d4 = x, d5 = x, d6 = x, d7 = x, d8 = x, d9 = x
+  y
+  var e0 = x, e1 = x, e2 = x, e3 = x, e4 = x, e5 = x, e6 = x, e7 = x, e8 = x, e9 = x
+  y
+  var f0 = x, f1 = x, f2 = x, f3 = x, f4 = x, f5 = x, f6 = x, f7 = x, f8 = x, f9 = x
+  jQuery()
+}
+", "
+(function() {
+  function ja() {
+    var a = x(), b = x(), c = x(), d = x(), e = x(), f = x(), g = x(), h = x(), i = x(), j = x();
+    y();
+    var k = x(), l = x(), m = x(), n = x(), o = x(), p = x(), q = x(), r = x(), s = x(), t = x();
+    y();
+    var u = x(), v = x(), w = x(), z = x(), A = x(), B = x(), C = x(), D = x(), E = x(), F = x();
+    y();
+    var G = x(), H = x(), I = x(), J = x(), K = x(), L = x(), M = x(), N = x(), O = x(), P = x();
+    y();
+    var Q = x(), R = x(), S = x(), T = x(), U = x(), V = x(), W = x(), X = x(), Y = x(), Z = x();
+    y();
+    var _ = x(), aa = x(), ba = x(), ca = x(), da = x(), ea = x(), fa = x(), ga = x(), ha = x(), ia = x();
+    $();
+  }
+
+  ja();
 })();
 ").jsMangle
 

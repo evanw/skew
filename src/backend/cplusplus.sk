@@ -7,6 +7,7 @@ namespace Skew {
     over requiresIntegerSwitchStatements bool { return true }
     over supportsListForeach bool { return true }
     over needsLambdaLifting bool { return true }
+    over stringEncoding Unicode.Encoding { return .UTF8 }
     over editOptions(options CompilerOptions) { options.define("TARGET", "CPLUSPLUS") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-cpp>", NATIVE_LIBRARY_CPP)) }
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return CPlusPlusEmitter.new(options, cache) }

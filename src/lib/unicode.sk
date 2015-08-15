@@ -76,6 +76,34 @@ namespace Unicode {
   namespace StringIterator {
     const INSTANCE = StringIterator.new
   }
+
+  def codeUnitCountForCodePoints(codePoints List<int>, encoding Encoding) int {
+    var count = 0
+
+    switch encoding {
+      case .UTF8 {
+        for codePoint in codePoints {
+          if codePoint < 0x80 { count++ }
+          else if codePoint < 0x800 { count += 2 }
+          else if codePoint < 0x10000 { count += 3 }
+          else { count += 4 }
+        }
+      }
+
+      case .UTF16 {
+        for codePoint in codePoints {
+          if codePoint < 0x10000 { count++ }
+          else { count += 2 }
+        }
+      }
+
+      case .UTF32 {
+        count = codePoints.count
+      }
+    }
+
+    return count
+  }
 }
 
 class string {

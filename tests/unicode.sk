@@ -3,18 +3,31 @@ namespace Skew.Tests {
     return "[" + ", ".join(list.map<string>(x => x.toString)) + "]"
   }
 
-  def testUnicode(text string, codePoints List<int>) {
+  def testUnicodeText(text string, codePoints List<int>) {
     testSimple("codePoints " + text, expectString => expectString(toString(codePoints), toString(text.codePoints)))
     testSimple("fromCodePoints " + text, expectString => expectString(text, string.fromCodePoints(codePoints)))
     testSimple("codeUnits " + text, expectString => expectString(text, string.fromCodeUnits(text.codeUnits)))
   }
 
+  def testUnicodeCount(text string, count int) {
+    testSimple("count " + text, expectString => expectString(count.toString, text.count.toString))
+  }
+
   def testUnicode {
-    testUnicode("Цлїςσδε", [1062, 1083, 1111, 962, 963, 948, 949])
-    testUnicode("ﾌﾑｱﾑｶﾓｹﾓ", [65420, 65425, 65393, 65425, 65398, 65427, 65401, 65427])
-    testUnicode("フムヤムカモケモ", [12501, 12512, 12516, 12512, 12459, 12514, 12465, 12514])
-    testUnicode("㊀㊁㊂㊃㊄", [12928, 12929, 12930, 12931, 12932])
-    testUnicode("☳☶☲", [9779, 9782, 9778])
-    testUnicode("𡇙𝌆", [135641, 119558])
+    # Make sure encoding and decoding works
+    testUnicodeText("Цлїςσδε", [1062, 1083, 1111, 962, 963, 948, 949])
+    testUnicodeText("ﾌﾑｱﾑｶﾓｹﾓ", [65420, 65425, 65393, 65425, 65398, 65427, 65401, 65427])
+    testUnicodeText("フムヤムカモケモ", [12501, 12512, 12516, 12512, 12459, 12514, 12465, 12514])
+    testUnicodeText("㊀㊁㊂㊃㊄", [12928, 12929, 12930, 12931, 12932])
+    testUnicodeText("☳☶☲", [9779, 9782, 9778])
+    testUnicodeText("𡇙𝌆", [135641, 119558])
+
+    # Make sure target-specific constant folding of string.count works correctly
+    testUnicodeCount("Цлїςσδε", "Цлїςσδε".count)
+    testUnicodeCount("ﾌﾑｱﾑｶﾓｹﾓ", "ﾌﾑｱﾑｶﾓｹﾓ".count)
+    testUnicodeCount("フムヤムカモケモ", "フムヤムカモケモ".count)
+    testUnicodeCount("㊀㊁㊂㊃㊄", "㊀㊁㊂㊃㊄".count)
+    testUnicodeCount("☳☶☲", "☳☶☲".count)
+    testUnicodeCount("𡇙𝌆", "𡇙𝌆".count)
   }
 }

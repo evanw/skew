@@ -92,15 +92,20 @@ flex:
 
 test: test-js test-cs
 
-test-js:
+test-js: | build
 	node skewc.js $(SOURCES_TEST) $(JS_FLAGS) --output-file=build/test.js
 	node build/test.js
 	node skewc.js $(SOURCES_TEST) $(JS_FLAGS) --output-file=build/test.min.js --release
 	node build/test.min.js
 
-test-cs:
+test-cs: | build
 	node skewc.js $(SOURCES_TEST) $(CS_FLAGS) --output-file=build/test.cs
 	mcs -debug build/test.cs
+	mono --debug build/test.exe
+	rm -fr build/cs
+	mkdir -p build/cs
+	node skewc.js $(SOURCES_TEST) $(CS_FLAGS) --output-dir=build/cs
+	mcs -debug build/cs/*.cs -out:build/test.exe
 	mono --debug build/test.exe
 
 clean:

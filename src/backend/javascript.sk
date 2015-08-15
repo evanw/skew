@@ -4,6 +4,7 @@ namespace Skew {
     over extension string { return "js" }
     over runPostResolvePasses bool { return true }
     over supportsNestedTypes bool { return true }
+    over stringEncoding Unicode.Encoding { return .UTF16 }
     over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
     over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return JavaScriptEmitter.new(options, cache) }
@@ -323,7 +324,9 @@ namespace Skew {
       # Collect all reserved names together into one big set for querying
       var reservedNames StringMap<int> = _isKeyword.clone
       for symbol in _allSymbols {
-        if !_shouldRenameSymbol(symbol) {
+        if symbol.isRenamed {
+          reservedNames[symbol.nameWithRenaming] = 0
+        } else if !_shouldRenameSymbol(symbol) {
           reservedNames[symbol.name] = 0
         }
       }
@@ -348,7 +351,7 @@ namespace Skew {
         if difference == 0 {
           difference = b.symbols.count <=> a.symbols.count
           for i = 0; difference == 0 && i < a.symbols.count; i++ {
-            difference = b.symbols[i].id <=> a.symbols[i].id
+            difference = a.symbols[i].id <=> b.symbols[i].id
           }
         }
         return difference
@@ -2245,14 +2248,17 @@ namespace Skew {
       return false
     }
 
+    const _first = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$"
+    const _rest = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$0123456789"
+
     def _numberToName(number int) string {
-      const WRAP = 26 * 2
-      var name = ""
-      if number >= WRAP {
-        name = _numberToName(number / WRAP - 1)
-        number = number % WRAP
+      var name = _first.get(number % _first.count)
+      number = number / _first.count
+      while number > 0 {
+        number--
+        name += _rest.get(number % _rest.count)
+        number = number / _rest.count
       }
-      name += string.fromCodeUnit(number + (number < 26 ? 'a' : 'A' - 26))
       return name
     }
 

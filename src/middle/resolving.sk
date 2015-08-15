@@ -12,7 +12,7 @@ namespace Skew {
       context.cache.loadGlobals(context.log, context.global)
       if !context.log.hasErrors {
         var resolver = Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log)
-        resolver.constantFolder = Folding.ConstantFolder.new(context.cache, Resolving.ConstantResolver.new(resolver))
+        resolver.constantFolder = Folding.ConstantFolder.new(context.cache, context.options, Resolving.ConstantResolver.new(resolver))
         resolver.initializeGlobals
         resolver.iterativelyMergeGuards
         resolver.resolveGlobal

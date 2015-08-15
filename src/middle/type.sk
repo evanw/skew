@@ -148,6 +148,10 @@ namespace Skew {
     var listType Type = null
     var stringMapType Type = null
     var stringType Type = null
+    var intToStringSymbol Symbol = null
+    var boolToStringSymbol Symbol = null
+    var doubleToStringSymbol Symbol = null
+    var stringCountSymbol Symbol = null
     var entryPointSymbol FunctionSymbol = null
     const _environments = IntMap<List<Environment>>.new
     const _lambdaTypes = IntMap<List<Type>>.new
@@ -162,6 +166,10 @@ namespace Skew {
       listType = _loadGlobalClass(global, "List", 0)
       stringMapType = _loadGlobalClass(global, "StringMap", 0)
       stringType = _loadGlobalClass(global, "string", Symbol.IS_VALUE_TYPE)
+      intToStringSymbol = _loadInstanceFunction(intType, "toString")
+      boolToStringSymbol = _loadInstanceFunction(boolType, "toString")
+      doubleToStringSymbol = _loadInstanceFunction(doubleType, "toString")
+      stringCountSymbol = _loadInstanceFunction(stringType, "count")
     }
 
     def isInteger(type Type) bool {
@@ -447,6 +455,13 @@ namespace Skew {
       symbol.resolvedType = type
       symbol.flags |= flags
       return type
+    }
+
+    def _loadInstanceFunction(type Type, name string) Symbol {
+      var symbol = type.symbol.asObjectSymbol.members.get(name, null)
+      assert(symbol != null)
+      assert(symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .OVERLOADED_INSTANCE)
+      return symbol
     }
 
     def _hashParameters(parameters List<ParameterSymbol>) int {

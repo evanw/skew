@@ -33,83 +33,87 @@ namespace Skew.Inlining {
     var spreadingAnnotations = info.symbol.spreadingAnnotations
     for i in 0..info.callSites.count {
       var callSite = info.callSites[i]
-      if callSite != null {
-        var node = callSite.callNode
-        assert(node.childCount == info.symbol.arguments.count + 1)
 
-        # Propagate spreading annotations that must be preserved through inlining
-        if spreadingAnnotations != null {
-          var annotations = callSite.enclosingSymbol.annotations
-          if annotations == null {
-            annotations = []
-            callSite.enclosingSymbol.annotations = annotations
-          }
-          for annotation in spreadingAnnotations {
-            if !(annotation in annotations) {
-              annotations.append(annotation)
-            }
-          }
+      # Some calls may be reused for other node types during constant folding
+      if callSite == null || callSite.callNode.kind != .CALL {
+        continue
+      }
+
+      var node = callSite.callNode
+      assert(node.childCount == info.symbol.arguments.count + 1)
+
+      # Propagate spreading annotations that must be preserved through inlining
+      if spreadingAnnotations != null {
+        var annotations = callSite.enclosingSymbol.annotations
+        if annotations == null {
+          annotations = []
+          callSite.enclosingSymbol.annotations = annotations
         }
-
-        # Make sure each call site is inlined once by setting the call site to
-        # null. The call site isn't removed from the list since we don't want
-        # to mess up the indices of another call to inlineSymbol further up
-        # the call stack.
-        info.callSites[i] = null
-
-        # If there are unused arguments, drop those expressions entirely if
-        # they don't have side effects:
-        #
-        #   def bar(a int, b int) int {
-        #     return a
-        #   }
-        #
-        #   def test int {
-        #     return bar(0, foo(0)) + bar(1, 2)
-        #   }
-        #
-        # This should compile to:
-        #
-        #   def test int {
-        #     return bar(0, foo(0)) + 2
-        #   }
-        #
-        if !info.unusedArguments.isEmpty {
-          var hasSideEffects = false
-          for child = node.callValue.nextSibling; child != null; child = child.nextSibling {
-            if !child.hasNoSideEffects {
-              hasSideEffects = true
-              break
-            }
-          }
-          if hasSideEffects {
-            continue
+        for annotation in spreadingAnnotations {
+          if !(annotation in annotations) {
+            annotations.append(annotation)
           }
         }
+      }
 
-        var clone = info.inlineValue.clone
-        var value = node.firstChild.remove
-        var values List<Node> = []
-        while node.hasChildren {
-          values.append(node.firstChild.remove)
+      # Make sure each call site is inlined once by setting the call site to
+      # null. The call site isn't removed from the list since we don't want
+      # to mess up the indices of another call to inlineSymbol further up
+      # the call stack.
+      info.callSites[i] = null
+
+      # If there are unused arguments, drop those expressions entirely if
+      # they don't have side effects:
+      #
+      #   def bar(a int, b int) int {
+      #     return a
+      #   }
+      #
+      #   def test int {
+      #     return bar(0, foo(0)) + bar(1, 2)
+      #   }
+      #
+      # This should compile to:
+      #
+      #   def test int {
+      #     return bar(0, foo(0)) + 2
+      #   }
+      #
+      if !info.unusedArguments.isEmpty {
+        var hasSideEffects = false
+        for child = node.callValue.nextSibling; child != null; child = child.nextSibling {
+          if !child.hasNoSideEffects {
+            hasSideEffects = true
+            break
+          }
         }
-
-        # Make sure not to update the type if the function dynamic because the
-        # expression inside the function may have a more specific type that is
-        # necessary during code generation
-        if node.resolvedType != .DYNAMIC {
-          clone.resolvedType = node.resolvedType
+        if hasSideEffects {
+          continue
         }
+      }
 
-        assert(value.kind == .NAME && value.symbol == info.symbol)
-        node.become(clone)
-        recursivelySubstituteArguments(node, info.symbol.arguments, values)
+      var clone = info.inlineValue.clone
+      var value = node.firstChild.remove
+      var values List<Node> = []
+      while node.hasChildren {
+        values.append(node.firstChild.remove)
+      }
 
-        # Remove the inlined result entirely if appropriate
-        var parent = node.parent
-        if parent != null && parent.kind == .EXPRESSION && node.hasNoSideEffects {
-          parent.remove
-        }
+      # Make sure not to update the type if the function dynamic because the
+      # expression inside the function may have a more specific type that is
+      # necessary during code generation
+      if node.resolvedType != .DYNAMIC {
+        clone.resolvedType = node.resolvedType
+      }
+
+      assert(value.kind == .NAME && value.symbol == info.symbol)
+      node.become(clone)
+      recursivelySubstituteArguments(node, info.symbol.arguments, values)
+
+      # Remove the inlined result entirely if appropriate
+      var parent = node.parent
+      if parent != null && parent.kind == .EXPRESSION && node.hasNoSideEffects {
+        parent.remove
       }
     }
   }

@@ -9,7 +9,7 @@ namespace Skew {
     }
 
     over run(context PassContext) {
-      Folding.ConstantFolder.new(context.cache, Folding.ConstantCache.new).visitObject(context.global)
+      Folding.ConstantFolder.new(context.cache, context.options, Folding.ConstantCache.new).visitObject(context.global)
     }
   }
 }
@@ -21,6 +21,7 @@ namespace Skew.Folding {
 
   class ConstantFolder {
     const cache TypeCache
+    const options CompilerOptions
     const constantLookup ConstantLookup
 
     def visitObject(symbol ObjectSymbol) {
@@ -332,21 +333,27 @@ namespace Skew.Folding {
       }
     }
 
+    def isKnownCall(symbol Symbol, knownSymbol Symbol) bool {
+      return symbol == knownSymbol || symbol != null && symbol.kind.isFunction && symbol.asFunctionSymbol.overloaded == knownSymbol
+    }
+
     def foldCall(node Node) {
       if node.kind == .CALL {
         var value = node.callValue
+        var symbol = value.symbol
 
         if value.kind == .DOT {
           var target = value.dotTarget
 
-          if target != null && target.kind == .CONSTANT && value.asString == "toString" {
-            var content = target.content
-            switch content.kind {
-              case .BOOL { flattenString(node, content.asBool.toString) }
-              case .INT { flattenString(node, content.asInt.toString) }
-              case .STRING { flattenString(node, content.asString) }
-            }
+          if target != null && target.kind == .CONSTANT {
+            if isKnownCall(symbol, cache.boolToStringSymbol) { flattenString(node, target.asBool.toString) }
+            else if isKnownCall(symbol, cache.doubleToStringSymbol) { flattenString(node, target.asDouble.toString) }
+            else if isKnownCall(symbol, cache.intToStringSymbol) { flattenString(node, target.asInt.toString) }
           }
+        }
+
+        else if value.kind == .NAME && isKnownCall(symbol, cache.stringCountSymbol) && node.lastChild.isString {
+          flattenInt(node, Unicode.codeUnitCountForCodePoints(node.lastChild.asString.codePoints, options.target.stringEncoding))
         }
       }
     }

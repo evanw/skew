@@ -3629,7 +3629,11 @@
     for (var i1 = 0, list1 = this._allSymbols, count2 = list1.length; i1 < count2; ++i1) {
       var symbol1 = list1[i1];
 
-      if (!Skew.JavaScriptEmitter._shouldRenameSymbol(symbol1)) {
+      if (symbol1.isRenamed()) {
+        reservedNames[symbol1.nameWithRenaming()] = 0;
+      }
+
+      else if (!Skew.JavaScriptEmitter._shouldRenameSymbol(symbol1)) {
         reservedNames[symbol1.name] = 0;
       }
     }
@@ -3662,7 +3666,7 @@
         difference = b.symbols.length - a.symbols.length | 0;
 
         for (var i = 0; difference === 0 && i < a.symbols.length; ++i) {
-          difference = b.symbols[i].id - a.symbols[i].id | 0;
+          difference = a.symbols[i].id - b.symbols[i].id | 0;
         }
       }
 
@@ -5865,15 +5869,15 @@
   };
 
   Skew.JavaScriptEmitter._numberToName = function(number) {
-    var WRAP = __imul(26, 2);
-    var name = '';
+    var name = Skew.JavaScriptEmitter._first[number % Skew.JavaScriptEmitter._first.length | 0];
+    number = number / Skew.JavaScriptEmitter._first.length | 0;
 
-    if (number >= WRAP) {
-      name = Skew.JavaScriptEmitter._numberToName((number / WRAP | 0) - 1 | 0);
-      number = number % WRAP | 0;
+    while (number > 0) {
+      --number;
+      name += Skew.JavaScriptEmitter._rest[number % Skew.JavaScriptEmitter._rest.length | 0];
+      number = number / Skew.JavaScriptEmitter._rest.length | 0;
     }
 
-    name += String.fromCharCode(number + (number < 26 ? 97 : 65 - 26 | 0) | 0);
     return name;
   };
 
@@ -10783,6 +10787,10 @@
     return false;
   };
 
+  Skew.CompilerTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF32;
+  };
+
   Skew.CompilerTarget.prototype.editOptions = function(options) {
   };
 
@@ -10819,6 +10827,10 @@
     return true;
   };
 
+  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF8;
+  };
+
   Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
     options.define('TARGET', 'CPLUSPLUS');
   };
@@ -10843,6 +10855,10 @@
 
   Skew.JavaScriptTarget.prototype.supportsNestedTypes = function() {
     return true;
+  };
+
+  Skew.JavaScriptTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF16;
   };
 
   Skew.JavaScriptTarget.prototype.editOptions = function(options) {
@@ -10881,6 +10897,10 @@
 
   Skew.CSharpTarget.prototype.supportsNestedTypes = function() {
     return true;
+  };
+
+  Skew.CSharpTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF16;
   };
 
   Skew.CSharpTarget.prototype.editOptions = function(options) {
@@ -11262,7 +11282,7 @@
   };
 
   Skew.FoldingPass.prototype.run = function(context) {
-    new Skew.Folding.ConstantFolder(context.cache, new Skew.Folding.ConstantCache()).visitObject(context.global);
+    new Skew.Folding.ConstantFolder(context.cache, context.options, new Skew.Folding.ConstantCache()).visitObject(context.global);
   };
 
   Skew.Folding = {};
@@ -11270,8 +11290,9 @@
   Skew.Folding.ConstantLookup = function() {
   };
 
-  Skew.Folding.ConstantFolder = function(cache, constantLookup) {
+  Skew.Folding.ConstantFolder = function(cache, options, constantLookup) {
     this.cache = cache;
+    this.options = options;
     this.constantLookup = constantLookup;
   };
 
@@ -11618,33 +11639,35 @@
     }
   };
 
+  Skew.Folding.ConstantFolder.prototype.isKnownCall = function(symbol, knownSymbol) {
+    return symbol === knownSymbol || symbol !== null && Skew.SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().overloaded === knownSymbol;
+  };
+
   Skew.Folding.ConstantFolder.prototype.foldCall = function(node) {
     if (node.kind === Skew.NodeKind.CALL) {
       var value = node.callValue();
+      var symbol = value.symbol;
 
       if (value.kind === Skew.NodeKind.DOT) {
         var target = value.dotTarget();
 
-        if (target !== null && target.kind === Skew.NodeKind.CONSTANT && value.asString() === 'toString') {
-          var content = target.content;
+        if (target !== null && target.kind === Skew.NodeKind.CONSTANT) {
+          if (this.isKnownCall(symbol, this.cache.boolToStringSymbol)) {
+            this.flattenString(node, target.asBool().toString());
+          }
 
-          switch (content.kind()) {
-            case Skew.ContentKind.BOOL: {
-              this.flattenString(node, content.asBool().toString());
-              break;
-            }
+          else if (this.isKnownCall(symbol, this.cache.doubleToStringSymbol)) {
+            this.flattenString(node, target.asDouble().toString());
+          }
 
-            case Skew.ContentKind.INT: {
-              this.flattenString(node, content.asInt().toString());
-              break;
-            }
-
-            case Skew.ContentKind.STRING: {
-              this.flattenString(node, content.asString());
-              break;
-            }
+          else if (this.isKnownCall(symbol, this.cache.intToStringSymbol)) {
+            this.flattenString(node, target.asInt().toString());
           }
         }
+      }
+
+      else if (value.kind === Skew.NodeKind.NAME && this.isKnownCall(symbol, this.cache.stringCountSymbol) && node.lastChild().isString()) {
+        this.flattenInt(node, Unicode.codeUnitCountForCodePoints(in_string.codePoints(node.lastChild().asString()), this.options.target.stringEncoding()));
       }
     }
   };
@@ -12346,91 +12369,94 @@
     for (var i = 0, count2 = info.callSites.length; i < count2; ++i) {
       var callSite = info.callSites[i];
 
-      if (callSite !== null) {
-        var node = callSite.callNode;
-        assert(node.childCount() === (info.symbol.$arguments.length + 1 | 0));
+      // Some calls may be reused for other node types during constant folding
+      if (callSite === null || callSite.callNode.kind !== Skew.NodeKind.CALL) {
+        continue;
+      }
 
-        // Propagate spreading annotations that must be preserved through inlining
-        if (spreadingAnnotations !== null) {
-          var annotations = callSite.enclosingSymbol.annotations;
+      var node = callSite.callNode;
+      assert(node.childCount() === (info.symbol.$arguments.length + 1 | 0));
 
-          if (annotations === null) {
-            annotations = [];
-            callSite.enclosingSymbol.annotations = annotations;
-          }
+      // Propagate spreading annotations that must be preserved through inlining
+      if (spreadingAnnotations !== null) {
+        var annotations = callSite.enclosingSymbol.annotations;
 
-          for (var i2 = 0, list1 = spreadingAnnotations, count1 = list1.length; i2 < count1; ++i2) {
-            var annotation = list1[i2];
-
-            if (!(annotations.indexOf(annotation) !== -1)) {
-              annotations.push(annotation);
-            }
-          }
+        if (annotations === null) {
+          annotations = [];
+          callSite.enclosingSymbol.annotations = annotations;
         }
 
-        // Make sure each call site is inlined once by setting the call site to
-        // null. The call site isn't removed from the list since we don't want
-        // to mess up the indices of another call to inlineSymbol further up
-        // the call stack.
-        info.callSites[i] = null;
+        for (var i2 = 0, list1 = spreadingAnnotations, count1 = list1.length; i2 < count1; ++i2) {
+          var annotation = list1[i2];
 
-        // If there are unused arguments, drop those expressions entirely if
-        // they don't have side effects:
-        //
-        //   def bar(a int, b int) int {
-        //     return a
-        //   }
-        //
-        //   def test int {
-        //     return bar(0, foo(0)) + bar(1, 2)
-        //   }
-        //
-        // This should compile to:
-        //
-        //   def test int {
-        //     return bar(0, foo(0)) + 2
-        //   }
-        //
-        if (!(info.unusedArguments.length === 0)) {
-          var hasSideEffects = false;
-
-          for (var child = node.callValue().nextSibling(); child !== null; child = child.nextSibling()) {
-            if (!child.hasNoSideEffects()) {
-              hasSideEffects = true;
-              break;
-            }
-          }
-
-          if (hasSideEffects) {
-            continue;
+          if (!(annotations.indexOf(annotation) !== -1)) {
+            annotations.push(annotation);
           }
         }
+      }
 
-        var clone = info.inlineValue.clone();
-        var value = node.firstChild().remove();
-        var values = [];
+      // Make sure each call site is inlined once by setting the call site to
+      // null. The call site isn't removed from the list since we don't want
+      // to mess up the indices of another call to inlineSymbol further up
+      // the call stack.
+      info.callSites[i] = null;
 
-        while (node.hasChildren()) {
-          values.push(node.firstChild().remove());
+      // If there are unused arguments, drop those expressions entirely if
+      // they don't have side effects:
+      //
+      //   def bar(a int, b int) int {
+      //     return a
+      //   }
+      //
+      //   def test int {
+      //     return bar(0, foo(0)) + bar(1, 2)
+      //   }
+      //
+      // This should compile to:
+      //
+      //   def test int {
+      //     return bar(0, foo(0)) + 2
+      //   }
+      //
+      if (!(info.unusedArguments.length === 0)) {
+        var hasSideEffects = false;
+
+        for (var child = node.callValue().nextSibling(); child !== null; child = child.nextSibling()) {
+          if (!child.hasNoSideEffects()) {
+            hasSideEffects = true;
+            break;
+          }
         }
 
-        // Make sure not to update the type if the function dynamic because the
-        // expression inside the function may have a more specific type that is
-        // necessary during code generation
-        if (node.resolvedType !== Skew.Type.DYNAMIC) {
-          clone.resolvedType = node.resolvedType;
+        if (hasSideEffects) {
+          continue;
         }
+      }
 
-        assert(value.kind === Skew.NodeKind.NAME && value.symbol === info.symbol);
-        node.become(clone);
-        Skew.Inlining.recursivelySubstituteArguments(node, info.symbol.$arguments, values);
+      var clone = info.inlineValue.clone();
+      var value = node.firstChild().remove();
+      var values = [];
 
-        // Remove the inlined result entirely if appropriate
-        var parent = node.parent();
+      while (node.hasChildren()) {
+        values.push(node.firstChild().remove());
+      }
 
-        if (parent !== null && parent.kind === Skew.NodeKind.EXPRESSION && node.hasNoSideEffects()) {
-          parent.remove();
-        }
+      // Make sure not to update the type if the function dynamic because the
+      // expression inside the function may have a more specific type that is
+      // necessary during code generation
+      if (node.resolvedType !== Skew.Type.DYNAMIC) {
+        clone.resolvedType = node.resolvedType;
+      }
+
+      assert(value.kind === Skew.NodeKind.NAME && value.symbol === info.symbol);
+      node.become(clone);
+      Skew.Inlining.recursivelySubstituteArguments(node, info.symbol.$arguments, values);
+
+      // Remove the inlined result entirely if appropriate
+      var parent = node.parent();
+
+      if (parent !== null && parent.kind === Skew.NodeKind.EXPRESSION && node.hasNoSideEffects()) {
+        parent.remove();
       }
     }
   };
@@ -13344,7 +13370,7 @@
 
     if (!context.log.hasErrors()) {
       var resolver = new Skew.Resolving.Resolver(context.global, context.options, in_StringMap.clone(context.options.defines), context.cache, context.log);
-      resolver.constantFolder = new Skew.Folding.ConstantFolder(context.cache, new Skew.Resolving.ConstantResolver(resolver));
+      resolver.constantFolder = new Skew.Folding.ConstantFolder(context.cache, context.options, new Skew.Resolving.ConstantResolver(resolver));
       resolver.initializeGlobals();
       resolver.iterativelyMergeGuards();
       resolver.resolveGlobal();
@@ -17169,6 +17195,10 @@
     this.listType = null;
     this.stringMapType = null;
     this.stringType = null;
+    this.intToStringSymbol = null;
+    this.boolToStringSymbol = null;
+    this.doubleToStringSymbol = null;
+    this.stringCountSymbol = null;
     this.entryPointSymbol = null;
     this._environments = Object.create(null);
     this._lambdaTypes = Object.create(null);
@@ -17184,6 +17214,10 @@
     this.listType = Skew.TypeCache._loadGlobalClass(global, 'List', 0);
     this.stringMapType = Skew.TypeCache._loadGlobalClass(global, 'StringMap', 0);
     this.stringType = Skew.TypeCache._loadGlobalClass(global, 'string', Skew.Symbol.IS_VALUE_TYPE);
+    this.intToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.intType, 'toString');
+    this.boolToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.boolType, 'toString');
+    this.doubleToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.doubleType, 'toString');
+    this.stringCountSymbol = Skew.TypeCache._loadInstanceFunction(this.stringType, 'count');
   };
 
   Skew.TypeCache.prototype.isInteger = function(type) {
@@ -17539,6 +17573,13 @@
     return type;
   };
 
+  Skew.TypeCache._loadInstanceFunction = function(type, name) {
+    var symbol = in_StringMap.get(type.symbol.asObjectSymbol().members, name, null);
+    assert(symbol !== null);
+    assert(symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE || symbol.kind === Skew.SymbolKind.OVERLOADED_INSTANCE);
+    return symbol;
+  };
+
   Skew.TypeCache._hashParameters = function(parameters) {
     var hash = 0;
 
@@ -17851,6 +17892,63 @@
 
   var Unicode = {};
 
+  Unicode.codeUnitCountForCodePoints = function(codePoints, encoding) {
+    var count = 0;
+
+    switch (encoding) {
+      case Unicode.Encoding.UTF8: {
+        for (var i = 0, list = codePoints, count1 = list.length; i < count1; ++i) {
+          var codePoint = list[i];
+
+          if (codePoint < 128) {
+            ++count;
+          }
+
+          else if (codePoint < 2048) {
+            count += 2;
+          }
+
+          else if (codePoint < 65536) {
+            count += 3;
+          }
+
+          else {
+            count += 4;
+          }
+        }
+        break;
+      }
+
+      case Unicode.Encoding.UTF16: {
+        for (var i1 = 0, list1 = codePoints, count2 = list1.length; i1 < count2; ++i1) {
+          var codePoint1 = list1[i1];
+
+          if (codePoint1 < 65536) {
+            ++count;
+          }
+
+          else {
+            count += 2;
+          }
+        }
+        break;
+      }
+
+      case Unicode.Encoding.UTF32: {
+        count = codePoints.length;
+        break;
+      }
+    }
+
+    return count;
+  };
+
+  Unicode.Encoding = {
+    UTF8: 0,
+    UTF16: 1,
+    UTF32: 2
+  };
+
   Unicode.StringIterator = function() {
     this.value = '';
     this.index = 0;
@@ -17953,6 +18051,22 @@
     }
 
     return result;
+  };
+
+  in_string.codePoints = function(self) {
+    var codePoints = [];
+    var instance = Unicode.StringIterator.INSTANCE;
+    instance.reset(self, 0);
+
+    while (true) {
+      var codePoint = instance.nextCodePoint();
+
+      if (codePoint < 0) {
+        return codePoints;
+      }
+
+      codePoints.push(codePoint);
+    }
   };
 
   in_string.fromCodePoints = function(codePoints) {
@@ -18114,6 +18228,8 @@
   Skew.PassKind.strings = ['EMITTING', 'PARSING', 'LEXING', 'TOKEN_PROCESSING', 'CALL_GRAPH', 'FOLDING', 'GLOBALIZING', 'INLINING', 'LAMBDA_LIFTING', 'MERGING', 'MOTION', 'RENAMING', 'RESOLVING'];
   Skew.CSharpEmitter._isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'abstract', 0), 'as', 0), 'base', 0), 'bool', 0), 'break', 0), 'byte', 0), 'case', 0), 'catch', 0), 'char', 0), 'checked', 0), 'class', 0), 'const', 0), 'continue', 0), 'decimal', 0), 'default', 0), 'delegate', 0), 'do', 0), 'double', 0), 'else', 0), 'enum', 0), 'event', 0), 'explicit', 0), 'extern', 0), 'false', 0), 'finally', 0), 'fixed', 0), 'float', 0), 'for', 0), 'foreach', 0), 'goto', 0), 'if', 0), 'implicit', 0), 'in', 0), 'int', 0), 'interface', 0), 'internal', 0), 'is', 0), 'lock', 0), 'long', 0), 'namespace', 0), 'new', 0), 'null', 0), 'object', 0), 'operator', 0), 'out', 0), 'override', 0), 'params', 0), 'private', 0), 'protected', 0), 'public', 0), 'readonly', 0), 'ref', 0), 'return', 0), 'sbyte', 0), 'sealed', 0), 'short', 0), 'sizeof', 0), 'stackalloc', 0), 'static', 0), 'string', 0), 'struct', 0), 'switch', 0), 'this', 0), 'throw', 0), 'true', 0), 'try', 0), 'typeof', 0), 'uint', 0), 'ulong', 0), 'unchecked', 0), 'unsafe', 0), 'ushort', 0), 'using', 0), 'virtual', 0), 'void', 0), 'volatile', 0), 'while', 0);
   Skew.CPlusPlusEmitter._isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'alignas', 0), 'alignof', 0), 'and', 0), 'and_eq', 0), 'asm', 0), 'auto', 0), 'bitand', 0), 'bitor', 0), 'bool', 0), 'break', 0), 'case', 0), 'catch', 0), 'char', 0), 'char16_t', 0), 'char32_t', 0), 'class', 0), 'compl', 0), 'const', 0), 'const_cast', 0), 'constexpr', 0), 'continue', 0), 'decltype', 0), 'default', 0), 'delete', 0), 'do', 0), 'double', 0), 'dynamic_cast', 0), 'else', 0), 'enum', 0), 'explicit', 0), 'export', 0), 'extern', 0), 'false', 0), 'float', 0), 'for', 0), 'friend', 0), 'goto', 0), 'if', 0), 'INFINITY', 0), 'inline', 0), 'int', 0), 'long', 0), 'mutable', 0), 'namespace', 0), 'NAN', 0), 'new', 0), 'noexcept', 0), 'not', 0), 'not_eq', 0), 'NULL', 0), 'nullptr', 0), 'operator', 0), 'or', 0), 'or_eq', 0), 'private', 0), 'protected', 0), 'public', 0), 'register', 0), 'reinterpret_cast', 0), 'return', 0), 'short', 0), 'signed', 0), 'sizeof', 0), 'static', 0), 'static_assert', 0), 'static_cast', 0), 'struct', 0), 'switch', 0), 'template', 0), 'this', 0), 'thread_local', 0), 'throw', 0), 'true', 0), 'try', 0), 'typedef', 0), 'typeid', 0), 'typename', 0), 'union', 0), 'unsigned', 0), 'using', 0), 'virtual', 0), 'void', 0), 'volatile', 0), 'wchar_t', 0), 'while', 0), 'xor', 0), 'xor_eq', 0);
+  Skew.JavaScriptEmitter._first = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$';
+  Skew.JavaScriptEmitter._rest = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$0123456789';
   Skew.JavaScriptEmitter._isFunctionProperty = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'apply', 0), 'call', 0), 'length', 0), 'name', 0);
   Skew.JavaScriptEmitter._isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'arguments', 0), 'Boolean', 0), 'break', 0), 'case', 0), 'catch', 0), 'class', 0), 'const', 0), 'constructor', 0), 'continue', 0), 'Date', 0), 'debugger', 0), 'default', 0), 'delete', 0), 'do', 0), 'double', 0), 'else', 0), 'export', 0), 'extends', 0), 'false', 0), 'finally', 0), 'float', 0), 'for', 0), 'Function', 0), 'function', 0), 'if', 0), 'import', 0), 'in', 0), 'instanceof', 0), 'int', 0), 'let', 0), 'new', 0), 'null', 0), 'Number', 0), 'Object', 0), 'return', 0), 'String', 0), 'super', 0), 'this', 0), 'throw', 0), 'true', 0), 'try', 0), 'var', 0);
   Skew.NodeKind.strings = ['ANNOTATION', 'BLOCK', 'CASE', 'CATCH', 'VARIABLE', 'BREAK', 'CONTINUE', 'EXPRESSION', 'FOR', 'FOREACH', 'IF', 'RETURN', 'SWITCH', 'THROW', 'TRY', 'VARIABLES', 'WHILE', 'ASSIGN_INDEX', 'CALL', 'CAST', 'CONSTANT', 'DOT', 'DYNAMIC', 'HOOK', 'INDEX', 'INITIALIZER_LIST', 'INITIALIZER_MAP', 'LAMBDA', 'LAMBDA_TYPE', 'NAME', 'NULL', 'PAIR', 'PARAMETERIZE', 'SEQUENCE', 'SUPER', 'TYPE', 'COMPLEMENT', 'DECREMENT', 'INCREMENT', 'NEGATIVE', 'NOT', 'POSITIVE', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'IN', 'IS', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'POWER', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_SUBTRACT'];
