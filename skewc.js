@@ -18053,6 +18053,17 @@
     return result;
   };
 
+  in_string.fromCodePoints = function(codePoints) {
+    var builder = new StringBuilder();
+
+    for (var i = 0, list = codePoints, count1 = list.length; i < count1; ++i) {
+      var codePoint = list[i];
+      builder.append(in_string.fromCodePoint(codePoint));
+    }
+
+    return builder.toString();
+  };
+
   in_string.codePoints = function(self) {
     var codePoints = [];
     var instance = Unicode.StringIterator.INSTANCE;
@@ -18069,24 +18080,8 @@
     }
   };
 
-  in_string.fromCodePoints = function(codePoints) {
-    var builder = new StringBuilder();
-
-    for (var i = 0, list = codePoints, count1 = list.length; i < count1; ++i) {
-      var codePoint = list[i];
-
-      if (codePoint < 65536) {
-        builder.append(String.fromCharCode(codePoint));
-      }
-
-      else {
-        var adjusted = codePoint - 65536 | 0;
-        builder.append(String.fromCharCode((adjusted >> 10) + 55296 | 0));
-        builder.append(String.fromCharCode((adjusted & (1 << 10) - 1) + 56320 | 0));
-      }
-    }
-
-    return builder.toString();
+  in_string.fromCodePoint = function(codePoint) {
+    return codePoint < 65536 ? String.fromCharCode(codePoint) : String.fromCharCode((codePoint - 65536 >> 10) + 55296 | 0) + String.fromCharCode((codePoint - 65536 & (1 << 10) - 1) + 56320 | 0);
   };
 
   var in_List = {};

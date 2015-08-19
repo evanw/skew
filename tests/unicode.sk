@@ -7,6 +7,10 @@ namespace Skew.Tests {
     testSimple("codePoints " + text, expectString => expectString(toString(codePoints), toString(text.codePoints)))
     testSimple("fromCodePoints " + text, expectString => expectString(text, string.fromCodePoints(codePoints)))
     testSimple("codeUnits " + text, expectString => expectString(text, string.fromCodeUnits(text.codeUnits)))
+    for codePoint in codePoints {
+      testSimple("fromCodePoint " + codePoint.toString, expectString =>
+        expectString(toString([codePoint]), toString(string.fromCodePoint(codePoint).codePoints)))
+    }
   }
 
   def testUnicodeCount(text string, count int) {

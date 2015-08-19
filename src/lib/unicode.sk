@@ -131,54 +131,38 @@ class string {
 }
 
 namespace string {
+  def fromCodePoints(codePoints List<int>) string {
+    var builder = StringBuilder.new
+    for codePoint in codePoints {
+      builder.append(fromCodePoint(codePoint))
+    }
+    return builder.toString
+  }
+
   if Unicode.STRING_ENCODING == .UTF8 {
-    def fromCodePoints(codePoints List<int>) string {
-      var builder = StringBuilder.new
-
-      for codePoint in codePoints {
-        if codePoint < 0x80 {
-          builder.append(fromCodeUnit(codePoint))
-        } else {
-          if codePoint < 0x800 {
-            builder.append(fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0))
-          } else {
-            if codePoint < 0x10000 {
-              builder.append(fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0))
-            } else {
-              builder.append(fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0))
-              builder.append(fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80))
-            }
-            builder.append(fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80))
-          }
-          builder.append(fromCodeUnit((codePoint & 0x3F) | 0x80))
-        }
-      }
-
-      return builder.toString
+    def fromCodePoint(codePoint int) string {
+      return
+        codePoint < 0x80 ? fromCodeUnit(codePoint) : (
+          codePoint < 0x800 ? fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0) : (
+            codePoint < 0x10000 ? fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0) : (
+              fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0)
+            ) + fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80)
+          ) + fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80)
+        ) + fromCodeUnit((codePoint & 0x3F) | 0x80)
     }
   }
 
   else if Unicode.STRING_ENCODING == .UTF16 {
-    def fromCodePoints(codePoints List<int>) string {
-      var builder = StringBuilder.new
-
-      for codePoint in codePoints {
-        if codePoint < 0x10000 {
-          builder.append(fromCodeUnit(codePoint))
-        } else {
-          var adjusted = codePoint - 0x10000
-          builder.append(fromCodeUnit((adjusted >> 10) + 0xD800))
-          builder.append(fromCodeUnit((adjusted & ((1 << 10) - 1)) + 0xDC00))
-        }
-      }
-
-      return builder.toString
+    def fromCodePoint(codePoint int) string {
+      return codePoint < 0x10000 ? fromCodeUnit(codePoint) :
+        fromCodeUnit(((codePoint - 0x10000) >> 10) + 0xD800) +
+        fromCodeUnit(((codePoint - 0x10000) & ((1 << 10) - 1)) + 0xDC00)
     }
   }
 
   else {
-    def fromCodePoints(codePoints List<int>) string {
-      return fromCodeUnits(codePoints)
+    def fromCodePoint(codePoint int) string {
+      return fromCodeUnit(codePoint)
     }
   }
 }
