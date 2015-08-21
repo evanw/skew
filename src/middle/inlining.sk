@@ -175,6 +175,9 @@ namespace Skew.Inlining {
     def new(graph CallGraph) {
       # Create the nodes in the graph
       for callInfo in graph.callInfo {
+        if callInfo.symbol.isInliningDisabled {
+          continue
+        }
         var info = _createInliningInfo(callInfo)
         if info != null {
           symbolToInfoIndex[info.symbol.id] = inliningInfo.count

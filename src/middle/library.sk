@@ -16,6 +16,7 @@ def @deprecated(message string)
 def @entry
 def @export
 def @import
+def @noinline
 def @prefer
 def @rename(name string)
 def @skip

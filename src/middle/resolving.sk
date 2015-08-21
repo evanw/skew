@@ -832,7 +832,7 @@ namespace Skew.Resolving {
         }
       }
 
-      var strings = VariableSymbol.new(.VARIABLE_GLOBAL, parent.scope.generateName("strings"))
+      var strings = VariableSymbol.new(.VARIABLE_GLOBAL, parent.scope.generateName("_strings"))
       strings.value = names
       strings.flags |= Symbol.IS_PROTECTED | Symbol.IS_CONST
       strings.state = .INITIALIZED
@@ -1320,6 +1320,7 @@ namespace Skew.Resolving {
           case Symbol.IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
           case Symbol.IS_EXPORTED { isValid = !symbol.isImported }
           case Symbol.IS_IMPORTED { isValid = !symbol.isExported && (!symbol.kind.isFunction || symbol.asFunctionSymbol.block == null) }
+          case Symbol.IS_INLINING_DISABLED { isValid = symbol.kind.isFunction }
           case Symbol.IS_PREFERRED { isValid = symbol.kind.isFunction }
           case Symbol.IS_RENAMED {}
           case Symbol.IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
@@ -2723,6 +2724,7 @@ namespace Skew.Resolving {
       "@entry": Symbol.IS_ENTRY_POINT,
       "@export": Symbol.IS_EXPORTED,
       "@import": Symbol.IS_IMPORTED,
+      "@noinline": Symbol.IS_INLINING_DISABLED,
       "@prefer": Symbol.IS_PREFERRED,
       "@rename": Symbol.IS_RENAMED,
       "@skip": Symbol.IS_SKIPPED,

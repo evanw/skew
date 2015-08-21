@@ -103,17 +103,18 @@ namespace Skew {
     const IS_ENTRY_POINT = 1 << 9
     const IS_EXPORTED = 1 << 10
     const IS_IMPORTED = 1 << 11
-    const IS_PREFERRED = 1 << 12
-    const IS_PROTECTED = 1 << 13
-    const IS_RENAMED = 1 << 14
-    const IS_SKIPPED = 1 << 15
-    const SHOULD_SPREAD = 1 << 16
+    const IS_INLINING_DISABLED = 1 << 12
+    const IS_PREFERRED = 1 << 13
+    const IS_PROTECTED = 1 << 14
+    const IS_RENAMED = 1 << 15
+    const IS_SKIPPED = 1 << 16
+    const SHOULD_SPREAD = 1 << 17
 
     # Pass-specific flags
-    const IS_MERGED = 1 << 17
-    const IS_OBSOLETE = 1 << 18
-    const IS_PRIMARY_CONSTRUCTOR = 1 << 19
-    const IS_VIRTUAL = 1 << 20
+    const IS_MERGED = 1 << 18
+    const IS_OBSOLETE = 1 << 19
+    const IS_PRIMARY_CONSTRUCTOR = 1 << 20
+    const IS_VIRTUAL = 1 << 21
   }
 
   class Symbol {
@@ -141,15 +142,16 @@ namespace Skew {
     def shouldInferReturnType bool    { return (flags & SHOULD_INFER_RETURN_TYPE) != 0 }
 
     # Modifiers
-    def isDeprecated bool { return (flags & IS_DEPRECATED) != 0 }
-    def isEntryPoint bool { return (flags & IS_ENTRY_POINT) != 0 }
-    def isExported bool   { return (flags & IS_EXPORTED) != 0 }
-    def isImported bool   { return (flags & IS_IMPORTED) != 0 }
-    def isPreferred bool  { return (flags & IS_PREFERRED) != 0 }
-    def isProtected bool  { return (flags & IS_PROTECTED) != 0 }
-    def isRenamed bool    { return (flags & IS_RENAMED) != 0 }
-    def isSkipped bool    { return (flags & IS_SKIPPED) != 0 }
-    def shouldSpread bool { return (flags & SHOULD_SPREAD) != 0 }
+    def isDeprecated bool       { return (flags & IS_DEPRECATED) != 0 }
+    def isEntryPoint bool       { return (flags & IS_ENTRY_POINT) != 0 }
+    def isExported bool         { return (flags & IS_EXPORTED) != 0 }
+    def isImported bool         { return (flags & IS_IMPORTED) != 0 }
+    def isInliningDisabled bool { return (flags & IS_INLINING_DISABLED) != 0 }
+    def isPreferred bool        { return (flags & IS_PREFERRED) != 0 }
+    def isProtected bool        { return (flags & IS_PROTECTED) != 0 }
+    def isRenamed bool          { return (flags & IS_RENAMED) != 0 }
+    def isSkipped bool          { return (flags & IS_SKIPPED) != 0 }
+    def shouldSpread bool       { return (flags & SHOULD_SPREAD) != 0 }
 
     # Pass-specific flags
     def isMerged bool             { return (flags & IS_MERGED) != 0 }
