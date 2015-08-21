@@ -2137,7 +2137,7 @@ namespace Skew {
 
       # Cast to string
       else if type == _cache.stringType {
-        if valueType != _cache.stringType {
+        if valueType != _cache.stringType && valueType != .NULL {
           node.become(Node.createBinary(.ADD, value.remove, Node.createString("").withType(_cache.stringType)).withType(_cache.stringType).withRange(node.range))
         }
       }

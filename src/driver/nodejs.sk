@@ -142,7 +142,7 @@ namespace Skew {
       if contents == null {
         log.commandLineErrorUnreadableFile(file, path)
       } else {
-        result.append(Source.new(path, contents.value))
+        result.append(Source.new(path, contents))
       }
     }
     return result

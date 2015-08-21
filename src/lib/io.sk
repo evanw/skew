@@ -1,12 +1,12 @@
 namespace IO {
-  def readFile(path string) Box<string>
+  def readFile(path string) string
   def writeFile(path string, contents string) bool
 
   if TARGET == .JAVASCRIPT {
-    def readFile(path string) Box<string> {
+    def readFile(path string) string {
       try {
         var contents string = dynamic.require("fs").readFileSync(path, "utf8")
-        return Box<string>.new(contents.replaceAll("\r\n", "\n"))
+        return contents.replaceAll("\r\n", "\n")
       }
       return null
     }
@@ -21,10 +21,10 @@ namespace IO {
   }
 
   else if TARGET == .CSHARP {
-    def readFile(path string) Box<string> {
+    def readFile(path string) string {
       try {
         var contents string = dynamic.System.IO.File.ReadAllText(path)
-        return Box<string>.new(contents.replaceAll("\r\n", "\n"))
+        return contents.replaceAll("\r\n", "\n")
       }
       return null
     }

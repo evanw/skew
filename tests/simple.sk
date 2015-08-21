@@ -1699,6 +1699,9 @@ def main(x Bar) {
 <stdin>:14:3: error: No overload of \"foo\" was found that takes 1 argument of type double
   x.foo(0.5)
   ~~~~~
+<stdin>:15:3: error: Multiple matching overloads of \"foo\" were found that can take 1 argument of type null
+  x.foo(null)
+  ~~~~~
 ")
 
 test("

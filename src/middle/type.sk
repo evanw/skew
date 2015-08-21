@@ -165,7 +165,7 @@ namespace Skew {
       intType = _loadGlobalClass(global, "int", Symbol.IS_VALUE_TYPE)
       listType = _loadGlobalClass(global, "List", 0)
       stringMapType = _loadGlobalClass(global, "StringMap", 0)
-      stringType = _loadGlobalClass(global, "string", Symbol.IS_VALUE_TYPE)
+      stringType = _loadGlobalClass(global, "string", 0)
       intToStringSymbol = _loadInstanceFunction(intType, "toString")
       boolToStringSymbol = _loadInstanceFunction(boolType, "toString")
       doubleToStringSymbol = _loadInstanceFunction(doubleType, "toString")

@@ -159,5 +159,15 @@ def foo string {
 (function(){foo=function(){return (0).toString()}})();
 ").jsMinify
 
+# Make sure null is allowed to convert to string
+test("
+@export
+def foo string {
+  return null
+}
+", "
+(function(){foo=function(){return null}})();
+").jsMinify
+
   }
 }

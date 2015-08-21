@@ -635,7 +635,7 @@
       }
 
       else {
-        result.push(new Skew.Source(path, contents.value));
+        result.push(new Skew.Source(path, contents));
       }
     }
 
@@ -5712,7 +5712,7 @@
 
     // Cast to string
     else if (type === this._cache.stringType) {
-      if (valueType !== this._cache.stringType) {
+      if (valueType !== this._cache.stringType && valueType !== Skew.Type.NULL) {
         node.become(Skew.Node.createBinary(Skew.NodeKind.ADD, value.remove(), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.StringContent('')).withType(this._cache.stringType)).withType(this._cache.stringType).withRange(node.range));
       }
     }
@@ -17213,7 +17213,7 @@
     this.intType = Skew.TypeCache._loadGlobalClass(global, 'int', Skew.Symbol.IS_VALUE_TYPE);
     this.listType = Skew.TypeCache._loadGlobalClass(global, 'List', 0);
     this.stringMapType = Skew.TypeCache._loadGlobalClass(global, 'StringMap', 0);
-    this.stringType = Skew.TypeCache._loadGlobalClass(global, 'string', Skew.Symbol.IS_VALUE_TYPE);
+    this.stringType = Skew.TypeCache._loadGlobalClass(global, 'string', 0);
     this.intToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.intType, 'toString');
     this.boolToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.boolType, 'toString');
     this.doubleToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.doubleType, 'toString');
@@ -17988,7 +17988,7 @@
   IO.readFile = function(path) {
     try {
       var contents = require('fs').readFileSync(path, 'utf8');
-      return new Box(contents.split('\r\n').join('\n'));
+      return contents.split('\r\n').join('\n');
     }
 
     catch (e) {
