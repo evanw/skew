@@ -2,6 +2,105 @@ namespace Skew.Tests {
   def testSimple {
 
 test("
+var x = 0b2
+", "
+<stdin>:1:10: error: Expected NEWLINE but found IDENTIFIER
+var x = 0b2
+         ~~
+")
+
+test("
+var x = 0b02
+", "
+<stdin>:1:12: error: Expected NEWLINE but found INT
+var x = 0b02
+           ^
+")
+
+test("
+var x = 0o8
+", "
+<stdin>:1:10: error: Expected NEWLINE but found IDENTIFIER
+var x = 0o8
+         ~~
+")
+
+test("
+var x = 0o08
+", "
+<stdin>:1:12: error: Expected NEWLINE but found INT
+var x = 0o08
+           ^
+")
+
+test("
+var x = 0xG
+", "
+<stdin>:1:10: error: Expected NEWLINE but found IDENTIFIER
+var x = 0xG
+         ~~
+")
+
+test("
+var x = 0x0G
+", "
+<stdin>:1:12: error: Expected NEWLINE but found IDENTIFIER
+var x = 0x0G
+           ^
+")
+
+test("
+def main List<double> {
+  return [
+    0,
+    0b10,
+    0o76543210,
+    0xFEDBCA98,
+    0.5,
+    1e100,
+    1e+100,
+    1e-100,
+    0.5e100,
+    0.5e+100,
+    0.5e-100,
+    0.toString,
+    0.5.toString,
+    1e100.toString,
+    1e+100.toString,
+    1e-100.toString,
+    0.5e100.toString,
+    0.5e+100.toString,
+    0.5e-100.toString,
+  ]
+}
+", "
+<stdin>:14:5: error: Cannot convert from type \"string\" to type \"double\"
+    0.toString,
+    ~~~~~~~~~~
+<stdin>:15:5: error: Cannot convert from type \"string\" to type \"double\"
+    0.5.toString,
+    ~~~~~~~~~~~~
+<stdin>:16:5: error: Cannot convert from type \"string\" to type \"double\"
+    1e100.toString,
+    ~~~~~~~~~~~~~~
+<stdin>:17:5: error: Cannot convert from type \"string\" to type \"double\"
+    1e+100.toString,
+    ~~~~~~~~~~~~~~~
+<stdin>:18:5: error: Cannot convert from type \"string\" to type \"double\"
+    1e-100.toString,
+    ~~~~~~~~~~~~~~~
+<stdin>:19:5: error: Cannot convert from type \"string\" to type \"double\"
+    0.5e100.toString,
+    ~~~~~~~~~~~~~~~~
+<stdin>:20:5: error: Cannot convert from type \"string\" to type \"double\"
+    0.5e+100.toString,
+    ~~~~~~~~~~~~~~~~~
+<stdin>:21:5: error: Cannot convert from type \"string\" to type \"double\"
+    0.5e-100.toString,
+    ~~~~~~~~~~~~~~~~~
+")
+
+test("
 class Foo<T> {
   def foo T
 }

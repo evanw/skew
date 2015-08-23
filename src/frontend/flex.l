@@ -95,6 +95,7 @@
 ["](\\.|[^\\"])*["]               STRING;
 @[A-Za-z_][A-Za-z0-9_]*           ANNOTATION;
 [A-Za-z_][A-Za-z0-9_]*            IDENTIFIER;
+[0-9]+\.[0-9]+[eE][-+]?[0-9]+     DOUBLE;
 [0-9]+\.[0-9]+                    DOUBLE;
 0b[0-1]+                          INT_BINARY;
 0o[0-7]+                          INT_OCTAL;
