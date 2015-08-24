@@ -14568,10 +14568,6 @@
       return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.BoolContent(false)).withType(type);
     }
 
-    if (type === this.cache.stringType) {
-      return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.StringContent('')).withType(type);
-    }
-
     if (type.isEnum()) {
       return Skew.Node.createCast(new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this.cache.intType), new Skew.Node(Skew.NodeKind.TYPE).withType(type)).withType(type);
     }

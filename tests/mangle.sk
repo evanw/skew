@@ -1,6 +1,30 @@
 namespace Skew.Tests {
   def testMangle {
 
+# Test default values
+test("
+@export
+def main string {
+  var i int
+  var s string
+  var d double
+  var b bool
+  var f Foo
+  return i.toString + d.toString + b.toString + s + f.toString
+}
+
+class Foo {
+  def toString string
+}
+", "
+(function() {
+  main = function() {
+    var a = null, b = null;
+    return '00false' + a + b.c();
+  };
+})();
+").jsMangle.foldAllConstants
+
 # Test associative operator rotation
 test("
 @export

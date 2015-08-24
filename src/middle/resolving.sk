@@ -999,10 +999,6 @@ namespace Skew.Resolving {
         return Node.createBool(false).withType(type)
       }
 
-      if type == cache.stringType {
-        return Node.createString("").withType(type)
-      }
-
       if type.isEnum {
         return Node.createCast(Node.createInt(0).withType(cache.intType), Node.createType(type)).withType(type)
       }
