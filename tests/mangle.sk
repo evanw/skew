@@ -22,6 +22,7 @@ class Foo {
     var a = null, b = null;
     return '00false' + a + b.c();
   };
+  var d = {};
 })();
 ").jsMangle.foldAllConstants
 
@@ -1255,6 +1256,48 @@ def main {
   b();
 })();
 ").jsMangle.inlineAllFunctions
+
+# Make sure classes with unused constructors are still emitted
+test("
+class A.B.C {}
+
+namespace A.B.C {
+  def foo {}
+}
+
+namespace D.E.F {
+  def foo {}
+}
+
+@entry
+def main {
+  A.B.C.foo
+  D.E.F.foo
+}
+", "
+(function() {
+  function main() {
+    A.B.C.foo();
+    D.E.F.foo();
+  }
+
+  var A = {};
+  A.B = {};
+  A.B.C = {};
+
+  A.B.C.foo = function() {
+  };
+
+  var D = {};
+  D.E = {};
+  D.E.F = {};
+
+  D.E.F.foo = function() {
+  };
+
+  main();
+})();
+").js
 
   }
 }

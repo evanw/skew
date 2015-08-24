@@ -3972,6 +3972,7 @@
       return;
     }
 
+    var foundPrimaryConstructor = false;
     this._namespacePrefix = symbol.parent !== null ? Skew.JavaScriptEmitter._computeNamespacePrefix(symbol.parent.asObjectSymbol()) : '';
 
     switch (symbol.kind) {
@@ -4029,8 +4030,6 @@
       }
 
       case Skew.SymbolKind.OBJECT_CLASS: {
-        var foundPrimaryConstructor = false;
-
         for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
           var $function = list1[i1];
 
@@ -4057,9 +4056,10 @@
           }
         }
 
-        // Ignore this entire class if it's never constructed
+        // Emit a namespace if the class is never constructed
         if (!foundPrimaryConstructor) {
-          return;
+          this._emit(this._indent + (this._namespacePrefix === '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{}');
+          this._emitSemicolonAfterStatement();
         }
         break;
       }
@@ -4069,10 +4069,11 @@
       this._namespacePrefix += Skew.JavaScriptEmitter._mangleName(symbol) + '.';
     }
 
+    // Ignore instance functions if the class is never constructed
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
       var function1 = list2[i2];
 
-      if (!function1.isPrimaryConstructor()) {
+      if (foundPrimaryConstructor ? !function1.isPrimaryConstructor() : function1.kind === Skew.SymbolKind.FUNCTION_GLOBAL) {
         this._emitFunction(function1);
       }
     }

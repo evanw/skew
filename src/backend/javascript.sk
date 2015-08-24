@@ -528,6 +528,7 @@ namespace Skew {
         return
       }
 
+      var foundPrimaryConstructor = false
       _namespacePrefix = symbol.parent != null ? _computeNamespacePrefix(symbol.parent.asObjectSymbol) : ""
 
       switch symbol.kind {
@@ -573,7 +574,6 @@ namespace Skew {
         }
 
         case .OBJECT_CLASS {
-          var foundPrimaryConstructor = false
           for function in symbol.functions {
             if function.isPrimaryConstructor {
               if function.comments == null && symbol.comments != null {
@@ -594,9 +594,10 @@ namespace Skew {
             }
           }
 
-          # Ignore this entire class if it's never constructed
+          # Emit a namespace if the class is never constructed
           if !foundPrimaryConstructor {
-            return
+            _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
+            _emitSemicolonAfterStatement
           }
         }
       }
@@ -605,8 +606,9 @@ namespace Skew {
         _namespacePrefix += _mangleName(symbol) + "."
       }
 
+      # Ignore instance functions if the class is never constructed
       for function in symbol.functions {
-        if !function.isPrimaryConstructor {
+        if foundPrimaryConstructor ? !function.isPrimaryConstructor : function.kind == .FUNCTION_GLOBAL {
           _emitFunction(function)
         }
       }

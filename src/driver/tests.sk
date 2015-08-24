@@ -13,6 +13,11 @@ namespace Skew.Tests {
       expectString(trimNewlines(_expected), trimNewlines(output))
     }
 
+    def js CompilerTest {
+      _options.target = JavaScriptTarget.new
+      return self
+    }
+
     def jsMangle CompilerTest {
       _options.target = JavaScriptTarget.new
       _options.jsMangle = true
