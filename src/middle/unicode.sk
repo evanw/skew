@@ -1,3 +1,5 @@
+namespace Skew {
+  const UNICODE_LIBRARY = "
 namespace Unicode {
   enum Encoding {
     UTF8
@@ -10,7 +12,7 @@ namespace Unicode {
     .UTF32
 
   class StringIterator {
-    var value = ""
+    var value = \"\"
     var index = 0
     var stop = 0
 
@@ -165,4 +167,6 @@ namespace string {
       return fromCodeUnit(codePoint)
     }
   }
+}
+"
 }

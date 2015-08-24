@@ -2,7 +2,6 @@ SOURCES += src/backend/*.sk
 SOURCES += src/core/*.sk
 SOURCES += src/frontend/*.sk
 SOURCES += src/lib/timestamp.sk
-SOURCES += src/lib/unicode.sk
 SOURCES += src/middle/*.sk
 
 SOURCES_SKEWC += $(SOURCES)
