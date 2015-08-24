@@ -12,7 +12,7 @@ namespace Skew {
       context.cache.loadGlobals(context.log, context.global)
       if !context.log.hasErrors {
         var resolver = Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log)
-        resolver.constantFolder = Folding.ConstantFolder.new(context.cache, context.options, Resolving.ConstantResolver.new(resolver))
+        resolver.constantFolder = Folding.ConstantFolder.new(context.cache, context.options, symbol => resolver.initializeSymbol(symbol))
         resolver.initializeGlobals
         resolver.iterativelyMergeGuards
         resolver.resolveGlobal
@@ -1566,7 +1566,7 @@ namespace Skew.Resolving {
           # Check for a constant variable, which may just be read-only with a
           # value determined at runtime
           if symbol != null && (mustEnsureConstantIntegers ? symbol.kind == .VARIABLE_ENUM : symbol.kind.isVariable && symbol.isConst) {
-            var constant = constantFolder.constantLookup.constantForSymbol(symbol.asVariableSymbol)
+            var constant = constantFolder.constantForSymbol(symbol.asVariableSymbol)
             if constant == null || constant.kind != .INT {
               allValuesAreIntegers = false
               continue
@@ -2769,32 +2769,6 @@ namespace Skew.Resolving {
         symbol.overloaded = overloaded
         overloaded.scope.asObjectScope.symbol.members[symbol.name] = overloaded
       }
-    }
-  }
-
-  class ConstantResolver : Folding.ConstantLookup {
-    const map IntMap<Content> = {}
-    const resolver Resolver
-
-    over constantForSymbol(symbol VariableSymbol) Content {
-      if symbol.id in map {
-        return map[symbol.id]
-      }
-
-      resolver.initializeSymbol(symbol)
-
-      var constant Content = null
-      var value = symbol.value
-
-      if symbol.isConst && value != null {
-        resolver.constantFolder.foldConstants(value)
-        if value.kind == .CONSTANT {
-          constant = value.content
-        }
-      }
-
-      map[symbol.id] = constant
-      return constant
     }
   }
 }

@@ -11381,18 +11381,16 @@
   };
 
   Skew.FoldingPass.prototype.run = function(context) {
-    new Skew.Folding.ConstantFolder(context.cache, context.options, new Skew.Folding.ConstantCache()).visitObject(context.global);
+    new Skew.Folding.ConstantFolder(context.cache, context.options, null).visitObject(context.global);
   };
 
   Skew.Folding = {};
 
-  Skew.Folding.ConstantLookup = function() {
-  };
-
-  Skew.Folding.ConstantFolder = function(cache, options, constantLookup) {
+  Skew.Folding.ConstantFolder = function(cache, options, prepareSymbol) {
     this.cache = cache;
     this.options = options;
-    this.constantLookup = constantLookup;
+    this.prepareSymbol = prepareSymbol;
+    this.constantCache = Object.create(null);
   };
 
   Skew.Folding.ConstantFolder.prototype.visitObject = function(symbol) {
@@ -11660,7 +11658,7 @@
       next = child.nextSibling();
       var symbol = child.symbol.asVariableSymbol();
 
-      if (symbol.isConst() && this.constantLookup.constantForSymbol(symbol) !== null) {
+      if (symbol.isConst() && this.constantForSymbol(symbol) !== null) {
         child.remove();
       }
     }
@@ -11717,7 +11715,7 @@
     // Only replace this with a constant if the target has no side effects.
     // This catches constants declared on imported types.
     if (symbol !== null && symbol.isConst() && (node.dotTarget() === null || node.dotTarget().hasNoSideEffects())) {
-      var content = this.constantLookup.constantForSymbol(symbol.asVariableSymbol());
+      var content = this.constantForSymbol(symbol.asVariableSymbol());
 
       if (content !== null) {
         this.flatten(node, content);
@@ -11730,7 +11728,7 @@
 
     // Don't fold loop variables since they aren't actually constant across loop iterations
     if (symbol !== null && symbol.isConst() && !symbol.isLoopVariable()) {
-      var content = this.constantLookup.constantForSymbol(symbol.asVariableSymbol());
+      var content = this.constantForSymbol(symbol.asVariableSymbol());
 
       if (content !== null) {
         this.flatten(node, content);
@@ -12317,41 +12315,28 @@
     return result;
   };
 
-  Skew.Folding.ConstantCache = function() {
-    Skew.Folding.ConstantLookup.call(this);
-    this.map = Object.create(null);
-  };
+  Skew.Folding.ConstantFolder.prototype.constantForSymbol = function(symbol) {
+    if (symbol.id in this.constantCache) {
+      return this.constantCache[symbol.id];
+    }
 
-  __extends(Skew.Folding.ConstantCache, Skew.Folding.ConstantLookup);
-
-  Skew.Folding.ConstantCache.prototype.constantForSymbol = function(symbol) {
-    if (symbol.id in this.map) {
-      return this.map[symbol.id];
+    if (this.prepareSymbol !== null) {
+      this.prepareSymbol(symbol);
     }
 
     var constant = null;
     var value = symbol.value;
 
     if (symbol.isConst() && value !== null) {
-      switch (value.kind) {
-        case Skew.NodeKind.CONSTANT: {
-          constant = value.content;
-          break;
-        }
+      this.constantCache[symbol.id] = null;
+      this.foldConstants(value);
 
-        case Skew.NodeKind.NAME:
-        case Skew.NodeKind.DOT: {
-          var target = value.symbol;
-
-          if (target !== null && Skew.SymbolKind.isVariable(target.kind)) {
-            constant = this.constantForSymbol(target.asVariableSymbol());
-          }
-          break;
-        }
+      if (value.kind === Skew.NodeKind.CONSTANT) {
+        constant = value.content;
       }
     }
 
-    this.map[symbol.id] = constant;
+    this.constantCache[symbol.id] = constant;
     return constant;
   };
 
@@ -13474,7 +13459,9 @@
 
     if (!context.log.hasErrors()) {
       var resolver = new Skew.Resolving.Resolver(context.global, context.options, in_StringMap.clone(context.options.defines), context.cache, context.log);
-      resolver.constantFolder = new Skew.Folding.ConstantFolder(context.cache, context.options, new Skew.Resolving.ConstantResolver(resolver));
+      resolver.constantFolder = new Skew.Folding.ConstantFolder(context.cache, context.options, function(symbol) {
+        resolver.initializeSymbol(symbol);
+      });
       resolver.initializeGlobals();
       resolver.iterativelyMergeGuards();
       resolver.resolveGlobal();
@@ -15336,7 +15323,7 @@
         // Check for a constant variable, which may just be read-only with a
         // value determined at runtime
         if (symbol !== null && (mustEnsureConstantIntegers ? symbol.kind === Skew.SymbolKind.VARIABLE_ENUM : Skew.SymbolKind.isVariable(symbol.kind) && symbol.isConst())) {
-          var constant = this.constantFolder.constantLookup.constantForSymbol(symbol.asVariableSymbol());
+          var constant = this.constantFolder.constantForSymbol(symbol.asVariableSymbol());
 
           if (constant === null || constant.kind() !== Skew.ContentKind.INT) {
             allValuesAreIntegers = false;
@@ -16663,35 +16650,6 @@
   };
 
   Skew.Resolving.Resolver.GuardMergingFailure = function() {
-  };
-
-  Skew.Resolving.ConstantResolver = function(resolver) {
-    Skew.Folding.ConstantLookup.call(this);
-    this.map = Object.create(null);
-    this.resolver = resolver;
-  };
-
-  __extends(Skew.Resolving.ConstantResolver, Skew.Folding.ConstantLookup);
-
-  Skew.Resolving.ConstantResolver.prototype.constantForSymbol = function(symbol) {
-    if (symbol.id in this.map) {
-      return this.map[symbol.id];
-    }
-
-    this.resolver.initializeSymbol(symbol);
-    var constant = null;
-    var value = symbol.value;
-
-    if (symbol.isConst() && value !== null) {
-      this.resolver.constantFolder.foldConstants(value);
-
-      if (value.kind === Skew.NodeKind.CONSTANT) {
-        constant = value.content;
-      }
-    }
-
-    this.map[symbol.id] = constant;
-    return constant;
   };
 
   Skew.ScopeKind = {

@@ -1299,5 +1299,28 @@ def main {
 })();
 ").js
 
+# Make sure inlined helper functions are also constant folded
+test("
+def bar(a int, b int) int {
+  return 'A' | a << 8 | 'B' << 16 | b << 24
+}
+
+@entry
+def main int {
+  const a = 1
+  const b = 2
+  const foo = bar(a, b)
+  return foo
+}
+", "
+(function() {
+  function a() {
+    return 37880129;
+  }
+
+  process.exit(a());
+})();
+").jsMangle.foldAllConstants.inlineAllFunctions
+
   }
 }

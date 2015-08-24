@@ -9,20 +9,17 @@ namespace Skew {
     }
 
     over run(context PassContext) {
-      Folding.ConstantFolder.new(context.cache, context.options, Folding.ConstantCache.new).visitObject(context.global)
+      Folding.ConstantFolder.new(context.cache, context.options, null).visitObject(context.global)
     }
   }
 }
 
 namespace Skew.Folding {
-  class ConstantLookup {
-    def constantForSymbol(symbol VariableSymbol) Content
-  }
-
   class ConstantFolder {
     const cache TypeCache
     const options CompilerOptions
-    const constantLookup ConstantLookup
+    const prepareSymbol fn(Symbol)
+    const constantCache IntMap<Content> = {}
 
     def visitObject(symbol ObjectSymbol) {
       for object in symbol.objects {
@@ -258,7 +255,7 @@ namespace Skew.Folding {
         assert(child.kind == .VARIABLE)
         next = child.nextSibling
         var symbol = child.symbol.asVariableSymbol
-        if symbol.isConst && constantLookup.constantForSymbol(symbol) != null {
+        if symbol.isConst && constantForSymbol(symbol) != null {
           child.remove
         }
       }
@@ -314,7 +311,7 @@ namespace Skew.Folding {
       # Only replace this with a constant if the target has no side effects.
       # This catches constants declared on imported types.
       if symbol != null && symbol.isConst && (node.dotTarget == null || node.dotTarget.hasNoSideEffects) {
-        var content = constantLookup.constantForSymbol(symbol.asVariableSymbol)
+        var content = constantForSymbol(symbol.asVariableSymbol)
         if content != null {
           flatten(node, content)
         }
@@ -326,7 +323,7 @@ namespace Skew.Folding {
 
       # Don't fold loop variables since they aren't actually constant across loop iterations
       if symbol != null && symbol.isConst && !symbol.isLoopVariable {
-        var content = constantLookup.constantForSymbol(symbol.asVariableSymbol)
+        var content = constantForSymbol(symbol.asVariableSymbol)
         if content != null {
           flatten(node, content)
         }
@@ -683,35 +680,28 @@ namespace Skew.Folding {
       }
       return result
     }
-  }
 
-  class ConstantCache : ConstantLookup {
-    const map IntMap<Content> = {}
+    def constantForSymbol(symbol VariableSymbol) Content {
+      if symbol.id in constantCache {
+        return constantCache[symbol.id]
+      }
 
-    over constantForSymbol(symbol VariableSymbol) Content {
-      if symbol.id in map {
-        return map[symbol.id]
+      if prepareSymbol != null {
+        prepareSymbol(symbol)
       }
 
       var constant Content = null
       var value = symbol.value
 
       if symbol.isConst && value != null {
-        switch value.kind {
-          case .CONSTANT {
-            constant = value.content
-          }
-
-          case .NAME, .DOT {
-            var target = value.symbol
-            if target != null && target.kind.isVariable {
-              constant = constantForSymbol(target.asVariableSymbol)
-            }
-          }
+        constantCache[symbol.id] = null
+        foldConstants(value)
+        if value.kind == .CONSTANT {
+          constant = value.content
         }
       }
 
-      map[symbol.id] = constant
+      constantCache[symbol.id] = constant
       return constant
     }
   }
