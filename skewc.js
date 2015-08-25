@@ -6019,7 +6019,7 @@
     if (parent !== null && parent.kind !== Skew.SymbolKind.OBJECT_GLOBAL) {
       var enclosingName = Skew.JavaScriptEmitter._fullName(parent);
 
-      if (symbol.isPrimaryConstructor()) {
+      if (symbol.isPrimaryConstructor() || symbol.isImported() && symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
         return enclosingName;
       }
 

@@ -2288,7 +2288,7 @@ namespace Skew {
       var parent = symbol.parent
       if parent != null && parent.kind != .OBJECT_GLOBAL {
         var enclosingName = _fullName(parent)
-        if symbol.isPrimaryConstructor {
+        if symbol.isPrimaryConstructor || symbol.isImported && symbol.kind == .FUNCTION_CONSTRUCTOR {
           return enclosingName
         }
         if symbol.kind == .FUNCTION_INSTANCE {

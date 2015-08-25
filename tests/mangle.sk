@@ -1322,5 +1322,35 @@ def main int {
 })();
 ").jsMangle.foldAllConstants.inlineAllFunctions
 
+# This tests a bug where overloaded imported constructors were emitted incorrectly
+test("
+@entry
+def main {
+  foo(Foo.new([]))
+}
+
+def foo(bar Foo) Foo {
+  return Foo.new(0)
+}
+
+@import
+class Foo {
+  def new(length int)
+  def new(array List<int>)
+}
+", "
+(function() {
+  function c() {
+    a(new Foo([]));
+  }
+
+  function a(b) {
+    return new Foo(0);
+  }
+
+  c();
+})();
+").jsMangle
+
   }
 }
