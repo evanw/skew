@@ -2,6 +2,14 @@ namespace Skew.Tests {
   def testSimple {
 
 test("
+var foo Foo<dynamic> = null
+", "
+<stdin>:1:9: error: \"Foo\" is not declared
+var foo Foo<dynamic> = null
+        ~~~
+")
+
+test("
 var x = 0b2
 ", "
 <stdin>:1:10: error: Expected NEWLINE but found IDENTIFIER

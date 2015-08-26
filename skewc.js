@@ -423,7 +423,7 @@
         var topKind = top.kind;
 
         // Stop parsing a type if we find a token that no type expression uses
-        if (topKind === Skew.TokenKind.LESS_THAN && tokenKind !== Skew.TokenKind.LESS_THAN && tokenKind !== Skew.TokenKind.IDENTIFIER && tokenKind !== Skew.TokenKind.COMMA && tokenKind !== Skew.TokenKind.DOT && tokenKind !== Skew.TokenKind.LEFT_PARENTHESIS && tokenKind !== Skew.TokenKind.RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan) {
+        if (topKind === Skew.TokenKind.LESS_THAN && tokenKind !== Skew.TokenKind.LESS_THAN && tokenKind !== Skew.TokenKind.IDENTIFIER && tokenKind !== Skew.TokenKind.COMMA && tokenKind !== Skew.TokenKind.DYNAMIC && tokenKind !== Skew.TokenKind.DOT && tokenKind !== Skew.TokenKind.LEFT_PARENTHESIS && tokenKind !== Skew.TokenKind.RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan) {
           stack.pop();
         }
 

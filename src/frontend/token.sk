@@ -132,7 +132,7 @@ namespace Skew {
         var topKind = top.kind
 
         # Stop parsing a type if we find a token that no type expression uses
-        if topKind == .LESS_THAN && tokenKind != .LESS_THAN && tokenKind != .IDENTIFIER && tokenKind != .COMMA &&
+        if topKind == .LESS_THAN && tokenKind != .LESS_THAN && tokenKind != .IDENTIFIER && tokenKind != .COMMA && tokenKind != .DYNAMIC &&
             tokenKind != .DOT && tokenKind != .LEFT_PARENTHESIS && tokenKind != .RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan {
           stack.removeLast
         } else {
