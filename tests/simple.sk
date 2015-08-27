@@ -2241,10 +2241,10 @@ namespace Foo {
   def bar2
 }
 ", "
-<stdin>:2:3: error: Cannot use this declaration inside an enum
+<stdin>:2:3: error: Cannot use this declaration here
   var foo
   ~~~~~~~
-<stdin>:4:3: error: Cannot use this declaration inside an enum
+<stdin>:4:3: error: Cannot use this declaration here
   def new
   ~~~~~~~
 ")
@@ -3895,6 +3895,164 @@ def main {
 <stdin>:2:14: warning: Local variable \"b\" is never read
   for i = 0, b = false; true; 0, 1 {}
              ^
+")
+
+test("
+type Foo = int
+type Foo = int
+type Foo : int {}
+", "
+<stdin>:2:12: error: \"Foo\" already has a base type
+type Foo = int
+           ~~~
+<stdin>:1:12: note: The previous base type is here
+type Foo = int
+           ~~~
+<stdin>:3:12: error: \"Foo\" already has a base type
+type Foo : int {}
+           ~~~
+<stdin>:1:12: note: The previous base type is here
+type Foo = int
+           ~~~
+")
+
+test("
+class Foo {
+  def foo {}
+}
+
+type Bar = Foo
+
+type Bar {
+  def bar
+}
+
+type Baz : Foo {
+  def bar
+}
+
+def main {
+  var foo = Foo.new
+  var bar = foo as Bar
+  var baz = foo as Baz
+  foo.foo
+  foo.bar
+  bar.foo
+  bar.bar
+  baz.foo
+  baz.bar
+}
+", "
+<stdin>:20:7: error: \"bar\" is not declared on type \"Foo\"
+  foo.bar
+      ~~~
+<stdin>:21:7: error: \"foo\" is not declared on type \"Bar\"
+  bar.foo
+      ~~~
+<stdin>:23:7: error: \"foo\" is not declared on type \"Baz\"
+  baz.foo
+      ~~~
+")
+
+test("
+type Foo {
+}
+", "
+<stdin>:1:6: warning: Missing base type for wrapped type \"Foo\"
+type Foo {
+     ~~~
+")
+
+test("
+class Foo : Bar {}
+type Bar = int
+", "
+<stdin>:1:13: error: Cannot derive from type \"Bar\"
+class Foo : Bar {}
+            ~~~
+")
+
+test("
+var foo int
+type Foo = fn()
+type Bar = foo
+type Baz = dynamic
+type Bat = Foo
+
+def main {
+  var foo Foo = => {}
+  var foo2 Foo = => {} as Foo
+  var bat Bat = foo
+  var bat2 Bat = foo as Bat
+}
+", "
+<stdin>:3:12: error: Unexpected expression of type \"int\"
+type Bar = foo
+           ~~~
+<stdin>:8:17: error: Cannot convert from type \"fn()\" to type \"Foo\" without a cast
+  var foo Foo = => {}
+                ~~~~~
+<stdin>:10:17: error: Cannot convert from type \"Foo\" to type \"Bat\" without a cast
+  var bat Bat = foo
+                ~~~
+<stdin>:9:7: warning: Local variable \"foo2\" is never read
+  var foo2 Foo = => {} as Foo
+      ~~~~
+<stdin>:10:7: warning: Local variable \"bat\" is never read
+  var bat Bat = foo
+      ~~~
+<stdin>:11:7: warning: Local variable \"bat2\" is never read
+  var bat2 Bat = foo as Bat
+      ~~~~
+")
+
+test("
+type Foo : int {
+  var foo
+  def bar
+  def new
+}
+
+namespace Foo {
+  var foo2
+  def bar2
+}
+", "
+<stdin>:2:3: error: Cannot use this declaration here
+  var foo
+  ~~~~~~~
+<stdin>:4:3: error: Cannot use this declaration here
+  def new
+  ~~~~~~~
+")
+
+test("
+class Foo<T> {
+}
+
+type Bar<T> : Foo<T> {
+  def foo(foo T)
+}
+
+def main {
+  var foo = Foo<int>.new
+  var bar = foo as Bar<bool>
+  var baz = foo as Bar<int>
+  var bat = bar as Bar<int>
+}
+", "
+<stdin>:10:13: error: Cannot convert from type \"Foo<int>\" to type \"Bar<bool>\"
+  var bar = foo as Bar<bool>
+            ~~~
+<stdin>:12:13: error: Cannot convert from type \"Bar<bool>\" to type \"Bar<int>\"
+  var bat = bar as Bar<int>
+            ~~~
+<stdin>:11:7: warning: Local variable \"baz\" is never read
+  var baz = foo as Bar<int>
+      ~~~
+<stdin>:12:7: warning: Local variable \"bat\" is never read
+  var bat = bar as Bar<int>
+      ~~~
 ")
 
   }

@@ -101,8 +101,8 @@ namespace Skew {
       error(range, "The comparison operator must have a return type of \"int\"")
     }
 
-    def syntaxErrorBadDeclarationInsideEnum(range Range) {
-      error(range, "Cannot use this declaration inside an enum")
+    def syntaxErrorBadDeclarationInsideType(range Range) {
+      error(range, "Cannot use this declaration here")
     }
   }
 
@@ -487,6 +487,10 @@ namespace Skew {
       if previous != null {
         note(previous, "The first occurrence is here")
       }
+    }
+
+    def semanticErrorMissingWrappedType(range Range, name string) {
+      warning(range, "Missing base type for wrapped type \"" + name + "\"")
     }
   }
 }

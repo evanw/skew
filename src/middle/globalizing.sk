@@ -17,6 +17,7 @@ namespace Skew {
         # Turn certain instance functions into global functions
         if symbol.kind == .FUNCTION_INSTANCE && (
             symbol.parent.kind == .OBJECT_ENUM ||
+            symbol.parent.kind == .OBJECT_WRAPPED ||
             symbol.parent.isImported && !symbol.isImported ||
             !symbol.isImportedOrExported && virtualLookup != null && !virtualLookup.isVirtual(symbol)) {
 

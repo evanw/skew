@@ -27,6 +27,10 @@ namespace Skew {
       return substitutions != null
     }
 
+    def isWrapped bool {
+      return symbol != null && symbol.kind == .OBJECT_WRAPPED
+    }
+
     def isClass bool {
       return symbol != null && symbol.kind == .OBJECT_CLASS
     }
@@ -209,6 +213,8 @@ namespace Skew {
     def canExplicitlyConvert(from Type, to Type) bool {
       if canImplicitlyConvert(from, to) { return true }
       if _canCastToNumeric(from) && _canCastToNumeric(to) { return true }
+      if from.isWrapped && from.symbol.asObjectSymbol.wrappedType == to { return true }
+      if to.isWrapped && to.symbol.asObjectSymbol.wrappedType == from { return true }
       if to.hasBaseType(from) { return true }
       if to.isEnum && isNumeric(from) { return true }
       return false

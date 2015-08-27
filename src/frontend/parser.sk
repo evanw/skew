@@ -828,6 +828,14 @@ namespace Skew.Parsing {
         case .ENUM { kind = .OBJECT_ENUM }
         case .INTERFACE { kind = .OBJECT_INTERFACE }
         case .NAMESPACE { kind = .OBJECT_NAMESPACE }
+        case .IDENTIFIER {
+          if token.range.toString == "type" {
+            kind = .OBJECT_WRAPPED
+          } else {
+            context.unexpectedToken
+            return false
+          }
+        }
         default {
           context.unexpectedToken
           return false
@@ -957,7 +965,7 @@ namespace Skew.Parsing {
           symbol = function
         }
 
-        case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
+        case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
           var object = ObjectSymbol.new(kind, name)
           object.range = range
 
@@ -968,21 +976,32 @@ namespace Skew.Parsing {
             }
           }
 
-          if context.eat(.COLON) {
+          # Allow "type Foo = int"
+          if kind == .OBJECT_WRAPPED && context.eat(.ASSIGN) {
             object.base = parseType(context)
             if object.base == null {
               return false
             }
           }
 
-          if !context.expect(.LEFT_BRACE) {
-            return false
-          }
+          # Regular block structure "type Foo : int {}"
+          else {
+            if context.eat(.COLON) {
+              object.base = parseType(context)
+              if object.base == null {
+                return false
+              }
+            }
 
-          parseSymbols(context, object, null)
+            if !context.expect(.LEFT_BRACE) {
+              return false
+            }
 
-          if !context.expect(.RIGHT_BRACE) {
-            return false
+            parseSymbols(context, object, null)
+
+            if !context.expect(.RIGHT_BRACE) {
+              return false
+            }
           }
 
           parent.objects.append(object)
@@ -994,9 +1013,9 @@ namespace Skew.Parsing {
         }
       }
 
-      # Forbid certain kinds of symbols inside enums
-      if parent.kind == .OBJECT_ENUM && (kind == .FUNCTION_CONSTRUCTOR || kind == .VARIABLE_INSTANCE) {
-        context.log.syntaxErrorBadDeclarationInsideEnum(context.spanSince(token.range))
+      # Forbid certain kinds of symbols inside enums and wrapped types
+      if (parent.kind == .OBJECT_ENUM || parent.kind == .OBJECT_WRAPPED) && (kind == .FUNCTION_CONSTRUCTOR || kind == .VARIABLE_INSTANCE) {
+        context.log.syntaxErrorBadDeclarationInsideType(context.spanSince(token.range))
       }
     }
 

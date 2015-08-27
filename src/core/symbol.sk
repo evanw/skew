@@ -8,6 +8,7 @@ namespace Skew {
     OBJECT_GLOBAL
     OBJECT_INTERFACE
     OBJECT_NAMESPACE
+    OBJECT_WRAPPED
 
     FUNCTION_ANNOTATION
     FUNCTION_CONSTRUCTOR
@@ -26,7 +27,7 @@ namespace Skew {
     VARIABLE_LOCAL
 
     def isType bool {
-      return self as int >= PARAMETER_FUNCTION as int && self as int <= OBJECT_NAMESPACE as int
+      return self as int >= PARAMETER_FUNCTION as int && self as int <= OBJECT_WRAPPED as int
     }
 
     def isParameter bool {
@@ -34,7 +35,7 @@ namespace Skew {
     }
 
     def isObject bool {
-      return self as int >= OBJECT_CLASS as int && self as int <= OBJECT_NAMESPACE as int
+      return self as int >= OBJECT_CLASS as int && self as int <= OBJECT_WRAPPED as int
     }
 
     def isFunction bool {
@@ -69,7 +70,7 @@ namespace Skew {
     }
 
     def hasInstances bool {
-      return self == OBJECT_CLASS || self == OBJECT_ENUM || self == OBJECT_INTERFACE
+      return self == OBJECT_CLASS || self == OBJECT_ENUM || self == OBJECT_INTERFACE || self == OBJECT_WRAPPED
     }
 
     def isOnInstances bool {
@@ -249,6 +250,7 @@ namespace Skew {
   class ObjectSymbol : Symbol {
     var base Node = null
     var baseClass ObjectSymbol = null
+    var wrappedType Type = null
     var members StringMap<Symbol> = {}
     var objects List<ObjectSymbol> = []
     var functions List<FunctionSymbol> = []

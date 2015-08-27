@@ -8729,6 +8729,18 @@
           break;
         }
 
+        case Skew.TokenKind.IDENTIFIER: {
+          if (token.range.toString() === 'type') {
+            kind = Skew.SymbolKind.OBJECT_WRAPPED;
+          }
+
+          else {
+            context.unexpectedToken();
+            return false;
+          }
+          break;
+        }
+
         default: {
           context.unexpectedToken();
           return false;
@@ -8882,7 +8894,8 @@
         case Skew.SymbolKind.OBJECT_CLASS:
         case Skew.SymbolKind.OBJECT_ENUM:
         case Skew.SymbolKind.OBJECT_INTERFACE:
-        case Skew.SymbolKind.OBJECT_NAMESPACE: {
+        case Skew.SymbolKind.OBJECT_NAMESPACE:
+        case Skew.SymbolKind.OBJECT_WRAPPED: {
           var object = new Skew.ObjectSymbol(kind, name);
           object.range = range;
 
@@ -8894,7 +8907,8 @@
             }
           }
 
-          if (context.eat(Skew.TokenKind.COLON)) {
+          // Allow "type Foo = int"
+          if (kind === Skew.SymbolKind.OBJECT_WRAPPED && context.eat(Skew.TokenKind.ASSIGN)) {
             object.base = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
 
             if (object.base === null) {
@@ -8902,14 +8916,25 @@
             }
           }
 
-          if (!context.expect(Skew.TokenKind.LEFT_BRACE)) {
-            return false;
-          }
+          // Regular block structure "type Foo : int {}"
+          else {
+            if (context.eat(Skew.TokenKind.COLON)) {
+              object.base = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
 
-          Skew.Parsing.parseSymbols(context, object, null);
+              if (object.base === null) {
+                return false;
+              }
+            }
 
-          if (!context.expect(Skew.TokenKind.RIGHT_BRACE)) {
-            return false;
+            if (!context.expect(Skew.TokenKind.LEFT_BRACE)) {
+              return false;
+            }
+
+            Skew.Parsing.parseSymbols(context, object, null);
+
+            if (!context.expect(Skew.TokenKind.RIGHT_BRACE)) {
+              return false;
+            }
           }
 
           parent.objects.push(object);
@@ -8923,9 +8948,9 @@
         }
       }
 
-      // Forbid certain kinds of symbols inside enums
-      if (parent.kind === Skew.SymbolKind.OBJECT_ENUM && (kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR || kind === Skew.SymbolKind.VARIABLE_INSTANCE)) {
-        context.log.syntaxErrorBadDeclarationInsideEnum(context.spanSince(token.range));
+      // Forbid certain kinds of symbols inside enums and wrapped types
+      if ((parent.kind === Skew.SymbolKind.OBJECT_ENUM || parent.kind === Skew.SymbolKind.OBJECT_WRAPPED) && (kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR || kind === Skew.SymbolKind.VARIABLE_INSTANCE)) {
+        context.log.syntaxErrorBadDeclarationInsideType(context.spanSince(token.range));
       }
     }
 
@@ -9427,23 +9452,24 @@
     OBJECT_GLOBAL: 4,
     OBJECT_INTERFACE: 5,
     OBJECT_NAMESPACE: 6,
-    FUNCTION_ANNOTATION: 7,
-    FUNCTION_CONSTRUCTOR: 8,
-    FUNCTION_GLOBAL: 9,
-    FUNCTION_INSTANCE: 10,
-    FUNCTION_LOCAL: 11,
-    OVERLOADED_ANNOTATION: 12,
-    OVERLOADED_GLOBAL: 13,
-    OVERLOADED_INSTANCE: 14,
-    VARIABLE_ARGUMENT: 15,
-    VARIABLE_ENUM: 16,
-    VARIABLE_GLOBAL: 17,
-    VARIABLE_INSTANCE: 18,
-    VARIABLE_LOCAL: 19
+    OBJECT_WRAPPED: 7,
+    FUNCTION_ANNOTATION: 8,
+    FUNCTION_CONSTRUCTOR: 9,
+    FUNCTION_GLOBAL: 10,
+    FUNCTION_INSTANCE: 11,
+    FUNCTION_LOCAL: 12,
+    OVERLOADED_ANNOTATION: 13,
+    OVERLOADED_GLOBAL: 14,
+    OVERLOADED_INSTANCE: 15,
+    VARIABLE_ARGUMENT: 16,
+    VARIABLE_ENUM: 17,
+    VARIABLE_GLOBAL: 18,
+    VARIABLE_INSTANCE: 19,
+    VARIABLE_LOCAL: 20
   };
 
   Skew.SymbolKind.isType = function(self) {
-    return self >= Skew.SymbolKind.PARAMETER_FUNCTION && self <= Skew.SymbolKind.OBJECT_NAMESPACE;
+    return self >= Skew.SymbolKind.PARAMETER_FUNCTION && self <= Skew.SymbolKind.OBJECT_WRAPPED;
   };
 
   Skew.SymbolKind.isParameter = function(self) {
@@ -9451,7 +9477,7 @@
   };
 
   Skew.SymbolKind.isObject = function(self) {
-    return self >= Skew.SymbolKind.OBJECT_CLASS && self <= Skew.SymbolKind.OBJECT_NAMESPACE;
+    return self >= Skew.SymbolKind.OBJECT_CLASS && self <= Skew.SymbolKind.OBJECT_WRAPPED;
   };
 
   Skew.SymbolKind.isFunction = function(self) {
@@ -9483,7 +9509,7 @@
   };
 
   Skew.SymbolKind.hasInstances = function(self) {
-    return self === Skew.SymbolKind.OBJECT_CLASS || self === Skew.SymbolKind.OBJECT_ENUM || self === Skew.SymbolKind.OBJECT_INTERFACE;
+    return self === Skew.SymbolKind.OBJECT_CLASS || self === Skew.SymbolKind.OBJECT_ENUM || self === Skew.SymbolKind.OBJECT_INTERFACE || self === Skew.SymbolKind.OBJECT_WRAPPED;
   };
 
   Skew.SymbolKind.isOnInstances = function(self) {
@@ -9708,6 +9734,7 @@
     Skew.Symbol.call(this, kind, name);
     this.base = null;
     this.baseClass = null;
+    this.wrappedType = null;
     this.members = Object.create(null);
     this.objects = [];
     this.functions = [];
@@ -9945,8 +9972,8 @@
     this.error(range, 'The comparison operator must have a return type of "int"');
   };
 
-  Skew.Log.prototype.syntaxErrorBadDeclarationInsideEnum = function(range) {
-    this.error(range, 'Cannot use this declaration inside an enum');
+  Skew.Log.prototype.syntaxErrorBadDeclarationInsideType = function(range) {
+    this.error(range, 'Cannot use this declaration here');
   };
 
   Skew.Log._expectedCountText = function(singular, expected, found) {
@@ -10346,6 +10373,10 @@
     if (previous !== null) {
       this.note(previous, 'The first occurrence is here');
     }
+  };
+
+  Skew.Log.prototype.semanticErrorMissingWrappedType = function(range, name) {
+    this.warning(range, 'Missing base type for wrapped type "' + name + '"');
   };
 
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
@@ -12358,7 +12389,7 @@
       var symbol = info.symbol;
 
       // Turn certain instance functions into global functions
-      if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind === Skew.SymbolKind.OBJECT_ENUM || symbol.parent.isImported() && !symbol.isImported() || !symbol.isImportedOrExported() && virtualLookup !== null && !virtualLookup.isVirtual(symbol))) {
+      if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind === Skew.SymbolKind.OBJECT_ENUM || symbol.parent.kind === Skew.SymbolKind.OBJECT_WRAPPED || symbol.parent.isImported() && !symbol.isImported() || !symbol.isImportedOrExported() && virtualLookup !== null && !virtualLookup.isVirtual(symbol))) {
         var $function = symbol.asFunctionSymbol();
         $function.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
         $function.$arguments.unshift($function.$this);
@@ -13513,7 +13544,8 @@
         case Skew.SymbolKind.OBJECT_ENUM:
         case Skew.SymbolKind.OBJECT_GLOBAL:
         case Skew.SymbolKind.OBJECT_INTERFACE:
-        case Skew.SymbolKind.OBJECT_NAMESPACE: {
+        case Skew.SymbolKind.OBJECT_NAMESPACE:
+        case Skew.SymbolKind.OBJECT_WRAPPED: {
           this.initializeObject(symbol.asObjectSymbol());
           break;
         }
@@ -13721,12 +13753,19 @@
     this.resolveParameters(symbol.parameters);
     this.forbidOverriddenSymbol(symbol);
 
-    // Resolve the base type (only for classes)
+    // Resolve the base type (only for classes and wrapped types)
     if (symbol.base !== null) {
       this.resolveAsParameterizedType(symbol.base, symbol.scope);
       var baseType = symbol.base.resolvedType;
 
-      if (baseType.kind === Skew.TypeKind.SYMBOL && baseType.symbol.kind === Skew.SymbolKind.OBJECT_CLASS && !baseType.symbol.isValueType()) {
+      if (symbol.kind === Skew.SymbolKind.OBJECT_WRAPPED) {
+        symbol.wrappedType = baseType;
+
+        // Don't lose the type parameters from the base type
+        symbol.resolvedType.environment = baseType.environment;
+      }
+
+      else if (baseType.kind === Skew.TypeKind.SYMBOL && baseType.symbol.kind === Skew.SymbolKind.OBJECT_CLASS && !baseType.symbol.isValueType()) {
         symbol.baseClass = baseType.symbol.asObjectSymbol();
 
         // Don't lose the type parameters from the base type
@@ -13736,6 +13775,11 @@
       else if (baseType !== Skew.Type.DYNAMIC) {
         this.log.semanticErrorInvalidBaseType(symbol.base.range, baseType);
       }
+    }
+
+    // Wrapped types without something to wrap don't make sense
+    else if (symbol.kind === Skew.SymbolKind.OBJECT_WRAPPED) {
+      this.log.semanticErrorMissingWrappedType(symbol.range, symbol.fullName());
     }
 
     // Assign values for all enums before they are initialized
@@ -17152,6 +17196,10 @@
     return this.substitutions !== null;
   };
 
+  Skew.Type.prototype.isWrapped = function() {
+    return this.symbol !== null && this.symbol.kind === Skew.SymbolKind.OBJECT_WRAPPED;
+  };
+
   Skew.Type.prototype.isClass = function() {
     return this.symbol !== null && this.symbol.kind === Skew.SymbolKind.OBJECT_CLASS;
   };
@@ -17338,6 +17386,14 @@
     }
 
     if (this._canCastToNumeric(from) && this._canCastToNumeric(to)) {
+      return true;
+    }
+
+    if (from.isWrapped() && from.symbol.asObjectSymbol().wrappedType === to) {
+      return true;
+    }
+
+    if (to.isWrapped() && to.symbol.asObjectSymbol().wrappedType === from) {
       return true;
     }
 
@@ -18318,7 +18374,7 @@
 
     return value.withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range));
   };
-  Skew.SymbolKind._strings = ['PARAMETER_FUNCTION', 'PARAMETER_OBJECT', 'OBJECT_CLASS', 'OBJECT_ENUM', 'OBJECT_GLOBAL', 'OBJECT_INTERFACE', 'OBJECT_NAMESPACE', 'FUNCTION_ANNOTATION', 'FUNCTION_CONSTRUCTOR', 'FUNCTION_GLOBAL', 'FUNCTION_INSTANCE', 'FUNCTION_LOCAL', 'OVERLOADED_ANNOTATION', 'OVERLOADED_GLOBAL', 'OVERLOADED_INSTANCE', 'VARIABLE_ARGUMENT', 'VARIABLE_ENUM', 'VARIABLE_GLOBAL', 'VARIABLE_INSTANCE', 'VARIABLE_LOCAL'];
+  Skew.SymbolKind._strings = ['PARAMETER_FUNCTION', 'PARAMETER_OBJECT', 'OBJECT_CLASS', 'OBJECT_ENUM', 'OBJECT_GLOBAL', 'OBJECT_INTERFACE', 'OBJECT_NAMESPACE', 'OBJECT_WRAPPED', 'FUNCTION_ANNOTATION', 'FUNCTION_CONSTRUCTOR', 'FUNCTION_GLOBAL', 'FUNCTION_INSTANCE', 'FUNCTION_LOCAL', 'OVERLOADED_ANNOTATION', 'OVERLOADED_GLOBAL', 'OVERLOADED_INSTANCE', 'VARIABLE_ARGUMENT', 'VARIABLE_ENUM', 'VARIABLE_GLOBAL', 'VARIABLE_INSTANCE', 'VARIABLE_LOCAL'];
 
   // Flags
   Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 0;

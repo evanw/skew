@@ -60,7 +60,7 @@ namespace Skew.Resolving {
         symbol.state = .INITIALIZING
 
         switch symbol.kind {
-          case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE {
+          case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
             initializeObject(symbol.asObjectSymbol)
           }
 
@@ -245,16 +245,24 @@ namespace Skew.Resolving {
       resolveParameters(symbol.parameters)
       forbidOverriddenSymbol(symbol)
 
-      # Resolve the base type (only for classes)
+      # Resolve the base type (only for classes and wrapped types)
       if symbol.base != null {
         resolveAsParameterizedType(symbol.base, symbol.scope)
         var baseType = symbol.base.resolvedType
-        if baseType.kind == .SYMBOL && baseType.symbol.kind == .OBJECT_CLASS && !baseType.symbol.isValueType {
+        if symbol.kind == .OBJECT_WRAPPED {
+          symbol.wrappedType = baseType
+          symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
+        } else if baseType.kind == .SYMBOL && baseType.symbol.kind == .OBJECT_CLASS && !baseType.symbol.isValueType {
           symbol.baseClass = baseType.symbol.asObjectSymbol
           symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
         } else if baseType != .DYNAMIC {
           log.semanticErrorInvalidBaseType(symbol.base.range, baseType)
         }
+      }
+
+      # Wrapped types without something to wrap don't make sense
+      else if symbol.kind == .OBJECT_WRAPPED {
+        log.semanticErrorMissingWrappedType(symbol.range, symbol.fullName)
       }
 
       # Assign values for all enums before they are initialized
