@@ -48,7 +48,7 @@ namespace Skew {
     def toString string {
       if kind == .SYMBOL {
         if isParameterized {
-          var name = symbol.name + "<"
+          var name = symbol.fullName + "<"
           for i in 0..substitutions.count {
             if i != 0 {
               name += ", "
@@ -57,7 +57,7 @@ namespace Skew {
           }
           return name + ">"
         }
-        return symbol.name
+        return symbol.fullName
       }
 
       if kind == .LAMBDA {

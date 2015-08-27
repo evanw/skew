@@ -14583,6 +14583,7 @@
     while (i < symbols.length) {
       var $function = symbols[i];
       this.initializeSymbol($function);
+      symbol.flags |= $function.flags & Skew.Symbol.IS_SETTER;
       var index = types.indexOf($function.argumentOnlyType);
 
       if (index !== -1) {
@@ -17172,7 +17173,7 @@
   Skew.Type.prototype.toString = function() {
     if (this.kind === Skew.TypeKind.SYMBOL) {
       if (this.isParameterized()) {
-        var name = this.symbol.name + '<';
+        var name = this.symbol.fullName() + '<';
 
         for (var i = 0, count = this.substitutions.length; i < count; ++i) {
           if (i !== 0) {
@@ -17185,7 +17186,7 @@
         return name + '>';
       }
 
-      return this.symbol.name;
+      return this.symbol.fullName();
     }
 
     if (this.kind === Skew.TypeKind.LAMBDA) {

@@ -189,7 +189,7 @@ def main {
 <stdin>:14:12: error: Cannot convert from type \"double\" to type \"fn(int) bool\"
   x.filter(1.0)
            ~~~
-<stdin>:15:3: error: Cannot use unparameterized type \"map\" here
+<stdin>:15:3: error: Cannot use unparameterized type \"Foo.map\" here
   x.map(1.0)
   ~~~~~
 <stdin>:16:17: error: Cannot convert from type \"double\" to type \"fn(int) string\"
@@ -198,7 +198,7 @@ def main {
 <stdin>:17:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   x.filter(x => x + 100)
                 ~~~~~~~
-<stdin>:18:3: error: Cannot use unparameterized type \"map\" here
+<stdin>:18:3: error: Cannot use unparameterized type \"Foo.map\" here
   x.map(x => x + 100)
   ~~~~~
 <stdin>:18:9: error: Unable to determine the type of \"x\"
@@ -226,7 +226,7 @@ def main {
   Foo.new.foo<bool>(0).foo<int>(0.0)
 }
 ", "
-<stdin>:7:3: error: Cannot use unparameterized type \"foo\" here
+<stdin>:7:3: error: Cannot use unparameterized type \"Foo.foo\" here
   Foo.new.foo(0).foo(0.0)
   ~~~~~~~~~~~
 <stdin>:8:21: error: Cannot convert from type \"int\" to type \"bool\" without a cast
@@ -452,7 +452,7 @@ namespace foo {
 @foo.bar.baz
 def main
 ", "
-<stdin>:7:10: error: \"@bax\" is not declared on type \"bar\"
+<stdin>:7:10: error: \"@bax\" is not declared on type \"foo.bar\"
 @foo.bar.bax
          ~~~
 ")
@@ -3860,6 +3860,19 @@ def main {
 <stdin>:6:17: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   Foo.new.foo = false
                 ~~~~~
+")
+
+# Make sure the uncalled function error doesn't trigger for overloaded setter calls
+test("
+class Foo {
+  def foo=(x int) {}
+  def foo=(x double) {}
+}
+
+def main {
+  Foo.new.foo = 0
+}
+", "
 ")
 
 test("

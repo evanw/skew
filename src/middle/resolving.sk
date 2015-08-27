@@ -1025,6 +1025,7 @@ namespace Skew.Resolving {
       while i < symbols.count {
         var function = symbols[i]
         initializeSymbol(function)
+        symbol.flags |= function.flags & Symbol.IS_SETTER
 
         var index = types.indexOf(function.argumentOnlyType)
         if index != -1 {
