@@ -1352,6 +1352,7 @@ class Foo {
 })();
 ").jsMangle
 
+# Make sure the 32-bit integer negation special-case is handled correctly
 test("
 @export
 def main List<int> {
@@ -1361,6 +1362,22 @@ def main List<int> {
 (function() {
   main = function() {
     return [2147483647, -2147483647, -2147483648, -2147483648];
+  };
+})();
+").jsMangle
+
+# Wrapping shouldn't introduce casts
+test("
+type Foo = int
+
+@export
+def main int {
+  return 0 as Foo as int as Foo as int
+}
+", "
+(function() {
+  main = function() {
+    return 0;
   };
 })();
 ").jsMangle

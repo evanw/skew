@@ -5803,6 +5803,11 @@
     var type = node.resolvedType;
     var valueType = value.resolvedType;
 
+    // Wrapping should be transparent in the emitted code
+    if (type.isWrapped() || valueType.isWrapped()) {
+      return;
+    }
+
     // Cast to bool
     if (type === this._cache.boolType) {
       if (valueType !== this._cache.boolType) {
