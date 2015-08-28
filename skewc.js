@@ -3977,7 +3977,8 @@
 
     switch (symbol.kind) {
       case Skew.SymbolKind.OBJECT_NAMESPACE:
-      case Skew.SymbolKind.OBJECT_INTERFACE: {
+      case Skew.SymbolKind.OBJECT_INTERFACE:
+      case Skew.SymbolKind.OBJECT_WRAPPED: {
         this._addMapping(symbol.range);
         this._emitNewlineBeforeSymbol(symbol);
         this._emitComments(symbol.comments);
@@ -10376,7 +10377,7 @@
   };
 
   Skew.Log.prototype.semanticErrorMissingWrappedType = function(range, name) {
-    this.warning(range, 'Missing base type for wrapped type "' + name + '"');
+    this.error(range, 'Missing base type for wrapped type "' + name + '"');
   };
 
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
@@ -17364,7 +17365,12 @@
   };
 
   Skew.TypeCache.prototype.isWrappedType = function(wrapped, unwrapped) {
-    return wrapped.isWrapped() && this.substitute(wrapped.symbol.asObjectSymbol().wrappedType, wrapped.environment) === unwrapped;
+    if (wrapped.isWrapped()) {
+      var inner = wrapped.symbol.asObjectSymbol().wrappedType;
+      return inner !== null && this.substitute(inner, wrapped.environment) === unwrapped;
+    }
+
+    return false;
   };
 
   Skew.TypeCache.prototype.canImplicitlyConvert = function(from, to) {

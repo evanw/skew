@@ -3958,7 +3958,7 @@ test("
 type Foo {
 }
 ", "
-<stdin>:1:6: warning: Missing base type for wrapped type \"Foo\"
+<stdin>:1:6: error: Missing base type for wrapped type \"Foo\"
 type Foo {
      ~~~
 ")
@@ -4089,6 +4089,24 @@ type Bar = Foo
 <stdin>:1:6: error: Cyclic declaration of \"Foo\"
 type Foo = Bar
      ~~~
+")
+
+test("
+type Foo {}
+
+def main {
+  var foo = 0 as Foo
+}
+", "
+<stdin>:1:6: error: Missing base type for wrapped type \"Foo\"
+type Foo {}
+     ~~~
+<stdin>:4:13: error: Cannot convert from type \"int\" to type \"Foo\"
+  var foo = 0 as Foo
+            ^
+<stdin>:4:7: warning: Local variable \"foo\" is never read
+  var foo = 0 as Foo
+      ~~~
 ")
 
   }

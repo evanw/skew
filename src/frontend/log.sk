@@ -490,7 +490,7 @@ namespace Skew {
     }
 
     def semanticErrorMissingWrappedType(range Range, name string) {
-      warning(range, "Missing base type for wrapped type \"" + name + "\"")
+      error(range, "Missing base type for wrapped type \"" + name + "\"")
     }
   }
 }

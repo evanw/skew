@@ -209,7 +209,11 @@ namespace Skew {
     }
 
     def isWrappedType(wrapped Type, unwrapped Type) bool {
-      return wrapped.isWrapped && substitute(wrapped.symbol.asObjectSymbol.wrappedType, wrapped.environment) == unwrapped
+      if wrapped.isWrapped {
+        var inner = wrapped.symbol.asObjectSymbol.wrappedType
+        return inner != null && substitute(inner, wrapped.environment) == unwrapped
+      }
+      return false
     }
 
     def canImplicitlyConvert(from Type, to Type) bool {
