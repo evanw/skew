@@ -2104,7 +2104,6 @@ namespace Skew {
             # The default case is always the last one
             var defaultCase = child.lastChild
             if defaultCase.hasOneChild {
-              var defaultBlock = defaultCase.caseBlock
               var hasFlowAtEnd = false
 
               # See if any non-default case will flow past the end of the switch block
@@ -2116,10 +2115,37 @@ namespace Skew {
 
               # "switch (a) { case b: return; default: c; break; }" => "switch (a) { case b: return; } c;"
               if !hasFlowAtEnd {
-                while defaultBlock.hasChildren {
-                  node.insertChildAfter(child, defaultBlock.lastChild.remove)
-                }
+                node.insertChildrenAfterFrom(defaultCase.caseBlock, child)
                 defaultCase.remove
+              }
+            }
+
+            # "switch (a) {}" => "a;"
+            if child.hasOneChild {
+              next = Node.createExpression(child.switchValue.remove)
+              child.replaceWith(next)
+            }
+
+            # "switch (a) { case b: c; break; }" => "if (a == b) c;"
+            else if child.hasTwoChildren {
+              var singleCase = child.lastChild
+              if singleCase.hasTwoChildren {
+                var value = singleCase.firstChild
+                next = Node.createIf(Node.createBinary(.EQUAL, child.switchValue.remove, value.remove), singleCase.caseBlock.remove, null)
+                _peepholeMangleIf(next)
+                child.replaceWith(next)
+              }
+            }
+
+            # "switch (a) { case b: c; break; default: d; break; }" => "if (a == b) c; else d;"
+            else if child.hasThreeChildren {
+              var firstCase = child.switchValue.nextSibling
+              var secondCase = child.lastChild
+              if firstCase.hasTwoChildren && secondCase.hasOneChild {
+                var value = firstCase.firstChild
+                next = Node.createIf(Node.createBinary(.EQUAL, child.switchValue.remove, value.remove), firstCase.caseBlock.remove, secondCase.caseBlock.remove)
+                _peepholeMangleIf(next)
+                child.replaceWith(next)
               }
             }
           }

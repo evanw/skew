@@ -282,6 +282,11 @@ namespace Skew {
       return hasChildren && _firstChild.nextSibling == _lastChild
     }
 
+    # This is cheaper than childCount == 3
+    def hasThreeChildren bool {
+      return hasChildren && _firstChild.nextSibling == _lastChild.previousSibling
+    }
+
     def childCount int {
       var count = 0
       for child = _firstChild; child != null; child = child._nextSibling {
@@ -442,6 +447,12 @@ namespace Skew {
 
       before._nextSibling = after
       return self
+    }
+
+    def insertChildrenAfterFrom(from Node, after Node) {
+      while from.hasChildren {
+        insertChildAfter(after, from.lastChild.remove)
+      }
     }
 
     def remove Node {

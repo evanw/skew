@@ -5773,7 +5773,6 @@
           var defaultCase = child.lastChild();
 
           if (defaultCase.hasOneChild()) {
-            var defaultBlock = defaultCase.caseBlock();
             var hasFlowAtEnd = false;
 
             // See if any non-default case will flow past the end of the switch block
@@ -5785,11 +5784,39 @@
 
             // "switch (a) { case b: return; default: c; break; }" => "switch (a) { case b: return; } c;"
             if (!hasFlowAtEnd) {
-              while (defaultBlock.hasChildren()) {
-                node.insertChildAfter(child, defaultBlock.lastChild().remove());
-              }
-
+              node.insertChildrenAfterFrom(defaultCase.caseBlock(), child);
               defaultCase.remove();
+            }
+          }
+
+          // "switch (a) {}" => "a;"
+          if (child.hasOneChild()) {
+            next = Skew.Node.createExpression(child.switchValue().remove());
+            child.replaceWith(next);
+          }
+
+          // "switch (a) { case b: c; break; }" => "if (a == b) c;"
+          else if (child.hasTwoChildren()) {
+            var singleCase = child.lastChild();
+
+            if (singleCase.hasTwoChildren()) {
+              var value = singleCase.firstChild();
+              next = Skew.Node.createIf(Skew.Node.createBinary(Skew.NodeKind.EQUAL, child.switchValue().remove(), value.remove()), singleCase.caseBlock().remove(), null);
+              this._peepholeMangleIf(next);
+              child.replaceWith(next);
+            }
+          }
+
+          // "switch (a) { case b: c; break; default: d; break; }" => "if (a == b) c; else d;"
+          else if (child.hasThreeChildren()) {
+            var firstCase = child.switchValue().nextSibling();
+            var secondCase = child.lastChild();
+
+            if (firstCase.hasTwoChildren() && secondCase.hasOneChild()) {
+              var value1 = firstCase.firstChild();
+              next = Skew.Node.createIf(Skew.Node.createBinary(Skew.NodeKind.EQUAL, child.switchValue().remove(), value1.remove()), firstCase.caseBlock().remove(), secondCase.caseBlock().remove());
+              this._peepholeMangleIf(next);
+              child.replaceWith(next);
             }
           }
           break;
@@ -6706,6 +6733,11 @@
     return this.hasChildren() && this._firstChild.nextSibling() === this._lastChild;
   };
 
+  // This is cheaper than childCount == 3
+  Skew.Node.prototype.hasThreeChildren = function() {
+    return this.hasChildren() && this._firstChild.nextSibling() === this._lastChild.previousSibling();
+  };
+
   Skew.Node.prototype.childCount = function() {
     var count = 0;
 
@@ -6878,6 +6910,12 @@
 
     before._nextSibling = after;
     return this;
+  };
+
+  Skew.Node.prototype.insertChildrenAfterFrom = function(from, after) {
+    while (from.hasChildren()) {
+      this.insertChildAfter(after, from.lastChild().remove());
+    }
   };
 
   Skew.Node.prototype.remove = function() {
@@ -11485,25 +11523,25 @@
 
   // Use this instead of node.become(Node.createBool(value)) to avoid more GC
   Skew.Folding.ConstantFolder.prototype.flattenBool = function(node, value) {
-    assert(node.resolvedType === this.cache.boolType || node.resolvedType === Skew.Type.DYNAMIC);
+    assert(this.areTypesEquivalent(node.resolvedType, this.cache.boolType) || node.resolvedType === Skew.Type.DYNAMIC);
     this.flatten(node, new Skew.BoolContent(value));
   };
 
   // Use this instead of node.become(Node.createInt(value)) to avoid more GC
   Skew.Folding.ConstantFolder.prototype.flattenInt = function(node, value) {
-    assert(node.resolvedType === this.cache.intType || node.resolvedType === Skew.Type.DYNAMIC);
+    assert(this.areTypesEquivalent(node.resolvedType, this.cache.intType) || node.resolvedType === Skew.Type.DYNAMIC);
     this.flatten(node, new Skew.IntContent(value));
   };
 
   // Use this instead of node.become(Node.createDouble(value)) to avoid more GC
   Skew.Folding.ConstantFolder.prototype.flattenDouble = function(node, value) {
-    assert(node.resolvedType === this.cache.doubleType || node.resolvedType === Skew.Type.DYNAMIC);
+    assert(this.areTypesEquivalent(node.resolvedType, this.cache.doubleType) || node.resolvedType === Skew.Type.DYNAMIC);
     this.flatten(node, new Skew.DoubleContent(value));
   };
 
   // Use this instead of node.become(Node.createString(value)) to avoid more GC
   Skew.Folding.ConstantFolder.prototype.flattenString = function(node, value) {
-    assert(node.resolvedType === this.cache.stringType || node.resolvedType === Skew.Type.DYNAMIC);
+    assert(this.areTypesEquivalent(node.resolvedType, this.cache.stringType) || node.resolvedType === Skew.Type.DYNAMIC);
     this.flatten(node, new Skew.StringContent(value));
   };
 
@@ -11799,6 +11837,10 @@
     return symbol === knownSymbol || symbol !== null && Skew.SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().overloaded === knownSymbol;
   };
 
+  Skew.Folding.ConstantFolder.prototype.areTypesEquivalent = function(type, primitiveType) {
+    return type === primitiveType || this.cache.isWrappedType(type, primitiveType);
+  };
+
   Skew.Folding.ConstantFolder.prototype.foldCall = function(node) {
     if (node.kind === Skew.NodeKind.CALL) {
       var value = node.callValue();
@@ -11838,34 +11880,46 @@
 
       // Cast "bool" values
       if (kind === Skew.ContentKind.BOOL) {
-        if (type === this.cache.intType) {
+        if (this.areTypesEquivalent(type, this.cache.boolType)) {
+          this.flattenBool(node, value.asBool());
+        }
+
+        else if (this.areTypesEquivalent(type, this.cache.intType)) {
           this.flattenInt(node, value.asBool() | 0);
         }
 
-        else if (type === this.cache.doubleType) {
+        else if (this.areTypesEquivalent(type, this.cache.doubleType)) {
           this.flattenDouble(node, +value.asBool());
         }
       }
 
       // Cast "int" values
       else if (kind === Skew.ContentKind.INT) {
-        if (type === this.cache.boolType) {
+        if (this.areTypesEquivalent(type, this.cache.boolType)) {
           this.flattenBool(node, !!value.asInt());
         }
 
-        else if (type === this.cache.doubleType) {
+        else if (this.areTypesEquivalent(type, this.cache.intType)) {
+          this.flattenInt(node, value.asInt());
+        }
+
+        else if (this.areTypesEquivalent(type, this.cache.doubleType)) {
           this.flattenDouble(node, value.asInt());
         }
       }
 
       // Cast "double" values
       else if (kind === Skew.ContentKind.DOUBLE) {
-        if (type === this.cache.boolType) {
+        if (this.areTypesEquivalent(type, this.cache.boolType)) {
           this.flattenBool(node, !!value.asDouble());
         }
 
-        else if (type === this.cache.intType) {
+        else if (this.areTypesEquivalent(type, this.cache.intType)) {
           this.flattenInt(node, value.asDouble() | 0);
+        }
+
+        else if (this.areTypesEquivalent(type, this.cache.doubleType)) {
+          this.flattenDouble(node, value.asDouble());
         }
       }
     }

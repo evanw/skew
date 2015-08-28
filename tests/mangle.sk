@@ -855,10 +855,8 @@ def foo {
         }
 
         case 1: {
-          switch (y) {
-            case 0: {
-              break c;
-            }
+          if (!y) {
+            break c;
           }
           break;
         }
@@ -872,10 +870,8 @@ def foo {
         }
 
         case 1: {
-          switch (y) {
-            case 0: {
-              break d;
-            }
+          if (!y) {
+            break d;
           }
           break;
         }
@@ -889,10 +885,8 @@ def foo {
         }
 
         case 1: {
-          switch (y) {
-            case 0: {
-              break e;
-            }
+          if (!y) {
+            break e;
           }
           break;
         }
@@ -927,27 +921,7 @@ def foo {
 ", "
 (function() {
   foo = function() {
-    switch (a) {
-      case 0: {
-        return;
-      }
-    }
-
-    b1(), b2();
-
-    switch (a) {
-      case 0: {
-        c();
-        break;
-      }
-
-      default: {
-        d1(), d2();
-        break;
-      }
-    }
-
-    e();
+    a && (b1(), b2(), a ? (d1(), d2()) : c(), e());
   };
 })();
 ").jsMangle
@@ -1378,6 +1352,91 @@ def main int {
 (function() {
   main = function() {
     return 0;
+  };
+})();
+").jsMangle
+
+# Wrapping should work with constant folding
+test("
+@export
+def main {
+  dynamic.foo((0 as Foo) == (1 as Foo))
+  dynamic.foo((0 as int) == (1 as int))
+  dynamic.foo(0 == 1)
+}
+
+type Foo = int
+", "
+(function() {
+  main = function() {
+    foo(!1), foo(!1), foo(!1);
+  };
+})();
+").jsMangle.foldAllConstants
+
+# Check that empty switch statements are removed
+test("
+@export
+def main(x int) {
+  switch x { default { dynamic.y() } }
+}
+", "
+(function() {
+  main = function(a) {
+    y();
+  };
+})();
+").jsMangle
+
+# Check that switch statements have a single element turn into if statements, which are then further optimized
+test("
+@export
+def main(x int, y Foo) {
+  switch x { case X { dynamic.foo() } }
+  switch y { case Y { dynamic.bar() } }
+}
+
+type Foo = int
+const X = 0
+const Y = 0 as Foo
+", "
+(function() {
+  main = function(a, b) {
+    a || foo(), b || bar();
+  };
+})();
+").jsMangle.foldAllConstants
+
+# Check that switch statements that become single-element after other optimizations turn into if statements
+test("
+@export
+def main(x int) {
+  switch x {
+    case 0 { return }
+    default { dynamic.y() }
+  }
+}
+", "
+(function() {
+  main = function(a) {
+    a && y();
+  };
+})();
+").jsMangle
+
+# Check that double-element switch statements turn into if statements and are optimized further
+test("
+@export
+def main(x int) {
+  switch x {
+    case 0 { dynamic.y() }
+    default { dynamic.z() }
+  }
+}
+", "
+(function() {
+  main = function(a) {
+    a ? z() : y();
   };
 })();
 ").jsMangle
