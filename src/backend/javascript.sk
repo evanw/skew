@@ -1313,6 +1313,20 @@ namespace Skew {
       return Node.createBinary(.BITWISE_OR, node, Node.createInt(0).withType(_cache.intType)).withType(_cache.intType).withRange(node.range)
     }
 
+    def _patchUnaryArithmetic(node Node) {
+      if node.resolvedType == _cache.intType && !_alwaysConvertsOperandsToInt(node.parent) {
+        var value = node.unaryValue
+        if value.resolvedType == _cache.intType {
+          if value.isInt {
+            value.content = IntContent.new(-value.asInt)
+            node.become(value.remove)
+          } else {
+            node.become(_wrapWithIntCast(node.cloneAndStealChildren))
+          }
+        }
+      }
+    }
+
     def _patchBinaryArithmetic(node Node) {
       # Make sure arithmetic integer operators don't emit doubles outside the
       # integer range. Allowing this causes JIT slowdowns due to extra checks
@@ -1389,6 +1403,10 @@ namespace Skew {
           if _mangle && node.content.kind == .BOOL {
             node.become(Node.createUnary(.NOT, Node.createInt(node.asBool ? 0 : 1)))
           }
+        }
+
+        case .NEGATIVE {
+          _patchUnaryArithmetic(node)
         }
 
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {

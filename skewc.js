@@ -4917,6 +4917,23 @@
     return Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, node, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this._cache.intType)).withType(this._cache.intType).withRange(node.range);
   };
 
+  Skew.JavaScriptEmitter.prototype._patchUnaryArithmetic = function(node) {
+    if (node.resolvedType === this._cache.intType && !Skew.JavaScriptEmitter._alwaysConvertsOperandsToInt(node.parent())) {
+      var value = node.unaryValue();
+
+      if (value.resolvedType === this._cache.intType) {
+        if (value.isInt()) {
+          value.content = new Skew.IntContent(-value.asInt() | 0);
+          node.become(value.remove());
+        }
+
+        else {
+          node.become(this._wrapWithIntCast(node.cloneAndStealChildren()));
+        }
+      }
+    }
+  };
+
   Skew.JavaScriptEmitter.prototype._patchBinaryArithmetic = function(node) {
     // Make sure arithmetic integer operators don't emit doubles outside the
     // integer range. Allowing this causes JIT slowdowns due to extra checks
@@ -5000,6 +5017,11 @@
         if (this._mangle && node.content.kind() === Skew.ContentKind.BOOL) {
           node.become(Skew.Node.createUnary(Skew.NodeKind.NOT, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(node.asBool() ? 0 : 1))));
         }
+        break;
+      }
+
+      case Skew.NodeKind.NEGATIVE: {
+        this._patchUnaryArithmetic(node);
         break;
       }
 
@@ -7848,7 +7870,7 @@
       }
     }
 
-    return new Box(isNegative ? -value : value);
+    return new Box(isNegative ? -value | 0 : value);
   };
 
   Skew.Parsing.checkExtraParentheses = function(context, node) {
@@ -11866,7 +11888,7 @@
         }
 
         else if (kind === Skew.NodeKind.NEGATIVE) {
-          this.flattenInt(node, -value.asInt());
+          this.flattenInt(node, -value.asInt() | 0);
         }
 
         else if (kind === Skew.NodeKind.COMPLEMENT) {
@@ -11915,7 +11937,7 @@
 
     // Make this an add for simplicity
     if (shouldNegateConstant) {
-      value = -value;
+      value = -value | 0;
     }
 
     // Include the delta from the parent node if present
@@ -11946,7 +11968,7 @@
 
     // Adjust the value so it has the correct sign
     if (shouldNegateConstant) {
-      value = -value;
+      value = -value | 0;
     }
 
     // The negative sign can often be removed by code transformation
@@ -11955,14 +11977,14 @@
       // a - -1 => a + 1
       if (isRightConstant) {
         node.kind = isAdd ? Skew.NodeKind.SUBTRACT : Skew.NodeKind.ADD;
-        value = -value;
+        value = -value | 0;
         needsContentUpdate = true;
       }
 
       // -1 + a => a - 1
       else if (isAdd) {
         node.kind = Skew.NodeKind.SUBTRACT;
-        value = -value;
+        value = -value | 0;
         variable.swapWith(constant);
         needsContentUpdate = true;
       }

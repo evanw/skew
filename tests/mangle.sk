@@ -1352,5 +1352,18 @@ class Foo {
 })();
 ").jsMangle
 
+test("
+@export
+def main List<int> {
+  return [0x7FFFFFFF, -0x7FFFFFFF, 0x80000000, -0x80000000]
+}
+", "
+(function() {
+  main = function() {
+    return [2147483647, -2147483647, -2147483648, -2147483648];
+  };
+})();
+").jsMangle
+
   }
 }
