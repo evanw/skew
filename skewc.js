@@ -17266,11 +17266,6 @@
     return null;
   };
 
-  Skew.Type.prototype.hasBaseType = function(type) {
-    var base = this.baseClass();
-    return base !== null && (base === type || base.hasBaseType(type));
-  };
-
   Skew.Type.initialize = function() {
     if (Skew.Type.DYNAMIC === null) {
       Skew.Type.DYNAMIC = new Skew.Type(Skew.TypeKind.SPECIAL, null);
@@ -17352,6 +17347,26 @@
     return type.symbol === this.stringMapType.symbol;
   };
 
+  Skew.TypeCache.prototype.isBaseType = function(derived, base) {
+    while (true) {
+      var baseClass = derived.baseClass();
+
+      if (baseClass === null) {
+        return false;
+      }
+
+      derived = this.substitute(baseClass, derived.environment);
+
+      if (derived === base) {
+        return true;
+      }
+    }
+  };
+
+  Skew.TypeCache.prototype.isWrappedType = function(wrapped, unwrapped) {
+    return wrapped.isWrapped() && this.substitute(wrapped.symbol.asObjectSymbol().wrappedType, wrapped.environment) === unwrapped;
+  };
+
   Skew.TypeCache.prototype.canImplicitlyConvert = function(from, to) {
     if (from === to) {
       return true;
@@ -17369,7 +17384,7 @@
       return true;
     }
 
-    if (from.hasBaseType(to)) {
+    if (this.isBaseType(from, to)) {
       return true;
     }
 
@@ -17389,15 +17404,15 @@
       return true;
     }
 
-    if (from.isWrapped() && from.symbol.asObjectSymbol().wrappedType === to) {
+    if (this.isWrappedType(from, to)) {
       return true;
     }
 
-    if (to.isWrapped() && to.symbol.asObjectSymbol().wrappedType === from) {
+    if (this.isWrappedType(to, from)) {
       return true;
     }
 
-    if (to.hasBaseType(from)) {
+    if (this.isBaseType(to, from)) {
       return true;
     }
 

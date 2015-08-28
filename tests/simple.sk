@@ -4030,8 +4030,7 @@ test("
 class Foo<T> {
 }
 
-type Bar<T> : Foo<T> {
-  def foo(foo T)
+class Bar<T> : Foo<T> {
 }
 
 def main {
@@ -4041,18 +4040,55 @@ def main {
   var bat = bar as Bar<int>
 }
 ", "
-<stdin>:10:13: error: Cannot convert from type \"Foo<int>\" to type \"Bar<bool>\"
+<stdin>:9:13: error: Cannot convert from type \"Foo<int>\" to type \"Bar<bool>\"
   var bar = foo as Bar<bool>
             ~~~
-<stdin>:12:13: error: Cannot convert from type \"Bar<bool>\" to type \"Bar<int>\"
+<stdin>:11:13: error: Cannot convert from type \"Bar<bool>\" to type \"Bar<int>\"
   var bat = bar as Bar<int>
             ~~~
-<stdin>:11:7: warning: Local variable \"baz\" is never read
+<stdin>:10:7: warning: Local variable \"baz\" is never read
   var baz = foo as Bar<int>
       ~~~
-<stdin>:12:7: warning: Local variable \"bat\" is never read
+<stdin>:11:7: warning: Local variable \"bat\" is never read
   var bat = bar as Bar<int>
       ~~~
+")
+
+test("
+class Foo<T> {
+}
+
+type Bar<T> : Foo<T> {
+}
+
+def main {
+  var foo = Foo<int>.new
+  var bar = foo as Bar<bool>
+  var baz = foo as Bar<int>
+  var bat = bar as Bar<int>
+}
+", "
+<stdin>:9:13: error: Cannot convert from type \"Foo<int>\" to type \"Bar<bool>\"
+  var bar = foo as Bar<bool>
+            ~~~
+<stdin>:11:13: error: Cannot convert from type \"Bar<bool>\" to type \"Bar<int>\"
+  var bat = bar as Bar<int>
+            ~~~
+<stdin>:10:7: warning: Local variable \"baz\" is never read
+  var baz = foo as Bar<int>
+      ~~~
+<stdin>:11:7: warning: Local variable \"bat\" is never read
+  var bat = bar as Bar<int>
+      ~~~
+")
+
+test("
+type Foo = Bar
+type Bar = Foo
+", "
+<stdin>:1:6: error: Cyclic declaration of \"Foo\"
+type Foo = Bar
+     ~~~
 ")
 
   }

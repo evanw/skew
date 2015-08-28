@@ -532,7 +532,7 @@ namespace Skew {
       _namespacePrefix = symbol.parent != null ? _computeNamespacePrefix(symbol.parent.asObjectSymbol) : ""
 
       switch symbol.kind {
-        case .OBJECT_NAMESPACE, .OBJECT_INTERFACE {
+        case .OBJECT_NAMESPACE, .OBJECT_INTERFACE, .OBJECT_WRAPPED {
           _addMapping(symbol.range)
           _emitNewlineBeforeSymbol(symbol)
           _emitComments(symbol.comments)

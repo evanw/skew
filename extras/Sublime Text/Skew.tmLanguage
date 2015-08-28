@@ -58,7 +58,21 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:catch|class|const|enum|for|interface|namespace|over|type|var)\b(?:\s+([A-Za-z0-9_\.]+))?</string>
+      <string>\b(?:catch|class|const|enum|for|interface|namespace|over|var)\b(?:\s+([A-Za-z0-9_\.]+))?</string>
+      <key>name</key>
+      <string>keyword.skew</string>
+      <key>captures</key>
+      <dict>
+        <key>1</key>
+        <dict>
+          <key>name</key>
+          <string>entity.name.function.skew</string>
+        </dict>
+      </dict>
+    </dict>
+    <dict>
+      <key>match</key>
+      <string>^\s*\btype\b(?:\s+([A-Za-z0-9_\.]+))?</string>
       <key>name</key>
       <string>keyword.skew</string>
       <key>captures</key>

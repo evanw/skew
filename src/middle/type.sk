@@ -87,11 +87,6 @@ namespace Skew {
       }
       return null
     }
-
-    def hasBaseType(type Type) bool {
-      var base = baseClass
-      return base != null && (base == type || base.hasBaseType(type))
-    }
   }
 
   namespace Type {
@@ -200,12 +195,29 @@ namespace Skew {
       return type.symbol == stringMapType.symbol
     }
 
+    def isBaseType(derived Type, base Type) bool {
+      while true {
+        var baseClass = derived.baseClass
+        if baseClass == null {
+          return false
+        }
+        derived = substitute(baseClass, derived.environment)
+        if derived == base {
+          return true
+        }
+      }
+    }
+
+    def isWrappedType(wrapped Type, unwrapped Type) bool {
+      return wrapped.isWrapped && substitute(wrapped.symbol.asObjectSymbol.wrappedType, wrapped.environment) == unwrapped
+    }
+
     def canImplicitlyConvert(from Type, to Type) bool {
       if from == to { return true }
       if from == .DYNAMIC || to == .DYNAMIC { return true }
       if from == .NULL && to.isReference { return true }
       if from == intType && to == doubleType { return true }
-      if from.hasBaseType(to) { return true }
+      if isBaseType(from, to) { return true }
       if from.isEnum && !to.isEnum && isNumeric(to) { return true }
       return false
     }
@@ -213,9 +225,9 @@ namespace Skew {
     def canExplicitlyConvert(from Type, to Type) bool {
       if canImplicitlyConvert(from, to) { return true }
       if _canCastToNumeric(from) && _canCastToNumeric(to) { return true }
-      if from.isWrapped && from.symbol.asObjectSymbol.wrappedType == to { return true }
-      if to.isWrapped && to.symbol.asObjectSymbol.wrappedType == from { return true }
-      if to.hasBaseType(from) { return true }
+      if isWrappedType(from, to) { return true }
+      if isWrappedType(to, from) { return true }
+      if isBaseType(to, from) { return true }
       if to.isEnum && isNumeric(from) { return true }
       return false
     }
