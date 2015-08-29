@@ -992,7 +992,7 @@ class Baz {
 ", "
 (function() {
   foo = function(a, e, f) {
-    var b = new g();
+    var b = new g;
     t('' + a), t(a + ''), t(a.toString() + a), t(e + ''), t(f.toString(0) + ''), t(b.c() + '');
   };
 
@@ -1043,7 +1043,7 @@ def main(args List<string>) int {
   };
 
   function m(a) {
-    return new l(), j(h(a), 100);
+    return new l, j(h(a), 100);
   }
 
   function h(a) {
@@ -1437,6 +1437,23 @@ def main(x int) {
 (function() {
   main = function(a) {
     a ? z() : y();
+  };
+})();
+").jsMangle
+
+# Check parentheses omission for object creation
+test("
+@export
+def main {
+  dynamic.Foo.new()
+  dynamic.Foo.new(100)
+  dynamic.Foo.new().foo
+  dynamic.Foo.new(100).foo
+}
+", "
+(function() {
+  main = function() {
+    new Foo, new Foo(100), new Foo().foo, new Foo(100).foo;
   };
 })();
 ").jsMangle

@@ -4576,6 +4576,7 @@
         var value = node.callValue();
         var call = value.kind === Skew.NodeKind.SUPER;
         var wrap1 = value.kind === Skew.NodeKind.LAMBDA && node.parent() !== null && node.parent().kind === Skew.NodeKind.EXPRESSION;
+        var isNew = false;
 
         if (wrap1) {
           this._emit('(');
@@ -4583,11 +4584,13 @@
 
         if (!call && node.symbol !== null && node.symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
           this._emit('new ' + Skew.JavaScriptEmitter._fullName(node.symbol));
+          isNew = true;
         }
 
         else if (!call && value.kind === Skew.NodeKind.DOT && value.asString() === 'new') {
           this._emit('new ');
           this._emitExpression(value.dotTarget(), Skew.Precedence.MEMBER);
+          isNew = true;
         }
 
         else {
@@ -4602,21 +4605,24 @@
           this._emit(')');
         }
 
-        this._emit('(');
+        // Omit parentheses during mangling when possible
+        if (!isNew || !this._mangle || call || value.nextSibling() !== null || node.parent() !== null && node.parent().kind === Skew.NodeKind.DOT) {
+          this._emit('(');
 
-        if (call) {
-          this._emit(Skew.JavaScriptEmitter._mangleName(this._enclosingFunction.$this));
-        }
-
-        for (var child = value.nextSibling(); child !== null; child = child.nextSibling()) {
-          if (call || child.previousSibling() !== value) {
-            this._emit(',' + this._space);
+          if (call) {
+            this._emit(Skew.JavaScriptEmitter._mangleName(this._enclosingFunction.$this));
           }
 
-          this._emitExpression(child, Skew.Precedence.COMMA);
-        }
+          for (var child = value.nextSibling(); child !== null; child = child.nextSibling()) {
+            if (call || child.previousSibling() !== value) {
+              this._emit(',' + this._space);
+            }
 
-        this._emit(')');
+            this._emitExpression(child, Skew.Precedence.COMMA);
+          }
+
+          this._emit(')');
+        }
         break;
       }
 

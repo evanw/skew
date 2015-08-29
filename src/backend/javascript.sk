@@ -1024,6 +1024,7 @@ namespace Skew {
           var value = node.callValue
           var call = value.kind == .SUPER
           var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
+          var isNew = false
 
           if wrap {
             _emit("(")
@@ -1031,9 +1032,11 @@ namespace Skew {
 
           if !call && node.symbol != null && node.symbol.kind == .FUNCTION_CONSTRUCTOR {
             _emit("new " + _fullName(node.symbol))
+            isNew = true
           } else if !call && value.kind == .DOT && value.asString == "new" {
             _emit("new ")
             _emitExpression(value.dotTarget, .MEMBER)
+            isNew = true
           } else {
             _emitExpression(value, .UNARY_POSTFIX)
             if call {
@@ -1045,20 +1048,23 @@ namespace Skew {
             _emit(")")
           }
 
-          _emit("(")
+          # Omit parentheses during mangling when possible
+          if !isNew || !_mangle || call || value.nextSibling != null || node.parent != null && node.parent.kind == .DOT {
+            _emit("(")
 
-          if call {
-            _emit(_mangleName(_enclosingFunction.this))
-          }
-
-          for child = value.nextSibling; child != null; child = child.nextSibling {
-            if call || child.previousSibling != value {
-              _emit("," + _space)
+            if call {
+              _emit(_mangleName(_enclosingFunction.this))
             }
-            _emitExpression(child, .COMMA)
-          }
 
-          _emit(")")
+            for child = value.nextSibling; child != null; child = child.nextSibling {
+              if call || child.previousSibling != value {
+                _emit("," + _space)
+              }
+              _emitExpression(child, .COMMA)
+            }
+
+            _emit(")")
+          }
         }
 
         case .INITIALIZER_LIST, .INITIALIZER_MAP {
