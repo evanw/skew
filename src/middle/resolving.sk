@@ -1776,7 +1776,8 @@ namespace Skew.Resolving {
       }
 
       # Forbid constructing an abstract type
-      if function != null && function.kind == .FUNCTION_CONSTRUCTOR && isAbstractObject(function.parent.asObjectSymbol) && value.kind != .SUPER {
+      if !options.target.allowAbstractConstruction && function != null && function.kind == .FUNCTION_CONSTRUCTOR &&
+          isAbstractObject(function.parent.asObjectSymbol) && value.kind != .SUPER {
         var reason = function.parent.asObjectSymbol.isAbstractBecauseOf
         log.semanticErrorAbstractNew(node.internalRangeOrRange, function.parent.resolvedType, reason.range, reason.name)
       }

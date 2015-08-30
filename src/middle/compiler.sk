@@ -4,6 +4,7 @@ namespace Skew {
     def extension string { return "" }
     def runPostResolvePasses bool { return false }
     def moveEverythingOffEnums bool { return false }
+    def allowAbstractConstruction bool { return false }
     def requiresIntegerSwitchStatements bool { return false }
     def supportsListForeach bool { return false }
     def supportsNestedTypes bool { return false }
@@ -12,6 +13,10 @@ namespace Skew {
     def editOptions(options CompilerOptions) {}
     def includeSources(sources List<Source>) {}
     def createEmitter(options CompilerOptions, cache TypeCache) Emitter { return null }
+  }
+
+  class TypeCheckingCompilerTarget : CompilerTarget {
+    over allowAbstractConstruction bool { return true }
   }
 
   class Define {

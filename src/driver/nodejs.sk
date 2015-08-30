@@ -218,16 +218,18 @@ namespace Skew {
     }
 
     # Parse the output location
-    var outputFile = parser.rangeForOption(.OUTPUT_FILE)
-    var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
-    if outputFile == null && outputDirectory == null {
-      log.commandLineErrorMissingOutput(trailingSpace, "--output-file", "--output-dir")
-    } else if outputFile != null && outputDirectory != null {
-      log.commandLineErrorDuplicateOutput(outputFile.start > outputDirectory.start ? outputFile : outputDirectory, "--output-file", "--output-dir")
-    } else if outputFile != null {
-      options.outputFile = outputFile.toString
-    } else {
-      options.outputDirectory = outputDirectory.toString
+    if target != null && target.toString != "typecheck" {
+      var outputFile = parser.rangeForOption(.OUTPUT_FILE)
+      var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
+      if outputFile == null && outputDirectory == null {
+        log.commandLineErrorMissingOutput(trailingSpace, "--output-file", "--output-dir")
+      } else if outputFile != null && outputDirectory != null {
+        log.commandLineErrorDuplicateOutput(outputFile.start > outputDirectory.start ? outputFile : outputDirectory, "--output-file", "--output-dir")
+      } else if outputFile != null {
+        options.outputFile = outputFile.toString
+      } else {
+        options.outputDirectory = outputDirectory.toString
+      }
     }
 
     return options
@@ -284,6 +286,7 @@ namespace Skew {
   }
 
   const VALID_TARGETS = {
+    "typecheck": TypeCheckingCompilerTarget.new,
     "cpp": CPlusPlusTarget.new,
     "cs": CSharpTarget.new,
     "js": JavaScriptTarget.new,
