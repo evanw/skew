@@ -4109,5 +4109,32 @@ type Foo {}
       ~~~
 ")
 
+test("
+type Foo : List<int> {
+  def +=(foo int) {
+    (self as List<int>).append(foo)
+  }
+}
+
+namespace Foo {
+  def new Foo {
+    return List<int>.new as Foo
+  }
+}
+
+def foo Foo {
+  return Foo.new
+}
+
+def main {
+  foo += 0
+  foo += false
+}
+", "
+<stdin>:19:10: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  foo += false
+         ~~~~~
+")
+
   }
 }

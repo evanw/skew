@@ -2532,14 +2532,12 @@ namespace Skew.Resolving {
         resolveAsParameterizedExpression(target, scope)
       }
 
-      # Check for a valid storage location even for overloadable operators
-      if kind.isAssign {
-        checkStorage(target, scope)
-      }
-
       # Can't do overload resolution on the dynamic type
       var type = target.resolvedType
       if type == .DYNAMIC {
+        if kind.isAssign {
+          checkStorage(target, scope)
+        }
         resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
@@ -2591,6 +2589,11 @@ namespace Skew.Resolving {
       var isRawImport = symbol.isImported && !symbol.isRenamed
       node.symbol = symbol
       checkAccess(node, node.internalRangeOrRange, scope)
+
+      # Check for a valid storage location for imported operators
+      if kind.isAssign && symbol.isImported {
+        checkStorage(target, scope)
+      }
 
       # "<", ">", "<=", or ">="
       if isComparison && (isRawImport || type == cache.doubleType) {

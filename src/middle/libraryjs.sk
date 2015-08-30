@@ -160,6 +160,12 @@ class List {
     (self as dynamic).splice(index, 1)
   }
 
+  def appendOne(value T) {
+    if !(value in self) {
+      append(value)
+    }
+  }
+
   def removeOne(value T) {
     var index = indexOf(value)
     if index >= 0 {
