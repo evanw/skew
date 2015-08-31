@@ -1381,21 +1381,21 @@ namespace Skew {
 
     def _patchTypeCheck(node Node) {
       var value = node.typeCheckValue
-      var type = node.typeCheckType.resolvedType
+      var type = _cache.unwrappedType(node.typeCheckType.resolvedType)
 
-      if _cache.isWrappedType(type, _cache.boolType) {
+      if type == _cache.boolType {
         node.become(Node.createSymbolCall(_specialVariable(.IS_BOOL)).appendChild(value.remove))
       }
 
-      else if _cache.isWrappedType(type, _cache.intType) || type.isEnum {
+      else if type == _cache.intType || type.isEnum {
         node.become(Node.createSymbolCall(_specialVariable(.IS_INT)).appendChild(value.remove))
       }
 
-      else if _cache.isWrappedType(type, _cache.doubleType) {
+      else if type == _cache.doubleType {
         node.become(Node.createSymbolCall(_specialVariable(.IS_DOUBLE)).appendChild(value.remove))
       }
 
-      else if _cache.isWrappedType(type, _cache.stringType) {
+      else if type == _cache.stringType {
         node.become(Node.createSymbolCall(_specialVariable(.IS_STRING)).appendChild(value.remove))
       }
 

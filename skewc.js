@@ -4978,21 +4978,21 @@
 
   Skew.JavaScriptEmitter.prototype._patchTypeCheck = function(node) {
     var value = node.typeCheckValue();
-    var type = node.typeCheckType().resolvedType;
+    var type = this._cache.unwrappedType(node.typeCheckType().resolvedType);
 
-    if (this._cache.isWrappedType(type, this._cache.boolType)) {
+    if (type === this._cache.boolType) {
       node.become(Skew.Node.createSymbolCall(this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.IS_BOOL)).appendChild(value.remove()));
     }
 
-    else if (this._cache.isWrappedType(type, this._cache.intType) || type.isEnum()) {
+    else if (type === this._cache.intType || type.isEnum()) {
       node.become(Skew.Node.createSymbolCall(this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.IS_INT)).appendChild(value.remove()));
     }
 
-    else if (this._cache.isWrappedType(type, this._cache.doubleType)) {
+    else if (type === this._cache.doubleType) {
       node.become(Skew.Node.createSymbolCall(this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.IS_DOUBLE)).appendChild(value.remove()));
     }
 
-    else if (this._cache.isWrappedType(type, this._cache.stringType)) {
+    else if (type === this._cache.stringType) {
       node.become(Skew.Node.createSymbolCall(this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.IS_STRING)).appendChild(value.remove()));
     }
 
@@ -11963,7 +11963,7 @@
   };
 
   Skew.Folding.ConstantFolder.prototype.areTypesEquivalent = function(type, primitiveType) {
-    return type === primitiveType || this.cache.isWrappedType(type, primitiveType);
+    return this.cache.unwrappedType(type) === primitiveType;
   };
 
   Skew.Folding.ConstantFolder.prototype.foldCall = function(node) {
@@ -14795,28 +14795,30 @@
   };
 
   Skew.Resolving.Resolver.prototype.createDefaultValueForType = function(type, range) {
-    if (type === this.cache.intType) {
+    var unwrapped = this.cache.unwrappedType(type);
+
+    if (unwrapped === this.cache.intType) {
       return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(type);
     }
 
-    if (type === this.cache.doubleType) {
+    if (unwrapped === this.cache.doubleType) {
       return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.DoubleContent(0)).withType(type);
     }
 
-    if (type === this.cache.boolType) {
+    if (unwrapped === this.cache.boolType) {
       return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.BoolContent(false)).withType(type);
     }
 
-    if (type.isEnum()) {
+    if (unwrapped.isEnum()) {
       return Skew.Node.createCast(new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this.cache.intType), new Skew.Node(Skew.NodeKind.TYPE).withType(type)).withType(type);
     }
 
-    if (type.isParameter()) {
+    if (unwrapped.isParameter()) {
       this.log.semanticErrorNoDefaultValue(range, type);
       return null;
     }
 
-    assert(type.isReference());
+    assert(unwrapped.isReference());
     return new Skew.Node(Skew.NodeKind.NULL).withType(type);
   };
 
@@ -17445,7 +17447,7 @@
   // Type parameters are not guaranteed to be nullable since generics are
   // implemented through type erasure and the substituted type may be "int"
   Skew.Type.prototype.isReference = function() {
-    return this.symbol === null || !this.symbol.isValueType() && !Skew.SymbolKind.isParameter(this.symbol.kind);
+    return this.symbol === null || !this.symbol.isValueType() && !Skew.SymbolKind.isParameter(this.symbol.kind) && (this.symbol.kind !== Skew.SymbolKind.OBJECT_WRAPPED || this.symbol.asObjectSymbol().wrappedType.isReference());
   };
 
   Skew.Type.prototype.toString = function() {
@@ -17593,17 +17595,16 @@
     }
   };
 
-  Skew.TypeCache.prototype.isWrappedType = function(wrapped, unwrapped) {
-    if (wrapped === unwrapped) {
-      return true;
+  Skew.TypeCache.prototype.unwrappedType = function(type) {
+    if (type.isWrapped()) {
+      var inner = type.symbol.asObjectSymbol().wrappedType;
+
+      if (inner !== null) {
+        return this.unwrappedType(this.substitute(inner, type.environment));
+      }
     }
 
-    if (wrapped.isWrapped()) {
-      var inner = wrapped.symbol.asObjectSymbol().wrappedType;
-      return inner !== null && this.substitute(inner, wrapped.environment) === unwrapped;
-    }
-
-    return false;
+    return type;
   };
 
   Skew.TypeCache.prototype.canImplicitlyConvert = function(from, to) {
@@ -17643,11 +17644,7 @@
       return true;
     }
 
-    if (this.isWrappedType(from, to)) {
-      return true;
-    }
-
-    if (this.isWrappedType(to, from)) {
+    if (this.unwrappedType(from) === this.unwrappedType(to)) {
       return true;
     }
 

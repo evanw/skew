@@ -335,7 +335,7 @@ namespace Skew.Folding {
     }
 
     def areTypesEquivalent(type Type, primitiveType Type) bool {
-      return type == primitiveType || cache.isWrappedType(type, primitiveType)
+      return cache.unwrappedType(type) == primitiveType
     }
 
     def foldCall(node Node) {

@@ -46,7 +46,7 @@ namespace Skew {
     # Type parameters are not guaranteed to be nullable since generics are
     # implemented through type erasure and the substituted type may be "int"
     def isReference bool {
-      return symbol == null || !symbol.isValueType && !symbol.kind.isParameter
+      return symbol == null || !symbol.isValueType && !symbol.kind.isParameter && (symbol.kind != .OBJECT_WRAPPED || symbol.asObjectSymbol.wrappedType.isReference)
     }
 
     def toString string {
@@ -208,15 +208,14 @@ namespace Skew {
       }
     }
 
-    def isWrappedType(wrapped Type, unwrapped Type) bool {
-      if wrapped == unwrapped {
-        return true
+    def unwrappedType(type Type) Type {
+      if type.isWrapped {
+        var inner = type.symbol.asObjectSymbol.wrappedType
+        if inner != null {
+          return unwrappedType(substitute(inner, type.environment))
+        }
       }
-      if wrapped.isWrapped {
-        var inner = wrapped.symbol.asObjectSymbol.wrappedType
-        return inner != null && substitute(inner, wrapped.environment) == unwrapped
-      }
-      return false
+      return type
     }
 
     def canImplicitlyConvert(from Type, to Type) bool {
@@ -232,8 +231,7 @@ namespace Skew {
     def canExplicitlyConvert(from Type, to Type) bool {
       if canImplicitlyConvert(from, to) { return true }
       if _canCastToNumeric(from) && _canCastToNumeric(to) { return true }
-      if isWrappedType(from, to) { return true }
-      if isWrappedType(to, from) { return true }
+      if unwrappedType(from) == unwrappedType(to) { return true }
       if isBaseType(to, from) { return true }
       if to.isEnum && isNumeric(from) { return true }
       return false

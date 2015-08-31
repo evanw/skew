@@ -4163,5 +4163,33 @@ def main {
                       ~~~~~~
 ")
 
+test("
+var a Bool = null
+var b Int = null
+var c Double = null
+var d String = null
+var e Bar = null
+
+type Bool = bool
+type Int = int
+type Double = double
+type String = string
+type Bar = Foo
+enum Foo {}
+", "
+<stdin>:1:14: error: Cannot convert from type \"null\" to type \"Bool\"
+var a Bool = null
+             ~~~~
+<stdin>:2:13: error: Cannot convert from type \"null\" to type \"Int\"
+var b Int = null
+            ~~~~
+<stdin>:3:16: error: Cannot convert from type \"null\" to type \"Double\"
+var c Double = null
+               ~~~~
+<stdin>:5:13: error: Cannot convert from type \"null\" to type \"Bar\"
+var e Bar = null
+            ~~~~
+")
+
   }
 }

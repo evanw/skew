@@ -995,28 +995,30 @@ namespace Skew.Resolving {
     }
 
     def createDefaultValueForType(type Type, range Range) Node {
-      if type == cache.intType {
+      var unwrapped = cache.unwrappedType(type)
+
+      if unwrapped == cache.intType {
         return Node.createInt(0).withType(type)
       }
 
-      if type == cache.doubleType {
+      if unwrapped == cache.doubleType {
         return Node.createDouble(0).withType(type)
       }
 
-      if type == cache.boolType {
+      if unwrapped == cache.boolType {
         return Node.createBool(false).withType(type)
       }
 
-      if type.isEnum {
+      if unwrapped.isEnum {
         return Node.createCast(Node.createInt(0).withType(cache.intType), Node.createType(type)).withType(type)
       }
 
-      if type.isParameter {
+      if unwrapped.isParameter {
         log.semanticErrorNoDefaultValue(range, type)
         return null
       }
 
-      assert(type.isReference)
+      assert(unwrapped.isReference)
       return Node.createNull.withType(type)
     }
 

@@ -1540,5 +1540,30 @@ def main {
 })();
 ").jsMangle
 
+test("
+@export {
+  var a Bool
+  var b Int
+  var c Double
+  var d String
+  var e Bar
+}
+
+type Bool = bool
+type Int = int
+type Double = double
+type String = string
+type Bar = Foo
+enum Foo {}
+", "
+(function() {
+  a = !1;
+  b = 0;
+  c = 0;
+  d = null;
+  e = 0;
+})();
+").jsMangle
+
   }
 }
