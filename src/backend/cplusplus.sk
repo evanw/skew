@@ -668,8 +668,7 @@ namespace Skew {
 
         case .CAST {
           var value = node.castValue
-
-          if node.castType.kind == .DYNAMIC {
+          if node.castType.resolvedType == .DYNAMIC {
             _emitExpression(value, precedence)
           } else {
             if Precedence.UNARY_POSTFIX as int < precedence as int {

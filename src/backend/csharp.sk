@@ -762,10 +762,6 @@ namespace Skew {
           _emitType(node.resolvedType)
         }
 
-        case .DYNAMIC {
-          _emit("dynamic")
-        }
-
         case .NULL {
           _emit("null")
         }
@@ -818,7 +814,7 @@ namespace Skew {
           var type = node.castType
           var value = node.castValue
 
-          if type.kind == .DYNAMIC {
+          if type.resolvedType == .DYNAMIC {
             _emitExpression(value, precedence)
           }
 

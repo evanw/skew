@@ -281,6 +281,10 @@ namespace Skew {
       warning(range, "Unnecessary cast from type \"" + from.toString + "\" to type \"" + to.toString + "\"")
     }
 
+    def semanticWarningExtraTypeCheck(range Range, from Type, to Type) {
+      warning(range, "Unnecessary type check, type \"" + from.toString + "\" is always type \"" + to.toString + "\"")
+    }
+
     def semanticErrorWrongArgumentCount(range Range, name string, count int) {
       error(range, "Expected \"" + name + "\" to take " + count.toString + " argument" + PrettyPrint.plural(count))
     }

@@ -4136,5 +4136,32 @@ def main {
          ~~~~~
 ")
 
+test("
+class Foo {}
+class Bar : Foo {}
+
+@export
+def main {
+  dynamic.foo(Foo.new is dynamic)
+  dynamic.foo(Foo.new is Foo)
+  dynamic.foo(Foo.new is Bar)
+  dynamic.foo(Bar.new is Foo)
+  dynamic.foo(Bar.new is Bar)
+}
+", "
+<stdin>:6:23: warning: Unnecessary type check, type \"Foo\" is always type \"dynamic\"
+  dynamic.foo(Foo.new is dynamic)
+                      ~~~~~~~~~~
+<stdin>:7:23: warning: Unnecessary type check, type \"Foo\" is always type \"Foo\"
+  dynamic.foo(Foo.new is Foo)
+                      ~~~~~~
+<stdin>:9:23: warning: Unnecessary type check, type \"Bar\" is always type \"Foo\"
+  dynamic.foo(Bar.new is Foo)
+                      ~~~~~~
+<stdin>:10:23: warning: Unnecessary type check, type \"Bar\" is always type \"Bar\"
+  dynamic.foo(Bar.new is Bar)
+                      ~~~~~~
+")
+
   }
 }

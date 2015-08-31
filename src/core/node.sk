@@ -27,7 +27,6 @@ namespace Skew {
     CAST
     CONSTANT
     DOT
-    DYNAMIC
     HOOK
     INDEX
     INITIALIZER_LIST
@@ -41,6 +40,7 @@ namespace Skew {
     SEQUENCE
     SUPER
     TYPE
+    TYPE_CHECK
 
     # Unary operators
     COMPLEMENT
@@ -59,7 +59,6 @@ namespace Skew {
     DIVIDE
     EQUAL
     IN
-    IS
     LOGICAL_AND
     LOGICAL_OR
     MULTIPLY
@@ -894,10 +893,6 @@ namespace Skew {
       return new(.NAME).withContent(StringContent.new(text))
     }
 
-    def createDynamic Node {
-      return new(.DYNAMIC)
-    }
-
     def createNull Node {
       return new(.NULL)
     }
@@ -939,6 +934,12 @@ namespace Skew {
 
     def createType(type Type) Node {
       return new(.TYPE).withType(type)
+    }
+
+    def createTypeCheck(value Node, type Node) Node {
+      assert(value.kind.isExpression)
+      assert(type.kind.isExpression)
+      return new(.TYPE_CHECK).appendChild(value).appendChild(type)
     }
 
     def createUnary(kind NodeKind, value Node) Node {
@@ -1107,6 +1108,20 @@ namespace Skew {
 
     def castType Node {
       assert(kind == .CAST)
+      assert(childCount == 2)
+      assert(_lastChild.kind.isExpression)
+      return _lastChild
+    }
+
+    def typeCheckValue Node {
+      assert(kind == .TYPE_CHECK)
+      assert(childCount == 2)
+      assert(_firstChild.kind.isExpression)
+      return _firstChild
+    }
+
+    def typeCheckType Node {
+      assert(kind == .TYPE_CHECK)
       assert(childCount == 2)
       assert(_lastChild.kind.isExpression)
       return _lastChild

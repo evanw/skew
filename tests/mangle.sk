@@ -1491,5 +1491,54 @@ def main {
 })();
 ").jsMangle
 
+test("
+class Class {}
+enum Enum {}
+type Type = int
+
+@export
+def main {
+  dynamic.foo(dynamic.bar is dynamic)
+  dynamic.foo(dynamic.bar is fn())
+
+  dynamic.foo(dynamic.bar is bool)
+  dynamic.foo(dynamic.bar is double)
+  dynamic.foo(dynamic.bar is Enum)
+  dynamic.foo(dynamic.bar is int)
+  dynamic.foo(dynamic.bar is Type)
+  dynamic.foo(dynamic.bar is string)
+
+  dynamic.foo(dynamic.bar is Class)
+  dynamic.foo(dynamic.bar is dynamic.Dynamic)
+}
+", "
+(function() {
+  function f(a) {
+    return a === !!a;
+  }
+
+  function g(a) {
+    return a === +a || isNaN(a);
+  }
+
+  function e(a) {
+    return a === (a | 0);
+  }
+
+  function h(a) {
+    return typeof(a) === 'string';
+  }
+
+  main = function() {
+    foo(bar), foo(bar instanceof Function), foo(f(bar)), foo(g(bar)), foo(e(bar)), foo(e(bar)), foo(e(bar)), foo(h(bar)), foo(bar instanceof b), foo(bar instanceof Dynamic);
+  };
+  var b = {};
+
+  var c = {};
+
+  var d = {};
+})();
+").jsMangle
+
   }
 }

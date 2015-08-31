@@ -209,6 +209,9 @@ namespace Skew {
     }
 
     def isWrappedType(wrapped Type, unwrapped Type) bool {
+      if wrapped == unwrapped {
+        return true
+      }
       if wrapped.isWrapped {
         var inner = wrapped.symbol.asObjectSymbol.wrappedType
         return inner != null && substitute(inner, wrapped.environment) == unwrapped

@@ -37,16 +37,24 @@ namespace Skew {
       CAN_OMIT_BRACES
     }
 
+    enum SpecialVariable {
+      NONE
+      EXTENDS
+      IS_BOOL
+      IS_DOUBLE
+      IS_INT
+      IS_STRING
+      MULTIPLY
+    }
+
     const _options CompilerOptions
     const _cache TypeCache
-    var _needsExtends = false
-    var _needsMultiply = false
     var _namespacePrefix = ""
     var _previousNode Node = null
     var _previousSymbol Symbol = null
     var _enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
-    var _extends VariableSymbol = null
-    var _multiply VariableSymbol = null
+    var _specialVariables IntMap<VariableSymbol> = {}
+    var _isSpecialVariableNeeded IntMap<int> = {}
     var _enclosingLoop Node = null
     var _loopLabels IntMap<VariableSymbol> = {}
 
@@ -92,16 +100,17 @@ namespace Skew {
 
       # Load special-cased variables
       for variable in global.variables {
-        if variable.name == "__extends" {
-          _extends = variable
-          if _multiply != null { break }
-        } else if variable.name == "__imul" {
-          _multiply = variable
-          if _extends != null { break }
+        var special = SPECIAL_VARIABLE_MAP.get(variable.name, .NONE)
+        if special != .NONE {
+          _specialVariables[special] = variable
         }
       }
-      assert(_extends != null)
-      assert(_multiply != null)
+      assert(SpecialVariable.EXTENDS in _specialVariables)
+      assert(SpecialVariable.IS_BOOL in _specialVariables)
+      assert(SpecialVariable.IS_DOUBLE in _specialVariables)
+      assert(SpecialVariable.IS_INT in _specialVariables)
+      assert(SpecialVariable.IS_STRING in _specialVariables)
+      assert(SpecialVariable.MULTIPLY in _specialVariables)
 
       # Preprocess the code
       if _mangle { _liftGlobals(global) }
@@ -115,8 +124,16 @@ namespace Skew {
       _increaseIndent
 
       # Emit special-cased variables that must come first
-      if _needsExtends { _emitFunction(_convertLambdaToFunction(_extends)) }
-      if _needsMultiply { _emitVariable(_multiply) }
+      var specialVariables = _specialVariables.values
+      for variable in specialVariables {
+        if variable.id in _isSpecialVariableNeeded {
+          if variable.value.kind == .LAMBDA {
+            _emitFunction(_convertLambdaToFunction(variable))
+          } else {
+            _emitVariable(variable)
+          }
+        }
+      }
 
       # Emit objects and functions
       for object in objects {
@@ -132,7 +149,7 @@ namespace Skew {
           o = o.parent.asObjectSymbol
         }
         for variable in object.variables {
-          if variable != _extends && variable != _multiply {
+          if !(variable in specialVariables) {
             _emitVariable(variable)
           }
         }
@@ -243,13 +260,11 @@ namespace Skew {
       }
 
       # These will be culled by tree shaking regardless of whether they are needed
-      if _needsExtends {
-        _allocateNamingGroupIndex(_extends)
-        _patchNode(_extends.value)
-      }
-      if _needsMultiply {
-        _allocateNamingGroupIndex(_multiply)
-        _patchNode(_multiply.value)
+      for variable in _specialVariables.values {
+        if variable.id in _isSpecialVariableNeeded {
+          _allocateNamingGroupIndex(variable)
+          _patchNode(variable.value)
+        }
       }
 
       # Rename symbols based on frequency for better compression
@@ -574,6 +589,7 @@ namespace Skew {
         }
 
         case .OBJECT_CLASS {
+          var variable = _specialVariables[SpecialVariable.EXTENDS]
           for function in symbol.functions {
             if function.isPrimaryConstructor {
               if function.comments == null && symbol.comments != null {
@@ -585,8 +601,8 @@ namespace Skew {
                   _emit("\n" + _indent)
                 }
                 _emitSemicolonIfNeeded
-                _addMapping(_extends.range)
-                _emit(_mangleName(_extends) + "(" + _fullName(symbol) + "," + _space + _fullName(symbol.baseClass) + ")")
+                _addMapping(variable.range)
+                _emit(_mangleName(variable) + "(" + _fullName(symbol) + "," + _space + _fullName(symbol.baseClass) + ")")
                 _emitSemicolonAfterStatement
               }
               foundPrimaryConstructor = true
@@ -1188,6 +1204,23 @@ namespace Skew {
           }
         }
 
+        case .TYPE_CHECK {
+          var type = node.typeCheckType
+          if type.resolvedType.kind == .SYMBOL || type.kind != .TYPE {
+            if Precedence.COMPARE as int < precedence as int {
+              _emit("(")
+            }
+            _emitExpression(node.typeCheckValue, Precedence.COMPARE)
+            _emit(" instanceof ")
+            _emitExpression(type, Precedence.COMPARE)
+            if Precedence.COMPARE as int < precedence as int {
+              _emit(")")
+            }
+          } else {
+            _emitExpression(node.typeCheckValue, precedence)
+          }
+        }
+
         default {
           if kind.isBinary {
             var info = operatorInfo[kind]
@@ -1199,7 +1232,7 @@ namespace Skew {
             _emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
 
             # Always emit spaces around keyword operators, even when minifying
-            _emit(kind == .IN ? " in " : kind == .IS ? " instanceof " : _space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + _space)
+            _emit(kind == .IN ? " in " : _space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + _space)
 
             # Prevent "x - -1" from becoming "x--1"
             if _minify && (
@@ -1226,7 +1259,7 @@ namespace Skew {
 
       # Subclasses need the extension stub
       if !symbol.isImported && symbol.baseClass != null {
-        _needsExtends = true
+        _specialVariable(.EXTENDS)
       }
 
       # Scan over child objects
@@ -1305,8 +1338,7 @@ namespace Skew {
 
     def _createIntBinary(kind NodeKind, left Node, right Node) Node {
       if kind == .MULTIPLY {
-        _needsMultiply = true
-        return Node.createSymbolCall(_multiply).appendChild(left).appendChild(right)
+        return Node.createSymbolCall(_specialVariable(.MULTIPLY)).appendChild(left).appendChild(right)
       }
       return _wrapWithIntCast(Node.createBinary(kind, left, right).withType(_cache.intType))
     }
@@ -1343,6 +1375,31 @@ namespace Skew {
         if left.resolvedType == _cache.intType && right.resolvedType == _cache.intType {
           node.become(_createIntBinary(node.kind, left.remove, right.remove).withRange(node.range))
         }
+      }
+    }
+
+    def _patchTypeCheck(node Node) {
+      var value = node.typeCheckValue
+      var type = node.typeCheckType.resolvedType
+
+      if _cache.isWrappedType(type, _cache.boolType) {
+        node.become(Node.createSymbolCall(_specialVariable(.IS_BOOL)).appendChild(value.remove))
+      }
+
+      else if _cache.isWrappedType(type, _cache.intType) || type.isEnum {
+        node.become(Node.createSymbolCall(_specialVariable(.IS_INT)).appendChild(value.remove))
+      }
+
+      else if _cache.isWrappedType(type, _cache.doubleType) {
+        node.become(Node.createSymbolCall(_specialVariable(.IS_DOUBLE)).appendChild(value.remove))
+      }
+
+      else if _cache.isWrappedType(type, _cache.stringType) {
+        node.become(Node.createSymbolCall(_specialVariable(.IS_STRING)).appendChild(value.remove))
+      }
+
+      else if type.kind == .LAMBDA {
+        node.typeCheckType.replaceWith(Node.createName("Function").withType(.DYNAMIC))
       }
     }
 
@@ -1417,6 +1474,10 @@ namespace Skew {
 
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
           _patchBinaryArithmetic(node)
+        }
+
+        case .TYPE_CHECK {
+          _patchTypeCheck(node)
         }
 
         case .ASSIGN_INDEX {
@@ -1579,7 +1640,7 @@ namespace Skew {
 
           # Build up the chain of tests in reverse
           if child.symbol != null && child.symbol.resolvedType != .DYNAMIC {
-            var test = Node.createBinary(.IS, Node.createSymbolReference(variable), Node.createType(child.symbol.resolvedType))
+            var test = Node.createTypeCheck(Node.createSymbolReference(variable), Node.createType(child.symbol.resolvedType))
             block = Node.createBlock.appendChild(catchBlock.hasChildren
               ? Node.createIf(test, catchBlock, block)
               : Node.createIf(Node.createUnary(.NOT, test), block, null))
@@ -2199,6 +2260,13 @@ namespace Skew {
         }
       }
     }
+
+    def _specialVariable(name SpecialVariable) VariableSymbol {
+      assert(name in _specialVariables)
+      var variable = _specialVariables[name]
+      _isSpecialVariableNeeded[variable.id] = 0
+      return variable
+    }
   }
 
   namespace JavaScriptEmitter {
@@ -2439,6 +2507,15 @@ namespace Skew {
       "true": 0,
       "try": 0,
       "var": 0,
+    }
+
+    const SPECIAL_VARIABLE_MAP = {
+      "__extends": SpecialVariable.EXTENDS,
+      "__imul": SpecialVariable.MULTIPLY,
+      "__isBool": SpecialVariable.IS_BOOL,
+      "__isDouble": SpecialVariable.IS_DOUBLE,
+      "__isInt": SpecialVariable.IS_INT,
+      "__isString": SpecialVariable.IS_STRING,
     }
   }
 }

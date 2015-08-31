@@ -1299,7 +1299,6 @@ namespace Skew.Parsing {
     pratt.infix(.GREATER_THAN, .COMPARE, binaryInfix(.GREATER_THAN))
     pratt.infix(.GREATER_THAN_OR_EQUAL, .COMPARE, binaryInfix(.GREATER_THAN_OR_EQUAL))
     pratt.infix(.IN, .COMPARE, binaryInfix(.IN))
-    pratt.infix(.IS, .COMPARE, binaryInfix(.IS))
     pratt.infix(.LESS_THAN, .COMPARE, binaryInfix(.LESS_THAN))
     pratt.infix(.LESS_THAN_OR_EQUAL, .COMPARE, binaryInfix(.LESS_THAN_OR_EQUAL))
     pratt.infix(.LOGICAL_AND, .LOGICAL_AND, binaryInfix(.LOGICAL_AND))
@@ -1379,7 +1378,7 @@ namespace Skew.Parsing {
       if !context.expect(.IDENTIFIER) {
         return null
       }
-      return Node.createDot(Node.createDynamic, range.toString).withRange(context.spanSince(token.range)).withInternalRange(range)
+      return Node.createDot(Node.createType(.DYNAMIC), range.toString).withRange(context.spanSince(token.range)).withInternalRange(range)
     }
 
     # Name expressions and lambda expressions like "x => x * x"
@@ -1399,6 +1398,16 @@ namespace Skew.Parsing {
       }
 
       return Node.createName(name).withRange(range)
+    }
+
+    # Type check expressions
+    pratt.parselet(.IS, .COMPARE).infix = (context, left) => {
+      var token = context.next
+      var type = parseType(context)
+      if type == null {
+        return null
+      }
+      return Node.createTypeCheck(left, type).withRange(context.spanSince(left.range)).withInternalRange(token.range)
     }
 
     # Index expressions
@@ -1469,7 +1478,7 @@ namespace Skew.Parsing {
   def createTypeParser Pratt {
     var pratt = Pratt.new
 
-    pratt.literal(.DYNAMIC, tokenLiteral(.DYNAMIC))
+    pratt.literal(.DYNAMIC, (context, token) => Node.createType(.DYNAMIC).withRange(token.range))
     pratt.parselet(.DOT, .MEMBER).infix = dotInfixParselet
     pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = parameterizedParselet
 

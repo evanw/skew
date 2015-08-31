@@ -1115,7 +1115,6 @@ namespace Skew.Resolving {
         case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { resolveOperatorOverload(node, scope) }
         case .CONSTANT { resolveConstant(node, scope) }
         case .DOT { resolveDot(node, scope, context) }
-        case .DYNAMIC {}
         case .HOOK { resolveHook(node, scope, context) }
         case .INDEX { resolveOperatorOverload(node, scope) }
         case .INITIALIZER_LIST, .INITIALIZER_MAP { resolveInitializer(node, scope, context) }
@@ -1126,6 +1125,8 @@ namespace Skew.Resolving {
         case .PARAMETERIZE { resolveParameterize(node, scope) }
         case .SEQUENCE { resolveSequence(node, scope, context) }
         case .SUPER { resolveSuper(node, scope) }
+        case .TYPE {}
+        case .TYPE_CHECK { resolveTypeCheck(node, scope) }
 
         default {
           if node.kind.isBinary { resolveBinary(node, scope) }
@@ -2009,7 +2010,7 @@ namespace Skew.Resolving {
             reportGuardMergingFailure(node)
             log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
           }
-          if target.kind == .DYNAMIC {
+          if target.kind == .TYPE && target.resolvedType == .DYNAMIC {
             node.kind = .NAME
             node.removeChildren
           }
@@ -2451,6 +2452,21 @@ namespace Skew.Resolving {
       node.resolvedType = overridden.resolvedType
       node.symbol = overridden
       automaticallyCallGetter(node, scope)
+    }
+
+    def resolveTypeCheck(node Node, scope Scope) {
+      var value = node.typeCheckValue
+      var type = node.typeCheckType
+
+      resolveAsParameterizedExpression(value, scope)
+      resolveAsParameterizedType(type, scope)
+      checkConversion(value, type.resolvedType, .EXPLICIT)
+      node.resolvedType = cache.boolType
+
+      # Warn about unnecessary type checks
+      if value.resolvedType != .DYNAMIC && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) {
+        log.semanticWarningExtraTypeCheck(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
+      }
     }
 
     def resolveBinary(node Node, scope Scope) {
