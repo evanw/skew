@@ -2206,7 +2206,7 @@ namespace Skew {
       assert(node.kind == .BLOCK)
       assert(kind == .RETURN || kind == .CONTINUE)
       var parent = node.parent
-      if kind == .RETURN && parent == null || kind == .CONTINUE && parent != null && parent.kind.isLoop {
+      if kind == .RETURN && (parent == null || parent.kind == .LAMBDA) || kind == .CONTINUE && parent != null && parent.kind.isLoop {
         return true
       }
       if parent != null && parent.kind == .IF && parent.nextSibling == null {

@@ -5881,7 +5881,7 @@
     assert(kind === Skew.NodeKind.RETURN || kind === Skew.NodeKind.CONTINUE);
     var parent = node.parent();
 
-    if (kind === Skew.NodeKind.RETURN && parent === null || kind === Skew.NodeKind.CONTINUE && parent !== null && Skew.NodeKind.isLoop(parent.kind)) {
+    if (kind === Skew.NodeKind.RETURN && (parent === null || parent.kind === Skew.NodeKind.LAMBDA) || kind === Skew.NodeKind.CONTINUE && parent !== null && Skew.NodeKind.isLoop(parent.kind)) {
       return true;
     }
 

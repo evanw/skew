@@ -1458,5 +1458,38 @@ def main {
 })();
 ").jsMangle
 
+# Test equivalence of function and lambda folding
+test("
+def foo(x int) {
+  if x == 0 { return }
+  dynamic.use(x)
+}
+
+var bar = (x int) => {
+  if x == 0 { return }
+  dynamic.use(x)
+}
+
+@export
+def main {
+  foo(0)
+  bar(0)
+}
+", "
+(function() {
+  function b(a) {
+    a && use(a);
+  }
+
+  main = function() {
+    b(0), c(0);
+  };
+
+  var c = function(a) {
+    a && use(a);
+  };
+})();
+").jsMangle
+
   }
 }
