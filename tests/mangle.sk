@@ -1513,16 +1513,16 @@ def main {
 }
 ", "
 (function() {
+  function e(a) {
+    return a === (a | 0);
+  }
+
   function f(a) {
     return a === !!a;
   }
 
   function g(a) {
     return a === +a || isNaN(a);
-  }
-
-  function e(a) {
-    return a === (a | 0);
   }
 
   function h(a) {

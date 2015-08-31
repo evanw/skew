@@ -125,6 +125,7 @@ namespace Skew {
 
       # Emit special-cased variables that must come first
       var specialVariables = _specialVariables.values
+      specialVariables.sort((a, b) => a.id <=> b.id)
       for variable in specialVariables {
         if variable.id in _isSpecialVariableNeeded {
           if variable.value.kind == .LAMBDA {

@@ -1984,7 +1984,7 @@
         var type = node.castType();
         var value1 = node.castValue();
 
-        if (type.resolvedType === Skew.Type.DYNAMIC) {
+        if (type.kind === Skew.NodeKind.TYPE && type.resolvedType === Skew.Type.DYNAMIC) {
           this._emitExpression(value1, precedence);
         }
 
@@ -3459,6 +3459,9 @@
 
     // Emit special-cased variables that must come first
     var specialVariables = in_IntMap.values(this._specialVariables);
+    specialVariables.sort(function(a, b) {
+      return a.id - b.id | 0;
+    });
 
     for (var i1 = 0, list1 = specialVariables, count1 = list1.length; i1 < count1; ++i1) {
       var variable1 = list1[i1];
