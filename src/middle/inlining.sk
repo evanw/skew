@@ -106,7 +106,7 @@ namespace Skew.Inlining {
         clone.resolvedType = node.resolvedType
       }
 
-      assert(value.kind == .NAME && value.symbol == info.symbol)
+      assert((value.kind == .PARAMETERIZE ? value.parameterizeValue : value).kind == .NAME && value.symbol == info.symbol)
       node.become(clone)
       recursivelySubstituteArguments(node, info.symbol.arguments, values)
 

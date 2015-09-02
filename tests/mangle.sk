@@ -1565,5 +1565,90 @@ enum Foo {}
 })();
 ").jsMangle
 
+# This used to be a crash during globalization
+test("
+class Foo {
+  def foo<T>(foo fn(Foo) T) T {
+    return foo(self)
+  }
+}
+
+@entry
+def main {
+  var foo fn(Foo) dynamic = bar => bar.foo<dynamic>(foo)
+}
+", "
+(function() {
+  function d() {
+    var a = function(b) {
+      return c(b, a);
+    };
+  }
+
+  function c(b, a) {
+    return a(b);
+  }
+
+  d();
+})();
+").jsMangle.globalizeAllFunctions
+
+test("
+class Foo {}
+
+namespace Foo {
+  def foo<T>(self Foo, baz fn(Foo) T) T { return baz(self) }
+}
+
+@entry
+def main {
+  var foo fn(Foo) dynamic = x => Foo.foo<dynamic>(x, foo)
+  foo(Foo.new)
+}
+", "
+(function() {
+  function e() {
+    var a = function(c) {
+      return a(c);
+    };
+    a(new d);
+  }
+
+  function d() {
+  }
+
+  e();
+})();
+").jsMangle.inlineAllFunctions
+
+# There used to be a bug where generic inlineable functions were still emitted
+test("
+class Foo {
+  var bar List<Foo> = []
+  def foo<T>(baz fn(Foo) T) List<T> { return bar.map<T>(baz) }
+}
+
+@entry
+def main {
+  var foo fn(Foo) dynamic = bar => bar.foo<dynamic>(foo)
+  foo(Foo.new)
+}
+", "
+(function() {
+  function f() {
+    var a = function(d) {
+      return d.a.map(a);
+    };
+    a(new e);
+  }
+
+  function e() {
+    this.a = [];
+  }
+
+  f();
+})();
+").jsMangle.inlineAllFunctions.globalizeAllFunctions
+
   }
 }

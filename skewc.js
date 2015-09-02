@@ -12615,7 +12615,7 @@
 
           // Rewrite "self.foo(bar)" to "foo(self, bar)"
           else {
-            value.replaceWith(value.dotTarget().remove());
+            value.replaceWith((value.kind === Skew.NodeKind.PARAMETERIZE ? value.parameterizeValue() : value).dotTarget().remove());
           }
 
           callSite.callNode.prependChild(Skew.Node.createSymbolReference($function));
@@ -12770,7 +12770,7 @@
         clone.resolvedType = node.resolvedType;
       }
 
-      assert(value.kind === Skew.NodeKind.NAME && value.symbol === info.symbol);
+      assert((value.kind === Skew.NodeKind.PARAMETERIZE ? value.parameterizeValue() : value).kind === Skew.NodeKind.NAME && value.symbol === info.symbol);
       node.become(clone);
       Skew.Inlining.recursivelySubstituteArguments(node, info.symbol.$arguments, values);
 

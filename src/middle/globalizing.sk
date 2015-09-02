@@ -38,7 +38,7 @@ namespace Skew {
 
             # Rewrite "self.foo(bar)" to "foo(self, bar)"
             else {
-              value.replaceWith(value.dotTarget.remove)
+              value.replaceWith((value.kind == .PARAMETERIZE ? value.parameterizeValue : value).dotTarget.remove)
             }
 
             callSite.callNode.prependChild(Node.createSymbolReference(function))
