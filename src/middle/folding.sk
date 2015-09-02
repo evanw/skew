@@ -49,25 +49,25 @@ namespace Skew.Folding {
 
     # Use this instead of node.become(Node.createBool(value)) to avoid more GC
     def flattenBool(node Node, value bool) {
-      assert(areTypesEquivalent(node.resolvedType, cache.boolType) || node.resolvedType == .DYNAMIC)
+      assert(cache.isEquivalentToBool(node.resolvedType) || node.resolvedType == .DYNAMIC)
       flatten(node, BoolContent.new(value))
     }
 
     # Use this instead of node.become(Node.createInt(value)) to avoid more GC
     def flattenInt(node Node, value int) {
-      assert(areTypesEquivalent(node.resolvedType, cache.intType) || node.resolvedType == .DYNAMIC)
+      assert(cache.isEquivalentToInt(node.resolvedType) || node.resolvedType == .DYNAMIC)
       flatten(node, IntContent.new(value))
     }
 
     # Use this instead of node.become(Node.createDouble(value)) to avoid more GC
     def flattenDouble(node Node, value double) {
-      assert(areTypesEquivalent(node.resolvedType, cache.doubleType) || node.resolvedType == .DYNAMIC)
+      assert(cache.isEquivalentToDouble(node.resolvedType) || node.resolvedType == .DYNAMIC)
       flatten(node, DoubleContent.new(value))
     }
 
     # Use this instead of node.become(Node.createString(value)) to avoid more GC
     def flattenString(node Node, value string) {
-      assert(areTypesEquivalent(node.resolvedType, cache.stringType) || node.resolvedType == .DYNAMIC)
+      assert(cache.isEquivalentToString(node.resolvedType) || node.resolvedType == .DYNAMIC)
       flatten(node, StringContent.new(value))
     }
 
@@ -334,10 +334,6 @@ namespace Skew.Folding {
       return symbol == knownSymbol || symbol != null && symbol.kind.isFunction && symbol.asFunctionSymbol.overloaded == knownSymbol
     }
 
-    def areTypesEquivalent(type Type, primitiveType Type) bool {
-      return cache.unwrappedType(type) == primitiveType
-    }
-
     def foldCall(node Node) {
       if node.kind == .CALL {
         var value = node.callValue
@@ -369,23 +365,23 @@ namespace Skew.Folding {
 
         # Cast "bool" values
         if kind == .BOOL {
-          if areTypesEquivalent(type, cache.boolType) { flattenBool(node, value.asBool) }
-          else if areTypesEquivalent(type, cache.intType) { flattenInt(node, value.asBool as int) }
-          else if areTypesEquivalent(type, cache.doubleType) { flattenDouble(node, value.asBool as double) }
+          if cache.isEquivalentToBool(type) { flattenBool(node, value.asBool) }
+          else if cache.isEquivalentToInt(type) { flattenInt(node, value.asBool as int) }
+          else if cache.isEquivalentToDouble(type) { flattenDouble(node, value.asBool as double) }
         }
 
         # Cast "int" values
         else if kind == .INT {
-          if areTypesEquivalent(type, cache.boolType) { flattenBool(node, value.asInt as bool) }
-          else if areTypesEquivalent(type, cache.intType) { flattenInt(node, value.asInt) }
-          else if areTypesEquivalent(type, cache.doubleType) { flattenDouble(node, value.asInt) }
+          if cache.isEquivalentToBool(type) { flattenBool(node, value.asInt as bool) }
+          else if cache.isEquivalentToInt(type) { flattenInt(node, value.asInt) }
+          else if cache.isEquivalentToDouble(type) { flattenDouble(node, value.asInt) }
         }
 
         # Cast "double" values
         else if kind == .DOUBLE {
-          if areTypesEquivalent(type, cache.boolType) { flattenBool(node, value.asDouble as bool) }
-          else if areTypesEquivalent(type, cache.intType) { flattenInt(node, value.asDouble as int) }
-          else if areTypesEquivalent(type, cache.doubleType) { flattenDouble(node, value.asDouble) }
+          if cache.isEquivalentToBool(type) { flattenBool(node, value.asDouble as bool) }
+          else if cache.isEquivalentToInt(type) { flattenInt(node, value.asDouble as int) }
+          else if cache.isEquivalentToDouble(type) { flattenDouble(node, value.asDouble) }
         }
       }
     }

@@ -1085,6 +1085,12 @@ namespace Skew {
       return _firstChild
     }
 
+    def defaultCase Node {
+      assert(kind == .SWITCH)
+      assert(childCount >= 1)
+      return !hasOneChild && _lastChild.hasOneChild ? _lastChild : null # The default case is always the last one
+    }
+
     def parameterizeValue Node {
       assert(kind == .PARAMETERIZE)
       assert(childCount >= 1)

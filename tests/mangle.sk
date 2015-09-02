@@ -1441,6 +1441,155 @@ def main(x int) {
 })();
 ").jsMangle
 
+# Check that pass-through switch statements are optimized
+test("
+enum Foo {
+  FOO
+  BAR
+  BAZ
+}
+
+@export
+def a(x int) Foo {
+  switch x {
+    case 0 { return .FOO }
+    case 1 { return .BAR }
+    case 2 { return .BAZ }
+    default { return .FOO }
+  }
+}
+
+@export
+def b(x int) Foo {
+  switch x {
+    case 1 { return .FOO }
+    case 2 { return .BAR }
+    case 3 { return .BAZ }
+    default { return .FOO }
+  }
+}
+
+@export
+def c(x int) Foo {
+  switch x {
+    case 0 { return .BAR }
+    case 1 { return .BAZ }
+    default { return .FOO }
+  }
+}
+
+@export
+def d(x Foo) int {
+  switch x {
+    case .FOO { return 0 }
+    case .BAR { return 1 }
+    case .BAZ { return 2 }
+    default { return 0 }
+  }
+}
+
+@export
+def e(x Foo) int {
+  switch x {
+    case .FOO { return 1 }
+    case .BAR { return 2 }
+    case .BAZ { return 3 }
+    default { return 0 }
+  }
+}
+
+@export
+def f(x Foo) int {
+  switch x {
+    case .BAR { return 0 }
+    case .BAZ { return 1 }
+    default { return 0 }
+  }
+}
+
+@export
+def g(x int) Foo {
+  switch x {
+    case 1 { return .BAR }
+    case 0 { return .FOO }
+    default { return .FOO }
+  }
+}
+
+@export
+def h(x int) Foo {
+  switch x {
+    case 0 { return .BAR }
+    case 1 { return .FOO }
+    default { return .FOO }
+  }
+}
+
+@export
+def i(x int) Foo {
+  switch x {
+    case 0 { return .FOO }
+    case 2 { return .BAZ }
+    default { return .FOO }
+  }
+}
+", "
+(function() {
+  a = function(j) {
+    return j > -1 && j < 3 ? j : 0;
+  };
+
+  b = function(j) {
+    return j > 0 && j < 4 ? j - 1 | 0 : 0;
+  };
+
+  c = function(j) {
+    return j > -1 && j < 2 ? j + 1 | 0 : 0;
+  };
+
+  d = function(j) {
+    return j > -1 && j < 3 ? j : 0;
+  };
+
+  e = function(j) {
+    return j > -1 && j < 3 ? j + 1 | 0 : 0;
+  };
+
+  f = function(j) {
+    return j > 0 && j < 3 ? j - 1 | 0 : 0;
+  };
+
+  g = function(j) {
+    return j > -1 && j < 2 ? j : 0;
+  };
+
+  h = function(j) {
+    switch (j) {
+      case 0: {
+        return 1;
+      }
+
+      case 1: {
+        return 0;
+      }
+    }
+
+    return 0;
+  };
+
+  i = function(j) {
+    switch (j) {
+      case 0:
+      case 2: {
+        return j;
+      }
+    }
+
+    return 0;
+  };
+})();
+").jsMangle.foldAllConstants
+
 # Check parentheses omission for object creation
 test("
 @export

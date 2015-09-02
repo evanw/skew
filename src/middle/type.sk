@@ -171,6 +171,22 @@ namespace Skew {
       stringCountSymbol = _loadInstanceFunction(stringType, "count")
     }
 
+    def isEquivalentToBool(type Type) bool {
+      return unwrappedType(type) == boolType
+    }
+
+    def isEquivalentToInt(type Type) bool {
+      return unwrappedType(type) == intType || type.isEnum
+    }
+
+    def isEquivalentToDouble(type Type) bool {
+      return unwrappedType(type) == doubleType
+    }
+
+    def isEquivalentToString(type Type) bool {
+      return unwrappedType(type) == stringType
+    }
+
     def isInteger(type Type) bool {
       return type == intType || type.isEnum
     }

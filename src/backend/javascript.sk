@@ -1345,6 +1345,10 @@ namespace Skew {
       }
     }
 
+    def _createInt(value int) Node {
+      return Node.createInt(value).withType(_cache.intType)
+    }
+
     def _createIntBinary(kind NodeKind, left Node, right Node) Node {
       if kind == .MULTIPLY {
         return Node.createSymbolCall(_specialVariable(.MULTIPLY)).appendChild(left).appendChild(right)
@@ -1357,7 +1361,7 @@ namespace Skew {
     }
 
     def _wrapWithIntCast(node Node) Node {
-      return Node.createBinary(.BITWISE_OR, node, Node.createInt(0).withType(_cache.intType)).withType(_cache.intType).withRange(node.range)
+      return Node.createBinary(.BITWISE_OR, node, _createInt(0)).withType(_cache.intType).withRange(node.range)
     }
 
     def _patchUnaryArithmetic(node Node) {
@@ -1473,7 +1477,7 @@ namespace Skew {
 
         case .CONSTANT {
           if _mangle && node.content.kind == .BOOL {
-            node.become(Node.createUnary(.NOT, Node.createInt(node.asBool ? 0 : 1)))
+            node.become(Node.createUnary(.NOT, _createInt(node.asBool ? 0 : 1)))
           }
         }
 
@@ -1729,7 +1733,7 @@ namespace Skew {
         }
       }
 
-      else if (kind == .GREATER_THAN_OR_EQUAL || kind == .LESS_THAN_OR_EQUAL) && _cache.isInteger(left.resolvedType) && _cache.isInteger(right.resolvedType) {
+      else if (kind == .GREATER_THAN_OR_EQUAL || kind == .LESS_THAN_OR_EQUAL) && _cache.isEquivalentToInt(left.resolvedType) && _cache.isEquivalentToInt(right.resolvedType) {
         if left.isInt {
           var value = left.asInt
 
@@ -2177,13 +2181,14 @@ namespace Skew {
           }
 
           case .SWITCH {
-            # The default case is always the last one
-            var defaultCase = child.lastChild
-            if defaultCase.hasOneChild {
+            var switchValue = child.switchValue
+            var defaultCase = child.defaultCase
+
+            if defaultCase != null {
               var hasFlowAtEnd = false
 
               # See if any non-default case will flow past the end of the switch block
-              for caseChild = child.switchValue.nextSibling; caseChild != defaultCase; caseChild = caseChild.nextSibling {
+              for caseChild = switchValue.nextSibling; caseChild != defaultCase; caseChild = caseChild.nextSibling {
                 if caseChild.caseBlock.hasControlFlowAtEnd {
                   hasFlowAtEnd = true
                 }
@@ -2192,14 +2197,17 @@ namespace Skew {
               # "switch (a) { case b: return; default: c; break; }" => "switch (a) { case b: return; } c;"
               if !hasFlowAtEnd {
                 node.insertChildrenAfterFrom(defaultCase.caseBlock, child)
+                next = child.nextSibling
                 defaultCase.remove
+                defaultCase = null
               }
             }
 
             # "switch (a) {}" => "a;"
             if child.hasOneChild {
-              next = Node.createExpression(child.switchValue.remove)
+              next = Node.createExpression(switchValue.remove)
               child.replaceWith(next)
+              continue
             }
 
             # "switch (a) { case b: c; break; }" => "if (a == b) c;"
@@ -2207,25 +2215,107 @@ namespace Skew {
               var singleCase = child.lastChild
               if singleCase.hasTwoChildren {
                 var value = singleCase.firstChild
-                next = Node.createIf(Node.createBinary(.EQUAL, child.switchValue.remove, value.remove), singleCase.caseBlock.remove, null)
+                next = Node.createIf(Node.createBinary(.EQUAL, switchValue.remove, value.remove), singleCase.caseBlock.remove, null)
                 _peepholeMangleIf(next)
                 child.replaceWith(next)
+                continue
               }
             }
 
             # "switch (a) { case b: c; break; default: d; break; }" => "if (a == b) c; else d;"
             else if child.hasThreeChildren {
-              var firstCase = child.switchValue.nextSibling
+              var firstCase = switchValue.nextSibling
               var secondCase = child.lastChild
               if firstCase.hasTwoChildren && secondCase.hasOneChild {
                 var value = firstCase.firstChild
-                next = Node.createIf(Node.createBinary(.EQUAL, child.switchValue.remove, value.remove), firstCase.caseBlock.remove, secondCase.caseBlock.remove)
+                next = Node.createIf(Node.createBinary(.EQUAL, switchValue.remove, value.remove), firstCase.caseBlock.remove, secondCase.caseBlock.remove)
                 _peepholeMangleIf(next)
                 child.replaceWith(next)
+                continue
               }
+            }
+
+            # Optimize specific patterns of switch statements
+            if switchValue.kind == .NAME && defaultCase == null {
+              _peepholeMangleSwitchCases(child)
             }
           }
         }
+      }
+    }
+
+    # "switch (a) { case 0: return 0; case 1: return 1; case 2: return 2; }" => "if (a >= 0 && a <= 2) return a"
+    # "switch (a) { case 0: return 1; case 1: return 2; case 2: return 3; }" => "if (a >= 0 && a <= 2) return a + 1"
+    def _peepholeMangleSwitchCases(node Node) {
+      var switchValue = node.switchValue
+      var firstCase = switchValue.nextSibling
+      if !_cache.isEquivalentToInt(switchValue.resolvedType) {
+        return
+      }
+
+      var sharedDelta = 0
+      var count = 0
+      var min = 0
+      var max = 0
+
+      for child = firstCase; child != null; child = child.nextSibling {
+        var singleStatement = child.caseBlock.blockStatement
+        if !child.hasTwoChildren || singleStatement == null || singleStatement.kind != .RETURN {
+          return
+        }
+
+        var caseValue = child.firstChild
+        var returnValue = singleStatement.returnValue
+        if !caseValue.isInt || returnValue == null || !returnValue.isInt {
+          return
+        }
+
+        var caseInt = caseValue.asInt
+        var returnInt = returnValue.asInt
+        var delta = returnInt - caseInt
+        if count == 0 {
+          sharedDelta = delta
+          min = caseInt
+          max = caseInt
+        } else if delta != sharedDelta {
+          return
+        } else {
+          min = Math.min(min, caseInt)
+          max = Math.max(max, caseInt)
+        }
+
+        count++
+      }
+
+      # Make sure the pattern is matched
+      if count == 0 {
+        return
+      }
+
+      var block = Node.createBlock.appendChild(Node.createReturn(
+        sharedDelta > 0 ? _createIntBinary(.ADD, switchValue.remove, _createInt(sharedDelta)) :
+        sharedDelta < 0 ? _createIntBinary(.SUBTRACT, switchValue.remove, _createInt(-sharedDelta)) :
+        switchValue.remove))
+
+      # Replace the large "switch" statement with a smaller "if" statement if the entire range is covered
+      if max - min == count - 1 {
+        var lower = Node.createBinary(.GREATER_THAN_OR_EQUAL, switchValue.clone, _createInt(min)).withType(_cache.boolType)
+        var upper = Node.createBinary(.LESS_THAN_OR_EQUAL, switchValue.clone, _createInt(max)).withType(_cache.boolType)
+
+        # Convert ">=" and "<=" to ">" and "<" where possible
+        _peepholeMangleBinary(lower)
+        _peepholeMangleBinary(upper)
+
+        node.replaceWith(Node.createIf(Node.createBinary(.LOGICAL_AND, lower, upper).withType(_cache.boolType), block, null))
+      }
+
+      # Just combine everything into one case
+      else {
+        var combined = Node.createCase
+        for child = firstCase; child != null; child = child.nextSibling {
+          combined.appendChild(child.firstChild.remove)
+        }
+        node.replaceWith(Node.createSwitch(switchValue.clone).appendChild(combined.appendChild(block)))
       }
     }
 

@@ -4941,6 +4941,10 @@
     }
   };
 
+  Skew.JavaScriptEmitter.prototype._createInt = function(value) {
+    return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(value)).withType(this._cache.intType);
+  };
+
   Skew.JavaScriptEmitter.prototype._createIntBinary = function(kind, left, right) {
     if (kind === Skew.NodeKind.MULTIPLY) {
       return Skew.Node.createSymbolCall(this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.MULTIPLY)).appendChild(left).appendChild(right);
@@ -4954,7 +4958,7 @@
   };
 
   Skew.JavaScriptEmitter.prototype._wrapWithIntCast = function(node) {
-    return Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, node, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this._cache.intType)).withType(this._cache.intType).withRange(node.range);
+    return Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, node, this._createInt(0)).withType(this._cache.intType).withRange(node.range);
   };
 
   Skew.JavaScriptEmitter.prototype._patchUnaryArithmetic = function(node) {
@@ -5080,7 +5084,7 @@
 
       case Skew.NodeKind.CONSTANT: {
         if (this._mangle && node.content.kind() === Skew.ContentKind.BOOL) {
-          node.become(Skew.Node.createUnary(Skew.NodeKind.NOT, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(node.asBool() ? 0 : 1))));
+          node.become(Skew.Node.createUnary(Skew.NodeKind.NOT, this._createInt(node.asBool() ? 0 : 1)));
         }
         break;
       }
@@ -5368,7 +5372,7 @@
       }
     }
 
-    else if ((kind === Skew.NodeKind.GREATER_THAN_OR_EQUAL || kind === Skew.NodeKind.LESS_THAN_OR_EQUAL) && this._cache.isInteger(left.resolvedType) && this._cache.isInteger(right.resolvedType)) {
+    else if ((kind === Skew.NodeKind.GREATER_THAN_OR_EQUAL || kind === Skew.NodeKind.LESS_THAN_OR_EQUAL) && this._cache.isEquivalentToInt(left.resolvedType) && this._cache.isEquivalentToInt(right.resolvedType)) {
       if (left.isInt()) {
         var value = left.asInt();
 
@@ -5839,14 +5843,14 @@
         }
 
         case Skew.NodeKind.SWITCH: {
-          // The default case is always the last one
-          var defaultCase = child.lastChild();
+          var switchValue = child.switchValue();
+          var defaultCase = child.defaultCase();
 
-          if (defaultCase.hasOneChild()) {
+          if (defaultCase !== null) {
             var hasFlowAtEnd = false;
 
             // See if any non-default case will flow past the end of the switch block
-            for (var caseChild = child.switchValue().nextSibling(); caseChild !== defaultCase; caseChild = caseChild.nextSibling()) {
+            for (var caseChild = switchValue.nextSibling(); caseChild !== defaultCase; caseChild = caseChild.nextSibling()) {
               if (caseChild.caseBlock().hasControlFlowAtEnd()) {
                 hasFlowAtEnd = true;
               }
@@ -5855,14 +5859,17 @@
             // "switch (a) { case b: return; default: c; break; }" => "switch (a) { case b: return; } c;"
             if (!hasFlowAtEnd) {
               node.insertChildrenAfterFrom(defaultCase.caseBlock(), child);
+              next = child.nextSibling();
               defaultCase.remove();
+              defaultCase = null;
             }
           }
 
           // "switch (a) {}" => "a;"
           if (child.hasOneChild()) {
-            next = Skew.Node.createExpression(child.switchValue().remove());
+            next = Skew.Node.createExpression(switchValue.remove());
             child.replaceWith(next);
+            continue;
           }
 
           // "switch (a) { case b: c; break; }" => "if (a == b) c;"
@@ -5871,27 +5878,115 @@
 
             if (singleCase.hasTwoChildren()) {
               var value = singleCase.firstChild();
-              next = Skew.Node.createIf(Skew.Node.createBinary(Skew.NodeKind.EQUAL, child.switchValue().remove(), value.remove()), singleCase.caseBlock().remove(), null);
+              next = Skew.Node.createIf(Skew.Node.createBinary(Skew.NodeKind.EQUAL, switchValue.remove(), value.remove()), singleCase.caseBlock().remove(), null);
               this._peepholeMangleIf(next);
               child.replaceWith(next);
+              continue;
             }
           }
 
           // "switch (a) { case b: c; break; default: d; break; }" => "if (a == b) c; else d;"
           else if (child.hasThreeChildren()) {
-            var firstCase = child.switchValue().nextSibling();
+            var firstCase = switchValue.nextSibling();
             var secondCase = child.lastChild();
 
             if (firstCase.hasTwoChildren() && secondCase.hasOneChild()) {
               var value1 = firstCase.firstChild();
-              next = Skew.Node.createIf(Skew.Node.createBinary(Skew.NodeKind.EQUAL, child.switchValue().remove(), value1.remove()), firstCase.caseBlock().remove(), secondCase.caseBlock().remove());
+              next = Skew.Node.createIf(Skew.Node.createBinary(Skew.NodeKind.EQUAL, switchValue.remove(), value1.remove()), firstCase.caseBlock().remove(), secondCase.caseBlock().remove());
               this._peepholeMangleIf(next);
               child.replaceWith(next);
+              continue;
             }
+          }
+
+          // Optimize specific patterns of switch statements
+          if (switchValue.kind === Skew.NodeKind.NAME && defaultCase === null) {
+            this._peepholeMangleSwitchCases(child);
           }
           break;
         }
       }
+    }
+  };
+
+  // "switch (a) { case 0: return 0; case 1: return 1; case 2: return 2; }" => "if (a >= 0 && a <= 2) return a"
+  // "switch (a) { case 0: return 1; case 1: return 2; case 2: return 3; }" => "if (a >= 0 && a <= 2) return a + 1"
+  Skew.JavaScriptEmitter.prototype._peepholeMangleSwitchCases = function(node) {
+    var switchValue = node.switchValue();
+    var firstCase = switchValue.nextSibling();
+
+    if (!this._cache.isEquivalentToInt(switchValue.resolvedType)) {
+      return;
+    }
+
+    var sharedDelta = 0;
+    var count = 0;
+    var min = 0;
+    var max = 0;
+
+    for (var child = firstCase; child !== null; child = child.nextSibling()) {
+      var singleStatement = child.caseBlock().blockStatement();
+
+      if (!child.hasTwoChildren() || singleStatement === null || singleStatement.kind !== Skew.NodeKind.RETURN) {
+        return;
+      }
+
+      var caseValue = child.firstChild();
+      var returnValue = singleStatement.returnValue();
+
+      if (!caseValue.isInt() || returnValue === null || !returnValue.isInt()) {
+        return;
+      }
+
+      var caseInt = caseValue.asInt();
+      var returnInt = returnValue.asInt();
+      var delta = returnInt - caseInt | 0;
+
+      if (count === 0) {
+        sharedDelta = delta;
+        min = caseInt;
+        max = caseInt;
+      }
+
+      else if (delta !== sharedDelta) {
+        return;
+      }
+
+      else {
+        min = Math.min(min, caseInt);
+        max = Math.max(max, caseInt);
+      }
+
+      ++count;
+    }
+
+    // Make sure the pattern is matched
+    if (count === 0) {
+      return;
+    }
+
+    var block = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createReturn(sharedDelta > 0 ? this._createIntBinary(Skew.NodeKind.ADD, switchValue.remove(), this._createInt(sharedDelta)) : sharedDelta < 0 ? this._createIntBinary(Skew.NodeKind.SUBTRACT, switchValue.remove(), this._createInt(-sharedDelta | 0)) : switchValue.remove()));
+
+    // Replace the large "switch" statement with a smaller "if" statement if the entire range is covered
+    if ((max - min | 0) === (count - 1 | 0)) {
+      var lower = Skew.Node.createBinary(Skew.NodeKind.GREATER_THAN_OR_EQUAL, switchValue.clone(), this._createInt(min)).withType(this._cache.boolType);
+      var upper = Skew.Node.createBinary(Skew.NodeKind.LESS_THAN_OR_EQUAL, switchValue.clone(), this._createInt(max)).withType(this._cache.boolType);
+
+      // Convert ">=" and "<=" to ">" and "<" where possible
+      this._peepholeMangleBinary(lower);
+      this._peepholeMangleBinary(upper);
+      node.replaceWith(Skew.Node.createIf(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_AND, lower, upper).withType(this._cache.boolType), block, null));
+    }
+
+    // Just combine everything into one case
+    else {
+      var combined = new Skew.Node(Skew.NodeKind.CASE);
+
+      for (var child1 = firstCase; child1 !== null; child1 = child1.nextSibling()) {
+        combined.appendChild(child1.firstChild().remove());
+      }
+
+      node.replaceWith(Skew.Node.createSwitch(switchValue.clone()).appendChild(combined.appendChild(block)));
     }
   };
 
@@ -7582,6 +7677,14 @@
     assert(this.childCount() >= 1);
     assert(Skew.NodeKind.isExpression(this._firstChild.kind));
     return this._firstChild;
+  };
+
+  Skew.Node.prototype.defaultCase = function() {
+    assert(this.kind === Skew.NodeKind.SWITCH);
+    assert(this.childCount() >= 1);
+
+    // The default case is always the last one
+    return !this.hasOneChild() && this._lastChild.hasOneChild() ? this._lastChild : null;
   };
 
   Skew.Node.prototype.parameterizeValue = function() {
@@ -11660,25 +11763,25 @@
 
   // Use this instead of node.become(Node.createBool(value)) to avoid more GC
   Skew.Folding.ConstantFolder.prototype.flattenBool = function(node, value) {
-    assert(this.areTypesEquivalent(node.resolvedType, this.cache.boolType) || node.resolvedType === Skew.Type.DYNAMIC);
+    assert(this.cache.isEquivalentToBool(node.resolvedType) || node.resolvedType === Skew.Type.DYNAMIC);
     this.flatten(node, new Skew.BoolContent(value));
   };
 
   // Use this instead of node.become(Node.createInt(value)) to avoid more GC
   Skew.Folding.ConstantFolder.prototype.flattenInt = function(node, value) {
-    assert(this.areTypesEquivalent(node.resolvedType, this.cache.intType) || node.resolvedType === Skew.Type.DYNAMIC);
+    assert(this.cache.isEquivalentToInt(node.resolvedType) || node.resolvedType === Skew.Type.DYNAMIC);
     this.flatten(node, new Skew.IntContent(value));
   };
 
   // Use this instead of node.become(Node.createDouble(value)) to avoid more GC
   Skew.Folding.ConstantFolder.prototype.flattenDouble = function(node, value) {
-    assert(this.areTypesEquivalent(node.resolvedType, this.cache.doubleType) || node.resolvedType === Skew.Type.DYNAMIC);
+    assert(this.cache.isEquivalentToDouble(node.resolvedType) || node.resolvedType === Skew.Type.DYNAMIC);
     this.flatten(node, new Skew.DoubleContent(value));
   };
 
   // Use this instead of node.become(Node.createString(value)) to avoid more GC
   Skew.Folding.ConstantFolder.prototype.flattenString = function(node, value) {
-    assert(this.areTypesEquivalent(node.resolvedType, this.cache.stringType) || node.resolvedType === Skew.Type.DYNAMIC);
+    assert(this.cache.isEquivalentToString(node.resolvedType) || node.resolvedType === Skew.Type.DYNAMIC);
     this.flatten(node, new Skew.StringContent(value));
   };
 
@@ -11974,10 +12077,6 @@
     return symbol === knownSymbol || symbol !== null && Skew.SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().overloaded === knownSymbol;
   };
 
-  Skew.Folding.ConstantFolder.prototype.areTypesEquivalent = function(type, primitiveType) {
-    return this.cache.unwrappedType(type) === primitiveType;
-  };
-
   Skew.Folding.ConstantFolder.prototype.foldCall = function(node) {
     if (node.kind === Skew.NodeKind.CALL) {
       var value = node.callValue();
@@ -12017,45 +12116,45 @@
 
       // Cast "bool" values
       if (kind === Skew.ContentKind.BOOL) {
-        if (this.areTypesEquivalent(type, this.cache.boolType)) {
+        if (this.cache.isEquivalentToBool(type)) {
           this.flattenBool(node, value.asBool());
         }
 
-        else if (this.areTypesEquivalent(type, this.cache.intType)) {
+        else if (this.cache.isEquivalentToInt(type)) {
           this.flattenInt(node, value.asBool() | 0);
         }
 
-        else if (this.areTypesEquivalent(type, this.cache.doubleType)) {
+        else if (this.cache.isEquivalentToDouble(type)) {
           this.flattenDouble(node, +value.asBool());
         }
       }
 
       // Cast "int" values
       else if (kind === Skew.ContentKind.INT) {
-        if (this.areTypesEquivalent(type, this.cache.boolType)) {
+        if (this.cache.isEquivalentToBool(type)) {
           this.flattenBool(node, !!value.asInt());
         }
 
-        else if (this.areTypesEquivalent(type, this.cache.intType)) {
+        else if (this.cache.isEquivalentToInt(type)) {
           this.flattenInt(node, value.asInt());
         }
 
-        else if (this.areTypesEquivalent(type, this.cache.doubleType)) {
+        else if (this.cache.isEquivalentToDouble(type)) {
           this.flattenDouble(node, value.asInt());
         }
       }
 
       // Cast "double" values
       else if (kind === Skew.ContentKind.DOUBLE) {
-        if (this.areTypesEquivalent(type, this.cache.boolType)) {
+        if (this.cache.isEquivalentToBool(type)) {
           this.flattenBool(node, !!value.asDouble());
         }
 
-        else if (this.areTypesEquivalent(type, this.cache.intType)) {
+        else if (this.cache.isEquivalentToInt(type)) {
           this.flattenInt(node, value.asDouble() | 0);
         }
 
-        else if (this.areTypesEquivalent(type, this.cache.doubleType)) {
+        else if (this.cache.isEquivalentToDouble(type)) {
           this.flattenDouble(node, value.asDouble());
         }
       }
@@ -17569,6 +17668,22 @@
     this.boolToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.boolType, 'toString');
     this.doubleToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.doubleType, 'toString');
     this.stringCountSymbol = Skew.TypeCache._loadInstanceFunction(this.stringType, 'count');
+  };
+
+  Skew.TypeCache.prototype.isEquivalentToBool = function(type) {
+    return this.unwrappedType(type) === this.boolType;
+  };
+
+  Skew.TypeCache.prototype.isEquivalentToInt = function(type) {
+    return this.unwrappedType(type) === this.intType || type.isEnum();
+  };
+
+  Skew.TypeCache.prototype.isEquivalentToDouble = function(type) {
+    return this.unwrappedType(type) === this.doubleType;
+  };
+
+  Skew.TypeCache.prototype.isEquivalentToString = function(type) {
+    return this.unwrappedType(type) === this.stringType;
   };
 
   Skew.TypeCache.prototype.isInteger = function(type) {
