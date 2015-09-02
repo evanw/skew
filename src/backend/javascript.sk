@@ -1207,13 +1207,21 @@ namespace Skew {
 
         case .TYPE_CHECK {
           var type = node.typeCheckType
-          if type.resolvedType.kind == .SYMBOL || type.kind != .TYPE {
+          var resolvedType = type.resolvedType
+          if resolvedType.isWrapped {
+            resolvedType = _cache.unwrappedType(resolvedType)
+          }
+          if resolvedType.kind == .SYMBOL || type.kind != .TYPE {
             if Precedence.COMPARE as int < precedence as int {
               _emit("(")
             }
             _emitExpression(node.typeCheckValue, Precedence.COMPARE)
             _emit(" instanceof ")
-            _emitExpression(type, Precedence.COMPARE)
+            if resolvedType.kind == .SYMBOL {
+              _emit(_fullName(resolvedType.symbol))
+            } else {
+              _emitExpression(type, Precedence.COMPARE)
+            }
             if Precedence.COMPARE as int < precedence as int {
               _emit(")")
             }

@@ -4779,15 +4779,27 @@
 
       case Skew.NodeKind.TYPE_CHECK: {
         var type = node.typeCheckType();
+        var resolvedType = type.resolvedType;
 
-        if (type.resolvedType.kind === Skew.TypeKind.SYMBOL || type.kind !== Skew.NodeKind.TYPE) {
+        if (resolvedType.isWrapped()) {
+          resolvedType = this._cache.unwrappedType(resolvedType);
+        }
+
+        if (resolvedType.kind === Skew.TypeKind.SYMBOL || type.kind !== Skew.NodeKind.TYPE) {
           if (Skew.Precedence.COMPARE < precedence) {
             this._emit('(');
           }
 
           this._emitExpression(node.typeCheckValue(), Skew.Precedence.COMPARE);
           this._emit(' instanceof ');
-          this._emitExpression(type, Skew.Precedence.COMPARE);
+
+          if (resolvedType.kind === Skew.TypeKind.SYMBOL) {
+            this._emit(Skew.JavaScriptEmitter._fullName(resolvedType.symbol));
+          }
+
+          else {
+            this._emitExpression(type, Skew.Precedence.COMPARE);
+          }
 
           if (Skew.Precedence.COMPARE < precedence) {
             this._emit(')');

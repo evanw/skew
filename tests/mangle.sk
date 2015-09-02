@@ -1650,5 +1650,29 @@ def main {
 })();
 ").jsMangle.inlineAllFunctions.globalizeAllFunctions
 
+# Make sure wrapped types are unwrapped before using "instanceof"
+test("
+class Foo {}
+type Bar = Foo
+
+@export
+def main bool {
+  var foo = Foo.new
+  return foo is Foo || foo is Bar
+}
+", "
+(function() {
+  main = function() {
+    var a = new c;
+    return a instanceof c || a instanceof c;
+  };
+
+  function c() {
+  }
+
+  var d = {};
+})();
+").jsMangle
+
   }
 }
