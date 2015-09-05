@@ -222,8 +222,9 @@ class StringMap {
     return self
   }
 
-  def get(key string, value T) T {
-    return key in self ? self[key] : value
+  def get(key string, defaultValue T) T {
+    var value = self[key]
+    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
   }
 
   def keys List<string> {
@@ -263,8 +264,9 @@ class IntMap {
     return self
   }
 
-  def get(key int, value T) T {
-    return key in self ? self[key] : value
+  def get(key int, defaultValue T) T {
+    var value = self[key]
+    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
   }
 
   def keys List<int> {

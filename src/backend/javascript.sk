@@ -201,7 +201,7 @@ namespace Skew {
           }
         }
       }
-      super(text)
+      _code.append(text)
     }
 
     def _liftGlobals(global ObjectSymbol) {
@@ -1464,114 +1464,57 @@ namespace Skew {
         _enclosingLoop = oldLoop
       }
 
-      switch kind {
-        case .PAIR {
-          if _mangle && _isIdentifierString(node.firstValue) {
-            node.firstValue.kind = .NAME
-          }
-        }
+      # Split this into a separate function because this function is hot and V8 doesn't
+      # optimize it otherwise (it's optimized "too many times" whatever that means)
+      _patchNodeHelper(node)
+    }
 
-        case .BREAK {
-          _patchBreak(node)
-        }
+    def _patchNodeHelper(node Node) {
+      switch node.kind {
+        case .BREAK { _patchBreak(node) }
+        case .NEGATIVE { _patchUnaryArithmetic(node) }
+        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { _patchBinaryArithmetic(node) }
+        case .TYPE_CHECK { _patchTypeCheck(node) }
+        case .CAST { _patchCast(node) }
+        case .FOREACH { _unionVariableWithFunction(node.symbol, _enclosingFunction) }
+        case .LAMBDA { _patchLambda(node) }
+        case .NAME { _patchName(node) }
+        case .TRY { _patchTry(node) }
+        case .VARIABLE { _unionVariableWithFunction(node.symbol, _enclosingFunction) }
+      }
 
-        case .CONSTANT {
-          if _mangle && node.content.kind == .BOOL {
-            node.become(Node.createUnary(.NOT, _createInt(node.asBool ? 0 : 1)))
-          }
+      if _mangle {
+        switch node.kind {
+          case .PAIR { _peepholeManglePair(node) }
+          case .CONSTANT { _peepholeMangleConstant(node) }
+          case .ASSIGN_INDEX { _peepholeMangleAssignIndex(node) }
+          case .INDEX { _peepholeMangleIndex(node) }
+          case .BLOCK { _peepholeMangleBlock(node) }
+          case .CALL { _peepholeMangleCall(node) }
+          case .IF { _peepholeMangleIf(node) }
+          case .FOR { _peepholeMangleFor(node) }
+          case .WHILE { _peepholeMangleWhile(node) }
+          case .HOOK { _peepholeMangleHook(node) }
+          default { if node.kind.isBinary { _peepholeMangleBinary(node) } }
         }
+      }
+    }
 
-        case .NEGATIVE {
-          _patchUnaryArithmetic(node)
-        }
+    def _peepholeManglePair(node Node) {
+      if _isIdentifierString(node.firstValue) {
+        node.firstValue.kind = .NAME
+      }
+    }
 
-        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER {
-          _patchBinaryArithmetic(node)
-        }
+    def _peepholeMangleConstant(node Node) {
+      if node.content.kind == .BOOL {
+        node.become(Node.createUnary(.NOT, _createInt(node.asBool ? 0 : 1)))
+      }
+    }
 
-        case .TYPE_CHECK {
-          _patchTypeCheck(node)
-        }
-
-        case .ASSIGN_INDEX {
-          if _mangle {
-            _peepholeMangleAssignIndex(node)
-          }
-        }
-
-        case .INDEX {
-          if _mangle {
-            _peepholeMangleIndex(node)
-          }
-        }
-
-        case .BLOCK {
-          if _mangle {
-            _peepholeMangleBlock(node)
-          }
-        }
-
-        case .CALL {
-          if _mangle {
-            _peepholeMangleCall(node)
-          }
-        }
-
-        case .CAST {
-          _patchCast(node)
-        }
-
-        case .FOREACH {
-          _unionVariableWithFunction(symbol, _enclosingFunction)
-        }
-
-        case .IF {
-          if _mangle {
-            _peepholeMangleIf(node)
-          }
-        }
-
-        case .FOR {
-          if _mangle {
-            _peepholeMangleFor(node)
-          }
-        }
-
-        case .WHILE {
-          if _mangle {
-            _peepholeMangleWhile(node)
-          }
-        }
-
-        case .HOOK {
-          if _mangle {
-            _peepholeMangleHook(node)
-          }
-        }
-
-        case .LAMBDA {
-          _patchLambda(node)
-        }
-
-        case .NAME {
-          if symbol != null && symbol == _currentSelf && _enclosingFunction != null && _enclosingFunction.kind == .FUNCTION_LOCAL {
-            _needsSelf = true
-          }
-        }
-
-        case .TRY {
-          _patchTry(node)
-        }
-
-        case .VARIABLE {
-          _unionVariableWithFunction(symbol, _enclosingFunction)
-        }
-
-        default {
-          if _mangle && kind.isBinary {
-            _peepholeMangleBinary(node)
-          }
-        }
+    def _patchName(node Node) {
+      if node.symbol != null && node.symbol == _currentSelf && _enclosingFunction != null && _enclosingFunction.kind == .FUNCTION_LOCAL {
+        _needsSelf = true
       }
     }
 
