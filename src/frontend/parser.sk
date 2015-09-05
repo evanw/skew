@@ -1014,7 +1014,8 @@ namespace Skew.Parsing {
       }
 
       # Forbid certain kinds of symbols inside enums and wrapped types
-      if (parent.kind == .OBJECT_ENUM || parent.kind == .OBJECT_WRAPPED) && (kind == .FUNCTION_CONSTRUCTOR || kind == .VARIABLE_INSTANCE) {
+      if (parent.kind == .OBJECT_ENUM || parent.kind == .OBJECT_WRAPPED || parent.kind == .OBJECT_INTERFACE) && (
+          kind == .FUNCTION_CONSTRUCTOR || kind == .VARIABLE_INSTANCE) {
         context.log.syntaxErrorBadDeclarationInsideType(context.spanSince(token.range))
       }
     }

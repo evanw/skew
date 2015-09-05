@@ -35,6 +35,10 @@ namespace Skew {
       return symbol != null && symbol.kind == .OBJECT_CLASS
     }
 
+    def isInterface bool {
+      return symbol != null && symbol.kind == .OBJECT_INTERFACE
+    }
+
     def isEnum bool {
       return symbol != null && symbol.kind == .OBJECT_ENUM
     }
@@ -245,9 +249,10 @@ namespace Skew {
     }
 
     def canExplicitlyConvert(from Type, to Type) bool {
+      from = unwrappedType(from)
+      to = unwrappedType(to)
       if canImplicitlyConvert(from, to) { return true }
       if _canCastToNumeric(from) && _canCastToNumeric(to) { return true }
-      if unwrappedType(from) == unwrappedType(to) { return true }
       if isBaseType(to, from) { return true }
       if to.isEnum && isNumeric(from) { return true }
       return false

@@ -9224,7 +9224,7 @@
       }
 
       // Forbid certain kinds of symbols inside enums and wrapped types
-      if ((parent.kind === Skew.SymbolKind.OBJECT_ENUM || parent.kind === Skew.SymbolKind.OBJECT_WRAPPED) && (kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR || kind === Skew.SymbolKind.VARIABLE_INSTANCE)) {
+      if ((parent.kind === Skew.SymbolKind.OBJECT_ENUM || parent.kind === Skew.SymbolKind.OBJECT_WRAPPED || parent.kind === Skew.SymbolKind.OBJECT_INTERFACE) && (kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR || kind === Skew.SymbolKind.VARIABLE_INSTANCE)) {
         context.log.syntaxErrorBadDeclarationInsideType(context.spanSince(token.range));
       }
     }
@@ -14064,6 +14064,8 @@
   };
 
   Skew.Resolving.Resolver.prototype.initializeObject = function(symbol) {
+    var kind = symbol.kind;
+
     if (symbol.resolvedType === null) {
       symbol.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, symbol);
     }
@@ -14076,32 +14078,32 @@
       this.resolveAsParameterizedType(symbol.base, symbol.scope);
       var baseType = symbol.base.resolvedType;
 
-      if (symbol.kind === Skew.SymbolKind.OBJECT_WRAPPED) {
+      if (kind === Skew.SymbolKind.OBJECT_WRAPPED) {
         symbol.wrappedType = baseType;
 
         // Don't lose the type parameters from the base type
         symbol.resolvedType.environment = baseType.environment;
       }
 
-      else if (baseType.kind === Skew.TypeKind.SYMBOL && baseType.symbol.kind === Skew.SymbolKind.OBJECT_CLASS && !baseType.symbol.isValueType()) {
+      else if (kind === Skew.SymbolKind.OBJECT_CLASS && baseType.kind === Skew.TypeKind.SYMBOL && baseType.symbol.kind === Skew.SymbolKind.OBJECT_CLASS && !baseType.symbol.isValueType()) {
         symbol.baseClass = baseType.symbol.asObjectSymbol();
 
         // Don't lose the type parameters from the base type
         symbol.resolvedType.environment = baseType.environment;
       }
 
-      else if (baseType !== Skew.Type.DYNAMIC) {
+      else if (kind !== Skew.SymbolKind.OBJECT_CLASS || baseType !== Skew.Type.DYNAMIC) {
         this.log.semanticErrorInvalidBaseType(symbol.base.range, baseType);
       }
     }
 
     // Wrapped types without something to wrap don't make sense
-    else if (symbol.kind === Skew.SymbolKind.OBJECT_WRAPPED) {
+    else if (kind === Skew.SymbolKind.OBJECT_WRAPPED) {
       this.log.semanticErrorMissingWrappedType(symbol.range, symbol.fullName());
     }
 
     // Assign values for all enums before they are initialized
-    if (symbol.kind === Skew.SymbolKind.OBJECT_ENUM) {
+    if (kind === Skew.SymbolKind.OBJECT_ENUM) {
       var nextEnumValue = 0;
 
       for (var i = 0, list = symbol.variables, count = list.length; i < count; ++i) {
@@ -14121,7 +14123,7 @@
     // Create a default constructor if one doesn't exist
     var $constructor = in_StringMap.get(symbol.members, 'new', null);
 
-    if (symbol.kind === Skew.SymbolKind.OBJECT_CLASS && !symbol.isImported() && $constructor === null) {
+    if (kind === Skew.SymbolKind.OBJECT_CLASS && !symbol.isImported() && $constructor === null) {
       var baseConstructor = symbol.baseClass !== null ? in_StringMap.get(symbol.baseClass.members, 'new', null) : null;
 
       // Unwrap the overload group if present
@@ -14157,7 +14159,7 @@
     }
 
     // Create a default toString if one doesn't exist
-    if (symbol.kind === Skew.SymbolKind.OBJECT_ENUM && !symbol.isImported() && !('toString' in symbol.members)) {
+    if (kind === Skew.SymbolKind.OBJECT_ENUM && !symbol.isImported() && !('toString' in symbol.members)) {
       var generated1 = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_INSTANCE, 'toString');
       generated1.scope = new Skew.FunctionScope(symbol.scope, generated1);
       generated1.flags |= Skew.Symbol.IS_AUTOMATICALLY_GENERATED;
@@ -17763,15 +17765,14 @@
   };
 
   Skew.TypeCache.prototype.canExplicitlyConvert = function(from, to) {
+    from = this.unwrappedType(from);
+    to = this.unwrappedType(to);
+
     if (this.canImplicitlyConvert(from, to)) {
       return true;
     }
 
     if (this._canCastToNumeric(from) && this._canCastToNumeric(to)) {
-      return true;
-    }
-
-    if (this.unwrappedType(from) === this.unwrappedType(to)) {
       return true;
     }
 
@@ -18618,7 +18619,7 @@
   Skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 30, 30, 30, 31, 4, 32, 33, 34, 35, 36, 37, 38, 39, 30, 40, 30, 30, 30, 41, 42, 30, 43, 44, 45, 30, 46, 47, 30, 30, 48, 49, 50, 51, 53, 53, 56, 61, 64, 66, 70, 68, 74, 88, 75, 75, 75, 75, 80, 81, 71, 155, 67, 69, 62, 156, 76, 82, 83, 84, 85, 89, 65, 94, 57, 74, 76, 75, 75, 75, 75, 97, 95, 101, 90, 96, 99, 104, 100, 76, 102, 107, 111, 105, 112, 103, 77, 106, 98, 76, 117, 113, 119, 53, 53, 56, 64, 78, 108, 114, 122, 122, 122, 122, 74, 79, 75, 75, 75, 75, 125, 125, 126, 126, 126, 136, 137, 228, 76, 227, 65, 118, 226, 57, 225, 123, 120, 123, 76, 224, 124, 124, 124, 124, 122, 122, 122, 122, 124, 124, 124, 124, 124, 124, 124, 124, 161, 125, 125, 126, 126, 126, 168, 169, 223, 188, 161, 188, 222, 221, 189, 189, 189, 189, 189, 189, 189, 189, 189, 189, 189, 189, 55, 55, 55, 55, 58, 58, 58, 58, 63, 63, 63, 63, 86, 86, 87, 87, 87, 127, 127, 131, 131, 131, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 167, 166, 165, 164, 163, 162, 160, 159, 158, 157, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 143, 142, 141, 140, 139, 138, 135, 134, 133, 132, 130, 129, 128, 121, 229, 59, 229, 52, 116, 115, 110, 109, 93, 92, 91, 73, 72, 60, 59, 54, 52, 229, 3, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229];
   Skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 11, 12, 15, 18, 16, 22, 31, 22, 22, 22, 22, 25, 25, 18, 114, 15, 16, 11, 114, 22, 26, 26, 27, 27, 31, 12, 36, 8, 21, 22, 21, 21, 21, 21, 37, 36, 39, 31, 36, 38, 40, 38, 21, 39, 41, 44, 40, 44, 39, 21, 40, 37, 21, 48, 45, 49, 53, 53, 55, 63, 21, 41, 45, 74, 74, 74, 74, 75, 21, 75, 75, 75, 75, 77, 77, 78, 78, 78, 94, 94, 226, 75, 225, 63, 48, 223, 55, 222, 76, 49, 76, 75, 218, 76, 76, 76, 76, 122, 122, 122, 122, 123, 123, 123, 123, 124, 124, 124, 124, 122, 125, 125, 126, 126, 126, 139, 139, 215, 161, 122, 161, 214, 213, 161, 161, 161, 161, 188, 188, 188, 188, 189, 189, 189, 189, 230, 230, 230, 230, 231, 231, 231, 231, 232, 232, 232, 232, 233, 233, 234, 234, 234, 235, 235, 236, 236, 236, 212, 211, 210, 205, 203, 202, 201, 200, 198, 197, 196, 187, 186, 185, 183, 182, 181, 180, 177, 176, 175, 174, 171, 170, 169, 168, 167, 166, 164, 163, 162, 160, 159, 158, 155, 154, 153, 152, 151, 150, 149, 148, 147, 145, 144, 143, 142, 141, 140, 138, 137, 136, 135, 134, 132, 118, 117, 116, 115, 113, 112, 111, 110, 109, 108, 107, 105, 103, 102, 101, 100, 99, 98, 97, 96, 95, 93, 90, 89, 88, 85, 81, 80, 66, 65, 58, 57, 52, 47, 46, 43, 42, 35, 34, 33, 20, 19, 10, 9, 7, 5, 3, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229, 229];
   Skew.REMOVE_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.RIGHT_BRACKET, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0);
-  Skew.KEEP_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ANNOTATION, 0), Skew.TokenKind.CLASS, 0), Skew.TokenKind.COMMENT, 0), Skew.TokenKind.DEF, 0), Skew.TokenKind.INTERFACE, 0), Skew.TokenKind.NAMESPACE, 0), Skew.TokenKind.VAR, 0);
+  Skew.KEEP_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ANNOTATION, 0), Skew.TokenKind.CLASS, 0), Skew.TokenKind.COMMENT, 0), Skew.TokenKind.CONST, 0), Skew.TokenKind.DEF, 0), Skew.TokenKind.ENUM, 0), Skew.TokenKind.INTERFACE, 0), Skew.TokenKind.NAMESPACE, 0), Skew.TokenKind.OVER, 0), Skew.TokenKind.VAR, 0);
   Skew.REMOVE_NEWLINE_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(Object.create(null), Skew.TokenKind.ARROW, 0), Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.NEWLINE, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.LEFT_BRACE, 0), Skew.TokenKind.LEFT_BRACKET, 0), Skew.TokenKind.LEFT_PARENTHESIS, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.EQUAL, 0), Skew.TokenKind.GREATER_THAN, 0), Skew.TokenKind.GREATER_THAN_OR_EQUAL, 0), Skew.TokenKind.LESS_THAN, 0), Skew.TokenKind.LESS_THAN_OR_EQUAL, 0), Skew.TokenKind.LOGICAL_AND, 0), Skew.TokenKind.LOGICAL_OR, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT_EQUAL, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN_MINUS, 0);
   Skew.NATIVE_LIBRARY = '\nconst RELEASE = false\n\nenum Target {\n  NONE\n  CPLUSPLUS\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @noinline\ndef @prefer\ndef @rename(name string)\ndef @skip\ndef @spreads\n\n@spreads {\n  def @using(name string) # For use with C#\n  def @include(name string) # For use with C++\n}\n\n@skip if RELEASE\ndef assert(truth bool)\n\n@import\nnamespace Math {\n  @rename("Abs") if TARGET == .CSHARP\n  def abs(x double) double\n  @rename("Abs") if TARGET == .CSHARP\n  def abs(x int) int\n  @rename("Acos") if TARGET == .CSHARP\n  def acos(x double) double\n  @rename("Asin") if TARGET == .CSHARP\n  def asin(x double) double\n  @rename("Atan") if TARGET == .CSHARP\n  def atan(x double) double\n  @rename("Atan2") if TARGET == .CSHARP\n  def atan2(x double, y double) double\n  @rename("Ceil") if TARGET == .CSHARP\n  def ceil(x double) double\n  @rename("Cos") if TARGET == .CSHARP\n  def cos(x double) double\n  @rename("Exp") if TARGET == .CSHARP\n  def exp(x double) double\n  @rename("Floor") if TARGET == .CSHARP\n  def floor(x double) double\n  @rename("Log") if TARGET == .CSHARP\n  def log(x double) double\n  @rename("Pow") if TARGET == .CSHARP\n  def pow(x double, y double) double\n  @rename("Random") if TARGET == .CSHARP\n  def random double\n  @rename("Round") if TARGET == .CSHARP\n  def round(x double) double\n  @rename("Sin") if TARGET == .CSHARP\n  def sin(x double) double\n  @rename("Sqrt") if TARGET == .CSHARP\n  def sqrt(x double) double\n  @rename("Tan") if TARGET == .CSHARP\n  def tan(x double) double\n\n  @prefer\n  @rename("Max") if TARGET == .CSHARP\n  def max(x double, y double) double\n  @rename("Max") if TARGET == .CSHARP\n  def max(x int, y int) int\n\n  @prefer\n  @rename("Min") if TARGET == .CSHARP\n  def min(x double, y double) double\n  @rename("Min") if TARGET == .CSHARP\n  def min(x int, y int) int\n\n  const E = 2.718281828459045\n  const INFINITY = 1 / 0.0\n  const NAN = 0 / 0.0\n  const PI = 3.141592653589793\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def ++\n  def - int\n  def --\n  def ~ int\n\n  def %(x int) int\n  def &(x int) int\n  def *(x int) int\n  def +(x int) int\n  def -(x int) int\n  def /(x int) int\n  def <<(x int) int\n  def <=>(x int) int\n  def >>(x int) int\n  def ^(x int) int\n  def |(x int) int\n\n  def %=(x int)\n  def &=(x int)\n  def *=(x int)\n  def +=(x int)\n  def -=(x int)\n  def /=(x int)\n  def <<=(x int)\n  def >>=(x int)\n  def ^=(x int)\n  def |=(x int)\n\n  @rename("ToString") if TARGET == .CSHARP\n  def toString string\n}\n\n@import\nclass double {\n  def + double\n  def ++\n  def - double\n  def --\n\n  def *(x double) double\n  def **(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n\n  def **=(x double)\n  def *=(x double)\n  def +=(x double)\n  def -=(x double)\n  def /=(x double)\n\n  def isFinite bool\n  def isNaN bool\n\n  @rename("ToString") if TARGET == .CSHARP\n  def toString string\n\n  def <=>(x double) int {\n    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)\n  }\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string)\n  @rename("CompareTo") if TARGET == .CSHARP\n  @rename("compare") if TARGET == .CPLUSPLUS\n  def <=>(x string) int\n  def [](x int) int\n  def codePoints List<int>\n  def codeUnits List<int>\n  def count int\n  @rename("EndsWith") if TARGET == .CSHARP\n  def endsWith(x string) bool\n  def get(x int) string\n  @rename("Contains") if TARGET == .CSHARP\n  @rename("contains") if TARGET == .CPLUSPLUS\n  def in(x string) bool\n  @rename("IndexOf") if TARGET == .CSHARP\n  def indexOf(x string) int\n  def join(x List<string>) string\n  @rename("LastIndexOf") if TARGET == .CSHARP\n  def lastIndexOf(x string) int\n  def repeat(x int) string\n  @rename("Replace") if TARGET == .CSHARP\n  def replaceAll(before string, after string) string\n  @rename("Substring") if TARGET == .CSHARP\n  def slice(start int) string\n  def slice(start int, end int) string\n  def split(x string) List<string>\n  @rename("StartsWith") if TARGET == .CSHARP\n  def startsWith(x string) bool\n  @rename("ToLower") if TARGET == .CSHARP\n  def toLowerCase string\n  @rename("ToUpper") if TARGET == .CSHARP\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET != .JAVASCRIPT\nclass StringBuilder {\n  @rename("Append") if TARGET == .CSHARP\n  def append(x string)\n  def new\n  @rename("ToString") if TARGET == .CSHARP\n  def toString string\n}\n\n@import\nclass List<T> {\n  def [...](x T) List<T>\n  @rename("get") if TARGET == .CPLUSPLUS\n  def [](x int) T\n  @rename("set") if TARGET == .CPLUSPLUS\n  def []=(x int, y T)\n  @rename("TrueForAll") if TARGET == .CSHARP\n  @rename("every") if TARGET == .JAVASCRIPT\n  def all(x fn(T) bool) bool\n  def appendOne(x T)\n  @rename("slice") if TARGET == .JAVASCRIPT\n  def clone List<T>\n  def count int\n  @rename("ForEach") if TARGET == .CSHARP\n  @rename("forEach") if TARGET == .JAVASCRIPT\n  def each(x fn(T))\n  @using("System.Linq") if TARGET == .CSHARP {\n    @rename("SequenceEqual") if TARGET == .CSHARP\n    def equals(x List<T>) bool\n    @rename("First") if TARGET == .CSHARP\n    def first T\n    @rename("Last") if TARGET == .CSHARP\n    def last T\n  }\n  @rename("FindAll") if TARGET == .CSHARP\n  def filter(x fn(T) bool) List<T>\n  @rename("Contains") if TARGET == .CSHARP\n  @rename("contains") if TARGET == .CPLUSPLUS\n  def in(x T) bool\n  @rename("IndexOf") if TARGET == .CSHARP\n  def indexOf(x T) int\n  @rename("Insert") if TARGET == .CSHARP\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n  def isEmpty bool\n  @rename("LastIndexOf") if TARGET == .CSHARP\n  def lastIndexOf(x T) int\n  @rename("ConvertAll") if TARGET == .CSHARP\n  def map<R>(x fn(T) R) List<R>\n  def new\n  def removeAll(x T)\n  @rename("RemoveAt") if TARGET == .CSHARP\n  def removeAt(x int)\n  def removeDuplicates\n  @rename("shift") if TARGET == .JAVASCRIPT\n  def removeFirst\n  @rename("RemoveAll") if TARGET == .CSHARP\n  def removeIf(x fn(T) bool)\n  @rename("pop") if TARGET == .JAVASCRIPT\n  def removeLast\n  @rename("Remove") if TARGET == .CSHARP\n  def removeOne(x T)\n  def removeRange(start int, end int)\n  def resize(size int, defaultValue T)\n  @rename("Reverse") if TARGET == .CSHARP\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  @rename("Sort") if TARGET == .CSHARP\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n  @rename("shift") if TARGET == .JAVASCRIPT\n  def takeFirst T\n  @rename("pop") if TARGET == .JAVASCRIPT\n  def takeLast T\n  def takeRange(start int, end int) List<T>\n\n  @prefer\n  @rename("Add") if TARGET == .CSHARP\n  @rename("push") if TARGET == .JAVASCRIPT\n  def append(x T)\n  @rename("AddRange") if TARGET == .CSHARP\n  def append(x List<T>)\n\n  @prefer\n  @rename("unshift") if TARGET == .JAVASCRIPT\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  def first=(x T) { self[0] = x }\n  def last=(x T) { self[count - 1] = x }\n}\n\n@import\nclass StringMap<T> {\n  @rename("get") if TARGET == .CPLUSPLUS\n  def [](key string) T\n  @rename("set") if TARGET == .CPLUSPLUS\n  def []=(key string, value T)\n  def clone StringMap<T>\n  @rename("Count") if TARGET == .CSHARP\n  def count int\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  @rename("ContainsKey") if TARGET == .CSHARP\n  @rename("contains") if TARGET == .CPLUSPLUS\n  def in(key string) bool\n  def isEmpty bool\n  def keys List<string>\n  def new\n  @rename("Remove") if TARGET == .CSHARP\n  def remove(key string)\n  def values List<T>\n  def {...}(key string, value T) StringMap<T>\n}\n\n@import\nclass IntMap<T> {\n  @rename("get") if TARGET == .CPLUSPLUS\n  def [](key int) T\n  @rename("set") if TARGET == .CPLUSPLUS\n  def []=(key int, value T)\n  def clone IntMap<T>\n  @rename("Count") if TARGET == .CSHARP\n  def count int\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  @rename("ContainsKey") if TARGET == .CSHARP\n  @rename("contains") if TARGET == .CPLUSPLUS\n  def in(key int) bool\n  def isEmpty bool\n  def keys List<int>\n  def new\n  @rename("Remove") if TARGET == .CSHARP\n  def remove(key int)\n  def values List<T>\n  def {...}(key int, value T) IntMap<T>\n}\n\nclass Box<T> {\n  var value T\n}\n';
   Skew.NATIVE_LIBRARY_CPP = '\nclass bool {\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  def toString string {\n    return dynamic.intToString(self)\n  }\n}\n\nclass double {\n  def toString string {\n    return dynamic.doubleToString(self)\n  }\n\n  def isNaN bool {\n    return self != self\n  }\n}\n';

@@ -53,9 +53,12 @@ namespace Skew {
     TokenKind.ANNOTATION: 0,
     TokenKind.CLASS: 0,
     TokenKind.COMMENT: 0,
+    TokenKind.CONST: 0,
     TokenKind.DEF: 0,
+    TokenKind.ENUM: 0,
     TokenKind.INTERFACE: 0,
     TokenKind.NAMESPACE: 0,
+    TokenKind.OVER: 0,
     TokenKind.VAR: 0,
   }
 
