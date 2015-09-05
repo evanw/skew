@@ -73,16 +73,40 @@ namespace Skew {
     }
 
     def isBaseType(derived Type, base Type) bool {
-      while true {
-        var baseClass = derived.baseClass
-        if baseClass == null {
-          return false
-        }
-        derived = substitute(baseClass, derived.environment)
-        if derived == base {
-          return true
+      if derived.isClass && base.isClass {
+        while true {
+          var baseType = derived.baseType
+          if baseType == null {
+            break
+          }
+          derived = substitute(baseType, derived.environment)
+          if derived == base {
+            return true
+          }
         }
       }
+      return false
+    }
+
+    def isImplementedInterface(classType Type, interfaceType Type) bool {
+      if classType.isClass && interfaceType.isInterface {
+        while classType != null {
+          var interfaceTypes = classType.interfaceTypes
+          if interfaceTypes != null {
+            for type in interfaceTypes {
+              if substitute(type, classType.environment) == interfaceType {
+                return true
+              }
+            }
+          }
+          var baseType = classType.baseType
+          if baseType == null {
+            break
+          }
+          classType = substitute(baseType, classType.environment)
+        }
+      }
+      return false
     }
 
     def unwrappedType(type Type) Type {
@@ -101,6 +125,7 @@ namespace Skew {
       if from == .NULL && to.isReference { return true }
       if from == intType && to == doubleType { return true }
       if isBaseType(from, to) { return true }
+      if isImplementedInterface(from, to) { return true }
       if from.isEnum && !to.isEnum && isNumeric(to) { return true }
       return false
     }
@@ -111,6 +136,7 @@ namespace Skew {
       if canImplicitlyConvert(from, to) { return true }
       if _canCastToNumeric(from) && _canCastToNumeric(to) { return true }
       if isBaseType(to, from) { return true }
+      if isImplementedInterface(to, from) { return true }
       if to.isEnum && isNumeric(from) { return true }
       return false
     }
@@ -133,7 +159,7 @@ namespace Skew {
 
       # Check for a common base class
       if left.isClass && right.isClass {
-        return _commonBaseClass(left, right)
+        return _commonBaseType(left, right)
       }
 
       return null
@@ -380,7 +406,7 @@ namespace Skew {
       return hash
     }
 
-    def _commonBaseClass(left Type, right Type) Type {
+    def _commonBaseType(left Type, right Type) Type {
       var a = left
       while a != null {
         var b = right
@@ -388,9 +414,9 @@ namespace Skew {
           if a == b {
             return a
           }
-          b = b.baseClass
+          b = b.baseType
         }
-        a = a.baseClass
+        a = a.baseType
       }
       return null
     }

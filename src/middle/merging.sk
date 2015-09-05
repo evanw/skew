@@ -63,12 +63,21 @@ namespace Skew.Merging {
 
       # Classes can only have one base type
       var object = other.asObjectSymbol
-      if child.base != null && object.base != null {
-        log.semanticErrorDuplicateBaseType(child.base.range, child.name, object.base.range)
+      if child.extends != null && object.extends != null {
+        log.semanticErrorDuplicateBaseType(child.extends.range, child.name, object.extends.range)
         return true
       }
-      if child.base != null {
-        object.base = child.base
+      if child.extends != null {
+        object.extends = child.extends
+      }
+
+      # Merge base interfaces
+      if child.implements != null {
+        if object.implements != null {
+          object.implements.append(child.implements)
+        } else {
+          object.implements = child.implements
+        }
       }
 
       # Cannot merge two objects that both have type parameters

@@ -1389,10 +1389,10 @@ class Foo : int {}
 class Bar : fn() {}
 class Baz : Baz {}
 ", "
-<stdin>:1:13: error: Cannot derive from type \"int\"
+<stdin>:1:13: error: Cannot extend type \"int\"
 class Foo : int {}
             ~~~
-<stdin>:2:13: error: Cannot derive from type \"fn()\"
+<stdin>:2:13: error: Cannot extend type \"fn()\"
 class Bar : fn() {}
             ~~~~
 <stdin>:3:7: error: Cyclic declaration of \"Baz\"
@@ -3967,7 +3967,7 @@ test("
 class Foo : Bar {}
 type Bar = int
 ", "
-<stdin>:1:13: error: Cannot derive from type \"Bar\"
+<stdin>:1:13: error: Cannot extend type \"Bar\"
 class Foo : Bar {}
             ~~~
 ")
@@ -4189,6 +4189,138 @@ var c Double = null
 <stdin>:5:13: error: Cannot convert from type \"null\" to type \"Bar\"
 var e Bar = null
             ~~~~
+")
+
+test("
+interface I {}
+class C :: I {}
+interface I2 :: I {}
+namespace N :: I {}
+type T : C :: I {}
+enum E :: I {}
+", "
+<stdin>:3:17: error: Cannot implement type \"I\"
+interface I2 :: I {}
+                ^
+<stdin>:4:16: error: Cannot implement type \"I\"
+namespace N :: I {}
+               ^
+<stdin>:5:15: error: Cannot implement type \"I\"
+type T : C :: I {}
+              ^
+<stdin>:6:11: error: Cannot implement type \"I\"
+enum E :: I {}
+          ^
+")
+
+test("
+interface I {}
+class C :: I, I2, I, I2 {}
+interface I2 {}
+", "
+<stdin>:2:19: error: Duplicate implemented type \"I\"
+class C :: I, I2, I, I2 {}
+                  ^
+<stdin>:2:12: note: The first occurrence is here
+class C :: I, I2, I, I2 {}
+           ^
+<stdin>:2:22: error: Duplicate implemented type \"I2\"
+class C :: I, I2, I, I2 {}
+                     ~~
+<stdin>:2:15: note: The first occurrence is here
+class C :: I, I2, I, I2 {}
+              ~~
+")
+
+test("
+class Foo :: IFoo {}
+interface IFoo {}
+interface IBar {}
+
+def main(foo Foo, ifoo IFoo, ibar IBar) {
+  foo = ifoo
+  foo = ibar
+  ifoo = foo
+  ifoo = ibar
+  ibar = foo
+  ibar = ifoo
+}
+", "
+<stdin>:6:9: error: Cannot convert from type \"IFoo\" to type \"Foo\" without a cast
+  foo = ifoo
+        ~~~~
+<stdin>:7:9: error: Cannot convert from type \"IBar\" to type \"Foo\"
+  foo = ibar
+        ~~~~
+<stdin>:9:10: error: Cannot convert from type \"IBar\" to type \"IFoo\"
+  ifoo = ibar
+         ~~~~
+<stdin>:10:10: error: Cannot convert from type \"Foo\" to type \"IBar\"
+  ibar = foo
+         ~~~
+<stdin>:11:10: error: Cannot convert from type \"IFoo\" to type \"IBar\"
+  ibar = ifoo
+         ~~~~
+")
+
+test("
+class Foo :: IFoo<int> {}
+interface IFoo<T> {}
+
+def main(foo Foo, ifoo_int IFoo<int>, ifoo_bool IFoo<bool>) {
+  foo = ifoo_int
+  foo = ifoo_bool
+  ifoo_int = foo
+  ifoo_int = ifoo_bool
+  ifoo_bool = foo
+  ifoo_bool = ifoo_int
+}
+", "
+<stdin>:5:9: error: Cannot convert from type \"IFoo<int>\" to type \"Foo\" without a cast
+  foo = ifoo_int
+        ~~~~~~~~
+<stdin>:6:9: error: Cannot convert from type \"IFoo<bool>\" to type \"Foo\"
+  foo = ifoo_bool
+        ~~~~~~~~~
+<stdin>:8:14: error: Cannot convert from type \"IFoo<bool>\" to type \"IFoo<int>\"
+  ifoo_int = ifoo_bool
+             ~~~~~~~~~
+<stdin>:9:15: error: Cannot convert from type \"Foo\" to type \"IFoo<bool>\"
+  ifoo_bool = foo
+              ~~~
+<stdin>:10:15: error: Cannot convert from type \"IFoo<int>\" to type \"IFoo<bool>\"
+  ifoo_bool = ifoo_int
+              ~~~~~~~~
+")
+
+test("
+class Foo<T> :: IFoo<T> {}
+interface IFoo<T> {}
+
+def main(foo_int Foo<int>, ifoo_int IFoo<int>, ifoo_bool IFoo<bool>) {
+  foo_int = ifoo_int
+  foo_int = ifoo_bool
+  ifoo_int = foo_int
+  ifoo_int = ifoo_bool
+  ifoo_bool = foo_int
+  ifoo_bool = ifoo_int
+}
+", "
+<stdin>:5:13: error: Cannot convert from type \"IFoo<int>\" to type \"Foo<int>\" without a cast
+  foo_int = ifoo_int
+            ~~~~~~~~
+<stdin>:6:13: error: Cannot convert from type \"IFoo<bool>\" to type \"Foo<int>\"
+  foo_int = ifoo_bool
+            ~~~~~~~~~
+<stdin>:8:14: error: Cannot convert from type \"IFoo<bool>\" to type \"IFoo<int>\"
+  ifoo_int = ifoo_bool
+             ~~~~~~~~~
+<stdin>:9:15: error: Cannot convert from type \"Foo<int>\" to type \"IFoo<bool>\"
+  ifoo_bool = foo_int
+              ~~~~~~~
+<stdin>:10:15: error: Cannot convert from type \"IFoo<int>\" to type \"IFoo<bool>\"
+  ifoo_bool = ifoo_int
+              ~~~~~~~~
 ")
 
   }

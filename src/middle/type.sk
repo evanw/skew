@@ -82,14 +82,12 @@ namespace Skew {
       return self == DYNAMIC ? "dynamic" : "null"
     }
 
-    def baseClass Type {
-      if isClass {
-        var base = symbol.asObjectSymbol.base
-        if base != null {
-          return base.resolvedType
-        }
-      }
-      return null
+    def baseType Type {
+      return isClass ? symbol.asObjectSymbol.baseType : null
+    }
+
+    def interfaceTypes List<Type> {
+      return isClass ? symbol.asObjectSymbol.interfaceTypes : null
     }
   }
 

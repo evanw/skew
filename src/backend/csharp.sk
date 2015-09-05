@@ -253,9 +253,9 @@ namespace Skew {
       }
       _emit(_mangleName(symbol))
       _emitTypeParameters(symbol.parameters)
-      if symbol.base != null {
+      if symbol.extends != null {
         _emit(" : ")
-        _emitExpressionOrType(symbol.base, symbol.baseClass != null ? symbol.baseClass.resolvedType : null)
+        _emitExpressionOrType(symbol.extends, symbol.baseType)
       }
       _emit("\n" + _indent + "{\n")
       _increaseIndent

@@ -978,18 +978,34 @@ namespace Skew.Parsing {
 
           # Allow "type Foo = int"
           if kind == .OBJECT_WRAPPED && context.eat(.ASSIGN) {
-            object.base = parseType(context)
-            if object.base == null {
+            object.extends = parseType(context)
+            if object.extends == null {
               return false
             }
           }
 
           # Regular block structure "type Foo : int {}"
           else {
+            # Base class
             if context.eat(.COLON) {
-              object.base = parseType(context)
-              if object.base == null {
+              object.extends = parseType(context)
+              if object.extends == null {
                 return false
+              }
+            }
+
+            # Interfaces
+            if context.eat(.DOUBLE_COLON) {
+              object.implements = []
+              while true {
+                var type = parseType(context)
+                if type == null {
+                  return false
+                }
+                object.implements.append(type)
+                if !context.eat(.COMMA) {
+                  break
+                }
               }
             }
 

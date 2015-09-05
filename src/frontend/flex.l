@@ -53,6 +53,7 @@
 "."                               DOT;
 ","                               COMMA;
 "?"                               QUESTION_MARK;
+"::"                              DOUBLE_COLON;
 ":"                               COLON;
 ";"                               SEMICOLON;
 "**="                             ASSIGN_POWER;

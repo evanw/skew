@@ -239,6 +239,8 @@ namespace Skew.Resolving {
 
     def initializeObject(symbol ObjectSymbol) {
       var kind = symbol.kind
+      var extends = symbol.extends
+      var implements = symbol.implements
 
       if symbol.resolvedType == null {
         symbol.resolvedType = Type.new(.SYMBOL, symbol)
@@ -248,23 +250,56 @@ namespace Skew.Resolving {
       forbidOverriddenSymbol(symbol)
 
       # Resolve the base type (only for classes and wrapped types)
-      if symbol.base != null {
-        resolveAsParameterizedType(symbol.base, symbol.scope)
-        var baseType = symbol.base.resolvedType
+      if extends != null {
+        resolveAsParameterizedType(extends, symbol.scope)
+        var baseType = extends.resolvedType
         if kind == .OBJECT_WRAPPED {
           symbol.wrappedType = baseType
           symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
-        } else if kind == .OBJECT_CLASS && baseType.kind == .SYMBOL && baseType.symbol.kind == .OBJECT_CLASS && !baseType.symbol.isValueType {
+        } else if kind != .OBJECT_CLASS || (baseType != .DYNAMIC && (!baseType.isClass || baseType.symbol.isValueType)) {
+          log.semanticErrorInvalidExtends(extends.range, baseType)
+        } else if baseType != .DYNAMIC {
+          symbol.baseType = baseType
           symbol.baseClass = baseType.symbol.asObjectSymbol
           symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
-        } else if kind != .OBJECT_CLASS || baseType != .DYNAMIC {
-          log.semanticErrorInvalidBaseType(symbol.base.range, baseType)
         }
       }
 
       # Wrapped types without something to wrap don't make sense
       else if kind == .OBJECT_WRAPPED {
         log.semanticErrorMissingWrappedType(symbol.range, symbol.fullName)
+      }
+
+      # Resolve the base interface types
+      if implements != null {
+        symbol.interfaceTypes = []
+        for i in 0..implements.count {
+          var type = implements[i]
+          resolveAsParameterizedType(type, symbol.scope)
+
+          # Ignore the dynamic type, which will be from errors and dynamic expressions used for exports
+          var interfaceType = type.resolvedType
+          if interfaceType == .DYNAMIC {
+            continue
+          }
+
+          # Only classes can derive from interfaces
+          if kind != .OBJECT_CLASS || !interfaceType.isInterface {
+            log.semanticErrorInvalidImplements(type.range, interfaceType)
+            continue
+          }
+
+          # An interface can only be implemented once
+          for j in 0..i {
+            var other = implements[j]
+            if other.resolvedType == interfaceType {
+              log.semanticErrorDuplicateImplements(type.range, interfaceType, other.range)
+              break
+            }
+          }
+
+          symbol.interfaceTypes.append(interfaceType)
+        }
       }
 
       # Assign values for all enums before they are initialized
@@ -662,7 +697,7 @@ namespace Skew.Resolving {
 
         # Make sure the overridden symbol can be merged with this symbol
         if symbolKind != overriddenKind {
-          log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol.base.resolvedType, overridden.range)
+          log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol.baseType, overridden.range)
           overridden = null
         }
 
@@ -750,7 +785,7 @@ namespace Skew.Resolving {
           if overload.argumentOnlyType == symbol.argumentOnlyType {
             symbol.overridden = overload.asFunctionSymbol
             if symbol.kind != .FUNCTION_CONSTRUCTOR && overload.kind != .FUNCTION_CONSTRUCTOR && symbol.overridden.resolvedType.returnType != returnType {
-              log.semanticErrorBadOverrideReturnType(symbol.range, symbol.name, symbol.parent.asObjectSymbol.base.resolvedType, overload.range)
+              log.semanticErrorBadOverrideReturnType(symbol.range, symbol.name, symbol.parent.asObjectSymbol.baseType, overload.range)
               hasOverrideError = true
             }
             break
@@ -1963,7 +1998,7 @@ namespace Skew.Resolving {
     def forbidOverriddenSymbol(symbol Symbol) {
       var overridden = findOverriddenMember(symbol)
       if overridden != null {
-        log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol.base.resolvedType, overridden.range)
+        log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol.baseType, overridden.range)
       }
     }
 
@@ -1980,7 +2015,7 @@ namespace Skew.Resolving {
             }
           }
         }
-        check = check.baseClass
+        check = check.baseType
       }
       return null
     }

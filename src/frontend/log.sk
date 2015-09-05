@@ -405,8 +405,19 @@ namespace Skew {
       }
     }
 
-    def semanticErrorInvalidBaseType(range Range, type Type) {
-      error(range, "Cannot derive from type \"" + type.toString + "\"")
+    def semanticErrorInvalidExtends(range Range, type Type) {
+      error(range, "Cannot extend type \"" + type.toString + "\"")
+    }
+
+    def semanticErrorInvalidImplements(range Range, type Type) {
+      error(range, "Cannot implement type \"" + type.toString + "\"")
+    }
+
+    def semanticErrorDuplicateImplements(range Range, type Type, previous Range) {
+      error(range, "Duplicate implemented type \"" + type.toString + "\"")
+      if previous != null {
+        note(previous, "The first occurrence is here")
+      }
     }
 
     def semanticErrorBadOverride(range Range, name string, base Type, overridden Range) {
