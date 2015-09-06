@@ -4632,6 +4632,42 @@ def main(foo_int Foo<int>, ifoo_int IFoo<int>, ifoo_bool IFoo<bool>) {
 ")
 
 test("
+class Foo :: IFoo {}
+interface IFoo { def foo }
+", "
+<stdin>:1:7: error: Type \"Foo\" is missing an implementation of function \"foo\" from interface \"IFoo\"
+class Foo :: IFoo {}
+      ~~~
+<stdin>:2:22: note: The function declaration is here
+interface IFoo { def foo }
+                     ~~~
+")
+
+test("
+class Foo :: IFoo { def foo int }
+interface IFoo { def foo bool }
+", "
+<stdin>:1:25: error: Function \"foo\" has a different return type than the function with the same name and argument types from interface \"IFoo\"
+class Foo :: IFoo { def foo int }
+                        ~~~
+<stdin>:2:22: note: The function declaration is here
+interface IFoo { def foo bool }
+                     ~~~
+")
+
+test("
+class Foo :: IFoo { var foo int }
+interface IFoo { def foo bool }
+", "
+<stdin>:1:7: error: Type \"Foo\" is missing an implementation of function \"foo\" from interface \"IFoo\"
+class Foo :: IFoo { var foo int }
+      ~~~
+<stdin>:2:22: note: The function declaration is here
+interface IFoo { def foo bool }
+                     ~~~
+")
+
+test("
 class Foo {
   over foo
 }

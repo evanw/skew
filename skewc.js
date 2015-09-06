@@ -10098,7 +10098,7 @@
     this.variables = [];
     this.parameters = null;
     this.guards = [];
-    this.hasCheckedForAbstract = false;
+    this.hasCheckedInterfacesAndAbstractStatus = false;
     this.isAbstractBecauseOf = null;
   };
 
@@ -10656,6 +10656,22 @@
 
     if (previous !== null) {
       this.note(previous, 'The first occurrence is here');
+    }
+  };
+
+  Skew.Log.prototype.semanticErrorBadInterfaceImplementation = function(range, classType, interfaceType, name, reason) {
+    this.error(range, 'Type "' + classType.toString() + '" is missing an implementation of function "' + name + '" from interface "' + interfaceType.toString() + '"');
+
+    if (reason !== null) {
+      this.note(reason, 'The function declaration is here');
+    }
+  };
+
+  Skew.Log.prototype.semanticErrorBadInterfaceImplementationReturnType = function(range, name, interfaceType, reason) {
+    this.error(range, 'Function "' + name + '" has a different return type than the function with the same name and argument types from interface "' + interfaceType.toString() + '"');
+
+    if (reason !== null) {
+      this.note(reason, 'The function declaration is here');
     }
   };
 
@@ -14365,39 +14381,94 @@
     }
   };
 
-  Skew.Resolving.Resolver.prototype.checkAbstractFunction = function(object, $function) {
+  Skew.Resolving.Resolver.prototype.checkInterfacesAndAbstractStatus1 = function(object, $function) {
     assert($function.kind === Skew.SymbolKind.FUNCTION_INSTANCE);
-    this.initializeSymbol($function);
+    assert($function.state === Skew.SymbolState.INITIALIZED);
 
-    if (!$function.isImported() && !$function.isObsolete() && $function.block === null) {
+    if (!object.isAbstract() && !$function.isImported() && !$function.isObsolete() && $function.block === null) {
       object.isAbstractBecauseOf = $function;
-      return true;
     }
-
-    return false;
   };
 
-  Skew.Resolving.Resolver.prototype.isAbstractObject = function(symbol) {
-    var self = this;
+  Skew.Resolving.Resolver.prototype.checkInterfacesAndAbstractStatus2 = function(symbol) {
     assert(symbol.state === Skew.SymbolState.INITIALIZED);
 
-    if (!symbol.hasCheckedForAbstract) {
-      symbol.hasCheckedForAbstract = true;
+    if (symbol.hasCheckedInterfacesAndAbstractStatus || symbol.kind !== Skew.SymbolKind.OBJECT_CLASS) {
+      return;
+    }
 
-      if (symbol.kind === Skew.SymbolKind.OBJECT_CLASS && !symbol.isImported()) {
-        for (var i = 0, list = in_StringMap.values(symbol.members), count = list.length; i < count; ++i) {
-          var member = list[i];
+    symbol.hasCheckedInterfacesAndAbstractStatus = true;
 
-          if (member.kind === Skew.SymbolKind.OVERLOADED_INSTANCE && member.asOverloadedFunctionSymbol().symbols.some(function($function) {
-            return self.checkAbstractFunction(symbol, $function);
-          }) || member.kind === Skew.SymbolKind.FUNCTION_INSTANCE && self.checkAbstractFunction(symbol, member.asFunctionSymbol())) {
-            break;
+    // Check to see if this class is abstract (as unimplemented members)
+    for (var i1 = 0, list1 = in_StringMap.values(symbol.members), count1 = list1.length; i1 < count1; ++i1) {
+      var member = list1[i1];
+
+      if (member.kind === Skew.SymbolKind.OVERLOADED_INSTANCE) {
+        this.initializeSymbol(member);
+
+        for (var i = 0, list = member.asOverloadedFunctionSymbol().symbols, count = list.length; i < count; ++i) {
+          var $function = list[i];
+          this.checkInterfacesAndAbstractStatus1(symbol, $function);
+        }
+      }
+
+      else if (member.kind === Skew.SymbolKind.FUNCTION_INSTANCE) {
+        this.initializeSymbol(member);
+        this.checkInterfacesAndAbstractStatus1(symbol, member.asFunctionSymbol());
+      }
+
+      if (symbol.isAbstract()) {
+        break;
+      }
+    }
+
+    // Check interfaces for missing implementations
+    if (symbol.interfaceTypes !== null) {
+      for (var i4 = 0, list4 = symbol.interfaceTypes, count4 = list4.length; i4 < count4; ++i4) {
+        var interfaceType = list4[i4];
+
+        for (var i3 = 0, list3 = interfaceType.symbol.asObjectSymbol().functions, count3 = list3.length; i3 < count3; ++i3) {
+          var function1 = list3[i3];
+
+          if (function1.kind !== Skew.SymbolKind.FUNCTION_INSTANCE) {
+            continue;
+          }
+
+          this.initializeSymbol(function1);
+          var member1 = in_StringMap.get(symbol.members, function1.name, null);
+          var match = null;
+
+          // Search for a matching function
+          if (member1 !== null) {
+            if (member1.kind === Skew.SymbolKind.OVERLOADED_INSTANCE) {
+              for (var i2 = 0, list2 = member1.asOverloadedFunctionSymbol().symbols, count2 = list2.length; i2 < count2; ++i2) {
+                var other = list2[i2];
+
+                if (other.argumentOnlyType === function1.argumentOnlyType) {
+                  match = other;
+                  break;
+                }
+              }
+            }
+
+            else if (member1.kind === Skew.SymbolKind.FUNCTION_INSTANCE) {
+              if (member1.asFunctionSymbol().argumentOnlyType === function1.argumentOnlyType) {
+                match = member1.asFunctionSymbol();
+              }
+            }
+          }
+
+          // Validate use of the interface
+          if (match === null) {
+            this.log.semanticErrorBadInterfaceImplementation(symbol.range, symbol.resolvedType, interfaceType, function1.name, function1.range);
+          }
+
+          else if (function1.resolvedType.returnType !== match.resolvedType.returnType) {
+            this.log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function1.range);
           }
         }
       }
     }
-
-    return symbol.isAbstract();
   };
 
   Skew.Resolving.Resolver.prototype.initializeGlobals = function() {
@@ -14715,7 +14786,7 @@
       this.resolveVariable1(variable);
     }
 
-    this.isAbstractObject(symbol);
+    this.checkInterfacesAndAbstractStatus2(symbol);
   };
 
   Skew.Resolving.Resolver.prototype.initializeFunction = function(symbol) {
@@ -16103,9 +16174,13 @@
     }
 
     // Forbid constructing an abstract type
-    if (!this.options.target.allowAbstractConstruction() && $function !== null && $function.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR && this.isAbstractObject($function.parent.asObjectSymbol()) && value.kind !== Skew.NodeKind.SUPER) {
+    if (!this.options.target.allowAbstractConstruction() && $function !== null && $function.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR && value.kind !== Skew.NodeKind.SUPER) {
+      this.checkInterfacesAndAbstractStatus2($function.parent.asObjectSymbol());
       var reason = $function.parent.asObjectSymbol().isAbstractBecauseOf;
-      this.log.semanticErrorAbstractNew(node.internalRangeOrRange(), $function.parent.resolvedType, reason.range, reason.name);
+
+      if (reason !== null) {
+        this.log.semanticErrorAbstractNew(node.internalRangeOrRange(), $function.parent.resolvedType, reason.range, reason.name);
+      }
     }
 
     // Replace overloaded symbols with the chosen overload

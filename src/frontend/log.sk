@@ -420,6 +420,20 @@ namespace Skew {
       }
     }
 
+    def semanticErrorBadInterfaceImplementation(range Range, classType Type, interfaceType Type, name string, reason Range) {
+      error(range, "Type \"" + classType.toString + "\" is missing an implementation of function \"" + name + "\" from interface \"" + interfaceType.toString + "\"")
+      if reason != null {
+        note(reason, "The function declaration is here")
+      }
+    }
+
+    def semanticErrorBadInterfaceImplementationReturnType(range Range, name string, interfaceType Type, reason Range) {
+      error(range, "Function \"" + name + "\" has a different return type than the function with the same name and argument types from interface \"" + interfaceType.toString + "\"")
+      if reason != null {
+        note(reason, "The function declaration is here")
+      }
+    }
+
     def semanticErrorBadOverride(range Range, name string, base Type, overridden Range) {
       error(range, "\"" + name + "\" overrides another declaration with the same name in base type \"" + base.toString + "\"")
       if overridden != null {

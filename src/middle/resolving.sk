@@ -388,35 +388,77 @@ namespace Skew.Resolving {
       }
     }
 
-    def checkAbstractFunction(object ObjectSymbol, function FunctionSymbol) bool {
+    def checkInterfacesAndAbstractStatus(object ObjectSymbol, function FunctionSymbol) {
       assert(function.kind == .FUNCTION_INSTANCE)
-      initializeSymbol(function)
+      assert(function.state == .INITIALIZED)
 
-      if !function.isImported && !function.isObsolete && function.block == null {
+      if !object.isAbstract && !function.isImported && !function.isObsolete && function.block == null {
         object.isAbstractBecauseOf = function
-        return true
       }
-
-      return false
     }
 
-    def isAbstractObject(symbol ObjectSymbol) bool {
+    def checkInterfacesAndAbstractStatus(symbol ObjectSymbol) {
       assert(symbol.state == .INITIALIZED)
 
-      if !symbol.hasCheckedForAbstract {
-        symbol.hasCheckedForAbstract = true
+      if symbol.hasCheckedInterfacesAndAbstractStatus || symbol.kind != .OBJECT_CLASS {
+        return
+      }
 
-        if symbol.kind == .OBJECT_CLASS && !symbol.isImported {
-          for member in symbol.members.values {
-            if member.kind == .OVERLOADED_INSTANCE && member.asOverloadedFunctionSymbol.symbols.any(function => checkAbstractFunction(symbol, function)) ||
-                member.kind == .FUNCTION_INSTANCE && checkAbstractFunction(symbol, member.asFunctionSymbol) {
-              break
+      symbol.hasCheckedInterfacesAndAbstractStatus = true
+
+      # Check to see if this class is abstract (as unimplemented members)
+      for member in symbol.members.values {
+        if member.kind == .OVERLOADED_INSTANCE {
+          initializeSymbol(member)
+          for function in member.asOverloadedFunctionSymbol.symbols {
+            checkInterfacesAndAbstractStatus(symbol, function)
+          }
+        } else if member.kind == .FUNCTION_INSTANCE {
+          initializeSymbol(member)
+          checkInterfacesAndAbstractStatus(symbol, member.asFunctionSymbol)
+        }
+        if symbol.isAbstract {
+          break
+        }
+      }
+
+      # Check interfaces for missing implementations
+      if symbol.interfaceTypes != null {
+        for interfaceType in symbol.interfaceTypes {
+          for function in interfaceType.symbol.asObjectSymbol.functions {
+            if function.kind != .FUNCTION_INSTANCE {
+              continue
+            }
+            initializeSymbol(function)
+
+            var member = symbol.members.get(function.name, null)
+            var match FunctionSymbol = null
+
+            # Search for a matching function
+            if member != null {
+              if member.kind == .OVERLOADED_INSTANCE {
+                for other in member.asOverloadedFunctionSymbol.symbols {
+                  if other.argumentOnlyType == function.argumentOnlyType {
+                    match = other
+                    break
+                  }
+                }
+              } else if member.kind == .FUNCTION_INSTANCE {
+                if member.asFunctionSymbol.argumentOnlyType == function.argumentOnlyType {
+                  match = member.asFunctionSymbol
+                }
+              }
+            }
+
+            # Validate use of the interface
+            if match == null {
+              log.semanticErrorBadInterfaceImplementation(symbol.range, symbol.resolvedType, interfaceType, function.name, function.range)
+            } else if function.resolvedType.returnType != match.resolvedType.returnType {
+              log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function.range)
             }
           }
         }
       }
-
-      return symbol.isAbstract
     }
 
     def initializeGlobals {
@@ -711,7 +753,7 @@ namespace Skew.Resolving {
         resolveVariable(variable)
       }
 
-      isAbstractObject(symbol)
+      checkInterfacesAndAbstractStatus(symbol)
     }
 
     def initializeFunction(symbol FunctionSymbol) {
@@ -1843,10 +1885,12 @@ namespace Skew.Resolving {
       }
 
       # Forbid constructing an abstract type
-      if !options.target.allowAbstractConstruction && function != null && function.kind == .FUNCTION_CONSTRUCTOR &&
-          isAbstractObject(function.parent.asObjectSymbol) && value.kind != .SUPER {
+      if !options.target.allowAbstractConstruction && function != null && function.kind == .FUNCTION_CONSTRUCTOR && value.kind != .SUPER {
+        checkInterfacesAndAbstractStatus(function.parent.asObjectSymbol)
         var reason = function.parent.asObjectSymbol.isAbstractBecauseOf
-        log.semanticErrorAbstractNew(node.internalRangeOrRange, function.parent.resolvedType, reason.range, reason.name)
+        if reason != null {
+          log.semanticErrorAbstractNew(node.internalRangeOrRange, function.parent.resolvedType, reason.range, reason.name)
+        }
       }
 
       # Replace overloaded symbols with the chosen overload

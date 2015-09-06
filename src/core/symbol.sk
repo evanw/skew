@@ -260,7 +260,7 @@ namespace Skew {
     var variables List<VariableSymbol> = []
     var parameters List<ParameterSymbol> = null
     var guards List<Guard> = [] # Compile-time if statements
-    var hasCheckedForAbstract = false
+    var hasCheckedInterfacesAndAbstractStatus = false
     var isAbstractBecauseOf FunctionSymbol = null # Used for diagnostics
 
     def isAbstract bool {
