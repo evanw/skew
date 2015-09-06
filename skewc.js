@@ -530,7 +530,7 @@
         passTimer.timer.stop();
 
         // This is expensive but can be used for debugging
-        if (false) {
+        if (!RELEASE) {
           Skew._verifyHierarchy1(context.global);
         }
       }
@@ -541,25 +541,44 @@
   };
 
   Skew._verifyHierarchy1 = function(symbol) {
-    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
-      var object = list[i];
+    for (var i1 = 0, list1 = symbol.objects, count1 = list1.length; i1 < count1; ++i1) {
+      var object = list1[i1];
+      assert(object.parent === symbol);
       Skew._verifyHierarchy1(object);
+
+      if (object.$extends !== null) {
+        Skew._verifyHierarchy2(object.$extends, null);
+      }
+
+      if (object.implements !== null) {
+        for (var i = 0, list = object.implements, count = list.length; i < count; ++i) {
+          var node = list[i];
+          Skew._verifyHierarchy2(node, null);
+        }
+      }
     }
 
-    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
-      var $function = list1[i1];
+    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
+      var $function = list2[i2];
+      assert($function.parent === symbol);
 
       if ($function.block !== null) {
         Skew._verifyHierarchy2($function.block, null);
       }
     }
 
-    for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
-      var variable = list2[i2];
+    for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; ++i3) {
+      var variable = list3[i3];
+      assert(variable.parent === symbol);
 
       if (variable.value !== null) {
         Skew._verifyHierarchy2(variable.value, null);
       }
+    }
+
+    for (var i4 = 0, list4 = symbol.guards, count4 = list4.length; i4 < count4; ++i4) {
+      var guard = list4[i4];
+      Skew._verifyHierarchy3(guard, symbol);
     }
   };
 
@@ -568,6 +587,21 @@
 
     for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
       Skew._verifyHierarchy2(child, node);
+    }
+  };
+
+  Skew._verifyHierarchy3 = function(guard, parent) {
+    assert(guard.parent === parent);
+    assert(guard.contents.parent === parent);
+
+    if (guard.test !== null) {
+      Skew._verifyHierarchy2(guard.test, null);
+    }
+
+    Skew._verifyHierarchy1(guard.contents);
+
+    if (guard.elseGuard !== null) {
+      Skew._verifyHierarchy3(guard.elseGuard, parent);
     }
   };
 
@@ -8905,6 +8939,7 @@
     }
 
     var contents = new Skew.ObjectSymbol(parent.kind, '<conditional>');
+    contents.parent = parent;
     Skew.Parsing.parseSymbols(context, contents, annotations);
 
     if (!context.expect(Skew.TokenKind.RIGHT_BRACE) || !context.peek(Skew.TokenKind.ELSE) && !Skew.Parsing.parseAfterBlock(context)) {
@@ -8967,6 +9002,7 @@
     if (parent.kind === Skew.SymbolKind.OBJECT_ENUM && token.kind === Skew.TokenKind.IDENTIFIER) {
       var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ENUM, token.range.toString());
       variable.range = token.range;
+      variable.parent = parent;
       variable.flags |= Skew.Symbol.IS_CONST;
       parent.variables.push(variable);
       symbol = variable;
@@ -9072,6 +9108,7 @@
           // Wrap this declaration in a namespace
           var nextParent = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_NAMESPACE, name);
           nextParent.range = range;
+          nextParent.parent = parent;
           parent.objects.push(nextParent);
           parent = nextParent;
 
@@ -9088,6 +9125,7 @@
         case Skew.SymbolKind.VARIABLE_INSTANCE: {
           var variable1 = new Skew.VariableSymbol(kind, name);
           variable1.range = range;
+          variable1.parent = parent;
 
           if (token.kind === Skew.TokenKind.CONST) {
             variable1.flags |= Skew.Symbol.IS_CONST;
@@ -9122,6 +9160,7 @@
         case Skew.SymbolKind.FUNCTION_INSTANCE: {
           var $function = new Skew.FunctionSymbol(kind, name);
           $function.range = range;
+          $function.parent = parent;
 
           if (token.kind === Skew.TokenKind.OVER) {
             $function.flags |= Skew.Symbol.IS_OVER;
@@ -9179,6 +9218,7 @@
         case Skew.SymbolKind.OBJECT_WRAPPED: {
           var object = new Skew.ObjectSymbol(kind, name);
           object.range = range;
+          object.parent = parent;
 
           if (kind !== Skew.SymbolKind.OBJECT_NAMESPACE && context.eat(Skew.TokenKind.START_PARAMETER_LIST)) {
             object.parameters = Skew.Parsing.parseTypeParameters(context, Skew.SymbolKind.PARAMETER_OBJECT);
@@ -9844,7 +9884,7 @@
     this.id = Skew.Symbol._createID();
     this.kind = kind;
     this.name = name;
-    this.rename = '';
+    this.rename = null;
     this.range = null;
     this.parent = null;
     this.resolvedType = null;
@@ -10023,7 +10063,7 @@
   };
 
   Skew.Symbol.prototype.nameWithRenaming = function() {
-    return this.isRenamed() ? this.rename : this.name;
+    return this.rename !== null ? this.rename : this.name;
   };
 
   Skew.Symbol._createID = function() {
@@ -13495,12 +13535,12 @@
       // Classes can only have one base type
       var object = other.asObjectSymbol();
 
-      if (child.$extends !== null && object.$extends !== null) {
-        log.semanticErrorDuplicateBaseType(child.$extends.range, child.name, object.$extends.range);
-        return true;
-      }
-
       if (child.$extends !== null) {
+        if (object.$extends !== null) {
+          log.semanticErrorDuplicateBaseType(child.$extends.range, child.name, object.$extends.range);
+          return true;
+        }
+
         object.$extends = child.$extends;
       }
 
@@ -13534,7 +13574,12 @@
 
       for (var i = 0, list = child.guards, count = list.length; i < count; ++i) {
         var guard = list[i];
-        guard.parent = object;
+
+        for (var g = guard; g !== null; g = g.elseGuard) {
+          g.parent = object;
+          g.contents.parent = object;
+        }
+
         object.guards.push(guard);
       }
 
@@ -14262,6 +14307,8 @@
   };
 
   Skew.Resolving.Resolver.prototype.isAbstractObject = function(symbol) {
+    assert(symbol.state === Skew.SymbolState.INITIALIZED);
+
     if (!symbol.hasCheckedForAbstract) {
       symbol.hasCheckedForAbstract = true;
 
@@ -14298,6 +14345,16 @@
     this.discardUnusedDefines();
   };
 
+  // An obsolete function is one without an implementation that was dropped in
+  // favor of one with an implementation:
+  //
+  //   namespace Foo {
+  //     def foo {}
+  //
+  //     # This will be marked as obsolete
+  //     def foo
+  //   }
+  //
   Skew.Resolving.Resolver.prototype.removeObsoleteFunctions = function(symbol) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
@@ -18743,6 +18800,7 @@
     return values;
   };
 
+  var RELEASE = false;
   Unicode.StringIterator.INSTANCE = new Unicode.StringIterator();
   Skew.HEX = '0123456789ABCDEF';
   Skew.BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';

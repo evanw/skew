@@ -361,6 +361,8 @@ namespace Skew.Resolving {
     }
 
     def isAbstractObject(symbol ObjectSymbol) bool {
+      assert(symbol.state == .INITIALIZED)
+
       if !symbol.hasCheckedForAbstract {
         symbol.hasCheckedForAbstract = true
 
@@ -396,6 +398,16 @@ namespace Skew.Resolving {
       discardUnusedDefines
     }
 
+    # An obsolete function is one without an implementation that was dropped in
+    # favor of one with an implementation:
+    #
+    #   namespace Foo {
+    #     def foo {}
+    #
+    #     # This will be marked as obsolete
+    #     def foo
+    #   }
+    #
     def removeObsoleteFunctions(symbol ObjectSymbol) {
       for object in symbol.objects {
         removeObsoleteFunctions(object)

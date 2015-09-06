@@ -122,7 +122,7 @@ namespace Skew {
     const id = _createID
     var kind SymbolKind
     var name string
-    var rename = ""
+    var rename string = null
     var range Range = null # The location of the name in the source code
     var parent Symbol = null # Automatically set by the merging step
     var resolvedType Type = null # Automatically set by the resolving step
@@ -224,7 +224,7 @@ namespace Skew {
     }
 
     def nameWithRenaming string {
-      return isRenamed ? rename : name
+      return rename != null ? rename : name
     }
   }
 

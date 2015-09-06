@@ -758,6 +758,7 @@ namespace Skew.Parsing {
       return null
     }
     var contents = ObjectSymbol.new(parent.kind, "<conditional>")
+    contents.parent = parent
     parseSymbols(context, contents, annotations)
     if !context.expect(.RIGHT_BRACE) || !context.peek(.ELSE) && !parseAfterBlock(context) {
       return null
@@ -812,6 +813,7 @@ namespace Skew.Parsing {
     if parent.kind == .OBJECT_ENUM && token.kind == .IDENTIFIER {
       var variable = VariableSymbol.new(.VARIABLE_ENUM, token.range.toString)
       variable.range = token.range
+      variable.parent = parent
       variable.flags |= Symbol.IS_CONST
       parent.variables.append(variable)
       symbol = variable
@@ -876,6 +878,7 @@ namespace Skew.Parsing {
           # Wrap this declaration in a namespace
           var nextParent = ObjectSymbol.new(.OBJECT_NAMESPACE, name)
           nextParent.range = range
+          nextParent.parent = parent
           parent.objects.append(nextParent)
           parent = nextParent
 
@@ -891,6 +894,7 @@ namespace Skew.Parsing {
         case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE {
           var variable = VariableSymbol.new(kind, name)
           variable.range = range
+          variable.parent = parent
 
           if token.kind == .CONST {
             variable.flags |= Symbol.IS_CONST
@@ -918,6 +922,7 @@ namespace Skew.Parsing {
         case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
           var function = FunctionSymbol.new(kind, name)
           function.range = range
+          function.parent = parent
 
           if token.kind == .OVER {
             function.flags |= Symbol.IS_OVER
@@ -968,6 +973,7 @@ namespace Skew.Parsing {
         case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
           var object = ObjectSymbol.new(kind, name)
           object.range = range
+          object.parent = parent
 
           if kind != .OBJECT_NAMESPACE && context.eat(.START_PARAMETER_LIST) {
             object.parameters = parseTypeParameters(context, .PARAMETER_OBJECT)

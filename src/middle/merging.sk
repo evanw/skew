@@ -63,11 +63,11 @@ namespace Skew.Merging {
 
       # Classes can only have one base type
       var object = other.asObjectSymbol
-      if child.extends != null && object.extends != null {
-        log.semanticErrorDuplicateBaseType(child.extends.range, child.name, object.extends.range)
-        return true
-      }
       if child.extends != null {
+        if object.extends != null {
+          log.semanticErrorDuplicateBaseType(child.extends.range, child.name, object.extends.range)
+          return true
+        }
         object.extends = child.extends
       }
 
@@ -96,7 +96,10 @@ namespace Skew.Merging {
         object.parameters = child.parameters
       }
       for guard in child.guards {
-        guard.parent = object
+        for g = guard; g != null; g = g.elseGuard {
+          g.parent = object
+          g.contents.parent = object
+        }
         object.guards.append(guard)
       }
       return true

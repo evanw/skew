@@ -3788,6 +3788,75 @@ def main {
 ")
 
 test("
+class Foo {
+  def foo
+}
+
+class Bar : Foo {
+}
+
+def main {
+  Bar.new
+}
+", "
+<stdin>:9:3: error: Cannot construct abstract type \"Bar\"
+  Bar.new
+  ~~~~~~~
+<stdin>:2:7: note: The type \"Bar\" is abstract due to member \"foo\"
+  def foo
+      ~~~
+")
+
+test("
+class Foo {
+  def foo
+}
+
+class Bar : Foo {
+  over foo {}
+}
+
+def main {
+  Bar.new
+}
+", "
+")
+
+test("
+class Foo {
+}
+
+class Bar : Foo {
+  def foo
+}
+
+def main {
+  Foo.new
+}
+", "
+")
+
+test("
+class Foo {
+}
+
+class Bar : Foo {
+  def foo
+}
+
+def main {
+  Bar.new
+}
+", "
+<stdin>:9:3: error: Cannot construct abstract type \"Bar\"
+  Bar.new
+  ~~~~~~~
+<stdin>:5:7: note: The type \"Bar\" is abstract due to member \"foo\"
+  def foo
+      ~~~
+")
+
+test("
 class Foo<T> {
   def foo T {
     var bar T

@@ -88,6 +88,7 @@ namespace Skew {
   }
 
   enum PassKind {
+    # These values are defined near each pass
   }
 
   class PassContext {
@@ -180,7 +181,7 @@ namespace Skew {
         passTimer.timer.stop
 
         # This is expensive but can be used for debugging
-        if false {
+        if !RELEASE {
           _verifyHierarchy(context.global)
         }
       }
@@ -192,19 +193,38 @@ namespace Skew {
 
   def _verifyHierarchy(symbol ObjectSymbol) {
     for object in symbol.objects {
+      assert(object.parent == symbol)
       _verifyHierarchy(object)
+
+      if object.extends != null {
+        _verifyHierarchy(object.extends, null)
+      }
+
+      if object.implements != null {
+        for node in object.implements {
+          _verifyHierarchy(node, null)
+        }
+      }
     }
 
     for function in symbol.functions {
+      assert(function.parent == symbol)
+
       if function.block != null {
         _verifyHierarchy(function.block, null)
       }
     }
 
     for variable in symbol.variables {
+      assert(variable.parent == symbol)
+
       if variable.value != null {
         _verifyHierarchy(variable.value, null)
       }
+    }
+
+    for guard in symbol.guards {
+      _verifyHierarchy(guard, symbol)
     }
   }
 
@@ -213,6 +233,21 @@ namespace Skew {
 
     for child = node.firstChild; child != null; child = child.nextSibling {
       _verifyHierarchy(child, node)
+    }
+  }
+
+  def _verifyHierarchy(guard Guard, parent ObjectSymbol) {
+    assert(guard.parent == parent)
+    assert(guard.contents.parent == parent)
+
+    if guard.test != null {
+      _verifyHierarchy(guard.test, null)
+    }
+
+    _verifyHierarchy(guard.contents)
+
+    if guard.elseGuard != null {
+      _verifyHierarchy(guard.elseGuard, parent)
     }
   }
 }
