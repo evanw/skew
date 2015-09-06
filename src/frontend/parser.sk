@@ -788,6 +788,9 @@ namespace Skew.Parsing {
       if guard == null {
         return false
       }
+      if parent.guards == null {
+        parent.guards = []
+      }
       parent.guards.append(guard)
       return true
     }

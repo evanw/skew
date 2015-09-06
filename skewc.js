@@ -576,9 +576,11 @@
       }
     }
 
-    for (var i4 = 0, list4 = symbol.guards, count4 = list4.length; i4 < count4; ++i4) {
-      var guard = list4[i4];
-      Skew._verifyHierarchy3(guard, symbol);
+    if (symbol.guards !== null) {
+      for (var i4 = 0, list4 = symbol.guards, count4 = list4.length; i4 < count4; ++i4) {
+        var guard = list4[i4];
+        Skew._verifyHierarchy3(guard, symbol);
+      }
     }
   };
 
@@ -8976,6 +8978,10 @@
         return false;
       }
 
+      if (parent.guards === null) {
+        parent.guards = [];
+      }
+
       parent.guards.push(guard);
       return true;
     }
@@ -10097,7 +10103,7 @@
     this.functions = [];
     this.variables = [];
     this.parameters = null;
-    this.guards = [];
+    this.guards = null;
     this.hasCheckedInterfacesAndAbstractStatus = false;
     this.isAbstractBecauseOf = null;
   };
@@ -13587,15 +13593,21 @@
         object.parameters = child.parameters;
       }
 
-      for (var i = 0, list = child.guards, count = list.length; i < count; ++i) {
-        var guard = list[i];
-
-        for (var g = guard; g !== null; g = g.elseGuard) {
-          g.parent = object;
-          g.contents.parent = object;
+      if (child.guards !== null) {
+        if (object.guards === null) {
+          object.guards = [];
         }
 
-        object.guards.push(guard);
+        for (var i = 0, list = child.guards, count = list.length; i < count; ++i) {
+          var guard = list[i];
+
+          for (var g = guard; g !== null; g = g.elseGuard) {
+            g.parent = object;
+            g.contents.parent = object;
+          }
+
+          object.guards.push(guard);
+        }
       }
 
       return true;
@@ -14542,7 +14554,9 @@
   };
 
   Skew.Resolving.Resolver.prototype.scanForGuards = function(symbol, guards) {
-    in_List.append1(guards, symbol.guards);
+    if (symbol.guards !== null) {
+      in_List.append1(guards, symbol.guards);
+    }
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
@@ -14637,10 +14651,12 @@
     //     }
     //   }
     //
-    for (var i = 0, list = symbol.guards, count = list.length; i < count; ++i) {
-      var nested = list[i];
-      nested.parent = object;
-      object.guards.push(nested);
+    if (symbol.guards !== null) {
+      for (var i = 0, list = symbol.guards, count = list.length; i < count; ++i) {
+        var nested = list[i];
+        nested.parent = object;
+        object.guards.push(nested);
+      }
     }
   };
 

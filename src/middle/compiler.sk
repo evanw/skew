@@ -223,8 +223,10 @@ namespace Skew {
       }
     }
 
-    for guard in symbol.guards {
-      _verifyHierarchy(guard, symbol)
+    if symbol.guards != null {
+      for guard in symbol.guards {
+        _verifyHierarchy(guard, symbol)
+      }
     }
   }
 

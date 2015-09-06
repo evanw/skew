@@ -525,7 +525,9 @@ namespace Skew.Resolving {
     }
 
     def scanForGuards(symbol ObjectSymbol, guards List<Guard>) {
-      guards.append(symbol.guards)
+      if symbol.guards != null {
+        guards.append(symbol.guards)
+      }
 
       for object in symbol.objects {
         scanForGuards(object, guards)
@@ -615,9 +617,11 @@ namespace Skew.Resolving {
       #     }
       #   }
       #
-      for nested in symbol.guards {
-        nested.parent = object
-        object.guards.append(nested)
+      if symbol.guards != null {
+        for nested in symbol.guards {
+          nested.parent = object
+          object.guards.append(nested)
+        }
       }
     }
 

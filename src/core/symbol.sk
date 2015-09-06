@@ -259,7 +259,7 @@ namespace Skew {
     var functions List<FunctionSymbol> = []
     var variables List<VariableSymbol> = []
     var parameters List<ParameterSymbol> = null
-    var guards List<Guard> = [] # Compile-time if statements
+    var guards List<Guard> = null # Compile-time if statements
     var hasCheckedInterfacesAndAbstractStatus = false
     var isAbstractBecauseOf FunctionSymbol = null # Used for diagnostics
 
