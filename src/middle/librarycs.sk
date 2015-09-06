@@ -86,6 +86,10 @@ namespace string {
 
 @using(\"System.Collections.Generic\")
 class List {
+  def any(callback fn(T) bool) bool {
+    return !all(x => !callback(x))
+  }
+
   def isEmpty bool {
     return count == 0
   }

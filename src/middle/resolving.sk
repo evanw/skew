@@ -96,10 +96,6 @@ namespace Skew.Resolving {
           if overloaded != null && overloaded.state == .UNINITIALIZED {
             initializeSymbol(overloaded)
           }
-
-          if symbol.isEntryPoint {
-            validateEntryPoint(function)
-          }
         }
       }
 
@@ -247,7 +243,6 @@ namespace Skew.Resolving {
       }
 
       resolveParameters(symbol.parameters)
-      forbidOverriddenSymbol(symbol)
 
       # Resolve the base type (only for classes and wrapped types)
       if extends != null {
@@ -262,6 +257,39 @@ namespace Skew.Resolving {
           symbol.baseType = baseType
           symbol.baseClass = baseType.symbol.asObjectSymbol
           symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
+
+          # Copy members from the base type
+          var functions List<FunctionSymbol> = []
+          for member in symbol.baseClass.members.values {
+            var memberKind = member.kind
+
+            # Separate out functions
+            if memberKind.isFunction {
+              if memberKind != .FUNCTION_CONSTRUCTOR {
+                functions.append(member.asFunctionSymbol)
+              }
+            }
+
+            # Include overloaded functions individually
+            else if memberKind.isOverloadedFunction {
+              for function in member.asOverloadedFunctionSymbol.symbols {
+                if function.kind != .FUNCTION_CONSTRUCTOR {
+                  functions.append(function)
+                }
+              }
+            }
+
+            # Other kinds
+            else if !memberKind.isParameter {
+              var other = symbol.members.get(member.name, null)
+              if other != null {
+                log.semanticErrorBadOverride(other.range, other.name, baseType, member.range)
+              } else {
+                symbol.members[member.name] = member
+              }
+            }
+          }
+          Merging.mergeFunctions(log, symbol, functions, .INTO_DERIVED_CLASS)
         }
       }
 
@@ -360,6 +388,18 @@ namespace Skew.Resolving {
       }
     }
 
+    def checkAbstractFunction(object ObjectSymbol, function FunctionSymbol) bool {
+      assert(function.kind == .FUNCTION_INSTANCE)
+      initializeSymbol(function)
+
+      if !function.isImported && !function.isObsolete && function.block == null {
+        object.isAbstractBecauseOf = function
+        return true
+      }
+
+      return false
+    }
+
     def isAbstractObject(symbol ObjectSymbol) bool {
       assert(symbol.state == .INITIALIZED)
 
@@ -367,11 +407,9 @@ namespace Skew.Resolving {
         symbol.hasCheckedForAbstract = true
 
         if symbol.kind == .OBJECT_CLASS && !symbol.isImported {
-          for function in symbol.functions {
-            initializeSymbol(function)
-
-            if !function.isImported && !function.isObsolete && function.block == null {
-              symbol.isAbstractBecauseOf = function
+          for member in symbol.members.values {
+            if member.kind == .OVERLOADED_INSTANCE && member.asOverloadedFunctionSymbol.symbols.any(function => checkAbstractFunction(symbol, function)) ||
+                member.kind == .FUNCTION_INSTANCE && checkAbstractFunction(symbol, member.asFunctionSymbol) {
               break
             }
           }
@@ -521,7 +559,7 @@ namespace Skew.Resolving {
     def mergeGuardIntoObject(guard Guard, object ObjectSymbol) {
       var symbol = guard.contents
       Merging.mergeObjects(log, object, symbol.objects)
-      Merging.mergeFunctions(log, object, symbol.functions)
+      Merging.mergeFunctions(log, object, symbol.functions, .NORMAL)
       Merging.mergeVariables(log, object, symbol.variables)
       object.objects.append(symbol.objects)
       object.functions.append(symbol.functions)
@@ -701,29 +739,6 @@ namespace Skew.Resolving {
         }
       }
 
-      # Find the overridden function or overloaded function in the base class
-      var overridden = findOverriddenMember(symbol)
-      if overridden != null {
-        var symbolKind = Merging.overloadedKind(symbol.kind)
-        var overriddenKind = Merging.overloadedKind(overridden.kind)
-
-        # Make sure the overridden symbol can be merged with this symbol
-        if symbolKind != overriddenKind {
-          log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol.baseType, overridden.range)
-          overridden = null
-        }
-
-        # Overriding something makes both symbols overloaded for simplicity
-        else {
-          ensureFunctionIsOverloaded(symbol)
-          if overridden.kind.isFunction {
-            var function = overridden.asFunctionSymbol
-            ensureFunctionIsOverloaded(function)
-            overridden = function.overloaded
-          }
-        }
-      }
-
       resolveParameters(symbol.parameters)
 
       # Resolve the argument variables
@@ -788,37 +803,12 @@ namespace Skew.Resolving {
         }
       }
 
-      # Link this symbol with the overridden symbol if there is one
-      var hasOverrideError = false
-      if overridden != null {
-        var overloaded = overridden.asOverloadedFunctionSymbol
-        initializeSymbol(overloaded)
-        for overload in overloaded.symbols {
-          if overload.argumentOnlyType == symbol.argumentOnlyType {
-            symbol.overridden = overload.asFunctionSymbol
-            if symbol.kind != .FUNCTION_CONSTRUCTOR && overload.kind != .FUNCTION_CONSTRUCTOR && symbol.overridden.resolvedType.returnType != returnType {
-              log.semanticErrorBadOverrideReturnType(symbol.range, symbol.name, symbol.parent.asObjectSymbol.baseType, overload.range)
-              hasOverrideError = true
-            }
-            break
-          }
-        }
-      }
-
       symbol.resolvedType.returnType = returnType
       resolveAnnotations(symbol)
 
-      # Validate use of "def" vs "over"
-      if !hasOverrideError {
-        if symbol.overridden != null && symbol.kind == .FUNCTION_INSTANCE {
-          if !symbol.isOver {
-            log.semanticErrorModifierMissingOverride(symbol.range, symbol.name, symbol.overridden.range)
-          }
-        } else {
-          if symbol.isOver {
-            log.semanticErrorModifierUnusedOverride(symbol.range, symbol.name)
-          }
-        }
+      # Validate the entry point after this symbol has a type
+      if symbol.isEntryPoint {
+        validateEntryPoint(symbol)
       }
     }
 
@@ -907,6 +897,19 @@ namespace Skew.Resolving {
     def resolveFunction(symbol FunctionSymbol) {
       initializeSymbol(symbol)
 
+      # Validate use of "def" vs "over"
+      if !symbol.isObsolete {
+        if symbol.overridden != null && symbol.kind == .FUNCTION_INSTANCE {
+          if !symbol.isOver {
+            log.semanticErrorModifierMissingOverride(symbol.range, symbol.name, symbol.overridden.range)
+          }
+        } else {
+          if symbol.isOver {
+            log.semanticErrorModifierUnusedOverride(symbol.range, symbol.name)
+          }
+        }
+      }
+
       var scope = LocalScope.new(symbol.scope, .NORMAL)
       if symbol.this != null {
         scope.define(symbol.this, log)
@@ -978,8 +981,6 @@ namespace Skew.Resolving {
     }
 
     def initializeVariable(symbol VariableSymbol) {
-      forbidOverriddenSymbol(symbol)
-
       # Normal variables may omit the initializer if the type is present
       if symbol.type != null {
         resolveAsParameterizedType(symbol.type, symbol.scope)
@@ -1089,22 +1090,54 @@ namespace Skew.Resolving {
         var index = types.indexOf(function.argumentOnlyType)
         if index != -1 {
           var other = symbols[index]
+          var isFromSameObject = function.parent == other.parent
+          var areReturnTypesDifferent = (isFromSameObject || symbol.kind == .OVERLOADED_INSTANCE) && function.resolvedType.returnType != other.resolvedType.returnType
+
+          # Symbols should be either from the same object or from this class and a base class
+          assert(isFromSameObject || function.parent == symbol.parent || other.parent == symbol.parent)
+
+          # Forbid overloading by return type
+          if !isFromSameObject && areReturnTypesDifferent {
+            var derived = function.parent == symbol.parent ? function : other
+            var base = derived == function ? other : function
+            log.semanticErrorBadOverrideReturnType(derived.range, derived.name, symbol.parent.asObjectSymbol.baseType, base.range)
+            if isFromSameObject {
+              function.flags |= Symbol.IS_OBSOLETE
+            }
+          }
 
           # Allow duplicate function declarations with the same type to merge
           # as long as there is one declaration that provides an implementation.
           # Mark the obsolete function as obsolete instead of removing it so it
           # doesn't potentially mess up iteration in a parent call stack.
-          if function.isMerged || other.isMerged || (function.block != null) == (other.block != null) || function.resolvedType.returnType != other.resolvedType.returnType {
+          else if areReturnTypesDifferent || isFromSameObject && (function.isMerged || other.isMerged || (function.block != null) == (other.block != null)) {
             log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
-          } else if function.block != null {
+            if isFromSameObject {
+              function.flags |= Symbol.IS_OBSOLETE
+            }
+          }
+
+          # Keep "function"
+          else if isFromSameObject ? function.block != null : function.parent == symbol.parent {
             function.flags |= other.flags & ~Symbol.IS_IMPORTED | Symbol.IS_MERGED
             function.mergeAnnotationsAndCommentsFrom(other)
-            other.flags |= Symbol.IS_OBSOLETE
+            if isFromSameObject {
+              other.flags |= Symbol.IS_OBSOLETE
+            } else {
+              function.overridden = other
+            }
             symbols[index] = function
-          } else {
+          }
+
+          # Keep "other"
+          else {
             other.flags |= function.flags & ~Symbol.IS_IMPORTED | Symbol.IS_MERGED
             other.mergeAnnotationsAndCommentsFrom(function)
-            function.flags |= Symbol.IS_OBSOLETE
+            if isFromSameObject {
+              function.flags |= Symbol.IS_OBSOLETE
+            } else {
+              other.overridden = function
+            }
           }
 
           # Remove the symbol after the merge so "types" still matches "symbols"
@@ -1114,24 +1147,6 @@ namespace Skew.Resolving {
 
         types.append(function.argumentOnlyType)
         i++
-      }
-
-      # Include non-overridden overloads from the base class
-      var overridden = findOverriddenMember(symbol)
-      if overridden != null && overridden.kind.isOverloadedFunction {
-        symbol.overridden = overridden.asOverloadedFunctionSymbol
-        for function in symbol.overridden.symbols {
-
-          # Constructors are not inherited
-          if function.kind != .FUNCTION_CONSTRUCTOR {
-            initializeSymbol(function)
-            var index = types.indexOf(function.argumentOnlyType)
-            if index == -1 {
-              symbols.append(function)
-              types.append(function.argumentOnlyType)
-            }
-          }
-        }
       }
     }
 
@@ -1997,37 +2012,16 @@ namespace Skew.Resolving {
       }
     }
 
-    def findOverriddenMember(symbol Symbol) Symbol {
-      if symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS {
-        var object = symbol.parent.asObjectSymbol
-        if object.baseClass != null {
-          return findMember(object.baseClass.resolvedType, symbol.name)
-        }
-      }
-      return null
-    }
-
-    def forbidOverriddenSymbol(symbol Symbol) {
-      var overridden = findOverriddenMember(symbol)
-      if overridden != null {
-        log.semanticErrorBadOverride(symbol.range, symbol.name, symbol.parent.asObjectSymbol.baseType, overridden.range)
-      }
-    }
-
     def findMember(type Type, name string) Symbol {
-      var check = type
-      while check != null {
-        if check.kind == .SYMBOL {
-          var symbol = check.symbol
-          if symbol.kind.isObject {
-            var member = symbol.asObjectSymbol.members.get(name, null)
-            if member != null {
-              initializeSymbol(member)
-              return member
-            }
+      if type.kind == .SYMBOL {
+        var symbol = type.symbol
+        if symbol.kind.isObject {
+          var member = symbol.asObjectSymbol.members.get(name, null)
+          if member != null {
+            initializeSymbol(member)
+            return member
           }
         }
-        check = check.baseType
       }
       return null
     }
@@ -2488,7 +2482,8 @@ namespace Skew.Resolving {
     def resolveSuper(node Node, scope Scope) {
       var function = scope.findEnclosingFunction
       var symbol = function == null ? null : function.symbol
-      var overridden = symbol == null ? null : symbol.overloaded != null ? symbol.overloaded.overridden : symbol.overridden
+      var baseType = symbol == null ? null : symbol.parent.asObjectSymbol.baseType
+      var overridden = baseType == null ? null : findMember(baseType, symbol.name)
 
       if overridden == null {
         log.semanticErrorBadSuper(node.range)
@@ -2847,7 +2842,6 @@ namespace Skew.Resolving {
         overloaded.parent = symbol.parent
         overloaded.scope = overloaded.parent.scope
         symbol.overloaded = overloaded
-        overloaded.scope.asObjectScope.symbol.members[symbol.name] = overloaded
       }
     }
   }

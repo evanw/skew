@@ -219,6 +219,8 @@ class List<T> {
   @rename(\"TrueForAll\") if TARGET == .CSHARP
   @rename(\"every\") if TARGET == .JAVASCRIPT
   def all(x fn(T) bool) bool
+  @rename(\"some\") if TARGET == .JAVASCRIPT
+  def any(x fn(T) bool) bool
   def appendOne(x T)
   @rename(\"slice\") if TARGET == .JAVASCRIPT
   def clone List<T>

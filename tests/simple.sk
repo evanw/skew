@@ -1237,6 +1237,150 @@ class Foo {
 ")
 
 test("
+class Bar : Foo {
+  over foo
+}
+
+class Foo {
+  def foo
+}
+", "
+")
+
+test("
+class Foo {
+  def foo
+}
+
+class Bar : Foo {
+  over foo
+}
+", "
+")
+
+test("
+class Bar : Foo {
+  over foo
+}
+
+class Foo {
+  def foo
+  def foo
+}
+", "
+<stdin>:7:7: error: Duplicate overloaded function \"foo\"
+  def foo
+      ~~~
+<stdin>:6:7: note: The previous declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo {
+  def foo
+  def foo
+}
+
+class Bar : Foo {
+  over foo
+}
+", "
+<stdin>:3:7: error: Duplicate overloaded function \"foo\"
+  def foo
+      ~~~
+<stdin>:2:7: note: The previous declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Bar : Foo {
+  over foo
+  over foo
+}
+
+class Foo {
+  def foo
+}
+", "
+<stdin>:3:8: error: Duplicate overloaded function \"foo\"
+  over foo
+       ~~~
+<stdin>:2:8: note: The previous declaration is here
+  over foo
+       ~~~
+")
+
+test("
+class Foo {
+  def foo
+}
+
+class Bar : Foo {
+  over foo
+  over foo
+}
+", "
+<stdin>:7:8: error: Duplicate overloaded function \"foo\"
+  over foo
+       ~~~
+<stdin>:6:8: note: The previous declaration is here
+  over foo
+       ~~~
+")
+
+test("
+class Bar : Foo {
+  over foo
+  over foo
+}
+
+class Foo {
+  def foo
+  def foo
+}
+", "
+<stdin>:3:8: error: Duplicate overloaded function \"foo\"
+  over foo
+       ~~~
+<stdin>:2:8: note: The previous declaration is here
+  over foo
+       ~~~
+<stdin>:8:7: error: Duplicate overloaded function \"foo\"
+  def foo
+      ~~~
+<stdin>:7:7: note: The previous declaration is here
+  def foo
+      ~~~
+")
+
+test("
+class Foo {
+  def foo
+  def foo
+}
+
+class Bar : Foo {
+  over foo
+  over foo
+}
+", "
+<stdin>:3:7: error: Duplicate overloaded function \"foo\"
+  def foo
+      ~~~
+<stdin>:2:7: note: The previous declaration is here
+  def foo
+      ~~~
+<stdin>:8:8: error: Duplicate overloaded function \"foo\"
+  over foo
+       ~~~
+<stdin>:7:8: note: The previous declaration is here
+  over foo
+       ~~~
+")
+
+test("
 def bar(x int) int
 def bar(x double) double
 def bar(x List<int>) List<int>
@@ -3813,6 +3957,101 @@ class Foo {
 }
 
 class Bar : Foo {
+}
+
+class Baz : Foo {
+}
+
+def main {
+  Baz.new
+}
+", "
+<stdin>:12:3: error: Cannot construct abstract type \"Baz\"
+  Baz.new
+  ~~~~~~~
+<stdin>:2:7: note: The type \"Baz\" is abstract due to member \"foo\"
+  def foo
+      ~~~
+")
+
+test("
+class Foo {
+  def foo
+}
+
+class Bar : Foo {
+  def foo(x int)
+}
+
+class Baz : Bar {
+}
+
+def main {
+  Baz.new
+}
+", "
+<stdin>:13:3: error: Cannot construct abstract type \"Baz\"
+  Baz.new
+  ~~~~~~~
+<stdin>:6:7: note: The type \"Baz\" is abstract due to member \"foo\"
+  def foo(x int)
+      ~~~
+")
+
+test("
+class Foo {
+  def foo
+}
+
+class Bar : Foo {
+  def foo(x int) {}
+}
+
+class Baz : Bar {
+}
+
+def main {
+  Baz.new
+}
+", "
+<stdin>:13:3: error: Cannot construct abstract type \"Baz\"
+  Baz.new
+  ~~~~~~~
+<stdin>:2:7: note: The type \"Baz\" is abstract due to member \"foo\"
+  def foo
+      ~~~
+")
+
+test("
+class Foo {
+  def foo {}
+}
+
+class Bar : Foo {
+  def foo(x int)
+}
+
+class Baz : Bar {
+}
+
+def main {
+  Baz.new
+}
+", "
+<stdin>:13:3: error: Cannot construct abstract type \"Baz\"
+  Baz.new
+  ~~~~~~~
+<stdin>:6:7: note: The type \"Baz\" is abstract due to member \"foo\"
+  def foo(x int)
+      ~~~
+")
+
+test("
+class Foo {
+  def foo
+}
+
+class Bar : Foo {
   over foo {}
 }
 
@@ -4390,6 +4629,33 @@ def main(foo_int Foo<int>, ifoo_int IFoo<int>, ifoo_bool IFoo<bool>) {
 <stdin>:10:15: error: Cannot convert from type \"IFoo<int>\" to type \"IFoo<bool>\"
   ifoo_bool = ifoo_int
               ~~~~~~~~
+")
+
+test("
+class Foo {
+  over foo
+}
+", "
+<stdin>:2:8: error: \"foo\" is declared using \"over\" instead of \"def\" but does not override anything
+  over foo
+       ~~~
+")
+
+test("
+class Foo {
+  def foo
+}
+
+class Bar : Foo {
+  def foo
+}
+", "
+<stdin>:6:7: error: \"foo\" overrides another symbol with the same name but is declared using \"def\" instead of \"over\"
+  def foo
+      ~~~
+<stdin>:2:7: note: The overridden declaration is here
+  def foo
+      ~~~
 ")
 
   }

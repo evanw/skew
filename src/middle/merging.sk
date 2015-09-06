@@ -37,7 +37,7 @@ namespace Skew.Merging {
     }
 
     mergeObjects(log, target, symbol.objects)
-    mergeFunctions(log, target, symbol.functions)
+    mergeFunctions(log, target, symbol.functions, .NORMAL)
     mergeVariables(log, target, symbol.variables)
   }
 
@@ -106,28 +106,37 @@ namespace Skew.Merging {
     })
   }
 
-  def mergeFunctions(log Log, parent ObjectSymbol, children List<FunctionSymbol>) {
+  enum MergeBehavior {
+    NORMAL
+    INTO_DERIVED_CLASS
+  }
+
+  def mergeFunctions(log Log, parent ObjectSymbol, children List<FunctionSymbol>, behavior MergeBehavior) {
     var members = parent.members
 
     for child in children {
       var other = members.get(child.name, null)
-      var scope = FunctionScope.new(parent.scope, child)
-      child.scope = scope
-      child.parent = parent
 
-      if child.parameters != null {
-        for parameter in child.parameters {
-          parameter.scope = scope
-          parameter.parent = child
+      # Create a scope for this function's type parameters
+      if behavior == .NORMAL {
+        var scope = FunctionScope.new(parent.scope, child)
+        child.scope = scope
+        child.parent = parent
 
-          # Type parameters cannot merge with other parameters on this function
-          var previous = scope.parameters.get(parameter.name, null)
-          if previous != null {
-            log.semanticErrorDuplicateSymbol(parameter.range, parameter.name, previous.range)
-            continue
+        if child.parameters != null {
+          for parameter in child.parameters {
+            parameter.scope = scope
+            parameter.parent = child
+
+            # Type parameters cannot merge with other parameters on this function
+            var previous = scope.parameters.get(parameter.name, null)
+            if previous != null {
+              log.semanticErrorDuplicateSymbol(parameter.range, parameter.name, previous.range)
+              continue
+            }
+
+            scope.parameters[parameter.name] = parameter
           }
-
-          scope.parameters[parameter.name] = parameter
         }
       }
 
@@ -142,14 +151,20 @@ namespace Skew.Merging {
 
       # Merge with another symbol of the same overloaded group type
       if childKind != otherKind || !childKind.isOverloadedFunction {
-        log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
+        if behavior == .NORMAL {
+          log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
+        } else {
+          log.semanticErrorBadOverride(other.range, other.name, parent.baseType, child.range)
+        }
         continue
       }
 
       # Merge with a group of overloaded functions
       if other.kind.isOverloadedFunction {
         other.asOverloadedFunctionSymbol.symbols.append(child)
-        child.overloaded = other.asOverloadedFunctionSymbol
+        if behavior == .NORMAL {
+          child.overloaded = other.asOverloadedFunctionSymbol
+        }
         continue
       }
 
@@ -157,7 +172,9 @@ namespace Skew.Merging {
       var overloaded = OverloadedFunctionSymbol.new(childKind, child.name, [other.asFunctionSymbol, child])
       members[child.name] = overloaded
       other.asFunctionSymbol.overloaded = overloaded
-      child.overloaded = overloaded
+      if behavior == .NORMAL {
+        child.overloaded = overloaded
+      }
       overloaded.scope = parent.scope
       overloaded.parent = parent
     }

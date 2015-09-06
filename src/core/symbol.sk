@@ -254,7 +254,7 @@ namespace Skew {
     var baseClass ObjectSymbol = null
     var interfaceTypes List<Type> = null
     var wrappedType Type = null
-    var members StringMap<Symbol> = {}
+    var members StringMap<Symbol> = {} # Is expanded to include members from the base class by the resolving step
     var objects List<ObjectSymbol> = []
     var functions List<FunctionSymbol> = []
     var variables List<VariableSymbol> = []
@@ -298,7 +298,6 @@ namespace Skew {
   }
 
   class OverloadedFunctionSymbol : Symbol {
-    var overridden OverloadedFunctionSymbol = null
     var symbols List<FunctionSymbol>
   }
 }
