@@ -1153,17 +1153,18 @@ namespace Skew.Resolving {
         var index = types.indexOf(function.argumentOnlyType)
         if index != -1 {
           var other = symbols[index]
+          var parent = symbol.parent
           var isFromSameObject = function.parent == other.parent
           var areReturnTypesDifferent = (isFromSameObject || symbol.kind == .OVERLOADED_INSTANCE) && function.resolvedType.returnType != other.resolvedType.returnType
 
           # Symbols should be either from the same object or from this class and a base class
-          assert(isFromSameObject || function.parent == symbol.parent || other.parent == symbol.parent)
+          assert(isFromSameObject || function.parent == parent || other.parent == parent)
 
           # Forbid overloading by return type
           if !isFromSameObject && areReturnTypesDifferent {
-            var derived = function.parent == symbol.parent ? function : other
+            var derived = function.parent == parent ? function : other
             var base = derived == function ? other : function
-            log.semanticErrorBadOverrideReturnType(derived.range, derived.name, symbol.parent.asObjectSymbol.baseType, base.range)
+            log.semanticErrorBadOverrideReturnType(derived.range, derived.name, parent.asObjectSymbol.baseType, base.range)
             if isFromSameObject {
               function.flags |= Symbol.IS_OBSOLETE
             }
@@ -1181,12 +1182,12 @@ namespace Skew.Resolving {
           }
 
           # Keep "function"
-          else if isFromSameObject ? function.block != null : function.parent == symbol.parent {
-            function.flags |= other.flags & ~Symbol.IS_IMPORTED
-            function.mergeAnnotationsAndCommentsFrom(other)
-            if isFromSameObject {
+          else if isFromSameObject ? function.block != null : function.parent == parent {
+            if function.parent == parent && other.parent == parent {
+              function.mergeAnnotationsAndCommentsFrom(other)
+              function.flags |= other.flags & ~Symbol.IS_IMPORTED
               other.flags |= Symbol.IS_OBSOLETE
-            } else {
+            } else if !isFromSameObject {
               function.overridden = other
             }
             symbols[index] = function
@@ -1194,11 +1195,11 @@ namespace Skew.Resolving {
 
           # Keep "other"
           else {
-            other.flags |= function.flags & ~Symbol.IS_IMPORTED
-            other.mergeAnnotationsAndCommentsFrom(function)
-            if isFromSameObject {
+            if function.parent == parent && other.parent == parent {
+              other.flags |= function.flags & ~Symbol.IS_IMPORTED
+              other.mergeAnnotationsAndCommentsFrom(function)
               function.flags |= Symbol.IS_OBSOLETE
-            } else {
+            } else if !isFromSameObject {
               other.overridden = function
             }
           }

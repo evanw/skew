@@ -102,7 +102,6 @@ def main {
   };
 
   // Bar.foo(x int)
-  // Foo.foo(x int)
   Bar.prototype.foo2 = function(x) {
   };
 
@@ -748,6 +747,66 @@ def main {
   };
 })();
 ").js.inlineAllFunctions
+
+# Check for a bug where merged functions weren't emitted sometimes
+test("
+class Bar : Foo {
+}
+
+class Foo {
+  def foo
+  def foo {}
+}
+
+@entry
+def main {
+  Foo.new.foo
+}
+", "
+(function() {
+  function main() {
+    new Foo().foo();
+  }
+
+  function Foo() {
+  }
+
+  Foo.prototype.foo = function() {
+  };
+
+  main();
+})();
+").js
+
+# Check for a bug where merged functions weren't emitted sometimes
+test("
+class Foo {
+  def foo
+  def foo {}
+}
+
+class Bar : Foo {
+}
+
+@entry
+def main {
+  Foo.new.foo
+}
+", "
+(function() {
+  function main() {
+    new Foo().foo();
+  }
+
+  function Foo() {
+  }
+
+  Foo.prototype.foo = function() {
+  };
+
+  main();
+})();
+").js
 
   }
 }
