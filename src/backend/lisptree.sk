@@ -3,7 +3,7 @@ namespace Skew {
     over name string { return "S-expression" }
     over extension string { return "lisp" }
     over runPostResolvePasses bool { return false }
-    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return LispTreeEmitter.new(options) }
+    over createEmitter(context PassContext) Emitter { return LispTreeEmitter.new(context.options) }
   }
 
   class LispTreeEmitter : Emitter {

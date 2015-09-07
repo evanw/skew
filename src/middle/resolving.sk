@@ -2055,13 +2055,15 @@ namespace Skew.Resolving {
     def resolveCast(node Node, scope Scope, context Type) {
       var value = node.castValue
       var type = node.castType
+      var neededTypeContext = needsTypeContext(value)
+
       resolveAsParameterizedType(type, scope)
       resolveAsParameterizedExpressionWithTypeContext(value, scope, type.resolvedType)
       checkConversion(value, type.resolvedType, .EXPLICIT)
       node.resolvedType = type.resolvedType
 
       # Warn about unnecessary casts
-      if type.resolvedType != .DYNAMIC && (value.resolvedType == type.resolvedType ||
+      if type.resolvedType != .DYNAMIC && !neededTypeContext && (value.resolvedType == type.resolvedType ||
           context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
         log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }

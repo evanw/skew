@@ -7,7 +7,7 @@ namespace Skew {
     over stringEncoding Unicode.Encoding { return .UTF16 }
     over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
-    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return JavaScriptEmitter.new(options, cache) }
+    over createEmitter(context PassContext) Emitter { return JavaScriptEmitter.new(context, context.options, context.cache) }
   }
 
   class JavaScriptEmitter : Emitter {
@@ -47,34 +47,35 @@ namespace Skew {
       MULTIPLY
     }
 
+    const _context PassContext
     const _options CompilerOptions
     const _cache TypeCache
+    const _isSpecialVariableNeeded IntMap<int> = {}
+    const _loopLabels IntMap<VariableSymbol> = {}
+    const _specialVariables IntMap<VariableSymbol> = {}
+    var _enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
+    var _enclosingLoop Node = null
     var _namespacePrefix = ""
     var _previousNode Node = null
     var _previousSymbol Symbol = null
-    var _enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
-    var _specialVariables IntMap<VariableSymbol> = {}
-    var _isSpecialVariableNeeded IntMap<int> = {}
-    var _enclosingLoop Node = null
-    var _loopLabels IntMap<VariableSymbol> = {}
 
     # Source map support
-    var _sourceMap = false
-    var _generator = SourceMapGenerator.new
-    var _currentLine = 0
     var _currentColumn = 0
-    var _previousStart = 0
+    var _currentLine = 0
+    var _generator = SourceMapGenerator.new
     var _previousSource Source = null
+    var _previousStart = 0
+    var _sourceMap = false
 
     # A union-find data structure is used to quickly merge symbols into
     # groups. All local variables inside a function are merged with that
     # function. The map create a quick way of getting from a symbol to its
     # union/find index.
-    var _allSymbols List<Symbol> = []
-    var _localVariableUnionFind = UnionFind.new
-    var _namingGroupIndexForSymbol IntMap<int> = {}
+    const _allSymbols List<Symbol> = []
+    const _localVariableUnionFind = UnionFind.new
+    const _namingGroupIndexForSymbol IntMap<int> = {}
+    const _symbolCounts IntMap<int> = {}
     var _nextSymbolName = 0
-    var _symbolCounts IntMap<int> = {}
 
     # For minification
     var _mangle = false
@@ -113,7 +114,12 @@ namespace Skew {
       assert(SpecialVariable.MULTIPLY in _specialVariables)
 
       # Preprocess the code
-      if _mangle { _liftGlobals(global) }
+      if _mangle {
+        _liftGlobals(global)
+      }
+      if _options.inlineAllFunctions {
+        _maybeInlineFunctions(global)
+      }
       shakingPass(global, _cache.entryPointSymbol, .IGNORE_TYPES)
       _prepareGlobal(global)
       _convertLambdasToFunctions(global)
@@ -249,6 +255,104 @@ namespace Skew {
         }
         return false
       })
+    }
+
+    def _maybeInlineFunctions(symbol ObjectSymbol) {
+      for object in symbol.objects {
+        _maybeInlineFunctions(object)
+      }
+
+      for function in symbol.functions {
+        _maybeInlineFunction(function)
+      }
+    }
+
+    def _maybeInlineFunction(function FunctionSymbol) {
+      var arguments = function.arguments
+
+      if function.block != null && function.block.hasTwoChildren {
+        # "foo([], 0)" => "[0]" where "foo" is "def foo(a, b) { a.push(b); return a }"
+        if arguments.count == 2 {
+          var first = function.block.firstChild
+          var second = function.block.lastChild
+
+          # Match the function body
+          if first.kind == .EXPRESSION && first.expressionValue.kind == .CALL &&
+              second.kind == .RETURN && second.returnValue != null {
+            var call = first.expressionValue
+            var callValue = call.callValue
+            if call.hasTwoChildren && callValue.kind == .DOT && callValue.asString == "push" &&
+                _isReferenceTo(callValue.dotTarget, arguments[0]) &&
+                _isReferenceTo(call.lastChild, arguments[1]) &&
+                _isReferenceTo(second.returnValue, arguments[0]) {
+
+              # Check each call site
+              for callSite in _context.callGraph.callInfoForSymbol(function).callSites {
+                # Some calls may be reused for other node types during constant folding
+                if callSite == null || callSite.callNode.kind != .CALL {
+                  continue
+                }
+
+                var node = callSite.callNode
+                var firstArgument = node.firstChild.nextSibling
+                var secondArgument = firstArgument.nextSibling
+
+                # Map expressions are sometimes casted
+                if firstArgument.kind == .CAST {
+                  firstArgument = firstArgument.castValue
+                }
+
+                # Only check when the inputs are constants
+                if firstArgument.kind == .INITIALIZER_LIST {
+                  node.become(firstArgument.remove.appendChild(secondArgument.remove))
+                }
+              }
+            }
+          }
+        }
+
+        # "foo({}, 0, 1)" => "{0: 1}" where "foo" is "def foo(a, b, c) { a[b] = c; return a }"
+        else if arguments.count == 3 {
+          var keyType = arguments[1].resolvedType
+          var first = function.block.firstChild
+          var second = function.block.lastChild
+
+          # Match the function body
+          if (keyType == .DYNAMIC || _cache.isEquivalentToInt(keyType) || _cache.isEquivalentToString(keyType)) &&
+              first.kind == .EXPRESSION && first.expressionValue.kind == .ASSIGN_INDEX &&
+              second.kind == .RETURN && second.returnValue != null {
+            var assign = first.expressionValue
+            if _isReferenceTo(assign.assignIndexLeft, arguments[0]) &&
+                _isReferenceTo(assign.assignIndexCenter, arguments[1]) &&
+                _isReferenceTo(assign.assignIndexRight, arguments[2]) &&
+                _isReferenceTo(second.returnValue, arguments[0]) {
+
+              # Check each call site
+              for callSite in _context.callGraph.callInfoForSymbol(function).callSites {
+                # Some calls may be reused for other node types during constant folding
+                if callSite == null || callSite.callNode.kind != .CALL {
+                  continue
+                }
+
+                var node = callSite.callNode
+                var firstArgument = node.firstChild.nextSibling
+                var secondArgument = firstArgument.nextSibling
+                var thirdArgument = secondArgument.nextSibling
+
+                # Map expressions are sometimes casted
+                if firstArgument.kind == .CAST {
+                  firstArgument = firstArgument.castValue
+                }
+
+                # Only check when the inputs are constants
+                if firstArgument.kind == .INITIALIZER_MAP && (secondArgument.isInt || secondArgument.isString) {
+                  node.become(firstArgument.remove.appendChild(Node.createPair(secondArgument.remove, thirdArgument.remove)))
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     def _prepareGlobal(global ObjectSymbol) {
@@ -1526,7 +1630,7 @@ namespace Skew {
       var value = node.callValue
       var parent = node.parent
 
-      # "x + y.toString()" => "x + y" where x is a string
+      # "x + y.toString()" => "x + y" where "x" is a string
       # "x.toString() + ''" => "x + ''"
       if value.nextSibling == null && value.kind == .DOT && value.asString == "toString" &&
           value.symbol != null && value.symbol.isImportedOrExported && parent.kind == .ADD && (
@@ -2318,6 +2422,13 @@ namespace Skew {
   }
 
   namespace JavaScriptEmitter {
+    def _isReferenceTo(node Node, symbol Symbol) bool {
+      if node.kind == .CAST {
+        node = node.castValue
+      }
+      return node.kind == .NAME && node.symbol == symbol
+    }
+
     def _isJumpImplied(node Node, kind NodeKind) bool {
       assert(node.kind == .BLOCK)
       assert(kind == .RETURN || kind == .CONTINUE)

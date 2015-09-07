@@ -187,7 +187,7 @@ namespace Skew.Inlining {
 
       # Create the edges in the graph
       for info in inliningInfo {
-        for callSite in graph.callInfo[graph.symbolToInfoIndex[info.symbol.id]].callSites {
+        for callSite in graph.callInfoForSymbol(info.symbol).callSites {
           if callSite.enclosingSymbol.kind == .FUNCTION_GLOBAL {
             var index = symbolToInfoIndex.get(callSite.enclosingSymbol.id, -1)
             if index != -1 {

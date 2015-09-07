@@ -31,6 +31,11 @@ namespace Skew {
       _visitObject(global)
     }
 
+    def callInfoForSymbol(symbol FunctionSymbol) CallInfo {
+      assert(symbol.id in symbolToInfoIndex)
+      return callInfo[symbolToInfoIndex[symbol.id]]
+    }
+
     def _visitObject(symbol ObjectSymbol) {
       for object in symbol.objects {
         _visitObject(object)

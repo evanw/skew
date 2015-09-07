@@ -3416,29 +3416,30 @@
     MEMBER: 15
   };
 
-  Skew.JavaScriptEmitter = function(_options, _cache) {
+  Skew.JavaScriptEmitter = function(_context, _options, _cache) {
     Skew.Emitter.call(this);
+    this._context = _context;
     this._options = _options;
     this._cache = _cache;
+    this._isSpecialVariableNeeded = {};
+    this._loopLabels = {};
+    this._specialVariables = {};
+    this._enclosingFunction = null;
+    this._enclosingLoop = null;
     this._namespacePrefix = '';
     this._previousNode = null;
     this._previousSymbol = null;
-    this._enclosingFunction = null;
-    this._specialVariables = {};
-    this._isSpecialVariableNeeded = {};
-    this._enclosingLoop = null;
-    this._loopLabels = {};
-    this._sourceMap = false;
-    this._generator = new Skew.SourceMapGenerator();
-    this._currentLine = 0;
     this._currentColumn = 0;
-    this._previousStart = 0;
+    this._currentLine = 0;
+    this._generator = new Skew.SourceMapGenerator();
     this._previousSource = null;
+    this._previousStart = 0;
+    this._sourceMap = false;
     this._allSymbols = [];
     this._localVariableUnionFind = new Skew.UnionFind();
     this._namingGroupIndexForSymbol = {};
-    this._nextSymbolName = 0;
     this._symbolCounts = {};
+    this._nextSymbolName = 0;
     this._mangle = false;
     this._minify = false;
     this._needsSemicolon = false;
@@ -3481,6 +3482,10 @@
     // Preprocess the code
     if (this._mangle) {
       this._liftGlobals1(global);
+    }
+
+    if (this._options.inlineAllFunctions) {
+      this._maybeInlineFunctions(global);
     }
 
     Skew.shakingPass(global, this._cache.entryPointSymbol, Skew.ShakingMode.IGNORE_TYPES);
@@ -3649,6 +3654,101 @@
 
       return false;
     });
+  };
+
+  Skew.JavaScriptEmitter.prototype._maybeInlineFunctions = function(symbol) {
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      this._maybeInlineFunctions(object);
+    }
+
+    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
+      var $function = list1[i1];
+      this._maybeInlineFunction($function);
+    }
+  };
+
+  Skew.JavaScriptEmitter.prototype._maybeInlineFunction = function($function) {
+    var $arguments = $function.$arguments;
+
+    if ($function.block !== null && $function.block.hasTwoChildren()) {
+      // "foo([], 0)" => "[0]" where "foo" is "def foo(a, b) { a.push(b); return a }"
+      if ($arguments.length === 2) {
+        var first = $function.block.firstChild();
+        var second = $function.block.lastChild();
+
+        // Match the function body
+        if (first.kind === Skew.NodeKind.EXPRESSION && first.expressionValue().kind === Skew.NodeKind.CALL && second.kind === Skew.NodeKind.RETURN && second.returnValue() !== null) {
+          var call = first.expressionValue();
+          var callValue = call.callValue();
+
+          if (call.hasTwoChildren() && callValue.kind === Skew.NodeKind.DOT && callValue.asString() === 'push' && Skew.JavaScriptEmitter._isReferenceTo(callValue.dotTarget(), $arguments[0]) && Skew.JavaScriptEmitter._isReferenceTo(call.lastChild(), $arguments[1]) && Skew.JavaScriptEmitter._isReferenceTo(second.returnValue(), $arguments[0])) {
+            // Check each call site
+            for (var i = 0, list = this._context.callGraph.callInfoForSymbol($function).callSites, count = list.length; i < count; ++i) {
+              var callSite = list[i];
+
+              // Some calls may be reused for other node types during constant folding
+              if (callSite === null || callSite.callNode.kind !== Skew.NodeKind.CALL) {
+                continue;
+              }
+
+              var node = callSite.callNode;
+              var firstArgument = node.firstChild().nextSibling();
+              var secondArgument = firstArgument.nextSibling();
+
+              // Map expressions are sometimes casted
+              if (firstArgument.kind === Skew.NodeKind.CAST) {
+                firstArgument = firstArgument.castValue();
+              }
+
+              // Only check when the inputs are constants
+              if (firstArgument.kind === Skew.NodeKind.INITIALIZER_LIST) {
+                node.become(firstArgument.remove().appendChild(secondArgument.remove()));
+              }
+            }
+          }
+        }
+      }
+
+      // "foo({}, 0, 1)" => "{0: 1}" where "foo" is "def foo(a, b, c) { a[b] = c; return a }"
+      else if ($arguments.length === 3) {
+        var keyType = $arguments[1].resolvedType;
+        var first1 = $function.block.firstChild();
+        var second1 = $function.block.lastChild();
+
+        // Match the function body
+        if ((keyType === Skew.Type.DYNAMIC || this._cache.isEquivalentToInt(keyType) || this._cache.isEquivalentToString(keyType)) && first1.kind === Skew.NodeKind.EXPRESSION && first1.expressionValue().kind === Skew.NodeKind.ASSIGN_INDEX && second1.kind === Skew.NodeKind.RETURN && second1.returnValue() !== null) {
+          var assign = first1.expressionValue();
+
+          if (Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexLeft(), $arguments[0]) && Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexCenter(), $arguments[1]) && Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexRight(), $arguments[2]) && Skew.JavaScriptEmitter._isReferenceTo(second1.returnValue(), $arguments[0])) {
+            // Check each call site
+            for (var i1 = 0, list1 = this._context.callGraph.callInfoForSymbol($function).callSites, count1 = list1.length; i1 < count1; ++i1) {
+              var callSite1 = list1[i1];
+
+              // Some calls may be reused for other node types during constant folding
+              if (callSite1 === null || callSite1.callNode.kind !== Skew.NodeKind.CALL) {
+                continue;
+              }
+
+              var node1 = callSite1.callNode;
+              var firstArgument1 = node1.firstChild().nextSibling();
+              var secondArgument1 = firstArgument1.nextSibling();
+              var thirdArgument = secondArgument1.nextSibling();
+
+              // Map expressions are sometimes casted
+              if (firstArgument1.kind === Skew.NodeKind.CAST) {
+                firstArgument1 = firstArgument1.castValue();
+              }
+
+              // Only check when the inputs are constants
+              if (firstArgument1.kind === Skew.NodeKind.INITIALIZER_MAP && (secondArgument1.isInt() || secondArgument1.isString())) {
+                node1.become(firstArgument1.remove().appendChild(Skew.Node.createPair(secondArgument1.remove(), thirdArgument.remove())));
+              }
+            }
+          }
+        }
+      }
+    }
   };
 
   Skew.JavaScriptEmitter.prototype._prepareGlobal = function(global) {
@@ -5117,16 +5217,6 @@
 
   Skew.JavaScriptEmitter.prototype._patchNodeHelper = function(node) {
     switch (node.kind) {
-      case Skew.NodeKind.BREAK: {
-        this._patchBreak(node);
-        break;
-      }
-
-      case Skew.NodeKind.NEGATIVE: {
-        this._patchUnaryArithmetic(node);
-        break;
-      }
-
       case Skew.NodeKind.ADD:
       case Skew.NodeKind.SUBTRACT:
       case Skew.NodeKind.MULTIPLY:
@@ -5136,8 +5226,8 @@
         break;
       }
 
-      case Skew.NodeKind.TYPE_CHECK: {
-        this._patchTypeCheck(node);
+      case Skew.NodeKind.BREAK: {
+        this._patchBreak(node);
         break;
       }
 
@@ -5161,8 +5251,18 @@
         break;
       }
 
+      case Skew.NodeKind.NEGATIVE: {
+        this._patchUnaryArithmetic(node);
+        break;
+      }
+
       case Skew.NodeKind.TRY: {
         this._patchTry(node);
+        break;
+      }
+
+      case Skew.NodeKind.TYPE_CHECK: {
+        this._patchTypeCheck(node);
         break;
       }
 
@@ -5174,23 +5274,8 @@
 
     if (this._mangle) {
       switch (node.kind) {
-        case Skew.NodeKind.PAIR: {
-          this._peepholeManglePair(node);
-          break;
-        }
-
-        case Skew.NodeKind.CONSTANT: {
-          this._peepholeMangleConstant(node);
-          break;
-        }
-
         case Skew.NodeKind.ASSIGN_INDEX: {
           this._peepholeMangleAssignIndex(node);
-          break;
-        }
-
-        case Skew.NodeKind.INDEX: {
-          this._peepholeMangleIndex(node);
           break;
         }
 
@@ -5204,8 +5289,8 @@
           break;
         }
 
-        case Skew.NodeKind.IF: {
-          this._peepholeMangleIf(node);
+        case Skew.NodeKind.CONSTANT: {
+          this._peepholeMangleConstant(node);
           break;
         }
 
@@ -5214,13 +5299,28 @@
           break;
         }
 
-        case Skew.NodeKind.WHILE: {
-          this._peepholeMangleWhile(node);
+        case Skew.NodeKind.HOOK: {
+          this._peepholeMangleHook(node);
           break;
         }
 
-        case Skew.NodeKind.HOOK: {
-          this._peepholeMangleHook(node);
+        case Skew.NodeKind.IF: {
+          this._peepholeMangleIf(node);
+          break;
+        }
+
+        case Skew.NodeKind.INDEX: {
+          this._peepholeMangleIndex(node);
+          break;
+        }
+
+        case Skew.NodeKind.PAIR: {
+          this._peepholeManglePair(node);
+          break;
+        }
+
+        case Skew.NodeKind.WHILE: {
+          this._peepholeMangleWhile(node);
           break;
         }
 
@@ -5256,7 +5356,9 @@
     var value = node.callValue();
     var parent = node.parent();
 
-    if (value.nextSibling() === null && value.kind === Skew.NodeKind.DOT && value.asString() === 'toString' && value.symbol !== null && value.symbol.isImportedOrExported() && parent.kind === Skew.NodeKind.ADD && (node === parent.binaryRight() || parent.binaryRight().kind === Skew.NodeKind.CONSTANT)) {
+    // "x + y.toString()" => "x + y" where "x" is a string
+    // "x.toString() + ''" => "x + ''"
+    if (value.nextSibling() === null && value.kind === Skew.NodeKind.DOT && value.asString() === 'toString' && value.symbol !== null && value.symbol.isImportedOrExported() && parent.kind === Skew.NodeKind.ADD && (node === parent.binaryRight() && this._cache.isEquivalentToString(parent.binaryLeft().resolvedType) || parent.binaryRight().isString())) {
       node.become(value.dotTarget().remove());
     }
   };
@@ -6085,6 +6187,14 @@
     var variable = this._specialVariables[name];
     this._isSpecialVariableNeeded[variable.id] = 0;
     return variable;
+  };
+
+  Skew.JavaScriptEmitter._isReferenceTo = function(node, symbol) {
+    if (node.kind === Skew.NodeKind.CAST) {
+      node = node.castValue();
+    }
+
+    return node.kind === Skew.NodeKind.NAME && node.symbol === symbol;
   };
 
   Skew.JavaScriptEmitter._isJumpImplied = function(node, kind) {
@@ -11255,6 +11365,11 @@
     this._visitObject(global);
   };
 
+  Skew.CallGraph.prototype.callInfoForSymbol = function(symbol) {
+    assert(symbol.id in this.symbolToInfoIndex);
+    return this.callInfo[this.symbolToInfoIndex[symbol.id]];
+  };
+
   Skew.CallGraph.prototype._visitObject = function(symbol) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
@@ -11341,7 +11456,7 @@
   Skew.CompilerTarget.prototype.includeSources = function(sources) {
   };
 
-  Skew.CompilerTarget.prototype.createEmitter = function(options, cache) {
+  Skew.CompilerTarget.prototype.createEmitter = function(context) {
     return null;
   };
 
@@ -11371,8 +11486,8 @@
     sources.unshift(new Skew.Source('<native-js>', Skew.NATIVE_LIBRARY_JS));
   };
 
-  Skew.JavaScriptTarget.prototype.createEmitter = function(options, cache) {
-    return new Skew.JavaScriptEmitter(options, cache);
+  Skew.JavaScriptTarget.prototype.createEmitter = function(context) {
+    return new Skew.JavaScriptEmitter(context, context.options, context.cache);
   };
 
   Skew.CSharpTarget = function() {
@@ -11413,8 +11528,8 @@
     sources.unshift(new Skew.Source('<native-cs>', Skew.NATIVE_LIBRARY_CS));
   };
 
-  Skew.CSharpTarget.prototype.createEmitter = function(options, cache) {
-    return new Skew.CSharpEmitter(options, cache);
+  Skew.CSharpTarget.prototype.createEmitter = function(context) {
+    return new Skew.CSharpEmitter(context.options, context.cache);
   };
 
   Skew.CPlusPlusTarget = function() {
@@ -11455,8 +11570,8 @@
     sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
   };
 
-  Skew.CPlusPlusTarget.prototype.createEmitter = function(options, cache) {
-    return new Skew.CPlusPlusEmitter(options, cache);
+  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
+    return new Skew.CPlusPlusEmitter(context.options, context.cache);
   };
 
   Skew.LispTreeTarget = function() {
@@ -11469,8 +11584,8 @@
     return false;
   };
 
-  Skew.LispTreeTarget.prototype.createEmitter = function(options, cache) {
-    return new Skew.LispTreeEmitter(options);
+  Skew.LispTreeTarget.prototype.createEmitter = function(context) {
+    return new Skew.LispTreeEmitter(context.options);
   };
 
   Skew.TypeCheckingCompilerTarget = function() {
@@ -11631,7 +11746,7 @@
   };
 
   Skew.EmittingPass.prototype.run = function(context) {
-    var emitter = context.options.target.createEmitter(context.options, context.cache);
+    var emitter = context.options.target.createEmitter(context);
 
     if (emitter !== null) {
       emitter.visit(context.global);
@@ -13077,7 +13192,7 @@
     for (var i2 = 0, list2 = this.inliningInfo, count2 = list2.length; i2 < count2; ++i2) {
       var info1 = list2[i2];
 
-      for (var i1 = 0, list1 = graph.callInfo[graph.symbolToInfoIndex[info1.symbol.id]].callSites, count1 = list1.length; i1 < count1; ++i1) {
+      for (var i1 = 0, list1 = graph.callInfoForSymbol(info1.symbol).callSites, count1 = list1.length; i1 < count1; ++i1) {
         var callSite = list1[i1];
 
         if (callSite.enclosingSymbol.kind === Skew.SymbolKind.FUNCTION_GLOBAL) {
@@ -16510,13 +16625,14 @@
   Skew.Resolving.Resolver.prototype.resolveCast = function(node, scope, context) {
     var value = node.castValue();
     var type = node.castType();
+    var neededTypeContext = Skew.Resolving.Resolver.needsTypeContext(value);
     this.resolveAsParameterizedType(type, scope);
     this.resolveAsParameterizedExpressionWithTypeContext(value, scope, type.resolvedType);
     this.checkConversion(value, type.resolvedType, Skew.Resolving.ConversionKind.EXPLICIT);
     node.resolvedType = type.resolvedType;
 
     // Warn about unnecessary casts
-    if (type.resolvedType !== Skew.Type.DYNAMIC && (value.resolvedType === type.resolvedType || context === type.resolvedType && this.cache.canImplicitlyConvert(value.resolvedType, type.resolvedType))) {
+    if (type.resolvedType !== Skew.Type.DYNAMIC && !neededTypeContext && (value.resolvedType === type.resolvedType || context === type.resolvedType && this.cache.canImplicitlyConvert(value.resolvedType, type.resolvedType))) {
       this.log.semanticWarningExtraCast(Skew.Range.span(node.internalRangeOrRange(), type.range), value.resolvedType, type.resolvedType);
     }
   };

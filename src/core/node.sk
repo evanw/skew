@@ -286,6 +286,11 @@ namespace Skew {
       return hasChildren && _firstChild.nextSibling == _lastChild.previousSibling
     }
 
+    # This is cheaper than childCount == 4
+    def hasFourChildren bool {
+      return hasChildren && _firstChild.nextSibling != null && _firstChild.nextSibling.nextSibling == _lastChild.previousSibling
+    }
+
     def childCount int {
       var count = 0
       for child = _firstChild; child != null; child = child._nextSibling {

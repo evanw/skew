@@ -1,0 +1,454 @@
+namespace Skew.Tests {
+  def testJavaScript {
+
+# Make sure classes with unused constructors are still emitted
+test("
+class A.B.C {}
+
+namespace A.B.C {
+  def foo {}
+}
+
+namespace D.E.F {
+  def foo {}
+}
+
+@entry
+def main {
+  A.B.C.foo
+  D.E.F.foo
+}
+", "
+(function() {
+  function main() {
+    A.B.C.foo();
+    D.E.F.foo();
+  }
+
+  var A = {};
+  A.B = {};
+  A.B.C = {};
+
+  A.B.C.foo = function() {
+  };
+
+  var D = {};
+  D.E = {};
+  D.E.F = {};
+
+  D.E.F.foo = function() {
+  };
+
+  main();
+})();
+").js
+
+# Check renaming across inherited scopes
+test("
+class Foo {
+  def foo(x int) {} # Foo.foo(x int)
+  def foo(x bool) {} # Foo.foo(x bool)
+}
+
+class Bar : Foo {
+  def foo1(x string) {} # Bar.foo1(x string)
+  over foo(x int) {} # Bar.foo(x int)
+}
+
+@entry
+def main {
+  var foo = Foo.new
+  var bar = Bar.new
+  foo.foo(0)
+  foo.foo(false)
+  bar.foo(0)
+  bar.foo1(null)
+}
+", "
+(function() {
+  function __extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+
+  function main() {
+    var foo = new Foo();
+    var bar = new Bar();
+    foo.foo2(0);
+    foo.foo1(false);
+    bar.foo2(0);
+    bar.foo1(null);
+  }
+
+  function Foo() {
+  }
+
+  // Foo.foo(x int)
+  Foo.prototype.foo2 = function(x) {
+  };
+
+  // Foo.foo(x bool)
+  Foo.prototype.foo1 = function(x) {
+  };
+
+  function Bar() {
+    Foo.call(this);
+  }
+
+  __extends(Bar, Foo);
+
+  // Bar.foo1(x string)
+  Bar.prototype.foo1 = function(x) {
+  };
+
+  // Bar.foo(x int)
+  // Foo.foo(x int)
+  Bar.prototype.foo2 = function(x) {
+  };
+
+  main();
+})();
+").js
+
+# Check overloaded functions with identical names across types
+test("
+class Foo {
+  def foo(x int) {} # Foo.foo(x int)
+  def foo(x bool) {} # Foo.foo(x bool)
+}
+
+class Bar {
+  def foo(x string) {} # Bar.foo(x string)
+  def foo(x int) {} # Bar.foo(x int)
+  def foo(x bool) {} # Bar.foo(x bool)
+}
+
+@entry
+def main {
+  var foo = Foo.new
+  var bar = Bar.new
+  foo.foo(0)
+  foo.foo(false)
+  bar.foo(0)
+  bar.foo(false)
+}
+", "
+(function() {
+  function main() {
+    var foo = new Foo();
+    var bar = new Bar();
+    foo.foo1(0);
+    foo.foo2(false);
+    bar.foo2(0);
+    bar.foo3(false);
+  }
+
+  function Foo() {
+  }
+
+  // Foo.foo(x int)
+  Foo.prototype.foo1 = function(x) {
+  };
+
+  // Foo.foo(x bool)
+  Foo.prototype.foo2 = function(x) {
+  };
+
+  function Bar() {
+  }
+
+  // Bar.foo(x int)
+  Bar.prototype.foo2 = function(x) {
+  };
+
+  // Bar.foo(x bool)
+  Bar.prototype.foo3 = function(x) {
+  };
+
+  main();
+})();
+").js
+
+# Check overloaded functions when an interface is present
+test("
+interface I {
+  def foo(x int) {} # I.foo(x int)
+  def foo(x bool) {} # I.foo(x bool)
+}
+
+class Foo :: I {
+  def foo(x int) {} # Foo.foo(x int)
+  def foo(x bool) {} # Foo.foo(x bool)
+}
+
+class Bar :: I {
+  def foo(x string) {} # Bar.foo(x string)
+  def foo(x int) {} # Bar.foo(x int)
+  def foo(x bool) {} # Bar.foo(x bool)
+}
+
+@entry
+def main {
+  var foo = Foo.new
+  var bar = Bar.new
+  foo.foo(0)
+  foo.foo(false)
+  bar.foo(0)
+  bar.foo(false)
+}
+", "
+(function() {
+  function main() {
+    var foo = new Foo();
+    var bar = new Bar();
+    foo.foo2(0);
+    foo.foo3(false);
+    bar.foo2(0);
+    bar.foo3(false);
+  }
+
+  function Foo() {
+  }
+
+  // Foo.foo(x int)
+  Foo.prototype.foo2 = function(x) {
+  };
+
+  // Foo.foo(x bool)
+  Foo.prototype.foo3 = function(x) {
+  };
+
+  function Bar() {
+  }
+
+  // Bar.foo(x int)
+  Bar.prototype.foo2 = function(x) {
+  };
+
+  // Bar.foo(x bool)
+  Bar.prototype.foo3 = function(x) {
+  };
+
+  main();
+})();
+").js.globalizeAllFunctions
+
+# Conflicting rename annotations should be an error
+test("
+class Foo {
+  @rename(\"a\")
+  def foo
+}
+
+class Bar : Foo {
+  @rename(\"b\")
+  over foo
+}
+", "
+<stdin>:8:8: error: Cannot rename \"foo\" to both \"a\" and \"b\"
+  over foo
+       ~~~
+").js
+
+# Check map literal inlining
+test("
+@export
+def main {
+  dynamic.bar(foo(foo([], 1, 2), \"3\", \"4\"))
+}
+
+def foo(map dynamic, key dynamic, value dynamic) dynamic {
+  map[key] = value
+  return map
+}
+", "
+(function() {
+  main = function() {
+    bar(foo(foo([], 1, 2), '3', '4'));
+  };
+
+  function foo(map, key, value) {
+    map[key] = value;
+    return map;
+  }
+})();
+").js.inlineAllFunctions
+
+# Check map literal inlining
+test("
+@export
+def main {
+  dynamic.bar(foo(foo({}, 1, 2), \"3\", \"4\"))
+}
+
+def foo(map dynamic, key dynamic, value dynamic) dynamic {
+  map[key] = value
+  return map
+}
+", "
+(function() {
+  main = function() {
+    bar({1: 2, '3': '4'});
+  };
+})();
+").js.inlineAllFunctions
+
+# Check map literal inlining
+test("
+def foo<T>(map IntMap<T>, key int, value T) IntMap<T> {
+  map[key] = value
+  return map
+}
+
+@export
+def main {
+  dynamic.bar(foo<int>(foo<int>({}, 1, 2), 3, 4))
+}
+", "
+(function() {
+  main = function() {
+    bar({1: 2, 3: 4});
+  };
+})();
+").js.inlineAllFunctions
+
+# Check map literal inlining
+test("
+@export
+def main(x int) {
+  dynamic.bar(foo(foo(foo(foo({}, 1, 2), 3, 4), x, 5), 6, 7))
+}
+
+def foo(map dynamic, key int, value int) dynamic {
+  map[key] = value
+  return map
+}
+", "
+(function() {
+  main = function(x) {
+    bar(foo(foo({1: 2, 3: 4}, x, 5), 6, 7));
+  };
+
+  function foo(map, key, value) {
+    map[key] = value;
+    return map;
+  }
+})();
+").js.inlineAllFunctions
+
+# Check map literal inlining
+test("
+@export
+def main(x int) {
+  dynamic.bar({1: 2, 3: 4, x: 5, 6: 7} as Foo)
+}
+
+@import
+class Foo {
+  def []=(key int, value int) {
+    (self as dynamic)[key] = value
+  }
+
+  def {...}(key int, value int) Foo {
+    self[key] = value
+    return self
+  }
+}
+
+namespace Foo {
+  def new Foo {
+    return {} as dynamic
+  }
+}
+", "
+(function() {
+  main = function(x) {
+    bar(in_Foo.insert(in_Foo.insert({1: 2, 3: 4}, x, 5), 6, 7));
+  };
+
+  var in_Foo = {};
+
+  in_Foo.insert = function(self, key, value) {
+    self[key] = value;
+    return self;
+  };
+})();
+").js.inlineAllFunctions
+
+# Check list literal inlining
+test("
+@export
+def main {
+  dynamic.bar(foo(foo([], 1), 2))
+}
+
+def foo(list dynamic, value dynamic) dynamic {
+  list.push(value)
+  return list
+}
+", "
+(function() {
+  main = function() {
+    bar([1, 2]);
+  };
+})();
+").js.inlineAllFunctions
+
+# Check list literal inlining
+test("
+@export
+def main {
+  dynamic.bar(foo(foo({}, 1), 2))
+}
+
+def foo(list dynamic, value dynamic) dynamic {
+  list.push(value)
+  return list
+}
+", "
+(function() {
+  main = function() {
+    bar(foo(foo({}, 1), 2));
+  };
+
+  function foo(list, value) {
+    list.push(value);
+    return list;
+  }
+})();
+").js.inlineAllFunctions
+
+# Check list literal inlining
+test("
+@export
+def main(x int) {
+  dynamic.bar([1, \"2\", x, false] as Foo)
+}
+
+@import
+class Foo {
+  def append(value dynamic) {
+    (self as dynamic).push(value)
+  }
+
+  def [...](value dynamic) Foo {
+    append(value)
+    return self
+  }
+}
+
+namespace Foo {
+  def new Foo {
+    return [] as dynamic
+  }
+}
+", "
+(function() {
+  main = function(x) {
+    bar([1, '2', x, false]);
+  };
+})();
+").js.inlineAllFunctions
+
+  }
+}

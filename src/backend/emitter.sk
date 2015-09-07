@@ -9,7 +9,7 @@ namespace Skew {
     }
 
     over run(context PassContext) {
-      var emitter = context.options.target.createEmitter(context.options, context.cache)
+      var emitter = context.options.target.createEmitter(context)
       if emitter != null {
         emitter.visit(context.global)
         context.outputs = emitter.sources

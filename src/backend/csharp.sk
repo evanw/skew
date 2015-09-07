@@ -10,7 +10,7 @@ namespace Skew {
     over stringEncoding Unicode.Encoding { return .UTF16 }
     over editOptions(options CompilerOptions) { options.define("TARGET", "CSHARP") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-cs>", NATIVE_LIBRARY_CS)) }
-    over createEmitter(options CompilerOptions, cache TypeCache) Emitter { return CSharpEmitter.new(options, cache) }
+    over createEmitter(context PassContext) Emitter { return CSharpEmitter.new(context.options, context.cache) }
   }
 
   class CSharpEmitter : Emitter {
