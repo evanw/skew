@@ -1634,7 +1634,7 @@ def main {
   }
 
   function h(a) {
-    return typeof(a) === 'string';
+    return typeof a === 'string';
   }
 
   main = function() {

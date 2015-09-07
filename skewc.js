@@ -4781,8 +4781,14 @@
       case Skew.NodeKind.CALL: {
         var value = node.callValue();
         var call = value.kind === Skew.NodeKind.SUPER;
+        var isKeyword = value.kind === Skew.NodeKind.NAME && value.symbol === null && value.asString() in Skew.JavaScriptEmitter.KEYWORD_CALL_MAP;
+        var parenthesize = isKeyword && Skew.Precedence.UNARY_POSTFIX < precedence;
         var wrap1 = value.kind === Skew.NodeKind.LAMBDA && node.parent() !== null && node.parent().kind === Skew.NodeKind.EXPRESSION;
         var isNew = false;
+
+        if (parenthesize) {
+          this._emit('(');
+        }
 
         if (wrap1) {
           this._emit('(');
@@ -4813,7 +4819,7 @@
 
         // Omit parentheses during mangling when possible
         if (!isNew || !this._mangle || call || value.nextSibling() !== null || node.parent() !== null && node.parent().kind === Skew.NodeKind.DOT) {
-          this._emit('(');
+          this._emit(isKeyword ? ' ' : '(');
 
           if (call) {
             this._emit(Skew.JavaScriptEmitter._mangleName(this._enclosingFunction.$this));
@@ -4828,6 +4834,12 @@
             this._emitExpression(child, Skew.Precedence.COMMA);
           }
 
+          if (!isKeyword) {
+            this._emit(')');
+          }
+        }
+
+        if (parenthesize) {
           this._emit(')');
         }
         break;
@@ -11601,13 +11613,13 @@
   Skew.Timer.prototype.start = function() {
     assert(!this._isStarted);
     this._isStarted = true;
-    this._startTime = (typeof(performance) !== 'undefined' && performance.now ? performance.now() : Date.now()) / 1000;
+    this._startTime = (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()) / 1000;
   };
 
   Skew.Timer.prototype.stop = function() {
     assert(this._isStarted);
     this._isStarted = false;
-    this._totalSeconds += (typeof(performance) !== 'undefined' && performance.now ? performance.now() : Date.now()) / 1000 - this._startTime;
+    this._totalSeconds += (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()) / 1000 - this._startTime;
   };
 
   Skew.Timer.prototype.elapsedMilliseconds = function() {
@@ -14382,7 +14394,7 @@
     }
 
     // Remove the define so we can tell what defines weren't used later on
-    delete(this.defines[key]);
+    delete this.defines[key];
     var type = symbol.resolvedType;
     var range = define.value;
     var value = range.toString();
@@ -19297,7 +19309,7 @@
     var value = self[key];
 
     // Compare against undefined so the key is only hashed once for speed
-    return value !== void(0) ? value : defaultValue;
+    return value !== void 0 ? value : defaultValue;
   };
 
   in_StringMap.values = function(self) {
@@ -19332,7 +19344,7 @@
     var value = self[key];
 
     // Compare against undefined so the key is only hashed once for speed
-    return value !== void(0) ? value : defaultValue;
+    return value !== void 0 ? value : defaultValue;
   };
 
   in_IntMap.values = function(self) {
@@ -19374,6 +19386,7 @@
   Skew.JavaScriptEmitter._rest = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$0123456789';
   Skew.JavaScriptEmitter._isFunctionProperty = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'apply', 0), 'call', 0), 'length', 0), 'name', 0);
   Skew.JavaScriptEmitter._isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'arguments', 0), 'Boolean', 0), 'break', 0), 'case', 0), 'catch', 0), 'class', 0), 'const', 0), 'constructor', 0), 'continue', 0), 'Date', 0), 'debugger', 0), 'default', 0), 'delete', 0), 'do', 0), 'double', 0), 'else', 0), 'export', 0), 'extends', 0), 'false', 0), 'finally', 0), 'float', 0), 'for', 0), 'Function', 0), 'function', 0), 'if', 0), 'import', 0), 'in', 0), 'instanceof', 0), 'int', 0), 'let', 0), 'new', 0), 'null', 0), 'Number', 0), 'Object', 0), 'return', 0), 'String', 0), 'super', 0), 'this', 0), 'throw', 0), 'true', 0), 'try', 0), 'var', 0);
+  Skew.JavaScriptEmitter.KEYWORD_CALL_MAP = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'delete', 0), 'typeof', 0), 'void', 0);
   Skew.JavaScriptEmitter.SPECIAL_VARIABLE_MAP = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), '__extends', Skew.JavaScriptEmitter.SpecialVariable.EXTENDS), '__imul', Skew.JavaScriptEmitter.SpecialVariable.MULTIPLY), '__isBool', Skew.JavaScriptEmitter.SpecialVariable.IS_BOOL), '__isDouble', Skew.JavaScriptEmitter.SpecialVariable.IS_DOUBLE), '__isInt', Skew.JavaScriptEmitter.SpecialVariable.IS_INT), '__isString', Skew.JavaScriptEmitter.SpecialVariable.IS_STRING);
 
   // An implicit return is a return statement inside an expression lambda. For

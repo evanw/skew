@@ -1179,8 +1179,14 @@ namespace Skew {
         case .CALL {
           var value = node.callValue
           var call = value.kind == .SUPER
+          var isKeyword = value.kind == .NAME && value.symbol == null && value.asString in KEYWORD_CALL_MAP
+          var parenthesize = isKeyword && Precedence.UNARY_POSTFIX as int < precedence as int
           var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
           var isNew = false
+
+          if parenthesize {
+            _emit("(")
+          }
 
           if wrap {
             _emit("(")
@@ -1206,7 +1212,7 @@ namespace Skew {
 
           # Omit parentheses during mangling when possible
           if !isNew || !_mangle || call || value.nextSibling != null || node.parent != null && node.parent.kind == .DOT {
-            _emit("(")
+            _emit(isKeyword ? " " : "(")
 
             if call {
               _emit(_mangleName(_enclosingFunction.this))
@@ -1220,6 +1226,12 @@ namespace Skew {
               _emitExpression(child, .COMMA)
             }
 
+            if !isKeyword {
+              _emit(")")
+            }
+          }
+
+          if parenthesize {
             _emit(")")
           }
         }
@@ -2700,6 +2712,12 @@ namespace Skew {
       "true": 0,
       "try": 0,
       "var": 0,
+    }
+
+    const KEYWORD_CALL_MAP = {
+      "delete": 0,
+      "typeof": 0,
+      "void": 0,
     }
 
     const SPECIAL_VARIABLE_MAP = {

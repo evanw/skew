@@ -1,6 +1,28 @@
 namespace Skew.Tests {
   def testJavaScript {
 
+# Check special cases for keyword operators
+test("
+@entry
+def main {
+  dynamic.foo(dynamic.void(0))
+  dynamic.foo(dynamic.typeof(0))
+  dynamic.foo(dynamic.typeof(0).length)
+  dynamic.foo(dynamic.delete(dynamic.foo.bar))
+}
+", "
+(function() {
+  function main() {
+    foo(void 0);
+    foo(typeof 0);
+    foo((typeof 0).length);
+    foo(delete foo.bar);
+  }
+
+  main();
+})();
+").js
+
 # Make sure classes with unused constructors are still emitted
 test("
 class A.B.C {}
