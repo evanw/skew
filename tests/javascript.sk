@@ -317,10 +317,8 @@ def main int {
     ifoo.foo();
     ifoo = bar;
     ifoo.foo();
-    return IFoo.FOO;
+    return in_IFoo.FOO;
   }
-
-  var IFoo = {};
 
   function Foo() {
   }
@@ -334,7 +332,9 @@ def main int {
   Bar.prototype.foo = function() {
   };
 
-  IFoo.FOO = 0;
+  var in_IFoo = {};
+
+  in_IFoo.FOO = 0;
 
   process.exit(main());
 })();
@@ -831,7 +831,7 @@ def main {
     var foo = new Foo();
     var ifoo = foo;
     foo.foo();
-    IFoo.bar(ifoo);
+    in_IFoo.bar(ifoo);
   };
 
   function Foo() {
@@ -840,9 +840,9 @@ def main {
   Foo.prototype.foo = function() {
   };
 
-  var IFoo = {};
+  var in_IFoo = {};
 
-  IFoo.bar = function(self) {
+  in_IFoo.bar = function(self) {
   };
 })();
 ").js

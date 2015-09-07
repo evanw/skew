@@ -253,9 +253,19 @@ namespace Skew {
       }
       _emit(_mangleName(symbol))
       _emitTypeParameters(symbol.parameters)
-      if symbol.extends != null {
+      if symbol.extends != null || symbol.implements != null {
         _emit(" : ")
-        _emitExpressionOrType(symbol.extends, symbol.baseType)
+        if symbol.extends != null {
+          _emitExpressionOrType(symbol.extends, symbol.baseType)
+        }
+        if symbol.implements != null {
+          for node in symbol.implements {
+            if node != symbol.implements.first || symbol.extends != null {
+              _emit(", ")
+            }
+            _emitExpressionOrType(node, node.resolvedType)
+          }
+        }
       }
       _emit("\n" + _indent + "{\n")
       _increaseIndent
@@ -346,17 +356,22 @@ namespace Skew {
       _enclosingFunction = symbol
       _emitNewlineBeforeSymbol(symbol)
       _emitComments(symbol.comments)
-      _emit(_indent + "public ")
+      _emit(_indent)
+      if symbol.parent.kind != .OBJECT_INTERFACE {
+        _emit("public ")
+      }
       if symbol.kind == .FUNCTION_GLOBAL {
         _emit("static ")
       }
       if symbol.kind != .FUNCTION_CONSTRUCTOR {
-        if symbol.block == null {
-          _emit("abstract ")
-        } else if symbol.overridden != null {
-          _emit("override ")
-        } else if symbol.isVirtual {
-          _emit("virtual ")
+        if symbol.parent.kind != .OBJECT_INTERFACE {
+          if symbol.block == null {
+            _emit("abstract ")
+          } else if symbol.overridden != null {
+            _emit("override ")
+          } else if symbol.isVirtual {
+            _emit("virtual ")
+          }
         }
         _emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType)
         _emit(" ")

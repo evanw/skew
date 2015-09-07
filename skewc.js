@@ -1340,26 +1340,41 @@
     this._emit(Skew.CSharpEmitter._mangleName(symbol));
     this._emitTypeParameters(symbol.parameters);
 
-    if (symbol.$extends !== null) {
+    if (symbol.$extends !== null || symbol.implements !== null) {
       this._emit(' : ');
-      this._emitExpressionOrType(symbol.$extends, symbol.baseType);
+
+      if (symbol.$extends !== null) {
+        this._emitExpressionOrType(symbol.$extends, symbol.baseType);
+      }
+
+      if (symbol.implements !== null) {
+        for (var i = 0, list = symbol.implements, count = list.length; i < count; ++i) {
+          var node = list[i];
+
+          if (node !== symbol.implements[0] || symbol.$extends !== null) {
+            this._emit(', ');
+          }
+
+          this._emitExpressionOrType(node, node.resolvedType);
+        }
+      }
     }
 
     this._emit('\n' + this._indent + '{\n');
     this._increaseIndent();
 
-    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
-      var object = list[i];
+    for (var i1 = 0, list1 = symbol.objects, count1 = list1.length; i1 < count1; ++i1) {
+      var object = list1[i1];
       this._emitObject(object);
     }
 
-    for (var i1 = 0, list1 = symbol.variables, count1 = list1.length; i1 < count1; ++i1) {
-      var variable = list1[i1];
+    for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
+      var variable = list2[i2];
       this._emitVariable(variable);
     }
 
-    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
-      var $function = list2[i2];
+    for (var i3 = 0, list3 = symbol.functions, count3 = list3.length; i3 < count3; ++i3) {
+      var $function = list3[i3];
       this._emitFunction($function);
     }
 
@@ -1461,23 +1476,29 @@
     this._enclosingFunction = symbol;
     this._emitNewlineBeforeSymbol(symbol);
     this._emitComments(symbol.comments);
-    this._emit(this._indent + 'public ');
+    this._emit(this._indent);
+
+    if (symbol.parent.kind !== Skew.SymbolKind.OBJECT_INTERFACE) {
+      this._emit('public ');
+    }
 
     if (symbol.kind === Skew.SymbolKind.FUNCTION_GLOBAL) {
       this._emit('static ');
     }
 
     if (symbol.kind !== Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
-      if (symbol.block === null) {
-        this._emit('abstract ');
-      }
+      if (symbol.parent.kind !== Skew.SymbolKind.OBJECT_INTERFACE) {
+        if (symbol.block === null) {
+          this._emit('abstract ');
+        }
 
-      else if (symbol.overridden !== null) {
-        this._emit('override ');
-      }
+        else if (symbol.overridden !== null) {
+          this._emit('override ');
+        }
 
-      else if (symbol.isVirtual()) {
-        this._emit('virtual ');
+        else if (symbol.isVirtual()) {
+          this._emit('virtual ');
+        }
       }
 
       this._emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType);
@@ -1920,22 +1941,22 @@
   Skew.CSharpEmitter.prototype._emitContent = function(content) {
     switch (content.kind()) {
       case Skew.ContentKind.BOOL: {
-        this._emit(Skew.Content.asBool(content).toString());
+        this._emit(Skew.in_Content.asBool(content).toString());
         break;
       }
 
       case Skew.ContentKind.INT: {
-        this._emit(Skew.Content.asInt(content).toString());
+        this._emit(Skew.in_Content.asInt(content).toString());
         break;
       }
 
       case Skew.ContentKind.DOUBLE: {
-        this._emit(Skew.Content.asDouble(content).toString());
+        this._emit(Skew.in_Content.asDouble(content).toString());
         break;
       }
 
       case Skew.ContentKind.STRING: {
-        this._emit(Skew.quoteString(Skew.Content.asString(content), Skew.QuoteStyle.DOUBLE));
+        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE));
         break;
       }
     }
@@ -2944,22 +2965,22 @@
   Skew.CPlusPlusEmitter.prototype._emitContent = function(content) {
     switch (content.kind()) {
       case Skew.ContentKind.BOOL: {
-        this._emit(Skew.Content.asBool(content).toString());
+        this._emit(Skew.in_Content.asBool(content).toString());
         break;
       }
 
       case Skew.ContentKind.INT: {
-        this._emit(Skew.Content.asInt(content).toString());
+        this._emit(Skew.in_Content.asInt(content).toString());
         break;
       }
 
       case Skew.ContentKind.DOUBLE: {
-        this._emit(Skew.Content.asDouble(content).toString());
+        this._emit(Skew.in_Content.asDouble(content).toString());
         break;
       }
 
       case Skew.ContentKind.STRING: {
-        this._emit(Skew.quoteString(Skew.Content.asString(content), Skew.QuoteStyle.DOUBLE) + '_s');
+        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE) + '_s');
         break;
       }
     }
@@ -4682,22 +4703,22 @@
   Skew.JavaScriptEmitter.prototype._emitContent = function(content) {
     switch (content.kind()) {
       case Skew.ContentKind.BOOL: {
-        this._emit(Skew.Content.asBool(content).toString());
+        this._emit(Skew.in_Content.asBool(content).toString());
         break;
       }
 
       case Skew.ContentKind.INT: {
-        this._emit(Skew.Content.asInt(content).toString());
+        this._emit(Skew.in_Content.asInt(content).toString());
         break;
       }
 
       case Skew.ContentKind.DOUBLE: {
-        this._emit(Skew.Content.asDouble(content).toString());
+        this._emit(Skew.in_Content.asDouble(content).toString());
         break;
       }
 
       case Skew.ContentKind.STRING: {
-        this._emit(Skew.quoteString(Skew.Content.asString(content), Skew.QuoteStyle.SHORTEST));
+        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.SHORTEST));
         break;
       }
     }
@@ -6422,15 +6443,15 @@
 
         switch (content.kind()) {
           case Skew.ContentKind.INT: {
-            return Skew.Content.asInt(content) === 0;
+            return Skew.in_Content.asInt(content) === 0;
           }
 
           case Skew.ContentKind.DOUBLE: {
-            return Skew.Content.asDouble(content) === 0 || isNaN(Skew.Content.asDouble(content));
+            return Skew.in_Content.asDouble(content) === 0 || isNaN(Skew.in_Content.asDouble(content));
           }
 
           case Skew.ContentKind.STRING: {
-            return Skew.Content.asString(content) === '';
+            return Skew.in_Content.asString(content) === '';
           }
         }
         break;
@@ -6620,22 +6641,22 @@
     if (content !== null) {
       switch (content.kind()) {
         case Skew.ContentKind.INT: {
-          this._emit(' ' + Skew.Content.asInt(content).toString());
+          this._emit(' ' + Skew.in_Content.asInt(content).toString());
           break;
         }
 
         case Skew.ContentKind.BOOL: {
-          this._emit(' ' + Skew.Content.asBool(content).toString());
+          this._emit(' ' + Skew.in_Content.asBool(content).toString());
           break;
         }
 
         case Skew.ContentKind.DOUBLE: {
-          this._emit(' ' + Skew.Content.asDouble(content).toString());
+          this._emit(' ' + Skew.in_Content.asDouble(content).toString());
           break;
         }
 
         case Skew.ContentKind.STRING: {
-          this._emit(' ' + Skew.quoteString(Skew.Content.asString(content), Skew.QuoteStyle.DOUBLE));
+          this._emit(' ' + Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE));
           break;
         }
       }
@@ -6771,28 +6792,6 @@
     INT: 1,
     DOUBLE: 2,
     STRING: 3
-  };
-
-  Skew.Content = {};
-
-  Skew.Content.asBool = function(self) {
-    assert(self.kind() === Skew.ContentKind.BOOL);
-    return self.value;
-  };
-
-  Skew.Content.asInt = function(self) {
-    assert(self.kind() === Skew.ContentKind.INT);
-    return self.value;
-  };
-
-  Skew.Content.asDouble = function(self) {
-    assert(self.kind() === Skew.ContentKind.DOUBLE);
-    return self.value;
-  };
-
-  Skew.Content.asString = function(self) {
-    assert(self.kind() === Skew.ContentKind.STRING);
-    return self.value;
   };
 
   Skew.BoolContent = function(value) {
@@ -7404,11 +7403,11 @@
   };
 
   Skew.Node.prototype.isTrue = function() {
-    return this.kind === Skew.NodeKind.CONSTANT && this.content.kind() === Skew.ContentKind.BOOL && Skew.Content.asBool(this.content);
+    return this.kind === Skew.NodeKind.CONSTANT && this.content.kind() === Skew.ContentKind.BOOL && Skew.in_Content.asBool(this.content);
   };
 
   Skew.Node.prototype.isFalse = function() {
-    return this.kind === Skew.NodeKind.CONSTANT && this.content.kind() === Skew.ContentKind.BOOL && !Skew.Content.asBool(this.content);
+    return this.kind === Skew.NodeKind.CONSTANT && this.content.kind() === Skew.ContentKind.BOOL && !Skew.in_Content.asBool(this.content);
   };
 
   Skew.Node.prototype.isType = function() {
@@ -7471,7 +7470,7 @@
     switch (this.kind) {
       case Skew.NodeKind.CONSTANT: {
         if (this.content.kind() === Skew.ContentKind.BOOL) {
-          this.content = new Skew.BoolContent(!Skew.Content.asBool(this.content));
+          this.content = new Skew.BoolContent(!Skew.in_Content.asBool(this.content));
         }
 
         return;
@@ -7779,22 +7778,22 @@
 
   Skew.Node.prototype.asInt = function() {
     assert(this.kind === Skew.NodeKind.CONSTANT);
-    return Skew.Content.asInt(this.content);
+    return Skew.in_Content.asInt(this.content);
   };
 
   Skew.Node.prototype.asBool = function() {
     assert(this.kind === Skew.NodeKind.CONSTANT);
-    return Skew.Content.asBool(this.content);
+    return Skew.in_Content.asBool(this.content);
   };
 
   Skew.Node.prototype.asDouble = function() {
     assert(this.kind === Skew.NodeKind.CONSTANT);
-    return Skew.Content.asDouble(this.content);
+    return Skew.in_Content.asDouble(this.content);
   };
 
   Skew.Node.prototype.asString = function() {
     assert(this.kind === Skew.NodeKind.NAME || this.kind === Skew.NodeKind.DOT || this.kind === Skew.NodeKind.CONSTANT);
-    return Skew.Content.asString(this.content);
+    return Skew.in_Content.asString(this.content);
   };
 
   Skew.Node.prototype.blockStatement = function() {
@@ -11507,6 +11506,20 @@
     return null;
   };
 
+  Skew.LispTreeTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.LispTreeTarget, Skew.CompilerTarget);
+
+  Skew.LispTreeTarget.prototype.runPostResolvePasses = function() {
+    return false;
+  };
+
+  Skew.LispTreeTarget.prototype.createEmitter = function(context) {
+    return new Skew.LispTreeEmitter(context.options);
+  };
+
   Skew.JavaScriptTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -11625,20 +11638,6 @@
     return new Skew.CPlusPlusEmitter(context.options, context.cache);
   };
 
-  Skew.LispTreeTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.LispTreeTarget, Skew.CompilerTarget);
-
-  Skew.LispTreeTarget.prototype.runPostResolvePasses = function() {
-    return false;
-  };
-
-  Skew.LispTreeTarget.prototype.createEmitter = function(context) {
-    return new Skew.LispTreeEmitter(context.options);
-  };
-
   Skew.TypeCheckingCompilerTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -11755,20 +11754,22 @@
     return this;
   };
 
-  Skew.LexingPass = function() {
+  Skew.EmittingPass = function() {
     Skew.Pass.call(this);
   };
 
-  __extends(Skew.LexingPass, Skew.Pass);
+  __extends(Skew.EmittingPass, Skew.Pass);
 
-  Skew.LexingPass.prototype.kind = function() {
-    return Skew.PassKind.LEXING;
+  Skew.EmittingPass.prototype.kind = function() {
+    return Skew.PassKind.EMITTING;
   };
 
-  Skew.LexingPass.prototype.run = function(context) {
-    for (var i = 0, list = context.inputs, count = list.length; i < count; ++i) {
-      var source = list[i];
-      context.tokens.push(Skew.tokenize(context.log, source));
+  Skew.EmittingPass.prototype.run = function(context) {
+    var emitter = context.options.target.createEmitter(context);
+
+    if (emitter !== null) {
+      emitter.visit(context.global);
+      context.outputs = emitter.sources();
     }
   };
 
@@ -11789,22 +11790,20 @@
     }
   };
 
-  Skew.EmittingPass = function() {
+  Skew.LexingPass = function() {
     Skew.Pass.call(this);
   };
 
-  __extends(Skew.EmittingPass, Skew.Pass);
+  __extends(Skew.LexingPass, Skew.Pass);
 
-  Skew.EmittingPass.prototype.kind = function() {
-    return Skew.PassKind.EMITTING;
+  Skew.LexingPass.prototype.kind = function() {
+    return Skew.PassKind.LEXING;
   };
 
-  Skew.EmittingPass.prototype.run = function(context) {
-    var emitter = context.options.target.createEmitter(context);
-
-    if (emitter !== null) {
-      emitter.visit(context.global);
-      context.outputs = emitter.sources();
+  Skew.LexingPass.prototype.run = function(context) {
+    for (var i = 0, list = context.inputs, count = list.length; i < count; ++i) {
+      var source = list[i];
+      context.tokens.push(Skew.tokenize(context.log, source));
     }
   };
 
@@ -12715,32 +12714,32 @@
       if (leftKind === Skew.ContentKind.STRING && rightKind === Skew.ContentKind.STRING) {
         switch (kind) {
           case Skew.NodeKind.EQUAL: {
-            this.flattenBool(node, Skew.Content.asString(leftContent) === Skew.Content.asString(rightContent));
+            this.flattenBool(node, Skew.in_Content.asString(leftContent) === Skew.in_Content.asString(rightContent));
             break;
           }
 
           case Skew.NodeKind.NOT_EQUAL: {
-            this.flattenBool(node, Skew.Content.asString(leftContent) !== Skew.Content.asString(rightContent));
+            this.flattenBool(node, Skew.in_Content.asString(leftContent) !== Skew.in_Content.asString(rightContent));
             break;
           }
 
           case Skew.NodeKind.LESS_THAN: {
-            this.flattenBool(node, in_string.compare(Skew.Content.asString(leftContent), Skew.Content.asString(rightContent)) < 0);
+            this.flattenBool(node, in_string.compare(Skew.in_Content.asString(leftContent), Skew.in_Content.asString(rightContent)) < 0);
             break;
           }
 
           case Skew.NodeKind.GREATER_THAN: {
-            this.flattenBool(node, in_string.compare(Skew.Content.asString(leftContent), Skew.Content.asString(rightContent)) > 0);
+            this.flattenBool(node, in_string.compare(Skew.in_Content.asString(leftContent), Skew.in_Content.asString(rightContent)) > 0);
             break;
           }
 
           case Skew.NodeKind.LESS_THAN_OR_EQUAL: {
-            this.flattenBool(node, in_string.compare(Skew.Content.asString(leftContent), Skew.Content.asString(rightContent)) <= 0);
+            this.flattenBool(node, in_string.compare(Skew.in_Content.asString(leftContent), Skew.in_Content.asString(rightContent)) <= 0);
             break;
           }
 
           case Skew.NodeKind.GREATER_THAN_OR_EQUAL: {
-            this.flattenBool(node, in_string.compare(Skew.Content.asString(leftContent), Skew.Content.asString(rightContent)) >= 0);
+            this.flattenBool(node, in_string.compare(Skew.in_Content.asString(leftContent), Skew.in_Content.asString(rightContent)) >= 0);
             break;
           }
         }
@@ -12752,22 +12751,22 @@
       else if (leftKind === Skew.ContentKind.BOOL && rightKind === Skew.ContentKind.BOOL) {
         switch (kind) {
           case Skew.NodeKind.LOGICAL_AND: {
-            this.flattenBool(node, Skew.Content.asBool(leftContent) && Skew.Content.asBool(rightContent));
+            this.flattenBool(node, Skew.in_Content.asBool(leftContent) && Skew.in_Content.asBool(rightContent));
             break;
           }
 
           case Skew.NodeKind.LOGICAL_OR: {
-            this.flattenBool(node, Skew.Content.asBool(leftContent) || Skew.Content.asBool(rightContent));
+            this.flattenBool(node, Skew.in_Content.asBool(leftContent) || Skew.in_Content.asBool(rightContent));
             break;
           }
 
           case Skew.NodeKind.EQUAL: {
-            this.flattenBool(node, Skew.Content.asBool(leftContent) === Skew.Content.asBool(rightContent));
+            this.flattenBool(node, Skew.in_Content.asBool(leftContent) === Skew.in_Content.asBool(rightContent));
             break;
           }
 
           case Skew.NodeKind.NOT_EQUAL: {
-            this.flattenBool(node, Skew.Content.asBool(leftContent) !== Skew.Content.asBool(rightContent));
+            this.flattenBool(node, Skew.in_Content.asBool(leftContent) !== Skew.in_Content.asBool(rightContent));
             break;
           }
         }
@@ -12779,82 +12778,82 @@
       else if (leftKind === Skew.ContentKind.INT && rightKind === Skew.ContentKind.INT) {
         switch (kind) {
           case Skew.NodeKind.ADD: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) + Skew.Content.asInt(rightContent) | 0);
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) + Skew.in_Content.asInt(rightContent) | 0);
             break;
           }
 
           case Skew.NodeKind.SUBTRACT: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) - Skew.Content.asInt(rightContent) | 0);
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) - Skew.in_Content.asInt(rightContent) | 0);
             break;
           }
 
           case Skew.NodeKind.MULTIPLY: {
-            this.flattenInt(node, __imul(Skew.Content.asInt(leftContent), Skew.Content.asInt(rightContent)));
+            this.flattenInt(node, __imul(Skew.in_Content.asInt(leftContent), Skew.in_Content.asInt(rightContent)));
             break;
           }
 
           case Skew.NodeKind.DIVIDE: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) / Skew.Content.asInt(rightContent) | 0);
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) / Skew.in_Content.asInt(rightContent) | 0);
             break;
           }
 
           case Skew.NodeKind.REMAINDER: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) % Skew.Content.asInt(rightContent) | 0);
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) % Skew.in_Content.asInt(rightContent) | 0);
             break;
           }
 
           case Skew.NodeKind.SHIFT_LEFT: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) << Skew.Content.asInt(rightContent));
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) << Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.SHIFT_RIGHT: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) >> Skew.Content.asInt(rightContent));
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) >> Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.BITWISE_AND: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) & Skew.Content.asInt(rightContent));
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) & Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.BITWISE_OR: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) | Skew.Content.asInt(rightContent));
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) | Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.BITWISE_XOR: {
-            this.flattenInt(node, Skew.Content.asInt(leftContent) ^ Skew.Content.asInt(rightContent));
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) ^ Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.EQUAL: {
-            this.flattenBool(node, Skew.Content.asInt(leftContent) === Skew.Content.asInt(rightContent));
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) === Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.NOT_EQUAL: {
-            this.flattenBool(node, Skew.Content.asInt(leftContent) !== Skew.Content.asInt(rightContent));
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) !== Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.LESS_THAN: {
-            this.flattenBool(node, Skew.Content.asInt(leftContent) < Skew.Content.asInt(rightContent));
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) < Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.GREATER_THAN: {
-            this.flattenBool(node, Skew.Content.asInt(leftContent) > Skew.Content.asInt(rightContent));
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) > Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.LESS_THAN_OR_EQUAL: {
-            this.flattenBool(node, Skew.Content.asInt(leftContent) <= Skew.Content.asInt(rightContent));
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) <= Skew.in_Content.asInt(rightContent));
             break;
           }
 
           case Skew.NodeKind.GREATER_THAN_OR_EQUAL: {
-            this.flattenBool(node, Skew.Content.asInt(leftContent) >= Skew.Content.asInt(rightContent));
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) >= Skew.in_Content.asInt(rightContent));
             break;
           }
         }
@@ -12866,52 +12865,52 @@
       else if (leftKind === Skew.ContentKind.DOUBLE && rightKind === Skew.ContentKind.DOUBLE) {
         switch (kind) {
           case Skew.NodeKind.ADD: {
-            this.flattenDouble(node, Skew.Content.asDouble(leftContent) + Skew.Content.asDouble(rightContent));
+            this.flattenDouble(node, Skew.in_Content.asDouble(leftContent) + Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.SUBTRACT: {
-            this.flattenDouble(node, Skew.Content.asDouble(leftContent) - Skew.Content.asDouble(rightContent));
+            this.flattenDouble(node, Skew.in_Content.asDouble(leftContent) - Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.MULTIPLY: {
-            this.flattenDouble(node, Skew.Content.asDouble(leftContent) * Skew.Content.asDouble(rightContent));
+            this.flattenDouble(node, Skew.in_Content.asDouble(leftContent) * Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.DIVIDE: {
-            this.flattenDouble(node, Skew.Content.asDouble(leftContent) / Skew.Content.asDouble(rightContent));
+            this.flattenDouble(node, Skew.in_Content.asDouble(leftContent) / Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.EQUAL: {
-            this.flattenBool(node, Skew.Content.asDouble(leftContent) === Skew.Content.asDouble(rightContent));
+            this.flattenBool(node, Skew.in_Content.asDouble(leftContent) === Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.NOT_EQUAL: {
-            this.flattenBool(node, Skew.Content.asDouble(leftContent) !== Skew.Content.asDouble(rightContent));
+            this.flattenBool(node, Skew.in_Content.asDouble(leftContent) !== Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.LESS_THAN: {
-            this.flattenBool(node, Skew.Content.asDouble(leftContent) < Skew.Content.asDouble(rightContent));
+            this.flattenBool(node, Skew.in_Content.asDouble(leftContent) < Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.GREATER_THAN: {
-            this.flattenBool(node, Skew.Content.asDouble(leftContent) > Skew.Content.asDouble(rightContent));
+            this.flattenBool(node, Skew.in_Content.asDouble(leftContent) > Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.LESS_THAN_OR_EQUAL: {
-            this.flattenBool(node, Skew.Content.asDouble(leftContent) <= Skew.Content.asDouble(rightContent));
+            this.flattenBool(node, Skew.in_Content.asDouble(leftContent) <= Skew.in_Content.asDouble(rightContent));
             break;
           }
 
           case Skew.NodeKind.GREATER_THAN_OR_EQUAL: {
-            this.flattenBool(node, Skew.Content.asDouble(leftContent) >= Skew.Content.asDouble(rightContent));
+            this.flattenBool(node, Skew.in_Content.asDouble(leftContent) >= Skew.in_Content.asDouble(rightContent));
             break;
           }
         }
@@ -14035,9 +14034,9 @@
       return false;
     });
 
-    // Move global functions with implementations off imported objects
+    // Move global functions with implementations off of imported objects and interfaces
     in_List.removeIf(symbol.functions, function($function) {
-      if ($function.kind === Skew.SymbolKind.FUNCTION_GLOBAL && symbol.isImported() && !$function.isImported()) {
+      if ($function.kind === Skew.SymbolKind.FUNCTION_GLOBAL && (symbol.isImported() && !$function.isImported() || symbol.kind === Skew.SymbolKind.OBJECT_INTERFACE)) {
         Skew.Motion.moveSymbolIntoNewNamespace($function, namespaces).functions.push($function);
         return true;
       }
@@ -14063,6 +14062,14 @@
       });
       symbol.objects = [];
       symbol.functions = [];
+    }
+
+    // Move variables off of interfaces
+    else if (symbol.kind === Skew.SymbolKind.OBJECT_INTERFACE) {
+      symbol.variables.forEach(function(variable) {
+        Skew.Motion.moveSymbolIntoNewNamespace(variable, namespaces).variables.push(variable);
+      });
+      symbol.variables = [];
     }
   };
 
@@ -15995,7 +16002,7 @@
             var last = value.lastChild();
 
             if (last.kind === Skew.NodeKind.CONSTANT && last.content.kind() === Skew.ContentKind.STRING) {
-              this.log.warning(range, Skew.Content.asString(last.content));
+              this.log.warning(range, Skew.in_Content.asString(last.content));
               return;
             }
           }
@@ -16378,7 +16385,7 @@
             continue;
           }
 
-          integer = Skew.Content.asInt(constant);
+          integer = Skew.in_Content.asInt(constant);
         }
 
         // Fall back to the constant folder only as a last resort because it
@@ -18884,12 +18891,12 @@
 
   Skew.Options.Parser.prototype.boolForOption = function(option, defaultValue) {
     var node = this.nodeForOption(option);
-    return node !== null ? Skew.Content.asBool(node.content) : defaultValue;
+    return node !== null ? Skew.in_Content.asBool(node.content) : defaultValue;
   };
 
   Skew.Options.Parser.prototype.intForOption = function(option, defaultValue) {
     var node = this.nodeForOption(option);
-    return node !== null ? Skew.Content.asInt(node.content) : defaultValue;
+    return node !== null ? Skew.in_Content.asInt(node.content) : defaultValue;
   };
 
   Skew.Options.Parser.prototype.rangeForOption = function(option) {
@@ -19084,6 +19091,28 @@
     }
 
     return text + '\n';
+  };
+
+  Skew.in_Content = {};
+
+  Skew.in_Content.asBool = function(self) {
+    assert(self.kind() === Skew.ContentKind.BOOL);
+    return self.value;
+  };
+
+  Skew.in_Content.asInt = function(self) {
+    assert(self.kind() === Skew.ContentKind.INT);
+    return self.value;
+  };
+
+  Skew.in_Content.asDouble = function(self) {
+    assert(self.kind() === Skew.ContentKind.DOUBLE);
+    return self.value;
+  };
+
+  Skew.in_Content.asString = function(self) {
+    assert(self.kind() === Skew.ContentKind.STRING);
+    return self.value;
   };
 
   var IO = {};

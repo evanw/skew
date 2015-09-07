@@ -37,9 +37,9 @@ namespace Skew.Motion {
       return false
     })
 
-    # Move global functions with implementations off imported objects
+    # Move global functions with implementations off of imported objects and interfaces
     symbol.functions.removeIf(function => {
-      if function.kind == .FUNCTION_GLOBAL && symbol.isImported && !function.isImported {
+      if function.kind == .FUNCTION_GLOBAL && (symbol.isImported && !function.isImported || symbol.kind == .OBJECT_INTERFACE) {
         moveSymbolIntoNewNamespace(function, namespaces).functions.append(function)
         return true
       }
@@ -59,6 +59,12 @@ namespace Skew.Motion {
       })
       symbol.objects = []
       symbol.functions = []
+    }
+
+    # Move variables off of interfaces
+    else if symbol.kind == .OBJECT_INTERFACE {
+      symbol.variables.each(variable => moveSymbolIntoNewNamespace(variable, namespaces).variables.append(variable))
+      symbol.variables = []
     }
   }
 
