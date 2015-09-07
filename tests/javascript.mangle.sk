@@ -1782,11 +1782,169 @@ def main bool {
 })();
 ").jsMangle
 
+# Basic usage of interfaces
+test("
+interface IFoo {
+  def foo
+}
+
+class Foo :: IFoo {
+  def foo {}
+}
+
+@entry
+def main {
+  var foo = Foo.new
+  var ifoo = foo as IFoo
+  foo.foo
+  ifoo.foo
+}
+", "
+(function() {
+  function f() {
+    var b = new e, c = b;
+    b.a(), c.a();
+  }
+
+  function e() {
+  }
+
+  e.prototype.a = function() {
+  };
+
+  f();
+})();
+").jsMangle
+
+# Basic usage of interfaces
+test("
+interface IFoo {
+  def foo
+}
+
+class Foo :: IFoo {
+  def foo {}
+}
+
+class Bar :: IFoo {
+  def foo {}
+}
+
+@entry
+def main {
+  var foo = Foo.new
+  var bar = Foo.new
+  var ifoo = foo as IFoo
+  foo.foo
+  bar.foo
+  ifoo.foo
+  ifoo = bar
+  ifoo.foo
+}
+", "
+(function() {
+  function g() {
+    var d = new f, e = new f, b = d;
+    d.a(), e.a(), b.a(), b = e, b.a();
+  }
+
+  function f() {
+  }
+
+  f.prototype.a = function() {
+  };
+
+  g();
+})();
+").jsMangle
+
+# Interface removal with globalization
+test("
+interface IFoo {
+  def foo
+}
+
+class Foo :: IFoo {
+  def foo {}
+}
+
+@entry
+def main {
+  var foo = Foo.new
+  var ifoo = foo as IFoo
+  foo.foo
+  ifoo.foo
+}
+", "
+(function() {
+  function f() {
+    var b = new e, c = b;
+    a(b), a(c);
+  }
+
+  function a(b) {
+  }
+
+  function e() {
+  }
+
+  f();
+})();
+").jsMangle.globalizeAllFunctions
+
+# Interface removal should not trigger even with globalization
+test("
+interface IFoo {
+  def foo
+}
+
+class Foo :: IFoo {
+  def foo {}
+}
+
+class Bar :: IFoo {
+  def foo {}
+}
+
+@entry
+def main {
+  var foo = Foo.new
+  var bar = Bar.new
+  var ifoo = foo as IFoo
+  foo.foo
+  bar.foo
+  ifoo.foo
+  ifoo = bar
+  ifoo.foo
+}
+", "
+(function() {
+  function i() {
+    var c = new g, d = new h, b = c;
+    c.a(), d.a(), b.a(), b = d, b.a();
+  }
+
+  function g() {
+  }
+
+  g.prototype.a = function() {
+  };
+
+  function h() {
+  }
+
+  h.prototype.a = function() {
+  };
+
+  i();
+})();
+").jsMangle.globalizeAllFunctions
+
 # Check overloaded functions when an interface is present
 test("
 interface I {
-  def foo(x int) {} # I.foo(x int)
-  def foo(x bool) {} # I.foo(x bool)
+  def foo(x int) # I.foo(x int)
+  def foo(x bool) # I.foo(x bool)
 }
 
 class Foo :: I {

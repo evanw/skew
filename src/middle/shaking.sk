@@ -110,6 +110,15 @@ namespace Skew {
       context = symbol
     }
 
+    def _recordOverride(base FunctionSymbol, derived FunctionSymbol) {
+      var overrides = _overridesForSymbol.get(base.id, null)
+      if overrides == null {
+        overrides = []
+        _overridesForSymbol[base.id] = overrides
+      }
+      overrides.append(derived)
+    }
+
     def _recordUsage(symbol Symbol) {
       if !symbol.kind.isLocal {
         _currentUsages[symbol.id] = symbol
@@ -128,17 +137,17 @@ namespace Skew {
 
       for function in symbol.functions {
         _changeContext(function)
-        _recordUsage(symbol)
+
+        # Interface functions shouldn't cause interfaces to be emitted for dynamically-typed targets
+        if _mode != .IGNORE_TYPES || symbol.kind != .OBJECT_INTERFACE || function.kind != .FUNCTION_INSTANCE {
+          _recordUsage(symbol)
+        }
+
         _visitFunction(function)
 
         # Remember which functions are overridden for later
         if function.overridden != null {
-          var overrides = _overridesForSymbol.get(function.overridden.id, null)
-          if overrides == null {
-            overrides = []
-            _overridesForSymbol[function.overridden.id] = overrides
-          }
-          overrides.append(function)
+          _recordOverride(function.overridden, function)
         }
       }
 
@@ -156,6 +165,13 @@ namespace Skew {
 
       _visitType(symbol.resolvedType.returnType)
       _visitNode(symbol.block)
+
+      # Remember which functions are overridden for later
+      if symbol.implementations != null {
+        for function in symbol.implementations {
+          _recordOverride(symbol, function)
+        }
+      }
     }
 
     def _visitVariable(symbol VariableSymbol) {

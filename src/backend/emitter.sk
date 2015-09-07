@@ -142,6 +142,9 @@ namespace Skew {
       if _isContainedBy(after, before) {
         return true
       }
+      if after.forwardTo == before {
+        return true
+      }
       return false
     }
   }

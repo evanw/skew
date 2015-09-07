@@ -4,6 +4,7 @@ namespace Skew {
     over extension string { return "js" }
     over runPostResolvePasses bool { return true }
     over supportsNestedTypes bool { return true }
+    over removeSingletonInterfaces bool { return true }
     over stringEncoding Unicode.Encoding { return .UTF16 }
     over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
@@ -684,12 +685,14 @@ namespace Skew {
 
       switch symbol.kind {
         case .OBJECT_NAMESPACE, .OBJECT_INTERFACE, .OBJECT_WRAPPED {
-          _addMapping(symbol.range)
-          _emitNewlineBeforeSymbol(symbol)
-          _emitComments(symbol.comments)
-          _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
-          _emitSemicolonAfterStatement
-          _emitNewlineAfterSymbol(symbol)
+          if symbol.forwardTo == null {
+            _addMapping(symbol.range)
+            _emitNewlineBeforeSymbol(symbol)
+            _emitComments(symbol.comments)
+            _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
+            _emitSemicolonAfterStatement
+            _emitNewlineAfterSymbol(symbol)
+          }
         }
 
         case .OBJECT_ENUM {
@@ -2614,6 +2617,7 @@ namespace Skew {
     }
 
     def _mangleName(symbol Symbol) string {
+      symbol = symbol.forwarded
       if symbol.isPrimaryConstructor {
         symbol = symbol.parent
       }

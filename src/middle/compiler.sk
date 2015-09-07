@@ -9,6 +9,7 @@ namespace Skew {
     def supportsListForeach bool { return false }
     def supportsNestedTypes bool { return false }
     def needsLambdaLifting bool { return false }
+    def removeSingletonInterfaces bool { return false }
     def stringEncoding Unicode.Encoding { return .UTF32 }
     def editOptions(options CompilerOptions) {}
     def includeSources(sources List<Source>) {}
@@ -43,6 +44,7 @@ namespace Skew {
       MergingPass.new,
       ResolvingPass.new,
       LambdaLiftingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.target.needsLambdaLifting),
+      InterfaceRemovalPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.target.removeSingletonInterfaces && options.globalizeAllFunctions),
 
       # The call graph is used as a shortcut so the tree only needs to be scanned once for all call-based optimizations
       CallGraphPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),

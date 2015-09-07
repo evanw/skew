@@ -130,6 +130,7 @@ namespace Skew {
     var state SymbolState = .UNINITIALIZED
     var annotations List<Node> = null
     var comments List<string> = null
+    var forwardTo Symbol = null # Set by the interface removal step
     var flags = 0
 
     # Flags
@@ -193,6 +194,14 @@ namespace Skew {
         return parent.fullName + "." + name
       }
       return name
+    }
+
+    def forwarded Symbol {
+      var symbol = self
+      while symbol.forwardTo != null {
+        symbol = symbol.forwardTo
+      }
+      return symbol
     }
 
     def spreadingAnnotations List<Node> {

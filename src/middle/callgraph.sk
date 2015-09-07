@@ -59,7 +59,7 @@ namespace Skew {
 
         if node.kind == .CALL && node.symbol != null {
           assert(node.symbol.kind.isFunction)
-          _recordCallSite(node.symbol.asFunctionSymbol, node, context)
+          _recordCallSite(node.symbol.forwarded.asFunctionSymbol, node, context)
         }
       }
     }

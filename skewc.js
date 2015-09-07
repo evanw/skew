@@ -906,11 +906,12 @@
     FOLDING: 5,
     GLOBALIZING: 6,
     INLINING: 7,
-    LAMBDA_LIFTING: 8,
-    MERGING: 9,
-    MOTION: 10,
-    RENAMING: 11,
-    RESOLVING: 12
+    INTERFACE_REMOVAL: 8,
+    LAMBDA_LIFTING: 9,
+    MERGING: 10,
+    MOTION: 11,
+    RENAMING: 12,
+    RESOLVING: 13
   };
 
   Skew.EmitMode = {
@@ -1044,6 +1045,10 @@
     }
 
     if (Skew.Emitter._isContainedBy(after, before)) {
+      return true;
+    }
+
+    if (after.forwardTo === before) {
       return true;
     }
 
@@ -4154,12 +4159,14 @@
       case Skew.SymbolKind.OBJECT_NAMESPACE:
       case Skew.SymbolKind.OBJECT_INTERFACE:
       case Skew.SymbolKind.OBJECT_WRAPPED: {
-        this._addMapping(symbol.range);
-        this._emitNewlineBeforeSymbol(symbol);
-        this._emitComments(symbol.comments);
-        this._emit(this._indent + (this._namespacePrefix === '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{}');
-        this._emitSemicolonAfterStatement();
-        this._emitNewlineAfterSymbol(symbol);
+        if (symbol.forwardTo === null) {
+          this._addMapping(symbol.range);
+          this._emitNewlineBeforeSymbol(symbol);
+          this._emitComments(symbol.comments);
+          this._emit(this._indent + (this._namespacePrefix === '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{}');
+          this._emitSemicolonAfterStatement();
+          this._emitNewlineAfterSymbol(symbol);
+        }
         break;
       }
 
@@ -6459,6 +6466,8 @@
   };
 
   Skew.JavaScriptEmitter._mangleName = function(symbol) {
+    symbol = symbol.forwarded();
+
     if (symbol.isPrimaryConstructor()) {
       symbol = symbol.parent;
     }
@@ -10053,6 +10062,7 @@
     this.state = Skew.SymbolState.UNINITIALIZED;
     this.annotations = null;
     this.comments = null;
+    this.forwardTo = null;
     this.flags = 0;
   };
 
@@ -10183,6 +10193,16 @@
     }
 
     return this.name;
+  };
+
+  Skew.Symbol.prototype.forwarded = function() {
+    var symbol = this;
+
+    while (symbol.forwardTo !== null) {
+      symbol = symbol.forwardTo;
+    }
+
+    return symbol;
   };
 
   Skew.Symbol.prototype.spreadingAnnotations = function() {
@@ -11432,7 +11452,7 @@
 
       if (node.kind === Skew.NodeKind.CALL && node.symbol !== null) {
         assert(Skew.SymbolKind.isFunction(node.symbol.kind));
-        this._recordCallSite(node.symbol.asFunctionSymbol(), node, context);
+        this._recordCallSite(node.symbol.forwarded().asFunctionSymbol(), node, context);
       }
     }
   };
@@ -11482,6 +11502,10 @@
     return false;
   };
 
+  Skew.CompilerTarget.prototype.removeSingletonInterfaces = function() {
+    return false;
+  };
+
   Skew.CompilerTarget.prototype.stringEncoding = function() {
     return Unicode.Encoding.UTF32;
   };
@@ -11507,6 +11531,10 @@
   };
 
   Skew.JavaScriptTarget.prototype.supportsNestedTypes = function() {
+    return true;
+  };
+
+  Skew.JavaScriptTarget.prototype.removeSingletonInterfaces = function() {
     return true;
   };
 
@@ -11659,6 +11687,9 @@
       new Skew.ResolvingPass(),
       new Skew.LambdaLiftingPass().onlyRunWhen(function(options) {
         return options.target.runPostResolvePasses() && options.target.needsLambdaLifting();
+      }),
+      new Skew.InterfaceRemovalPass().onlyRunWhen(function(options) {
+        return options.target.runPostResolvePasses() && options.target.removeSingletonInterfaces() && options.globalizeAllFunctions;
       }),
       // The call graph is used as a shortcut so the tree only needs to be scanned once for all call-based optimizations
       new Skew.CallGraphPass().onlyRunWhen(function(options) {
@@ -13022,19 +13053,20 @@
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
       var $function = list2[i2];
 
-      if (symbol.kind === Skew.SymbolKind.OBJECT_INTERFACE && $function.kind === Skew.SymbolKind.FUNCTION_INSTANCE || $function.overridden !== null || $function.implementations !== null) {
+      if ($function.overridden !== null) {
+        this._map[$function.overridden.id] = 0;
         this._map[$function.id] = 0;
       }
 
-      if ($function.overridden !== null) {
-        this._map[$function.overridden.id] = 0;
-      }
-
-      if ($function.implementations !== null) {
-        for (var i1 = 0, list1 = $function.implementations, count1 = list1.length; i1 < count1; ++i1) {
-          var implementation = list1[i1];
-          this._map[implementation.id] = 0;
+      if (symbol.kind === Skew.SymbolKind.OBJECT_INTERFACE && $function.kind === Skew.SymbolKind.FUNCTION_INSTANCE && $function.forwardTo === null) {
+        if ($function.implementations !== null) {
+          for (var i1 = 0, list1 = $function.implementations, count1 = list1.length; i1 < count1; ++i1) {
+            var implementation = list1[i1];
+            this._map[implementation.id] = 0;
+          }
         }
+
+        this._map[$function.id] = 0;
       }
     }
   };
@@ -13387,6 +13419,88 @@
     }
 
     return true;
+  };
+
+  Skew.InterfaceRemovalPass = function() {
+    Skew.Pass.call(this);
+    this._interfaceImplementations = {};
+    this._interfaces = [];
+  };
+
+  __extends(Skew.InterfaceRemovalPass, Skew.Pass);
+
+  Skew.InterfaceRemovalPass.prototype.kind = function() {
+    return Skew.PassKind.INTERFACE_REMOVAL;
+  };
+
+  Skew.InterfaceRemovalPass.prototype.run = function(context) {
+    this._scanForInterfaces(context.global);
+
+    for (var i2 = 0, list2 = this._interfaces, count2 = list2.length; i2 < count2; ++i2) {
+      var symbol = list2[i2];
+
+      if (symbol.isImportedOrExported()) {
+        continue;
+      }
+
+      var implementations = in_IntMap.get(this._interfaceImplementations, symbol.id, null);
+
+      if (implementations === null || implementations.length === 1) {
+        symbol.kind = Skew.SymbolKind.OBJECT_NAMESPACE;
+
+        // Remove this interface from its implementation
+        if (implementations !== null) {
+          var object = implementations[0];
+
+          for (var i = 0, list = object.interfaceTypes, count = list.length; i < count; ++i) {
+            var type = list[i];
+
+            if (type.symbol === symbol) {
+              in_List.removeOne(object.interfaceTypes, type);
+              break;
+            }
+          }
+
+          // Mark these symbols as forwarded, which is used by the globalization
+          // pass and the JavaScript emitter to ignore this interface
+          for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
+            var $function = list1[i1];
+
+            if ($function.implementations !== null) {
+              $function.forwardTo = $function.implementations[0];
+            }
+          }
+
+          symbol.forwardTo = object;
+        }
+      }
+    }
+  };
+
+  Skew.InterfaceRemovalPass.prototype._scanForInterfaces = function(symbol) {
+    for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
+      var object = list[i];
+      this._scanForInterfaces(object);
+    }
+
+    if (symbol.kind === Skew.SymbolKind.OBJECT_INTERFACE) {
+      this._interfaces.push(symbol);
+    }
+
+    if (symbol.interfaceTypes !== null) {
+      for (var i1 = 0, list1 = symbol.interfaceTypes, count1 = list1.length; i1 < count1; ++i1) {
+        var type = list1[i1];
+        var key = type.symbol.id;
+        var implementations = in_IntMap.get(this._interfaceImplementations, key, null);
+
+        if (implementations === null) {
+          implementations = [];
+          this._interfaceImplementations[key] = implementations;
+        }
+
+        implementations.push(symbol);
+      }
+    }
   };
 
   Skew.LambdaLiftingPass = function() {
@@ -17892,6 +18006,17 @@
     this.context = symbol;
   };
 
+  Skew.UsageGraph.prototype._recordOverride = function(base, derived) {
+    var overrides = in_IntMap.get(this._overridesForSymbol, base.id, null);
+
+    if (overrides === null) {
+      overrides = [];
+      this._overridesForSymbol[base.id] = overrides;
+    }
+
+    overrides.push(derived);
+  };
+
   Skew.UsageGraph.prototype._recordUsage = function(symbol) {
     if (!Skew.SymbolKind.isLocal(symbol.kind)) {
       this._currentUsages[symbol.id] = symbol;
@@ -17914,19 +18039,17 @@
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
       var $function = list1[i1];
       this._changeContext($function);
-      this._recordUsage(symbol);
+
+      // Interface functions shouldn't cause interfaces to be emitted for dynamically-typed targets
+      if (this._mode !== Skew.ShakingMode.IGNORE_TYPES || symbol.kind !== Skew.SymbolKind.OBJECT_INTERFACE || $function.kind !== Skew.SymbolKind.FUNCTION_INSTANCE) {
+        this._recordUsage(symbol);
+      }
+
       this._visitFunction($function);
 
       // Remember which functions are overridden for later
       if ($function.overridden !== null) {
-        var overrides = in_IntMap.get(this._overridesForSymbol, $function.overridden.id, null);
-
-        if (overrides === null) {
-          overrides = [];
-          this._overridesForSymbol[$function.overridden.id] = overrides;
-        }
-
-        overrides.push($function);
+        this._recordOverride($function.overridden, $function);
       }
     }
 
@@ -17946,6 +18069,14 @@
 
     this._visitType(symbol.resolvedType.returnType);
     this._visitNode(symbol.block);
+
+    // Remember which functions are overridden for later
+    if (symbol.implementations !== null) {
+      for (var i1 = 0, list1 = symbol.implementations, count1 = list1.length; i1 < count1; ++i1) {
+        var $function = list1[i1];
+        this._recordOverride(symbol, $function);
+      }
+    }
   };
 
   Skew.UsageGraph.prototype._visitVariable = function(symbol) {
@@ -19222,7 +19353,7 @@
   Skew.UNICODE_LIBRARY = '\nnamespace Unicode {\n  enum Encoding {\n    UTF8\n    UTF16\n    UTF32\n  }\n\n  const STRING_ENCODING Encoding =\n    TARGET == .CSHARP || TARGET == .JAVASCRIPT ? .UTF16 :\n    .UTF32\n\n  class StringIterator {\n    var value = ""\n    var index = 0\n    var stop = 0\n\n    def reset(text string, start int) StringIterator {\n      value = text\n      index = start\n      stop = text.count\n      return self\n    }\n\n    def countCodePointsUntil(stop int) int {\n      var count = 0\n      while index < stop && nextCodePoint >= 0 {\n        count++\n      }\n      return count\n    }\n\n    if STRING_ENCODING == .UTF8 {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index]\n        index++\n        if a < 0xC0 { return a }\n        if index >= stop { return -1 }\n        var b = value[index]\n        index++\n        if a < 0xE0 { return ((a & 0x1F) << 6) | (b & 0x3F) }\n        if index >= stop { return -1 }\n        var c = value[index]\n        index++\n        if a < 0xF0 { return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F) }\n        if index >= stop { return -1 }\n        var d = value[index]\n        index++\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)\n      }\n    }\n\n    else if STRING_ENCODING == .UTF16 {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index]\n        index++\n        if a < 0xD800 || a >= 0xDC00 { return a }\n        if index >= stop { return -1 }\n        var b = value[index]\n        index++\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)\n      }\n    }\n\n    else {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var c = value[index]\n        index++\n        return c\n      }\n    }\n  }\n\n  namespace StringIterator {\n    const INSTANCE = StringIterator.new\n  }\n\n  def codeUnitCountForCodePoints(codePoints List<int>, encoding Encoding) int {\n    var count = 0\n\n    switch encoding {\n      case .UTF8 {\n        for codePoint in codePoints {\n          if codePoint < 0x80 { count++ }\n          else if codePoint < 0x800 { count += 2 }\n          else if codePoint < 0x10000 { count += 3 }\n          else { count += 4 }\n        }\n      }\n\n      case .UTF16 {\n        for codePoint in codePoints {\n          if codePoint < 0x10000 { count++ }\n          else { count += 2 }\n        }\n      }\n\n      case .UTF32 {\n        count = codePoints.count\n      }\n    }\n\n    return count\n  }\n}\n\nclass string {\n  if Unicode.STRING_ENCODING == .UTF32 {\n    def codePoints List<int> {\n      return codeUnits\n    }\n  }\n\n  else {\n    def codePoints List<int> {\n      var codePoints List<int> = []\n      var instance = Unicode.StringIterator.INSTANCE\n      instance.reset(self, 0)\n\n      while true {\n        var codePoint = instance.nextCodePoint\n        if codePoint < 0 {\n          return codePoints\n        }\n        codePoints.append(codePoint)\n      }\n    }\n  }\n}\n\nnamespace string {\n  def fromCodePoints(codePoints List<int>) string {\n    var builder = StringBuilder.new\n    for codePoint in codePoints {\n      builder.append(fromCodePoint(codePoint))\n    }\n    return builder.toString\n  }\n\n  if Unicode.STRING_ENCODING == .UTF8 {\n    def fromCodePoint(codePoint int) string {\n      return\n        codePoint < 0x80 ? fromCodeUnit(codePoint) : (\n          codePoint < 0x800 ? fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0) : (\n            codePoint < 0x10000 ? fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0) : (\n              fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0)\n            ) + fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80)\n          ) + fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80)\n        ) + fromCodeUnit((codePoint & 0x3F) | 0x80)\n    }\n  }\n\n  else if Unicode.STRING_ENCODING == .UTF16 {\n    def fromCodePoint(codePoint int) string {\n      return codePoint < 0x10000 ? fromCodeUnit(codePoint) :\n        fromCodeUnit(((codePoint - 0x10000) >> 10) + 0xD800) +\n        fromCodeUnit(((codePoint - 0x10000) & ((1 << 10) - 1)) + 0xDC00)\n    }\n  }\n\n  else {\n    def fromCodePoint(codePoint int) string {\n      return fromCodeUnit(codePoint)\n    }\n  }\n}\n';
   Skew.DEFAULT_MESSAGE_LIMIT = 10;
   Skew.VALID_TARGETS = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'typecheck', new Skew.TypeCheckingCompilerTarget()), 'cpp', new Skew.CPlusPlusTarget()), 'cs', new Skew.CSharpTarget()), 'js', new Skew.JavaScriptTarget()), 'lisp-tree', new Skew.LispTreeTarget());
-  Skew.PassKind._strings = ['EMITTING', 'PARSING', 'LEXING', 'TOKEN_PROCESSING', 'CALL_GRAPH', 'FOLDING', 'GLOBALIZING', 'INLINING', 'LAMBDA_LIFTING', 'MERGING', 'MOTION', 'RENAMING', 'RESOLVING'];
+  Skew.PassKind._strings = ['EMITTING', 'PARSING', 'LEXING', 'TOKEN_PROCESSING', 'CALL_GRAPH', 'FOLDING', 'GLOBALIZING', 'INLINING', 'INTERFACE_REMOVAL', 'LAMBDA_LIFTING', 'MERGING', 'MOTION', 'RENAMING', 'RESOLVING'];
   Skew.CSharpEmitter._isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'abstract', 0), 'as', 0), 'base', 0), 'bool', 0), 'break', 0), 'byte', 0), 'case', 0), 'catch', 0), 'char', 0), 'checked', 0), 'class', 0), 'const', 0), 'continue', 0), 'decimal', 0), 'default', 0), 'delegate', 0), 'do', 0), 'double', 0), 'else', 0), 'enum', 0), 'event', 0), 'explicit', 0), 'extern', 0), 'false', 0), 'finally', 0), 'fixed', 0), 'float', 0), 'for', 0), 'foreach', 0), 'goto', 0), 'if', 0), 'implicit', 0), 'in', 0), 'int', 0), 'interface', 0), 'internal', 0), 'is', 0), 'lock', 0), 'long', 0), 'namespace', 0), 'new', 0), 'null', 0), 'object', 0), 'operator', 0), 'out', 0), 'override', 0), 'params', 0), 'private', 0), 'protected', 0), 'public', 0), 'readonly', 0), 'ref', 0), 'return', 0), 'sbyte', 0), 'sealed', 0), 'short', 0), 'sizeof', 0), 'stackalloc', 0), 'static', 0), 'string', 0), 'struct', 0), 'switch', 0), 'this', 0), 'throw', 0), 'true', 0), 'try', 0), 'typeof', 0), 'uint', 0), 'ulong', 0), 'unchecked', 0), 'unsafe', 0), 'ushort', 0), 'using', 0), 'virtual', 0), 'void', 0), 'volatile', 0), 'while', 0);
   Skew.CPlusPlusEmitter._isKeyword = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'alignas', 0), 'alignof', 0), 'and', 0), 'and_eq', 0), 'asm', 0), 'auto', 0), 'bitand', 0), 'bitor', 0), 'bool', 0), 'break', 0), 'case', 0), 'catch', 0), 'char', 0), 'char16_t', 0), 'char32_t', 0), 'class', 0), 'compl', 0), 'const', 0), 'const_cast', 0), 'constexpr', 0), 'continue', 0), 'decltype', 0), 'default', 0), 'delete', 0), 'do', 0), 'double', 0), 'dynamic_cast', 0), 'else', 0), 'enum', 0), 'explicit', 0), 'export', 0), 'extern', 0), 'false', 0), 'float', 0), 'for', 0), 'friend', 0), 'goto', 0), 'if', 0), 'INFINITY', 0), 'inline', 0), 'int', 0), 'long', 0), 'mutable', 0), 'namespace', 0), 'NAN', 0), 'new', 0), 'noexcept', 0), 'not', 0), 'not_eq', 0), 'NULL', 0), 'nullptr', 0), 'operator', 0), 'or', 0), 'or_eq', 0), 'private', 0), 'protected', 0), 'public', 0), 'register', 0), 'reinterpret_cast', 0), 'return', 0), 'short', 0), 'signed', 0), 'sizeof', 0), 'static', 0), 'static_assert', 0), 'static_cast', 0), 'struct', 0), 'switch', 0), 'template', 0), 'this', 0), 'thread_local', 0), 'throw', 0), 'true', 0), 'try', 0), 'typedef', 0), 'typeid', 0), 'typename', 0), 'union', 0), 'unsigned', 0), 'using', 0), 'virtual', 0), 'void', 0), 'volatile', 0), 'wchar_t', 0), 'while', 0), 'xor', 0), 'xor_eq', 0);
   Skew.JavaScriptEmitter._first = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$';

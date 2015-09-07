@@ -1,0 +1,71 @@
+namespace Skew {
+  enum PassKind {
+    INTERFACE_REMOVAL
+  }
+
+  class InterfaceRemovalPass : Pass {
+    const _interfaceImplementations IntMap<List<ObjectSymbol>> = {}
+    const _interfaces List<ObjectSymbol> = []
+
+    over kind PassKind {
+      return .INTERFACE_REMOVAL
+    }
+
+    over run(context PassContext) {
+      _scanForInterfaces(context.global)
+
+      for symbol in _interfaces {
+        if symbol.isImportedOrExported {
+          continue
+        }
+
+        var implementations = _interfaceImplementations.get(symbol.id, null)
+        if implementations == null || implementations.count == 1 {
+          symbol.kind = .OBJECT_NAMESPACE
+
+          # Remove this interface from its implementation
+          if implementations != null {
+            var object = implementations.first
+            for type in object.interfaceTypes {
+              if type.symbol == symbol {
+                object.interfaceTypes.removeOne(type)
+                break
+              }
+            }
+
+            # Mark these symbols as forwarded, which is used by the globalization
+            # pass and the JavaScript emitter to ignore this interface
+            for function in symbol.functions {
+              if function.implementations != null {
+                function.forwardTo = function.implementations.first
+              }
+            }
+            symbol.forwardTo = object
+          }
+        }
+      }
+    }
+
+    def _scanForInterfaces(symbol ObjectSymbol) {
+      for object in symbol.objects {
+        _scanForInterfaces(object)
+      }
+
+      if symbol.kind == .OBJECT_INTERFACE {
+        _interfaces.append(symbol)
+      }
+
+      if symbol.interfaceTypes != null {
+        for type in symbol.interfaceTypes {
+          var key = type.symbol.id
+          var implementations = _interfaceImplementations.get(key, null)
+          if implementations == null {
+            implementations = []
+            _interfaceImplementations[key] = implementations
+          }
+          implementations.append(symbol)
+        }
+      }
+    }
+  }
+}

@@ -233,6 +233,215 @@ def main {
 })();
 ").js.globalizeAllFunctions
 
+# Interface removal with globalization
+test("
+interface IFoo {
+  def foo
+}
+
+namespace IFoo {
+  const FOO = 0
+}
+
+class Foo :: IFoo {
+  def foo {}
+}
+
+@entry
+def main int {
+  var foo = Foo.new
+  var ifoo = foo as IFoo
+  foo.foo
+  ifoo.foo
+  return IFoo.FOO
+}
+", "
+(function() {
+  function main() {
+    var foo = new Foo();
+    var ifoo = foo;
+    Foo.foo(foo);
+    Foo.foo(ifoo);
+    return Foo.FOO;
+  }
+
+  function Foo() {
+  }
+
+  Foo.foo = function(self) {
+  };
+
+  Foo.FOO = 0;
+
+  process.exit(main());
+})();
+").js.globalizeAllFunctions
+
+# Interface removal should not trigger even with globalization
+test("
+interface IFoo {
+  def foo
+}
+
+namespace IFoo {
+  const FOO = 0
+}
+
+class Foo :: IFoo {
+  def foo {}
+}
+
+class Bar :: IFoo {
+  def foo {}
+}
+
+@entry
+def main int {
+  var foo = Foo.new
+  var bar = Bar.new
+  var ifoo = foo as IFoo
+  foo.foo
+  bar.foo
+  ifoo.foo
+  ifoo = bar
+  ifoo.foo
+  return IFoo.FOO
+}
+", "
+(function() {
+  function main() {
+    var foo = new Foo();
+    var bar = new Bar();
+    var ifoo = foo;
+    foo.foo();
+    bar.foo();
+    ifoo.foo();
+    ifoo = bar;
+    ifoo.foo();
+    return IFoo.FOO;
+  }
+
+  var IFoo = {};
+
+  function Foo() {
+  }
+
+  Foo.prototype.foo = function() {
+  };
+
+  function Bar() {
+  }
+
+  Bar.prototype.foo = function() {
+  };
+
+  IFoo.FOO = 0;
+
+  process.exit(main());
+})();
+").js.globalizeAllFunctions
+
+# Check interface removal with an inlineable function
+test("
+@entry
+def main int {
+  var ifoo IFoo = Foo.new(0)
+  return ifoo.x
+}
+
+class Foo :: IFoo {
+  var _x int
+  def x int { return _x }
+}
+
+interface IFoo {
+  def x int
+}
+", "
+(function() {
+  function main() {
+    var ifoo = new Foo(0);
+    return ifoo.x();
+  }
+
+  function Foo(_x) {
+    this._x = _x;
+  }
+
+  Foo.prototype.x = function() {
+    return this._x;
+  };
+
+  process.exit(main());
+})();
+").js
+
+# Check interface removal with an inlineable function
+test("
+@entry
+def main int {
+  var ifoo IFoo = Foo.new(0)
+  return ifoo.x
+}
+
+class Foo :: IFoo {
+  var _x int
+  def x int { return _x }
+}
+
+interface IFoo {
+  def x int
+}
+", "
+(function() {
+  function main() {
+    var ifoo = new Foo(0);
+    return Foo.x(ifoo);
+  }
+
+  function Foo(_x) {
+    this._x = _x;
+  }
+
+  Foo.x = function(self) {
+    return self._x;
+  };
+
+  process.exit(main());
+})();
+").js.globalizeAllFunctions
+
+# Check interface removal with an inlineable function
+test("
+@entry
+def main int {
+  var ifoo IFoo = Foo.new(0)
+  return ifoo.x
+}
+
+class Foo :: IFoo {
+  var _x int
+  def x int { return _x }
+}
+
+interface IFoo {
+  def x int
+}
+", "
+(function() {
+  function main() {
+    var ifoo = new Foo(0);
+    return ifoo._x;
+  }
+
+  function Foo(_x) {
+    this._x = _x;
+  }
+
+  process.exit(main());
+})();
+").js.globalizeAllFunctions.inlineAllFunctions
+
 # Conflicting rename annotations should be an error
 test("
 class Foo {
