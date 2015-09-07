@@ -525,5 +525,9 @@ namespace Skew {
     def semanticErrorDuplicateRename(range Range, name string, optionA string, optionB string) {
       error(range, "Cannot rename \"" + name + "\" to both \"" + optionA + "\" and \"" + optionB + "\"")
     }
+
+    def semanticErrorMissingSuper(range Range) {
+      error(range, "Constructors for derived types must start with a call to \"super\"")
+    }
   }
 }

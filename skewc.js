@@ -7253,6 +7253,10 @@
     return Skew.Node._nextID;
   };
 
+  Skew.Node.prototype.isSuperCallStatement = function() {
+    return this.kind === Skew.NodeKind.EXPRESSION && (this.expressionValue().kind === Skew.NodeKind.SUPER || this.expressionValue().kind === Skew.NodeKind.CALL && this.expressionValue().callValue().kind === Skew.NodeKind.SUPER);
+  };
+
   Skew.Node.prototype.isEmptySequence = function() {
     return this.kind === Skew.NodeKind.SEQUENCE && !this.hasChildren();
   };
@@ -10779,6 +10783,10 @@
 
   Skew.Log.prototype.semanticErrorDuplicateRename = function(range, name, optionA, optionB) {
     this.error(range, 'Cannot rename "' + name + '" to both "' + optionA + '" and "' + optionB + '"');
+  };
+
+  Skew.Log.prototype.semanticErrorMissingSuper = function(range) {
+    this.error(range, 'Constructors for derived types must start with a call to "super"');
   };
 
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
@@ -15169,7 +15177,11 @@
     var block = symbol.block;
 
     if (block !== null) {
-      var originalFirst = block.firstChild();
+      var firstStatement = block.firstChild();
+
+      if (firstStatement !== null && firstStatement.isSuperCallStatement()) {
+        firstStatement = firstStatement.nextSibling();
+      }
 
       // User-specified constructors have variable initializers automatically inserted
       if (symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR && !symbol.isAutomaticallyGenerated()) {
@@ -15194,7 +15206,7 @@
             }
 
             if (variable.value !== null) {
-              block.insertChildBefore(originalFirst, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable), variable.value)));
+              block.insertChildBefore(firstStatement, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable), variable.value)));
               variable.value = null;
             }
           }
@@ -15209,6 +15221,15 @@
 
         if (returnType !== null && returnType !== Skew.Type.DYNAMIC && block.hasControlFlowAtEnd()) {
           this.log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType);
+        }
+      }
+
+      // Derived class constructors must start with a call to "super"
+      else if (symbol.parent.asObjectSymbol().baseClass !== null) {
+        var first = block.firstChild();
+
+        if (first === null || !first.isSuperCallStatement()) {
+          this.log.semanticErrorMissingSuper(firstStatement === null ? symbol.range : firstStatement.range);
         }
       }
     }

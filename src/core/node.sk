@@ -556,6 +556,10 @@ namespace Skew {
 
   # Node-specific queries
   class Node {
+    def isSuperCallStatement bool {
+      return kind == .EXPRESSION && (expressionValue.kind == .SUPER || expressionValue.kind == .CALL && expressionValue.callValue.kind == .SUPER)
+    }
+
     def isEmptySequence bool {
       return kind == .SEQUENCE && !hasChildren
     }

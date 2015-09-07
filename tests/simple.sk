@@ -1568,8 +1568,8 @@ def main(foo Foo, bar Bar, baz Baz) {
 
 test("
 class Foo { def new {} }
-class Bar : Foo { def new {} }
-class Baz : Foo { def new {} }
+class Bar : Foo { def new { super } }
+class Baz : Foo { def new { super } }
 
 def main {
   var a Foo = Foo.new
@@ -1608,8 +1608,8 @@ def main {
 
 test("
 class Foo<T> { def new {} }
-class Bar : Foo<int> { def new {} }
-class Baz : Foo<int> { def new {} }
+class Bar : Foo<int> { def new { super } }
+class Baz : Foo<int> { def new { super } }
 
 def main {
   var foo = true ? Bar.new : Baz.new
@@ -1626,8 +1626,8 @@ def main {
 
 test("
 class Foo<T> { def new {} }
-class Bar : Foo<int> { def new {} }
-class Baz : Foo<bool> { def new {} }
+class Bar : Foo<int> { def new { super } }
+class Baz : Foo<bool> { def new { super } }
 
 def main {
   var foo = true ? Bar.new : Baz.new
@@ -1652,7 +1652,7 @@ class Bar<T> : Foo<int, T> {
 }
 
 class Baz : Bar<bool> {
-  def new {}
+  def new { super }
 }
 
 def foo string {
@@ -4692,6 +4692,56 @@ class Bar : Foo {
 <stdin>:2:7: note: The overridden declaration is here
   def foo
       ~~~
+")
+
+test("
+class Foo {
+  def new {}
+}
+
+class Bar : Foo {
+  def new {}
+}
+", "
+<stdin>:6:7: error: Constructors for derived types must start with a call to \"super\"
+  def new {}
+      ~~~
+")
+
+test("
+class Foo {
+  def new {}
+}
+
+class Bar : Foo {
+  def new { super }
+}
+", "
+")
+
+test("
+class Foo {
+  def new(x int) {}
+}
+
+class Bar : Foo {
+  def new { super }
+}
+", "
+<stdin>:6:13: error: The function \"new\" must be called
+  def new { super }
+            ~~~~~
+")
+
+test("
+class Foo {
+  def new(x int) {}
+}
+
+class Bar : Foo {
+  def new { super(1) }
+}
+", "
 ")
 
   }
