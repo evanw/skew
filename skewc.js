@@ -10141,10 +10141,6 @@
   };
 
   // Pass-specific flags
-  Skew.Symbol.prototype.isMerged = function() {
-    return (this.flags & Skew.Symbol.IS_MERGED) !== 0;
-  };
-
   Skew.Symbol.prototype.isObsolete = function() {
     return (this.flags & Skew.Symbol.IS_OBSOLETE) !== 0;
   };
@@ -15652,7 +15648,7 @@
         // as long as there is one declaration that provides an implementation.
         // Mark the obsolete function as obsolete instead of removing it so it
         // doesn't potentially mess up iteration in a parent call stack.
-        else if (areReturnTypesDifferent || isFromSameObject && ($function.isMerged() || other.isMerged() || $function.block !== null === (other.block !== null))) {
+        else if (areReturnTypesDifferent || isFromSameObject && $function.block !== null === (other.block !== null)) {
           this.log.semanticErrorDuplicateOverload($function.range, symbol.name, other.range);
 
           if (isFromSameObject) {
@@ -15662,7 +15658,7 @@
 
         // Keep "function"
         else if (isFromSameObject ? $function.block !== null : $function.parent === symbol.parent) {
-          $function.flags |= other.flags & ~Skew.Symbol.IS_IMPORTED | Skew.Symbol.IS_MERGED;
+          $function.flags |= other.flags & ~Skew.Symbol.IS_IMPORTED;
           $function.mergeAnnotationsAndCommentsFrom(other);
 
           if (isFromSameObject) {
@@ -15678,7 +15674,7 @@
 
         // Keep "other"
         else {
-          other.flags |= $function.flags & ~Skew.Symbol.IS_IMPORTED | Skew.Symbol.IS_MERGED;
+          other.flags |= $function.flags & ~Skew.Symbol.IS_IMPORTED;
           other.mergeAnnotationsAndCommentsFrom($function);
 
           if (isFromSameObject) {
@@ -19504,10 +19500,9 @@
   Skew.Symbol.SHOULD_SPREAD = 131072;
 
   // Pass-specific flags
-  Skew.Symbol.IS_MERGED = 1 << 18;
-  Skew.Symbol.IS_OBSOLETE = 1 << 19;
-  Skew.Symbol.IS_PRIMARY_CONSTRUCTOR = 1 << 20;
-  Skew.Symbol.IS_VIRTUAL = 1 << 21;
+  Skew.Symbol.IS_OBSOLETE = 1 << 18;
+  Skew.Symbol.IS_PRIMARY_CONSTRUCTOR = 1 << 19;
+  Skew.Symbol.IS_VIRTUAL = 1 << 20;
   Skew.Symbol._nextID = 0;
   Skew.TokenKind._strings = ['ANNOTATION', 'ARROW', 'AS', 'ASSIGN', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_INDEX', 'ASSIGN_MINUS', 'ASSIGN_MULTIPLY', 'ASSIGN_PLUS', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'BREAK', 'CASE', 'CATCH', 'CHARACTER', 'CLASS', 'COLON', 'COMMA', 'COMMENT', 'COMPARE', 'CONST', 'CONTINUE', 'DECREMENT', 'DEF', 'DEFAULT', 'DIVIDE', 'DOT', 'DOT_DOT', 'DOUBLE', 'DOUBLE_COLON', 'DYNAMIC', 'ELSE', 'END_OF_FILE', 'ENUM', 'EQUAL', 'ERROR', 'FALSE', 'FINALLY', 'FOR', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'IDENTIFIER', 'IF', 'IN', 'INCREMENT', 'INDEX', 'INT', 'INTERFACE', 'INT_BINARY', 'INT_HEX', 'INT_OCTAL', 'IS', 'LEFT_BRACE', 'LEFT_BRACKET', 'LEFT_PARENTHESIS', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'LIST', 'LIST_NEW', 'LOGICAL_AND', 'LOGICAL_OR', 'MINUS', 'MULTIPLY', 'NAMESPACE', 'NEWLINE', 'NOT', 'NOT_EQUAL', 'NULL', 'OVER', 'PLUS', 'POWER', 'QUESTION_MARK', 'REMAINDER', 'RETURN', 'RIGHT_BRACE', 'RIGHT_BRACKET', 'RIGHT_PARENTHESIS', 'SEMICOLON', 'SET', 'SET_NEW', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'STRING', 'SUPER', 'SWITCH', 'THROW', 'TILDE', 'TRUE', 'TRY', 'VAR', 'WHILE', 'WHITESPACE', 'YY_INVALID_ACTION', 'START_PARAMETER_LIST', 'END_PARAMETER_LIST'];
   Skew.Renaming.unaryPrefixes = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), '!', 'not'), '+', 'positive'), '++', 'increment'), '-', 'negative'), '--', 'decrement'), '~', 'complement');
