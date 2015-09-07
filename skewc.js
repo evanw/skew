@@ -4731,6 +4731,7 @@
 
       if (from !== to) {
         this._emit(',' + this._space);
+        this._maybeEmitMinifedNewline();
       }
     }
   };
@@ -4821,6 +4822,7 @@
           for (var child = value.nextSibling(); child !== null; child = child.nextSibling()) {
             if (call || child.previousSibling() !== value) {
               this._emit(',' + this._space);
+              this._maybeEmitMinifedNewline();
             }
 
             this._emitExpression(child, Skew.Precedence.COMMA);
@@ -4854,6 +4856,7 @@
         for (var child2 = node.firstChild(); child2 !== null; child2 = child2.nextSibling()) {
           if (child2.previousSibling() !== null) {
             this._emit(',' + (isIndented ? '' : this._space));
+            this._maybeEmitMinifedNewline();
           }
 
           if (isIndented) {

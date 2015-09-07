@@ -1137,6 +1137,7 @@ namespace Skew {
         from = from.nextSibling
         if from != to {
           _emit("," + _space)
+          _maybeEmitMinifedNewline
         }
       }
     }
@@ -1214,6 +1215,7 @@ namespace Skew {
             for child = value.nextSibling; child != null; child = child.nextSibling {
               if call || child.previousSibling != value {
                 _emit("," + _space)
+                _maybeEmitMinifedNewline
               }
               _emitExpression(child, .COMMA)
             }
@@ -1243,6 +1245,7 @@ namespace Skew {
           for child = node.firstChild; child != null; child = child.nextSibling {
             if child.previousSibling != null {
               _emit("," + (isIndented ? "" : _space))
+              _maybeEmitMinifedNewline
             }
             if isIndented {
               _emit("\n")
