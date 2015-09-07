@@ -3,7 +3,6 @@ namespace Skew {
     over name string { return "C++" }
     over extension string { return "cpp" }
     over runPostResolvePasses bool { return true }
-    over moveEverythingOffEnums bool { return true }
     over requiresIntegerSwitchStatements bool { return true }
     over supportsListForeach bool { return true }
     over needsLambdaLifting bool { return true }

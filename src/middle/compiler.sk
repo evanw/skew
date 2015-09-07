@@ -3,7 +3,6 @@ namespace Skew {
     def name string { return "" }
     def extension string { return "" }
     def runPostResolvePasses bool { return false }
-    def moveEverythingOffEnums bool { return false }
     def allowAbstractConstruction bool { return false }
     def requiresIntegerSwitchStatements bool { return false }
     def supportsListForeach bool { return false }
