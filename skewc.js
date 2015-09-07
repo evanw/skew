@@ -17250,7 +17250,7 @@
     }
 
     // Warn about unnecessary type checks
-    else if (value.resolvedType !== Skew.Type.DYNAMIC && this.cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
+    else if (value.resolvedType !== Skew.Type.DYNAMIC && this.cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) && (type.resolvedType !== Skew.Type.DYNAMIC || type.kind === Skew.NodeKind.TYPE)) {
       this.log.semanticWarningExtraTypeCheck(Skew.Range.span(node.internalRangeOrRange(), type.range), value.resolvedType, type.resolvedType);
     }
   };

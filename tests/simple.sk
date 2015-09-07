@@ -4440,6 +4440,7 @@ interface Baz {}
 @export
 def main {
   dynamic.foo(Foo.new is dynamic)
+  dynamic.foo(Foo.new is dynamic.Test)
   dynamic.foo(Foo.new is Foo)
   dynamic.foo(Foo.new is Bar)
   dynamic.foo(Foo.new is Baz)
@@ -4451,19 +4452,19 @@ def main {
 <stdin>:7:23: warning: Unnecessary type check, type \"Foo\" is always type \"dynamic\"
   dynamic.foo(Foo.new is dynamic)
                       ~~~~~~~~~~
-<stdin>:8:23: warning: Unnecessary type check, type \"Foo\" is always type \"Foo\"
+<stdin>:9:23: warning: Unnecessary type check, type \"Foo\" is always type \"Foo\"
   dynamic.foo(Foo.new is Foo)
                       ~~~~~~
-<stdin>:10:26: error: Cannot check against interface type \"Baz\"
+<stdin>:11:26: error: Cannot check against interface type \"Baz\"
   dynamic.foo(Foo.new is Baz)
                          ~~~
-<stdin>:11:23: warning: Unnecessary type check, type \"Bar\" is always type \"Foo\"
+<stdin>:12:23: warning: Unnecessary type check, type \"Bar\" is always type \"Foo\"
   dynamic.foo(Bar.new is Foo)
                       ~~~~~~
-<stdin>:12:23: warning: Unnecessary type check, type \"Bar\" is always type \"Bar\"
+<stdin>:13:23: warning: Unnecessary type check, type \"Bar\" is always type \"Bar\"
   dynamic.foo(Bar.new is Bar)
                       ~~~~~~
-<stdin>:13:26: error: Cannot check against interface type \"Baz\"
+<stdin>:14:26: error: Cannot check against interface type \"Baz\"
   dynamic.foo(Bar.new is Baz)
                          ~~~
 ")
