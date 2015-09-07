@@ -329,20 +329,24 @@ namespace Skew {
 
       # Ensure all overridden symbols have the same generated name. This is
       # manditory for correctness, otherwise virtual functions break.
+      var namingGroupMap IntMap<int> = {}
       for symbol in _allSymbols {
-        if symbol.kind.isFunction && symbol.asFunctionSymbol.overridden != null {
-          assert(symbol.id in _namingGroupIndexForSymbol)
-          assert(symbol.asFunctionSymbol.overridden.id in _namingGroupIndexForSymbol)
-          namingGroupsUnionFind.union(_namingGroupIndexForSymbol[symbol.id], _namingGroupIndexForSymbol[symbol.asFunctionSymbol.overridden.id])
+        if symbol.kind.isFunction {
+          var function = symbol.asFunctionSymbol
+          assert(function.id in _namingGroupIndexForSymbol)
+          var id = namingGroupMap.get(function.namingGroup, -1)
+          if id == -1 {
+            namingGroupMap[function.namingGroup] = _namingGroupIndexForSymbol[function.id]
+          } else {
+            namingGroupsUnionFind.union(id, _namingGroupIndexForSymbol[function.id])
+          }
         }
       }
 
       # Collect all reserved names together into one big set for querying
       var reservedNames StringMap<int> = _isKeyword.clone
       for symbol in _allSymbols {
-        if symbol.isRenamed {
-          reservedNames[symbol.nameWithRenaming] = 0
-        } else if !_shouldRenameSymbol(symbol) {
+        if !_shouldRenameSymbol(symbol) {
           reservedNames[symbol.name] = 0
         }
       }
@@ -2466,7 +2470,7 @@ namespace Skew {
 
     def _shouldRenameSymbol(symbol Symbol) bool {
       # Don't rename annotations since "@rename" is used for renaming and is identified by name
-      return !symbol.isImportedOrExported && symbol.kind != .FUNCTION_ANNOTATION && symbol.kind != .OBJECT_GLOBAL && symbol.kind != .FUNCTION_LOCAL
+      return !symbol.isImportedOrExported && !symbol.isRenamed && symbol.kind != .FUNCTION_ANNOTATION && symbol.kind != .OBJECT_GLOBAL && symbol.kind != .FUNCTION_LOCAL
     }
 
     def _mangleName(symbol Symbol) string {
@@ -2474,10 +2478,10 @@ namespace Skew {
         symbol = symbol.parent
       }
       if !symbol.isImportedOrExported && (symbol.name in _isKeyword ||
-        symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS && !symbol.kind.isOnInstances && symbol.name in _isFunctionProperty) {
+          symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS && !symbol.kind.isOnInstances && symbol.name in _isFunctionProperty) {
         return "$" + symbol.name
       }
-      return symbol.nameWithRenaming
+      return symbol.name
     }
 
     def _computeNamespacePrefix(symbol ObjectSymbol) string {

@@ -997,10 +997,9 @@ namespace Skew {
         symbol = symbol.parent
       }
       if !symbol.isImportedOrExported && symbol.name in _isKeyword {
-        symbol.name = symbol.scope.generateName(symbol.name)
-        return symbol.name
+        return "_" + symbol.name
       }
-      return symbol.nameWithRenaming
+      return symbol.name
     }
 
     const _isKeyword = {

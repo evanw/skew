@@ -928,7 +928,7 @@ namespace Skew {
       if !symbol.isImportedOrExported && symbol.name in _isKeyword {
         return "_" + symbol.name
       }
-      return symbol.nameWithRenaming
+      return symbol.name
     }
 
     var _isKeyword = {

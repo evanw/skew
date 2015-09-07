@@ -455,6 +455,11 @@ namespace Skew.Resolving {
               log.semanticErrorBadInterfaceImplementation(symbol.range, symbol.resolvedType, interfaceType, function.name, function.range)
             } else if function.resolvedType.returnType != match.resolvedType.returnType {
               log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function.range)
+            } else {
+              if function.implementations == null {
+                function.implementations = []
+              }
+              function.implementations.append(match)
             }
           }
         }
@@ -971,9 +976,10 @@ namespace Skew.Resolving {
       # The function is considered abstract if the body is missing
       var block = symbol.block
       if block != null {
+        var originalFirst = block.firstChild
+
         # User-specified constructors have variable initializers automatically inserted
         if symbol.kind == .FUNCTION_CONSTRUCTOR && !symbol.isAutomaticallyGenerated {
-          var first = block.firstChild
           for variable in symbol.parent.asObjectSymbol.variables {
             if variable.kind == .VARIABLE_INSTANCE {
               initializeSymbol(variable)
@@ -993,7 +999,7 @@ namespace Skew.Resolving {
               }
 
               if variable.value != null {
-                block.insertChildBefore(first, Node.createExpression(Node.createBinary(.ASSIGN,
+                block.insertChildBefore(originalFirst, Node.createExpression(Node.createBinary(.ASSIGN,
                   Node.createMemberReference(Node.createSymbolReference(symbol.this), variable),
                   variable.value)))
                 variable.value = null

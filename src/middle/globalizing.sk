@@ -49,14 +49,14 @@ namespace Skew {
   }
 
   class VirtualLookup {
-    const _map IntMap<bool> = {}
+    const _map IntMap<int> = {}
 
     def new(global ObjectSymbol) {
       _visitObject(global)
     }
 
     def isVirtual(symbol FunctionSymbol) bool {
-      return _map.get(symbol.id, false)
+      return symbol.id in _map
     }
 
     def _visitObject(symbol ObjectSymbol) {
@@ -65,14 +65,19 @@ namespace Skew {
       }
 
       for function in symbol.functions {
-        _visitFunction(function)
-      }
-    }
+        if symbol.kind == .OBJECT_INTERFACE && function.kind == .FUNCTION_INSTANCE || function.overridden != null || function.implementations != null {
+          _map[function.id] = 0
+        }
 
-    def _visitFunction(symbol FunctionSymbol) {
-      if symbol.overridden != null {
-        _map[symbol.overridden.id] = true
-        _map[symbol.id] = true
+        if function.overridden != null {
+          _map[function.overridden.id] = 0
+        }
+
+        if function.implementations != null {
+          for implementation in function.implementations {
+            _map[implementation.id] = 0
+          }
+        }
       }
     }
   }

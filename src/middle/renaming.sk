@@ -9,58 +9,139 @@ namespace Skew {
     }
 
     over run(context PassContext) {
-      Renaming.renameObject(context.global)
-      Renaming.useOverriddenNames(context.global) # Use a second pass to avoid ordering issues
+      Renaming.renameGlobal(context.log, context.global)
     }
   }
 }
 
 namespace Skew.Renaming {
-  def renameObject(symbol ObjectSymbol) {
-    for object in symbol.objects {
-      renameObject(object)
+  def renameGlobal(log Log, global ObjectSymbol) {
+    # Collect all functions
+    var functions List<FunctionSymbol> = []
+    collectFunctionAndRenameObjectsAndVariables(global, functions)
+
+    # Compute naming groups
+    var labels = UnionFind.new.allocate(functions.count)
+    var groups List<List<FunctionSymbol>> = []
+    for i in 0..functions.count {
+      functions[i].namingGroup = i
+      groups.append(null)
+    }
+    for function in functions {
+      if function.overridden != null {
+        labels.union(function.namingGroup, function.overridden.namingGroup)
+      }
+      if function.implementations != null {
+        for implementation in function.implementations {
+          labels.union(function.namingGroup, implementation.namingGroup)
+        }
+      }
+    }
+    for function in functions {
+      var label = labels.find(function.namingGroup)
+      var group = groups[label]
+      function.namingGroup = label
+      if group == null {
+        group = []
+        groups[label] = group
+      } else {
+        assert(function.name == group.first.name)
+      }
+      group.append(function)
     }
 
-    for function in symbol.functions {
-      if !function.isImportedOrExported && function.overridden == null {
-        var scope = function.scope.parent
-        var count = function.arguments.count
+    # Rename stuff
+    for group in groups {
+      if group == null {
+        continue
+      }
 
-        if (count == 0 || count == 1 && function.kind == .FUNCTION_GLOBAL) && function.name in unaryPrefixes {
-          function.name = scope.generateName(unaryPrefixes[function.name])
+      var isImportedOrExported = false
+      var shouldRename = false
+      var rename string = null
+
+      for function in group {
+        if function.isImportedOrExported {
+          isImportedOrExported = true
         }
 
-        else if function.name in prefixes {
-          function.name = scope.generateName(prefixes[function.name])
+        # Make sure there isn't more than one renamed symbol
+        if function.rename != null {
+          if rename != null && rename != function.rename {
+            log.semanticErrorDuplicateRename(function.range, function.name, rename, function.rename)
+          }
+          rename = function.rename
         }
 
-        else if function.name != "" && function.name[0] == '@' {
-          function.name = scope.generateName(function.name.slice(1))
+        # Rename functions with unusual names and make sure overloaded functions have unique names
+        if !shouldRename && (isInvalidIdentifier(function.name) || function.overloaded != null && function.overloaded.symbols.count > 1) {
+          shouldRename = true
         }
+      }
 
-        else if isInvalidIdentifier(function.name) {
-          function.name = scope.generateName(generateValidIdentifier(function.name))
+      # Bake in the rename annotation now
+      if rename != null {
+        for function in group {
+          function.flags |= Symbol.IS_RENAMED
+          function.name = rename
+          function.rename = null
         }
+        continue
+      }
 
-        else if function.overloaded != null && function.overloaded.symbols.count > 1 {
-          function.name = scope.generateName(function.name)
+      # One function with a pinned name causes the whole group to avoid renaming
+      if !shouldRename || isImportedOrExported {
+        continue
+      }
+
+      var first = group.first
+      var arguments = first.arguments.count
+      var count = 0
+      var start = first.name
+
+      if (arguments == 0 || arguments == 1 && first.kind == .FUNCTION_GLOBAL) && start in unaryPrefixes {
+        start = unaryPrefixes[start]
+      } else if start in prefixes {
+        start = prefixes[start]
+      } else {
+        if start.startsWith("@") {
+          start = start.slice(1)
         }
+        if isInvalidIdentifier(start) {
+          start = generateValidIdentifier(start)
+        }
+      }
+
+      # Generate a new name
+      var name = start
+      while group.any(function => function.scope.parent.isNameUsed(name)) {
+        count++
+        name = start + count.toString
+      }
+      for function in group {
+        function.scope.parent.reserveName(name, null)
+        function.name = name
       }
     }
   }
 
-  def useOverriddenNames(symbol ObjectSymbol) {
+  def collectFunctionAndRenameObjectsAndVariables(symbol ObjectSymbol, functions List<FunctionSymbol>) {
     for object in symbol.objects {
-      useOverriddenNames(object)
+      if object.rename != null {
+        object.name = object.rename
+        object.rename = null
+      }
+      collectFunctionAndRenameObjectsAndVariables(object, functions)
     }
 
     for function in symbol.functions {
-      if function.overridden != null {
-        var overridden = function.overridden
-        while overridden.overridden != null {
-          overridden = overridden.overridden
-        }
-        function.name = overridden.name
+      functions.append(function)
+    }
+
+    for variable in symbol.variables {
+      if variable.rename != null {
+        variable.name = variable.rename
+        variable.rename = null
       }
     }
   }

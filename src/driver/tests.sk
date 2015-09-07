@@ -112,8 +112,9 @@ namespace Skew.Tests {
   @entry
   def main int {
     # End-to-end tests
-    testMangle
-    testMinify
+    testJavaScript
+    testJavaScriptMangle
+    testJavaScriptMinify
     testSimple
 
     # Unit tests

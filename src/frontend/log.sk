@@ -521,5 +521,9 @@ namespace Skew {
     def semanticErrorMissingWrappedType(range Range, name string) {
       error(range, "Missing base type for wrapped type \"" + name + "\"")
     }
+
+    def semanticErrorDuplicateRename(range Range, name string, optionA string, optionB string) {
+      error(range, "Cannot rename \"" + name + "\" to both \"" + optionA + "\" and \"" + optionB + "\"")
+    }
   }
 }

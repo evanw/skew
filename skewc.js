@@ -2242,11 +2242,10 @@
     }
 
     if (!symbol.isImportedOrExported() && symbol.name in Skew.CSharpEmitter._isKeyword) {
-      symbol.name = symbol.scope.generateName(symbol.name);
-      return symbol.name;
+      return '_' + symbol.name;
     }
 
-    return symbol.nameWithRenaming();
+    return symbol.name;
   };
 
   Skew.CPlusPlusEmitter = function(_options, _cache) {
@@ -3370,7 +3369,7 @@
       return '_' + symbol.name;
     }
 
-    return symbol.nameWithRenaming();
+    return symbol.name;
   };
 
   Skew.CPlusPlusEmitter.CppEmitType = {
@@ -3741,13 +3740,23 @@
 
     // Ensure all overridden symbols have the same generated name. This is
     // manditory for correctness, otherwise virtual functions break.
+    var namingGroupMap = Object.create(null);
+
     for (var i = 0, list = this._allSymbols, count1 = list.length; i < count1; ++i) {
       var symbol = list[i];
 
-      if (Skew.SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().overridden !== null) {
-        assert(symbol.id in this._namingGroupIndexForSymbol);
-        assert(symbol.asFunctionSymbol().overridden.id in this._namingGroupIndexForSymbol);
-        namingGroupsUnionFind.union(this._namingGroupIndexForSymbol[symbol.id], this._namingGroupIndexForSymbol[symbol.asFunctionSymbol().overridden.id]);
+      if (Skew.SymbolKind.isFunction(symbol.kind)) {
+        var $function = symbol.asFunctionSymbol();
+        assert($function.id in this._namingGroupIndexForSymbol);
+        var id = in_IntMap.get(namingGroupMap, $function.namingGroup, -1);
+
+        if (id === -1) {
+          namingGroupMap[$function.namingGroup] = this._namingGroupIndexForSymbol[$function.id];
+        }
+
+        else {
+          namingGroupsUnionFind.union(id, this._namingGroupIndexForSymbol[$function.id]);
+        }
       }
     }
 
@@ -3757,11 +3766,7 @@
     for (var i1 = 0, list1 = this._allSymbols, count2 = list1.length; i1 < count2; ++i1) {
       var symbol1 = list1[i1];
 
-      if (symbol1.isRenamed()) {
-        reservedNames[symbol1.nameWithRenaming()] = 0;
-      }
-
-      else if (!Skew.JavaScriptEmitter._shouldRenameSymbol(symbol1)) {
+      if (!Skew.JavaScriptEmitter._shouldRenameSymbol(symbol1)) {
         reservedNames[symbol1.name] = 0;
       }
     }
@@ -6304,7 +6309,7 @@
 
   Skew.JavaScriptEmitter._shouldRenameSymbol = function(symbol) {
     // Don't rename annotations since "@rename" is used for renaming and is identified by name
-    return !symbol.isImportedOrExported() && symbol.kind !== Skew.SymbolKind.FUNCTION_ANNOTATION && symbol.kind !== Skew.SymbolKind.OBJECT_GLOBAL && symbol.kind !== Skew.SymbolKind.FUNCTION_LOCAL;
+    return !symbol.isImportedOrExported() && !symbol.isRenamed() && symbol.kind !== Skew.SymbolKind.FUNCTION_ANNOTATION && symbol.kind !== Skew.SymbolKind.OBJECT_GLOBAL && symbol.kind !== Skew.SymbolKind.FUNCTION_LOCAL;
   };
 
   Skew.JavaScriptEmitter._mangleName = function(symbol) {
@@ -6316,7 +6321,7 @@
       return '$' + symbol.name;
     }
 
-    return symbol.nameWithRenaming();
+    return symbol.name;
   };
 
   Skew.JavaScriptEmitter._computeNamespacePrefix = function(symbol) {
@@ -10068,10 +10073,6 @@
     }
   };
 
-  Skew.Symbol.prototype.nameWithRenaming = function() {
-    return this.rename !== null ? this.rename : this.name;
-  };
-
   Skew.Symbol._createID = function() {
     ++Skew.Symbol._nextID;
     return Skew.Symbol._nextID;
@@ -10126,12 +10127,14 @@
     Skew.Symbol.call(this, kind, name);
     this.overridden = null;
     this.overloaded = null;
+    this.implementations = null;
     this.parameters = null;
     this.$arguments = [];
     this.$this = null;
     this.argumentOnlyType = null;
     this.returnType = null;
     this.block = null;
+    this.namingGroup = -1;
   };
 
   __extends(Skew.FunctionSymbol, Skew.Symbol);
@@ -10772,6 +10775,10 @@
 
   Skew.Log.prototype.semanticErrorMissingWrappedType = function(range, name) {
     this.error(range, 'Missing base type for wrapped type "' + name + '"');
+  };
+
+  Skew.Log.prototype.semanticErrorDuplicateRename = function(range, name, optionA, optionB) {
+    this.error(range, 'Cannot rename "' + name + '" to both "' + optionA + '" and "' + optionB + '"');
   };
 
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
@@ -12844,7 +12851,7 @@
   };
 
   Skew.VirtualLookup.prototype.isVirtual = function(symbol) {
-    return in_IntMap.get(this._map, symbol.id, false);
+    return symbol.id in this._map;
   };
 
   Skew.VirtualLookup.prototype._visitObject = function(symbol) {
@@ -12853,16 +12860,23 @@
       this._visitObject(object);
     }
 
-    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
-      var $function = list1[i1];
-      this._visitFunction($function);
-    }
-  };
+    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; ++i2) {
+      var $function = list2[i2];
 
-  Skew.VirtualLookup.prototype._visitFunction = function(symbol) {
-    if (symbol.overridden !== null) {
-      this._map[symbol.overridden.id] = true;
-      this._map[symbol.id] = true;
+      if (symbol.kind === Skew.SymbolKind.OBJECT_INTERFACE && $function.kind === Skew.SymbolKind.FUNCTION_INSTANCE || $function.overridden !== null || $function.implementations !== null) {
+        this._map[$function.id] = 0;
+      }
+
+      if ($function.overridden !== null) {
+        this._map[$function.overridden.id] = 0;
+      }
+
+      if ($function.implementations !== null) {
+        for (var i1 = 0, list1 = $function.implementations, count1 = list1.length; i1 < count1; ++i1) {
+          var implementation = list1[i1];
+          this._map[implementation.id] = 0;
+        }
+      }
     }
   };
 
@@ -13839,67 +13853,173 @@
   };
 
   Skew.RenamingPass.prototype.run = function(context) {
-    Skew.Renaming.renameObject(context.global);
-
-    // Use a second pass to avoid ordering issues
-    Skew.Renaming.useOverriddenNames(context.global);
+    Skew.Renaming.renameGlobal(context.log, context.global);
   };
 
   Skew.Renaming = {};
 
-  Skew.Renaming.renameObject = function(symbol) {
-    for (var i = 0, list = symbol.objects, count1 = list.length; i < count1; ++i) {
-      var object = list[i];
-      Skew.Renaming.renameObject(object);
+  Skew.Renaming.renameGlobal = function(log, global) {
+    // Collect all functions
+    var functions = [];
+    Skew.Renaming.collectFunctionAndRenameObjectsAndVariables(global, functions);
+
+    // Compute naming groups
+    var labels = new Skew.UnionFind().allocate2(functions.length);
+    var groups = [];
+
+    for (var i = 0, count1 = functions.length; i < count1; ++i) {
+      functions[i].namingGroup = i;
+      groups.push(null);
     }
 
-    for (var i1 = 0, list1 = symbol.functions, count2 = list1.length; i1 < count2; ++i1) {
-      var $function = list1[i1];
+    for (var i2 = 0, list1 = functions, count3 = list1.length; i2 < count3; ++i2) {
+      var $function = list1[i2];
 
-      if (!$function.isImportedOrExported() && $function.overridden === null) {
-        var scope = $function.scope.parent;
-        var count = $function.$arguments.length;
+      if ($function.overridden !== null) {
+        labels.union($function.namingGroup, $function.overridden.namingGroup);
+      }
 
-        if ((count === 0 || count === 1 && $function.kind === Skew.SymbolKind.FUNCTION_GLOBAL) && $function.name in Skew.Renaming.unaryPrefixes) {
-          $function.name = scope.generateName(Skew.Renaming.unaryPrefixes[$function.name]);
+      if ($function.implementations !== null) {
+        for (var i1 = 0, list = $function.implementations, count2 = list.length; i1 < count2; ++i1) {
+          var implementation = list[i1];
+          labels.union($function.namingGroup, implementation.namingGroup);
+        }
+      }
+    }
+
+    for (var i3 = 0, list2 = functions, count4 = list2.length; i3 < count4; ++i3) {
+      var function1 = list2[i3];
+      var label = labels.find(function1.namingGroup);
+      var group = groups[label];
+      function1.namingGroup = label;
+
+      if (group === null) {
+        group = [];
+        groups[label] = group;
+      }
+
+      else {
+        assert(function1.name === group[0].name);
+      }
+
+      group.push(function1);
+    }
+
+    // Rename stuff
+    for (var i7 = 0, list6 = groups, count8 = list6.length; i7 < count8; ++i7) {
+      var group1 = list6[i7];
+
+      if (group1 === null) {
+        continue;
+      }
+
+      var isImportedOrExported = false;
+      var shouldRename = false;
+      var rename = null;
+
+      for (var i4 = 0, list3 = group1, count5 = list3.length; i4 < count5; ++i4) {
+        var function2 = list3[i4];
+
+        if (function2.isImportedOrExported()) {
+          isImportedOrExported = true;
         }
 
-        else if ($function.name in Skew.Renaming.prefixes) {
-          $function.name = scope.generateName(Skew.Renaming.prefixes[$function.name]);
+        // Make sure there isn't more than one renamed symbol
+        if (function2.rename !== null) {
+          if (rename !== null && rename !== function2.rename) {
+            log.semanticErrorDuplicateRename(function2.range, function2.name, rename, function2.rename);
+          }
+
+          rename = function2.rename;
         }
 
-        else if ($function.name !== '' && $function.name.charCodeAt(0) === 64) {
-          $function.name = scope.generateName($function.name.slice(1));
+        // Rename functions with unusual names and make sure overloaded functions have unique names
+        if (!shouldRename && (Skew.Renaming.isInvalidIdentifier(function2.name) || function2.overloaded !== null && function2.overloaded.symbols.length > 1)) {
+          shouldRename = true;
+        }
+      }
+
+      // Bake in the rename annotation now
+      if (rename !== null) {
+        for (var i5 = 0, list4 = group1, count6 = list4.length; i5 < count6; ++i5) {
+          var function3 = list4[i5];
+          function3.flags |= Skew.Symbol.IS_RENAMED;
+          function3.name = rename;
+          function3.rename = null;
         }
 
-        else if (Skew.Renaming.isInvalidIdentifier($function.name)) {
-          $function.name = scope.generateName(Skew.Renaming.generateValidIdentifier($function.name));
+        continue;
+      }
+
+      // One function with a pinned name causes the whole group to avoid renaming
+      if (!shouldRename || isImportedOrExported) {
+        continue;
+      }
+
+      var first = group1[0];
+      var $arguments = first.$arguments.length;
+      var count = 0;
+      var start = first.name;
+
+      if (($arguments === 0 || $arguments === 1 && first.kind === Skew.SymbolKind.FUNCTION_GLOBAL) && start in Skew.Renaming.unaryPrefixes) {
+        start = Skew.Renaming.unaryPrefixes[start];
+      }
+
+      else if (start in Skew.Renaming.prefixes) {
+        start = Skew.Renaming.prefixes[start];
+      }
+
+      else {
+        if (in_string.startsWith(start, '@')) {
+          start = start.slice(1);
         }
 
-        else if ($function.overloaded !== null && $function.overloaded.symbols.length > 1) {
-          $function.name = scope.generateName($function.name);
+        if (Skew.Renaming.isInvalidIdentifier(start)) {
+          start = Skew.Renaming.generateValidIdentifier(start);
         }
+      }
+
+      // Generate a new name
+      var name = start;
+
+      while (group1.some(function($function) {
+        return $function.scope.parent.isNameUsed(name);
+      })) {
+        ++count;
+        name = start + count.toString();
+      }
+
+      for (var i6 = 0, list5 = group1, count7 = list5.length; i6 < count7; ++i6) {
+        var function4 = list5[i6];
+        function4.scope.parent.reserveName(name, null);
+        function4.name = name;
       }
     }
   };
 
-  Skew.Renaming.useOverriddenNames = function(symbol) {
+  Skew.Renaming.collectFunctionAndRenameObjectsAndVariables = function(symbol, functions) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
-      Skew.Renaming.useOverriddenNames(object);
+
+      if (object.rename !== null) {
+        object.name = object.rename;
+        object.rename = null;
+      }
+
+      Skew.Renaming.collectFunctionAndRenameObjectsAndVariables(object, functions);
     }
 
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
       var $function = list1[i1];
+      functions.push($function);
+    }
 
-      if ($function.overridden !== null) {
-        var overridden = $function.overridden;
+    for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
+      var variable = list2[i2];
 
-        while (overridden.overridden !== null) {
-          overridden = overridden.overridden;
-        }
-
-        $function.name = overridden.name;
+      if (variable.rename !== null) {
+        variable.name = variable.rename;
+        variable.rename = null;
       }
     }
   };
@@ -14478,6 +14598,14 @@
           else if (function1.resolvedType.returnType !== match.resolvedType.returnType) {
             this.log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function1.range);
           }
+
+          else {
+            if (function1.implementations === null) {
+              function1.implementations = [];
+            }
+
+            function1.implementations.push(match);
+          }
         }
       }
     }
@@ -15041,10 +15169,10 @@
     var block = symbol.block;
 
     if (block !== null) {
+      var originalFirst = block.firstChild();
+
       // User-specified constructors have variable initializers automatically inserted
       if (symbol.kind === Skew.SymbolKind.FUNCTION_CONSTRUCTOR && !symbol.isAutomaticallyGenerated()) {
-        var first = block.firstChild();
-
         for (var i1 = 0, list1 = symbol.parent.asObjectSymbol().variables, count1 = list1.length; i1 < count1; ++i1) {
           var variable = list1[i1];
 
@@ -15066,7 +15194,7 @@
             }
 
             if (variable.value !== null) {
-              block.insertChildBefore(first, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable), variable.value)));
+              block.insertChildBefore(originalFirst, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable), variable.value)));
               variable.value = null;
             }
           }
@@ -17367,16 +17495,12 @@
     var count = 0;
     var name = prefix;
 
-    while (true) {
-      if (this.find(name) === null && (this.used === null || !(name in this.used))) {
-        this.reserveName(name, null);
-        break;
-      }
-
+    while (this.isNameUsed(name)) {
       ++count;
       name = prefix + count.toString();
     }
 
+    this.reserveName(name, null);
     return name;
   };
 
@@ -17388,6 +17512,10 @@
     if (!(name in this.used)) {
       this.used[name] = symbol;
     }
+  };
+
+  Skew.Scope.prototype.isNameUsed = function(name) {
+    return this.find(name) !== null || this.used !== null && name in this.used;
   };
 
   Skew.ObjectScope = function(parent, symbol) {
@@ -17402,19 +17530,8 @@
   };
 
   Skew.ObjectScope.prototype.find = function(name) {
-    var check = this.symbol;
-
-    while (check !== null) {
-      var result = in_StringMap.get(check.members, name, null);
-
-      if (result !== null) {
-        return result;
-      }
-
-      check = check.baseClass;
-    }
-
-    return this.parent !== null ? this.parent.find(name) : null;
+    var result = in_StringMap.get(this.symbol.members, name, null);
+    return result !== null ? result : this.parent !== null ? this.parent.find(name) : null;
   };
 
   Skew.FunctionScope = function(parent, symbol) {

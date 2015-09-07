@@ -222,10 +222,6 @@ namespace Skew {
         comments.append(symbol.comments)
       }
     }
-
-    def nameWithRenaming string {
-      return rename != null ? rename : name
-    }
   }
 
   namespace Symbol {
@@ -254,7 +250,7 @@ namespace Skew {
     var baseClass ObjectSymbol = null
     var interfaceTypes List<Type> = null
     var wrappedType Type = null
-    var members StringMap<Symbol> = {} # Is expanded to include members from the base class by the resolving step
+    var members StringMap<Symbol> = {} # Automatically expanded to include members from the base class by the resolving step
     var objects List<ObjectSymbol> = []
     var functions List<FunctionSymbol> = []
     var variables List<VariableSymbol> = []
@@ -277,14 +273,16 @@ namespace Skew {
   }
 
   class FunctionSymbol : Symbol {
-    var overridden FunctionSymbol = null
-    var overloaded OverloadedFunctionSymbol = null
+    var overridden FunctionSymbol = null # For derived class functions
+    var overloaded OverloadedFunctionSymbol = null # Links overloaded functions to the other overloads on that type (not on derived types)
+    var implementations List<FunctionSymbol> = null # For interface functions
     var parameters List<ParameterSymbol> = null
     var arguments List<VariableSymbol> = []
     var this VariableSymbol = null # For instance functions and constructors
     var argumentOnlyType Type = null # For quickly comparing the argument types of two function symbols
     var returnType Node = null
     var block Node = null
+    var namingGroup = -1 # Automatically filled out by the renaming step
   }
 
   class VariableSymbol : Symbol {
