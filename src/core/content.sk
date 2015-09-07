@@ -6,7 +6,7 @@ namespace Skew {
     STRING
   }
 
-  class Content {
+  interface Content {
     def kind ContentKind
 
     def asBool bool {
@@ -30,34 +30,34 @@ namespace Skew {
     }
   }
 
-  class BoolContent : Content {
+  class BoolContent :: Content {
     const value bool
 
-    over kind ContentKind {
+    def kind ContentKind {
       return .BOOL
     }
   }
 
-  class IntContent : Content {
+  class IntContent :: Content {
     const value int
 
-    over kind ContentKind {
+    def kind ContentKind {
       return .INT
     }
   }
 
-  class DoubleContent : Content {
+  class DoubleContent :: Content {
     const value double
 
-    over kind ContentKind {
+    def kind ContentKind {
       return .DOUBLE
     }
   }
 
-  class StringContent : Content {
+  class StringContent :: Content {
     const value string
 
-    over kind ContentKind {
+    def kind ContentKind {
       return .STRING
     }
   }
