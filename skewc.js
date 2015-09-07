@@ -13007,7 +13007,7 @@
       var symbol = info.symbol;
 
       // Turn certain instance functions into global functions
-      if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind === Skew.SymbolKind.OBJECT_ENUM || symbol.parent.kind === Skew.SymbolKind.OBJECT_WRAPPED || symbol.parent.isImported() && !symbol.isImported() || !symbol.isImportedOrExported() && virtualLookup !== null && !virtualLookup.isVirtual(symbol))) {
+      if (symbol.kind === Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind === Skew.SymbolKind.OBJECT_ENUM || symbol.parent.kind === Skew.SymbolKind.OBJECT_WRAPPED || symbol.parent.kind === Skew.SymbolKind.OBJECT_INTERFACE && symbol.block !== null || symbol.parent.isImported() && !symbol.isImported() || !symbol.isImportedOrExported() && virtualLookup !== null && !virtualLookup.isVirtual(symbol))) {
         var $function = symbol.asFunctionSymbol();
         $function.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
         $function.$arguments.unshift($function.$this);
@@ -14835,7 +14835,7 @@
         for (var i3 = 0, list3 = interfaceType.symbol.asObjectSymbol().functions, count3 = list3.length; i3 < count3; ++i3) {
           var function1 = list3[i3];
 
-          if (function1.kind !== Skew.SymbolKind.FUNCTION_INSTANCE) {
+          if (function1.kind !== Skew.SymbolKind.FUNCTION_INSTANCE || function1.block !== null) {
             continue;
           }
 

@@ -426,7 +426,7 @@ namespace Skew.Resolving {
       if symbol.interfaceTypes != null {
         for interfaceType in symbol.interfaceTypes {
           for function in interfaceType.symbol.asObjectSymbol.functions {
-            if function.kind != .FUNCTION_INSTANCE {
+            if function.kind != .FUNCTION_INSTANCE || function.block != null {
               continue
             }
             initializeSymbol(function)

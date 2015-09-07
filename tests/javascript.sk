@@ -171,8 +171,8 @@ def main {
 # Check overloaded functions when an interface is present
 test("
 interface I {
-  def foo(x int) {} # I.foo(x int)
-  def foo(x bool) {} # I.foo(x bool)
+  def foo(x int) # I.foo(x int)
+  def foo(x bool) # I.foo(x bool)
 }
 
 class Foo :: I {
@@ -805,6 +805,45 @@ def main {
   };
 
   main();
+})();
+").js
+
+# Implemented instance functions should be pulled off of interfaces
+test("
+class Foo :: IFoo {
+  def foo {}
+}
+
+interface IFoo {
+  def bar {}
+}
+
+@export
+def main {
+  var foo = Foo.new
+  var ifoo = foo as IFoo
+  foo.foo
+  ifoo.bar
+}
+", "
+(function() {
+  main = function() {
+    var foo = new Foo();
+    var ifoo = foo;
+    foo.foo();
+    IFoo.bar(ifoo);
+  };
+
+  function Foo() {
+  }
+
+  Foo.prototype.foo = function() {
+  };
+
+  var IFoo = {};
+
+  IFoo.bar = function(self) {
+  };
 })();
 ").js
 
