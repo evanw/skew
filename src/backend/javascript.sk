@@ -1475,30 +1475,30 @@ namespace Skew {
 
     def _patchNodeHelper(node Node) {
       switch node.kind {
-        case .BREAK { _patchBreak(node) }
-        case .NEGATIVE { _patchUnaryArithmetic(node) }
         case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { _patchBinaryArithmetic(node) }
-        case .TYPE_CHECK { _patchTypeCheck(node) }
+        case .BREAK { _patchBreak(node) }
         case .CAST { _patchCast(node) }
         case .FOREACH { _unionVariableWithFunction(node.symbol, _enclosingFunction) }
         case .LAMBDA { _patchLambda(node) }
         case .NAME { _patchName(node) }
+        case .NEGATIVE { _patchUnaryArithmetic(node) }
         case .TRY { _patchTry(node) }
+        case .TYPE_CHECK { _patchTypeCheck(node) }
         case .VARIABLE { _unionVariableWithFunction(node.symbol, _enclosingFunction) }
       }
 
       if _mangle {
         switch node.kind {
-          case .PAIR { _peepholeManglePair(node) }
-          case .CONSTANT { _peepholeMangleConstant(node) }
           case .ASSIGN_INDEX { _peepholeMangleAssignIndex(node) }
-          case .INDEX { _peepholeMangleIndex(node) }
           case .BLOCK { _peepholeMangleBlock(node) }
           case .CALL { _peepholeMangleCall(node) }
-          case .IF { _peepholeMangleIf(node) }
+          case .CONSTANT { _peepholeMangleConstant(node) }
           case .FOR { _peepholeMangleFor(node) }
-          case .WHILE { _peepholeMangleWhile(node) }
           case .HOOK { _peepholeMangleHook(node) }
+          case .IF { _peepholeMangleIf(node) }
+          case .INDEX { _peepholeMangleIndex(node) }
+          case .PAIR { _peepholeManglePair(node) }
+          case .WHILE { _peepholeMangleWhile(node) }
           default { if node.kind.isBinary { _peepholeMangleBinary(node) } }
         }
       }
@@ -1526,9 +1526,11 @@ namespace Skew {
       var value = node.callValue
       var parent = node.parent
 
+      # "x + y.toString()" => "x + y" where x is a string
+      # "x.toString() + ''" => "x + ''"
       if value.nextSibling == null && value.kind == .DOT && value.asString == "toString" &&
-          value.symbol != null && value.symbol.isImportedOrExported && parent.kind == .ADD &&
-          (node == parent.binaryRight || parent.binaryRight.kind == .CONSTANT) {
+          value.symbol != null && value.symbol.isImportedOrExported && parent.kind == .ADD && (
+            node == parent.binaryRight && _cache.isEquivalentToString(parent.binaryLeft.resolvedType) || parent.binaryRight.isString) {
         node.become(value.dotTarget.remove)
       }
     }

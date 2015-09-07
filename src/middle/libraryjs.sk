@@ -254,7 +254,7 @@ class StringMap {
 
 namespace IntMap {
   def new IntMap<T> {
-    return dynamic.Object.create(null)
+    return {} as dynamic
   }
 }
 
