@@ -2577,8 +2577,13 @@ namespace Skew.Resolving {
       checkConversion(value, type.resolvedType, .EXPLICIT)
       node.resolvedType = cache.boolType
 
+      # Type checks don't work against interfaces
+      if type.resolvedType.isInterface {
+        log.semanticWarningBadTypeCheck(type.range, type.resolvedType)
+      }
+
       # Warn about unnecessary type checks
-      if value.resolvedType != .DYNAMIC && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) {
+      else if value.resolvedType != .DYNAMIC && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) {
         log.semanticWarningExtraTypeCheck(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }
     }

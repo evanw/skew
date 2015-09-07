@@ -285,6 +285,10 @@ namespace Skew {
       warning(range, "Unnecessary type check, type \"" + from.toString + "\" is always type \"" + to.toString + "\"")
     }
 
+    def semanticWarningBadTypeCheck(range Range, type Type) {
+      error(range, "Cannot check against interface type \"" + type.toString + "\"")
+    }
+
     def semanticErrorWrongArgumentCount(range Range, name string, count int) {
       error(range, "Expected \"" + name + "\" to take " + count.toString + " argument" + PrettyPrint.plural(count))
     }

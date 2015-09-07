@@ -10695,6 +10695,10 @@
     this.warning(range, 'Unnecessary type check, type "' + from.toString() + '" is always type "' + to.toString() + '"');
   };
 
+  Skew.Log.prototype.semanticWarningBadTypeCheck = function(range, type) {
+    this.error(range, 'Cannot check against interface type "' + type.toString() + '"');
+  };
+
   Skew.Log.prototype.semanticErrorWrongArgumentCount = function(range, name, count) {
     this.error(range, 'Expected "' + name + '" to take ' + count.toString() + ' argument' + (count === 1 ? '' : 's'));
   };
@@ -17362,8 +17366,13 @@
     this.checkConversion(value, type.resolvedType, Skew.Resolving.ConversionKind.EXPLICIT);
     node.resolvedType = this.cache.boolType;
 
+    // Type checks don't work against interfaces
+    if (type.resolvedType.isInterface()) {
+      this.log.semanticWarningBadTypeCheck(type.range, type.resolvedType);
+    }
+
     // Warn about unnecessary type checks
-    if (value.resolvedType !== Skew.Type.DYNAMIC && this.cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
+    else if (value.resolvedType !== Skew.Type.DYNAMIC && this.cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
       this.log.semanticWarningExtraTypeCheck(Skew.Range.span(node.internalRangeOrRange(), type.range), value.resolvedType, type.resolvedType);
     }
   };
