@@ -3656,54 +3656,37 @@
     });
   };
 
-  Skew.JavaScriptEmitter.prototype._maybeInlineFunctions = function(symbol) {
+  Skew.JavaScriptEmitter.prototype._collectInlineableFunctions = function(symbol, listAppends, mapInserts) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; ++i) {
       var object = list[i];
-      this._maybeInlineFunctions(object);
+      this._collectInlineableFunctions(object, listAppends, mapInserts);
     }
 
-    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; ++i1) {
-      var $function = list1[i1];
-      this._maybeInlineFunction($function);
-    }
-  };
+    for (var i3 = 0, list3 = symbol.functions, count3 = list3.length; i3 < count3; ++i3) {
+      var $function = list3[i3];
 
-  Skew.JavaScriptEmitter.prototype._maybeInlineFunction = function($function) {
-    var $arguments = $function.$arguments;
+      if ($function.block === null || !$function.block.hasTwoChildren()) {
+        continue;
+      }
 
-    if ($function.block !== null && $function.block.hasTwoChildren()) {
+      var $arguments = $function.$arguments;
+
       // "foo([], 0)" => "[0]" where "foo" is "def foo(a, b) { a.push(b); return a }"
       if ($arguments.length === 2) {
         var first = $function.block.firstChild();
         var second = $function.block.lastChild();
 
-        // Match the function body
         if (first.kind === Skew.NodeKind.EXPRESSION && first.expressionValue().kind === Skew.NodeKind.CALL && second.kind === Skew.NodeKind.RETURN && second.returnValue() !== null) {
           var call = first.expressionValue();
           var callValue = call.callValue();
 
           if (call.hasTwoChildren() && callValue.kind === Skew.NodeKind.DOT && callValue.asString() === 'push' && Skew.JavaScriptEmitter._isReferenceTo(callValue.dotTarget(), $arguments[0]) && Skew.JavaScriptEmitter._isReferenceTo(call.lastChild(), $arguments[1]) && Skew.JavaScriptEmitter._isReferenceTo(second.returnValue(), $arguments[0])) {
-            // Check each call site
-            for (var i = 0, list = this._context.callGraph.callInfoForSymbol($function).callSites, count = list.length; i < count; ++i) {
-              var callSite = list[i];
+            for (var i1 = 0, list1 = this._context.callGraph.callInfoForSymbol($function).callSites, count1 = list1.length; i1 < count1; ++i1) {
+              var callSite = list1[i1];
 
-              // Some calls may be reused for other node types during constant folding
-              if (callSite === null || callSite.callNode.kind !== Skew.NodeKind.CALL) {
-                continue;
-              }
-
-              var node = callSite.callNode;
-              var firstArgument = node.firstChild().nextSibling();
-              var secondArgument = firstArgument.nextSibling();
-
-              // Map expressions are sometimes casted
-              if (firstArgument.kind === Skew.NodeKind.CAST) {
-                firstArgument = firstArgument.castValue();
-              }
-
-              // Only check when the inputs are constants
-              if (firstArgument.kind === Skew.NodeKind.INITIALIZER_LIST) {
-                node.become(firstArgument.remove().appendChild(secondArgument.remove()));
+              if (callSite !== null && callSite.callNode.kind === Skew.NodeKind.CALL) {
+                assert(callSite.callNode.symbol === $function);
+                listAppends.push(callSite.callNode);
               }
             }
           }
@@ -3716,36 +3699,89 @@
         var first1 = $function.block.firstChild();
         var second1 = $function.block.lastChild();
 
-        // Match the function body
         if ((keyType === Skew.Type.DYNAMIC || this._cache.isEquivalentToInt(keyType) || this._cache.isEquivalentToString(keyType)) && first1.kind === Skew.NodeKind.EXPRESSION && first1.expressionValue().kind === Skew.NodeKind.ASSIGN_INDEX && second1.kind === Skew.NodeKind.RETURN && second1.returnValue() !== null) {
           var assign = first1.expressionValue();
 
           if (Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexLeft(), $arguments[0]) && Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexCenter(), $arguments[1]) && Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexRight(), $arguments[2]) && Skew.JavaScriptEmitter._isReferenceTo(second1.returnValue(), $arguments[0])) {
-            // Check each call site
-            for (var i1 = 0, list1 = this._context.callGraph.callInfoForSymbol($function).callSites, count1 = list1.length; i1 < count1; ++i1) {
-              var callSite1 = list1[i1];
+            for (var i2 = 0, list2 = this._context.callGraph.callInfoForSymbol($function).callSites, count2 = list2.length; i2 < count2; ++i2) {
+              var callSite1 = list2[i2];
 
-              // Some calls may be reused for other node types during constant folding
-              if (callSite1 === null || callSite1.callNode.kind !== Skew.NodeKind.CALL) {
-                continue;
-              }
-
-              var node1 = callSite1.callNode;
-              var firstArgument1 = node1.firstChild().nextSibling();
-              var secondArgument1 = firstArgument1.nextSibling();
-              var thirdArgument = secondArgument1.nextSibling();
-
-              // Map expressions are sometimes casted
-              if (firstArgument1.kind === Skew.NodeKind.CAST) {
-                firstArgument1 = firstArgument1.castValue();
-              }
-
-              // Only check when the inputs are constants
-              if (firstArgument1.kind === Skew.NodeKind.INITIALIZER_MAP && (secondArgument1.isInt() || secondArgument1.isString())) {
-                node1.become(firstArgument1.remove().appendChild(Skew.Node.createPair(secondArgument1.remove(), thirdArgument.remove())));
+              if (callSite1 !== null && callSite1.callNode.kind === Skew.NodeKind.CALL) {
+                assert(callSite1.callNode.symbol === $function);
+                mapInserts.push(callSite1.callNode);
               }
             }
           }
+        }
+      }
+    }
+  };
+
+  // This uses iteration until fixed point to avoid dependence on inlining order
+  Skew.JavaScriptEmitter.prototype._maybeInlineFunctions = function(global) {
+    var listAppends = [];
+    var mapInserts = [];
+    this._collectInlineableFunctions(global, listAppends, mapInserts);
+
+    // List append fixed point
+    var changed = true;
+
+    while (changed) {
+      changed = false;
+
+      for (var i = 0, count = listAppends.length; i < count; ++i) {
+        var node = listAppends[i];
+
+        // This will be null if it was already inlined
+        if (node === null) {
+          continue;
+        }
+
+        var firstArgument = node.callValue().nextSibling();
+        var secondArgument = firstArgument.nextSibling();
+
+        // List expressions are sometimes casted
+        if (firstArgument.kind === Skew.NodeKind.CAST) {
+          firstArgument = firstArgument.castValue();
+        }
+
+        // Only check when the inputs are constants
+        if (firstArgument.kind === Skew.NodeKind.INITIALIZER_LIST) {
+          node.become(firstArgument.remove().appendChild(secondArgument.remove()));
+          listAppends[i] = null;
+          changed = true;
+        }
+      }
+    }
+
+    // Map insert fixed point
+    changed = true;
+
+    while (changed) {
+      changed = false;
+
+      for (var i1 = 0, count1 = mapInserts.length; i1 < count1; ++i1) {
+        var node1 = mapInserts[i1];
+
+        // This will be null if it was already inlined
+        if (node1 === null) {
+          continue;
+        }
+
+        var firstArgument1 = node1.callValue().nextSibling();
+        var secondArgument1 = firstArgument1.nextSibling();
+        var thirdArgument = secondArgument1.nextSibling();
+
+        // Map expressions are sometimes casted
+        if (firstArgument1.kind === Skew.NodeKind.CAST) {
+          firstArgument1 = firstArgument1.castValue();
+        }
+
+        // Only check when the inputs are constants
+        if (firstArgument1.kind === Skew.NodeKind.INITIALIZER_MAP && (secondArgument1.isInt() || secondArgument1.isString())) {
+          node1.become(firstArgument1.remove().appendChild(Skew.Node.createPair(secondArgument1.remove(), thirdArgument.remove())));
+          mapInserts[i1] = null;
+          changed = true;
         }
       }
     }

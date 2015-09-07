@@ -398,6 +398,30 @@ def foo(list dynamic, value dynamic) dynamic {
 test("
 @export
 def main {
+  dynamic.bar(foo(foo([], 1), 2))
+}
+
+def foo(list dynamic, value dynamic) dynamic {
+  list.unshift(value)
+  return list
+}
+", "
+(function() {
+  main = function() {
+    bar(foo(foo([], 1), 2));
+  };
+
+  function foo(list, value) {
+    list.unshift(value);
+    return list;
+  }
+})();
+").js.inlineAllFunctions
+
+# Check list literal inlining
+test("
+@export
+def main {
   dynamic.bar(foo(foo({}, 1), 2))
 }
 
@@ -446,6 +470,72 @@ namespace Foo {
 (function() {
   main = function(x) {
     bar([1, '2', x, false]);
+  };
+})();
+").js.inlineAllFunctions
+
+# Check that order doesn't matter when inlining list literals
+test("
+@import
+class Foo {
+  def [...](value int) Foo {
+    (self as dynamic).push(value)
+    return self
+  }
+
+  def [...](value bool) Foo {
+    (self as dynamic).push(value)
+    return self
+  }
+}
+
+namespace Foo {
+  def [new] Foo {
+    return [] as dynamic
+  }
+}
+
+@export
+def main {
+  [1, false] as Foo
+}
+", "
+(function() {
+  main = function() {
+    [1, false];
+  };
+})();
+").js.inlineAllFunctions
+
+# Check that order doesn't matter when inlining list literals
+test("
+@import
+class Foo {
+  def [...](value bool) Foo {
+    (self as dynamic).push(value)
+    return self
+  }
+
+  def [...](value int) Foo {
+    (self as dynamic).push(value)
+    return self
+  }
+}
+
+namespace Foo {
+  def [new] Foo {
+    return [] as dynamic
+  }
+}
+
+@export
+def main {
+  [1, false] as Foo
+}
+", "
+(function() {
+  main = function() {
+    [1, false];
   };
 })();
 ").js.inlineAllFunctions

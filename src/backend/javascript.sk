@@ -257,26 +257,22 @@ namespace Skew {
       })
     }
 
-    def _maybeInlineFunctions(symbol ObjectSymbol) {
+    def _collectInlineableFunctions(symbol ObjectSymbol, listAppends List<Node>, mapInserts List<Node>) {
       for object in symbol.objects {
-        _maybeInlineFunctions(object)
+        _collectInlineableFunctions(object, listAppends, mapInserts)
       }
 
       for function in symbol.functions {
-        _maybeInlineFunction(function)
-      }
-    }
+        if function.block == null || !function.block.hasTwoChildren {
+          continue
+        }
 
-    def _maybeInlineFunction(function FunctionSymbol) {
-      var arguments = function.arguments
+        var arguments = function.arguments
 
-      if function.block != null && function.block.hasTwoChildren {
         # "foo([], 0)" => "[0]" where "foo" is "def foo(a, b) { a.push(b); return a }"
         if arguments.count == 2 {
           var first = function.block.firstChild
           var second = function.block.lastChild
-
-          # Match the function body
           if first.kind == .EXPRESSION && first.expressionValue.kind == .CALL &&
               second.kind == .RETURN && second.returnValue != null {
             var call = first.expressionValue
@@ -285,26 +281,10 @@ namespace Skew {
                 _isReferenceTo(callValue.dotTarget, arguments[0]) &&
                 _isReferenceTo(call.lastChild, arguments[1]) &&
                 _isReferenceTo(second.returnValue, arguments[0]) {
-
-              # Check each call site
               for callSite in _context.callGraph.callInfoForSymbol(function).callSites {
-                # Some calls may be reused for other node types during constant folding
-                if callSite == null || callSite.callNode.kind != .CALL {
-                  continue
-                }
-
-                var node = callSite.callNode
-                var firstArgument = node.firstChild.nextSibling
-                var secondArgument = firstArgument.nextSibling
-
-                # Map expressions are sometimes casted
-                if firstArgument.kind == .CAST {
-                  firstArgument = firstArgument.castValue
-                }
-
-                # Only check when the inputs are constants
-                if firstArgument.kind == .INITIALIZER_LIST {
-                  node.become(firstArgument.remove.appendChild(secondArgument.remove))
+                if callSite != null && callSite.callNode.kind == .CALL {
+                  assert(callSite.callNode.symbol == function)
+                  listAppends.append(callSite.callNode)
                 }
               }
             }
@@ -316,8 +296,6 @@ namespace Skew {
           var keyType = arguments[1].resolvedType
           var first = function.block.firstChild
           var second = function.block.lastChild
-
-          # Match the function body
           if (keyType == .DYNAMIC || _cache.isEquivalentToInt(keyType) || _cache.isEquivalentToString(keyType)) &&
               first.kind == .EXPRESSION && first.expressionValue.kind == .ASSIGN_INDEX &&
               second.kind == .RETURN && second.returnValue != null {
@@ -326,30 +304,79 @@ namespace Skew {
                 _isReferenceTo(assign.assignIndexCenter, arguments[1]) &&
                 _isReferenceTo(assign.assignIndexRight, arguments[2]) &&
                 _isReferenceTo(second.returnValue, arguments[0]) {
-
-              # Check each call site
               for callSite in _context.callGraph.callInfoForSymbol(function).callSites {
-                # Some calls may be reused for other node types during constant folding
-                if callSite == null || callSite.callNode.kind != .CALL {
-                  continue
-                }
-
-                var node = callSite.callNode
-                var firstArgument = node.firstChild.nextSibling
-                var secondArgument = firstArgument.nextSibling
-                var thirdArgument = secondArgument.nextSibling
-
-                # Map expressions are sometimes casted
-                if firstArgument.kind == .CAST {
-                  firstArgument = firstArgument.castValue
-                }
-
-                # Only check when the inputs are constants
-                if firstArgument.kind == .INITIALIZER_MAP && (secondArgument.isInt || secondArgument.isString) {
-                  node.become(firstArgument.remove.appendChild(Node.createPair(secondArgument.remove, thirdArgument.remove)))
+                if callSite != null && callSite.callNode.kind == .CALL {
+                  assert(callSite.callNode.symbol == function)
+                  mapInserts.append(callSite.callNode)
                 }
               }
             }
+          }
+        }
+      }
+    }
+
+    # This uses iteration until fixed point to avoid dependence on inlining order
+    def _maybeInlineFunctions(global ObjectSymbol) {
+      var listAppends List<Node> = []
+      var mapInserts List<Node> = []
+      _collectInlineableFunctions(global, listAppends, mapInserts)
+
+      # List append fixed point
+      var changed = true
+      while changed {
+        changed = false
+        for i in 0..listAppends.count {
+          var node = listAppends[i]
+
+          # This will be null if it was already inlined
+          if node == null {
+            continue
+          }
+
+          var firstArgument = node.callValue.nextSibling
+          var secondArgument = firstArgument.nextSibling
+
+          # List expressions are sometimes casted
+          if firstArgument.kind == .CAST {
+            firstArgument = firstArgument.castValue
+          }
+
+          # Only check when the inputs are constants
+          if firstArgument.kind == .INITIALIZER_LIST {
+            node.become(firstArgument.remove.appendChild(secondArgument.remove))
+            listAppends[i] = null
+            changed = true
+          }
+        }
+      }
+
+      # Map insert fixed point
+      changed = true
+      while changed {
+        changed = false
+        for i in 0..mapInserts.count {
+          var node = mapInserts[i]
+
+          # This will be null if it was already inlined
+          if node == null {
+            continue
+          }
+
+          var firstArgument = node.callValue.nextSibling
+          var secondArgument = firstArgument.nextSibling
+          var thirdArgument = secondArgument.nextSibling
+
+          # Map expressions are sometimes casted
+          if firstArgument.kind == .CAST {
+            firstArgument = firstArgument.castValue
+          }
+
+          # Only check when the inputs are constants
+          if firstArgument.kind == .INITIALIZER_MAP && (secondArgument.isInt || secondArgument.isString) {
+            node.become(firstArgument.remove.appendChild(Node.createPair(secondArgument.remove, thirdArgument.remove)))
+            mapInserts[i] = null
+            changed = true
           }
         }
       }
