@@ -45,6 +45,8 @@ replace: | build
 	mv build/skewc3.js skewc.js
 	rm build/skewc2.js
 
+check: check-js check-cs check-determinism
+
 check-js: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.min.js --release
 	node build/skewc.min.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc2.min.js --release

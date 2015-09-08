@@ -1535,7 +1535,10 @@ namespace Skew {
       # Make sure arithmetic integer operators don't emit doubles outside the
       # integer range. Allowing this causes JIT slowdowns due to extra checks
       # during compilation and potential deoptimizations during execution.
-      if node.resolvedType == _cache.intType && !_alwaysConvertsOperandsToInt(node.parent) {
+      # Special-case the integer "%" operator where the right operand may be
+      # "0" since that generates "NaN" which is not representable as an int.
+      if node.resolvedType == _cache.intType && !_alwaysConvertsOperandsToInt(node.parent) && (
+          node.kind != .REMAINDER || !node.binaryRight.isInt || node.binaryRight.asInt == 0) {
         var left = node.binaryLeft
         var right = node.binaryRight
         if left.resolvedType == _cache.intType && right.resolvedType == _cache.intType {

@@ -5202,7 +5202,9 @@
     // Make sure arithmetic integer operators don't emit doubles outside the
     // integer range. Allowing this causes JIT slowdowns due to extra checks
     // during compilation and potential deoptimizations during execution.
-    if (node.resolvedType === this._cache.intType && !Skew.JavaScriptEmitter._alwaysConvertsOperandsToInt(node.parent())) {
+    // Special-case the integer "%" operator where the right operand may be
+    // "0" since that generates "NaN" which is not representable as an int.
+    if (node.resolvedType === this._cache.intType && !Skew.JavaScriptEmitter._alwaysConvertsOperandsToInt(node.parent()) && (node.kind !== Skew.NodeKind.REMAINDER || !node.binaryRight().isInt() || node.binaryRight().asInt() === 0)) {
       var left = node.binaryLeft();
       var right = node.binaryRight();
 
@@ -11138,7 +11140,7 @@
       }
 
       if (codePoint === 9) {
-        for (var space = 0, count1 = 8 - (codePoints.length % 8 | 0) | 0; space < count1; ++space) {
+        for (var space = 0, count1 = 8 - codePoints.length % 8 | 0; space < count1; ++space) {
           codePoints.push(32);
         }
       }
