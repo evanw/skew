@@ -869,5 +869,26 @@ def main {
 })();
 ").js
 
+# Check folding of the "**" operator
+test("
+@export
+def main dynamic {
+  return [
+    2 ** 2,
+    2 ** 3,
+    3 ** 2,
+    2 ** 0,
+    2 ** -2,
+    0.25 ** 0.5,
+  ]
+}
+", "
+(function() {
+  main = function() {
+    return [4, 8, 9, 1, 0, 0.5];
+  };
+})();
+").js.foldAllConstants
+
   }
 }

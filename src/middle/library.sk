@@ -83,6 +83,7 @@ namespace Math {
   const INFINITY = 1 / 0.0
   const NAN = 0 / 0.0
   const PI = 3.141592653589793
+  const SQRT_2 = 2 ** 0.5
 }
 
 @import
@@ -124,6 +125,17 @@ class int {
 
   @rename(\"ToString\") if TARGET == .CSHARP
   def toString string
+
+  def **(x int) int {
+    var y = self
+    var z = x < 0 ? 0 : 1
+    while x > 0 {
+      if (x & 1) != 0 { z *= y }
+      x >>= 1
+      y *= y
+    }
+    return z
+  }
 }
 
 @import
@@ -134,12 +146,10 @@ class double {
   def --
 
   def *(x double) double
-  def **(x double) double
   def +(x double) double
   def -(x double) double
   def /(x double) double
 
-  def **=(x double)
   def *=(x double)
   def +=(x double)
   def -=(x double)
@@ -150,6 +160,10 @@ class double {
 
   @rename(\"ToString\") if TARGET == .CSHARP
   def toString string
+
+  def **(x double) double {
+    return Math.pow(self, x)
+  }
 
   def <=>(x double) int {
     return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)

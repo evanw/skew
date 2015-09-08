@@ -11,6 +11,8 @@ namespace Skew {
     var intToStringSymbol Symbol = null
     var boolToStringSymbol Symbol = null
     var doubleToStringSymbol Symbol = null
+    var intPowerSymbol Symbol = null
+    var doublePowerSymbol Symbol = null
     var stringCountSymbol Symbol = null
     var entryPointSymbol FunctionSymbol = null
     const _environments = IntMap<List<Environment>>.new
@@ -29,6 +31,8 @@ namespace Skew {
       intToStringSymbol = _loadInstanceFunction(intType, "toString")
       boolToStringSymbol = _loadInstanceFunction(boolType, "toString")
       doubleToStringSymbol = _loadInstanceFunction(doubleType, "toString")
+      intPowerSymbol = _loadInstanceFunction(intType, "**")
+      doublePowerSymbol = _loadInstanceFunction(doubleType, "**")
       stringCountSymbol = _loadInstanceFunction(stringType, "count")
     }
 

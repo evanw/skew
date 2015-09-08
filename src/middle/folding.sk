@@ -335,22 +335,30 @@ namespace Skew.Folding {
     }
 
     def foldCall(node Node) {
-      if node.kind == .CALL {
-        var value = node.callValue
-        var symbol = value.symbol
+      var value = node.callValue
+      var symbol = value.symbol
 
-        if value.kind == .DOT {
-          var target = value.dotTarget
+      if value.kind == .DOT {
+        var target = value.dotTarget
 
-          if target != null && target.kind == .CONSTANT {
-            if isKnownCall(symbol, cache.boolToStringSymbol) { flattenString(node, target.asBool.toString) }
-            else if isKnownCall(symbol, cache.doubleToStringSymbol) { flattenString(node, target.asDouble.toString) }
-            else if isKnownCall(symbol, cache.intToStringSymbol) { flattenString(node, target.asInt.toString) }
-          }
+        if target != null && target.kind == .CONSTANT {
+          if isKnownCall(symbol, cache.boolToStringSymbol) { flattenString(node, target.asBool.toString) }
+          else if isKnownCall(symbol, cache.doubleToStringSymbol) { flattenString(node, target.asDouble.toString) }
+          else if isKnownCall(symbol, cache.intToStringSymbol) { flattenString(node, target.asInt.toString) }
+        }
+      }
+
+      else if value.kind == .NAME {
+        if isKnownCall(symbol, cache.stringCountSymbol) && node.lastChild.isString {
+          flattenInt(node, Unicode.codeUnitCountForCodePoints(node.lastChild.asString.codePoints, options.target.stringEncoding))
         }
 
-        else if value.kind == .NAME && isKnownCall(symbol, cache.stringCountSymbol) && node.lastChild.isString {
-          flattenInt(node, Unicode.codeUnitCountForCodePoints(node.lastChild.asString.codePoints, options.target.stringEncoding))
+        else if isKnownCall(symbol, cache.intPowerSymbol) && node.lastChild.isInt && value.nextSibling.isInt {
+          flattenInt(node, value.nextSibling.asInt ** node.lastChild.asInt)
+        }
+
+        else if isKnownCall(symbol, cache.doublePowerSymbol) && node.lastChild.isDouble && value.nextSibling.isDouble {
+          flattenDouble(node, value.nextSibling.asDouble ** node.lastChild.asDouble)
         }
       }
     }
