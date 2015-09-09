@@ -1,0 +1,14 @@
+{
+  "name": "skew",
+  "version": "0.5.0",
+  "author": "Evan Wallace",
+  "description": "A compiler for the Skew programming language",
+  "license": "MIT",
+  "bin": {
+    "skewc": "skewc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evanw/skew"
+  }
+}

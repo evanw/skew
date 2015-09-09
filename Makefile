@@ -89,7 +89,7 @@ build:
 	mkdir -p build
 
 flex:
-	cd src/frontend && python build.py && cd -
+	sh -c 'cd src/frontend && python build.py'
 
 test: test-js test-cs
 
@@ -111,3 +111,10 @@ test-cs: | build
 
 clean:
 	rm -fr build
+
+publish: test check
+	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.min.js --release
+	echo '#!/usr/bin/env node' > npm/skewc
+	cat build/skewc.min.js >> npm/skewc
+	chmod +x npm/skewc
+	sh -c 'cd npm && npm version patch && npm publish'
