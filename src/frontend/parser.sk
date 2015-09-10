@@ -282,7 +282,7 @@ namespace Skew.Parsing {
       if comments != null {
         child.comments = comments
         context.eat(.NEWLINE)
-      } else if context.peek(.RIGHT_BRACE) || !context.peek(.ELSE) && !context.expect(.NEWLINE) {
+      } else if context.peek(.RIGHT_BRACE) || !context.expect(.NEWLINE) {
         break
       }
     }
@@ -586,6 +586,7 @@ namespace Skew.Parsing {
   }
 
   def parseBlock(context ParserContext) Node {
+    context.skipWhitespace
     var token = context.current
     if !context.expect(.LEFT_BRACE) {
       return null
@@ -642,6 +643,8 @@ namespace Skew.Parsing {
       if !symbol.arguments.isEmpty && !context.expect(.COMMA) {
         return false
       }
+
+      context.skipWhitespace
 
       var range = context.current.range
       if !context.expect(.IDENTIFIER) {
@@ -1065,12 +1068,10 @@ namespace Skew.Parsing {
 
   def parseCommaSeparatedList(context ParserContext, parent Node, stop TokenKind) bool {
     var isFirst = true
+    context.skipWhitespace
     while !context.eat(stop) {
-      if !isFirst {
-        if !context.expect(.COMMA) {
-          return false
-        }
-        context.eat(.NEWLINE)
+      if !isFirst && !context.expect(.COMMA) {
+        return false
       }
       var value = expressionParser.parse(context, .LOWEST)
       if value == null {
@@ -1230,7 +1231,7 @@ namespace Skew.Parsing {
           break
         }
       }
-      context.eatWhitespace
+      context.skipWhitespace
       if !context.expect(end) {
         return null
       }

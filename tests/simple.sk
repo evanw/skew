@@ -4742,16 +4742,52 @@ class Bar : Foo {
 ", "
 ")
 
+# Parser whitespace test
 test("
 var x = 0 ?
 # Comment
 1 :
 # Comment
 2
+var y = z(
+  # Comment
+)
 ", "
 <stdin>:1:9: error: Cannot convert from type \"int\" to type \"bool\" without a cast
 var x = 0 ?
         ^
+<stdin>:6:9: error: \"z\" is not declared
+var y = z(
+        ^
+")
+
+# Parser whitespace test
+test("
+def main {
+  if 0
+  {
+  }
+  else
+  {
+  }
+}
+", "
+<stdin>:2:6: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  if 0
+     ^
+")
+
+# Parser whitespace test
+test("
+def main(
+  a int,
+  b int
+) int {
+}
+", "
+<stdin>:1:5: error: All control paths for \"main\" must return a value of type \"int\"
+def main(
+    ~~~~
 ")
 
   }

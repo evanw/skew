@@ -44,6 +44,7 @@ namespace Skew {
   var REMOVE_NEWLINE_BEFORE IntMap<int> = {
     TokenKind.COLON: 0,
     TokenKind.COMMA: 0,
+    TokenKind.NEWLINE: 0,
     TokenKind.QUESTION_MARK: 0,
     TokenKind.RIGHT_BRACKET: 0,
     TokenKind.RIGHT_PARENTHESIS: 0,
@@ -143,10 +144,9 @@ namespace Skew {
         }
       }
 
-      # Remove newlines based on the previous token or the next token to enable
-      # line continuations. Make sure to be conservative. We want to be like
-      # Python, not like JavaScript ASI! Anything that is at all ambiguous
-      # should be disallowed.
+      # Remove newlines based on the previous token to enable line continuations.
+      # Make sure to be conservative. We want to be like Python, not like
+      # JavaScript ASI! Anything that is at all ambiguous should be disallowed.
       if previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE {
         tokens[count - 2] = token
         count--
