@@ -80,11 +80,6 @@ namespace Skew.Parsing {
     }
   }
 
-  def eatCommentsAndNewlines(context ParserContext) {
-    while context.eat(.COMMENT) || context.eat(.NEWLINE) {
-    }
-  }
-
   def parseLeadingComments(context ParserContext) List<string> {
     var comments List<string> = null
     while context.peek(.COMMENT) {
@@ -254,7 +249,6 @@ namespace Skew.Parsing {
       var start = context.current
       if context.eat(.CASE) {
         while true {
-          eatCommentsAndNewlines(context)
           var constant = expressionParser.parse(context, .LOWEST)
           if constant == null {
             return null
@@ -1236,7 +1230,7 @@ namespace Skew.Parsing {
           break
         }
       }
-      eatCommentsAndNewlines(context)
+      context.eatWhitespace
       if !context.expect(end) {
         return null
       }

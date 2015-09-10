@@ -64,6 +64,11 @@ namespace Skew {
       return false
     }
 
+    def eatWhitespace {
+      while eat(.COMMENT) || eat(.NEWLINE) {
+      }
+    }
+
     def undo {
       assert(_index > 0)
       _index--
@@ -119,6 +124,7 @@ namespace Skew {
     }
 
     def parse(context ParserContext, precedence Precedence) Node {
+      context.eatWhitespace
       var token = context.current
       var parselet = _table.get(token.kind, null)
       if parselet == null || parselet.prefix == null {

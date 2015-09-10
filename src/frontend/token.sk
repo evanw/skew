@@ -49,62 +49,6 @@ namespace Skew {
     TokenKind.RIGHT_PARENTHESIS: 0,
   }
 
-  var KEEP_NEWLINE_BEFORE IntMap<int> = {
-    TokenKind.ANNOTATION: 0,
-    TokenKind.CLASS: 0,
-    TokenKind.COMMENT: 0,
-    TokenKind.CONST: 0,
-    TokenKind.DEF: 0,
-    TokenKind.ENUM: 0,
-    TokenKind.INTERFACE: 0,
-    TokenKind.NAMESPACE: 0,
-    TokenKind.OVER: 0,
-    TokenKind.VAR: 0,
-  }
-
-  var REMOVE_NEWLINE_AFTER IntMap<int> = {
-    TokenKind.ARROW: 0,
-    TokenKind.COLON: 0,
-    TokenKind.COMMA: 0,
-    TokenKind.NEWLINE: 0,
-    TokenKind.QUESTION_MARK: 0,
-
-    TokenKind.LEFT_BRACE: 0,
-    TokenKind.LEFT_BRACKET: 0,
-    TokenKind.LEFT_PARENTHESIS: 0,
-
-    TokenKind.BITWISE_AND: 0,
-    TokenKind.BITWISE_OR: 0,
-    TokenKind.BITWISE_XOR: 0,
-    TokenKind.DIVIDE: 0,
-    TokenKind.EQUAL: 0,
-    TokenKind.GREATER_THAN: 0,
-    TokenKind.GREATER_THAN_OR_EQUAL: 0,
-    TokenKind.LESS_THAN: 0,
-    TokenKind.LESS_THAN_OR_EQUAL: 0,
-    TokenKind.LOGICAL_AND: 0,
-    TokenKind.LOGICAL_OR: 0,
-    TokenKind.MINUS: 0,
-    TokenKind.MULTIPLY: 0,
-    TokenKind.NOT_EQUAL: 0,
-    TokenKind.PLUS: 0,
-    TokenKind.REMAINDER: 0,
-    TokenKind.SHIFT_LEFT: 0,
-    TokenKind.SHIFT_RIGHT: 0,
-
-    TokenKind.ASSIGN: 0,
-    TokenKind.ASSIGN_PLUS: 0,
-    TokenKind.ASSIGN_BITWISE_AND: 0,
-    TokenKind.ASSIGN_BITWISE_OR: 0,
-    TokenKind.ASSIGN_BITWISE_XOR: 0,
-    TokenKind.ASSIGN_DIVIDE: 0,
-    TokenKind.ASSIGN_MULTIPLY: 0,
-    TokenKind.ASSIGN_REMAINDER: 0,
-    TokenKind.ASSIGN_SHIFT_LEFT: 0,
-    TokenKind.ASSIGN_SHIFT_RIGHT: 0,
-    TokenKind.ASSIGN_MINUS: 0,
-  }
-
   def prepareTokens(tokens List<Token>) {
     var previousKind TokenKind = .NULL
     var stack List<Token> = []
@@ -203,10 +147,7 @@ namespace Skew {
       # line continuations. Make sure to be conservative. We want to be like
       # Python, not like JavaScript ASI! Anything that is at all ambiguous
       # should be disallowed.
-      if tokenKind == .NEWLINE && previousKind in REMOVE_NEWLINE_AFTER && !(tokens[i + 1].kind in KEEP_NEWLINE_BEFORE) {
-        count--
-        continue
-      } else if previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE {
+      if previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE {
         tokens[count - 2] = token
         count--
       }

@@ -4742,5 +4742,17 @@ class Bar : Foo {
 ", "
 ")
 
+test("
+var x = 0 ?
+# Comment
+1 :
+# Comment
+2
+", "
+<stdin>:1:9: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+var x = 0 ?
+        ^
+")
+
   }
 }
