@@ -4790,5 +4790,16 @@ def main(
     ~~~~
 ")
 
+# Parser whitespace test
+test("
+var foo = a
+  .b
+  .c
+", "
+<stdin>:1:11: error: \"a\" is not declared
+var foo = a
+          ^
+")
+
   }
 }
