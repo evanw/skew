@@ -55,7 +55,7 @@ namespace Skew {
       _markVirtualFunctions(global)
 
       # All code in C# is inside objects, so just emit objects recursively
-      var emitIndividualFiles = _options.outputDirectory != ""
+      var emitIndividualFiles = _options.outputDirectory != null
       for object in _collectObjects(global) {
         # Nested objects will be emitted by their parent
         if object.parent != null && object.parent.kind == .OBJECT_CLASS {

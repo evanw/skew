@@ -160,8 +160,8 @@ namespace Unit {
         Terminal.setColor(.BOLD)
         Terminal.print(text + " ".repeat(indent.count - text.count) + test.name + "\n")
         _printDiff(indent,
-          failure.expected == "" ? [] : failure.expected.split("\n"),
-          failure.observed == "" ? [] : failure.observed.split("\n"))
+          failure.expected == null ? [] : failure.expected.split("\n"),
+          failure.observed == null ? [] : failure.observed.split("\n"))
         Terminal.setColor(.DEFAULT)
         Terminal.print("")
       }

@@ -12,7 +12,7 @@ namespace Skew {
     over visit(global ObjectSymbol) {
       _visitObject(global)
       _emit("\n")
-      _createSource(_options.outputDirectory != "" ? _options.outputDirectory + "/compiled.lisp" : _options.outputFile, .ALWAYS_EMIT)
+      _createSource(_options.outputDirectory != null ? _options.outputDirectory + "/compiled.lisp" : _options.outputFile, .ALWAYS_EMIT)
     }
 
     def _visitObject(symbol ObjectSymbol) {
@@ -113,14 +113,14 @@ namespace Skew {
     def dump(global ObjectSymbol) string {
       var emitter = LispTreeEmitter.new(CompilerOptions.new)
       emitter.visit(global)
-      emitter._createSource("", .ALWAYS_EMIT)
+      emitter._createSource(null, .ALWAYS_EMIT)
       return emitter.sources.first.contents
     }
 
     def dump(node Node) string {
       var emitter = LispTreeEmitter.new(CompilerOptions.new)
       emitter._visitNode(node)
-      emitter._createSource("", .ALWAYS_EMIT)
+      emitter._createSource(null, .ALWAYS_EMIT)
       return emitter.sources.first.contents
     }
   }

@@ -9,7 +9,7 @@ namespace Skew.Tests {
       var log = Log.new
       var result = compile(log, _options, [Source.new("<stdin>", _input)])
       var output = result.outputs.isEmpty ? log.toString : "\n".join(
-        result.outputs.map<string>(source => (source.name == "" ? "" : "[" + source.name + "]\n") + source.contents))
+        result.outputs.map<string>(source => (source.name == null ? "" : "[" + source.name + "]\n") + source.contents))
       expectString(trimNewlines(_expected), trimNewlines(output))
     }
 

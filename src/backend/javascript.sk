@@ -177,7 +177,7 @@ namespace Skew {
       _decreaseIndent
       _emit(_indent + "})();\n")
 
-      var codeName = _options.outputDirectory != "" ? _options.outputDirectory + "/compiled.js" : _options.outputFile
+      var codeName = _options.outputDirectory != null ? _options.outputDirectory + "/compiled.js" : _options.outputFile
       var mapName = codeName + ".map"
 
       # Obfuscate the sourceMappingURL so it's not incorrectly picked up as the
@@ -1881,9 +1881,10 @@ namespace Skew {
         # "if (a != 0) b;" => "if (a) b;"
         if replacement != null {
 
-          # This minification is not valid for floating-point values because
-          # of NaN, since NaN != 0 but NaN is falsy in JavaScript
-          if left.resolvedType != null && left.resolvedType != _cache.doubleType && right.resolvedType != null && right.resolvedType != _cache.doubleType {
+          # This minification is not valid for strings and doubles because
+          # they both have multiple falsy values (NaN and 0, null, and "")
+          if left.resolvedType != null && !_cache.isEquivalentToDouble(left.resolvedType) && !_cache.isEquivalentToString(left.resolvedType) &&
+              right.resolvedType != null && !_cache.isEquivalentToDouble(right.resolvedType) && !_cache.isEquivalentToString(right.resolvedType) {
             replacement.remove
             node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement)
           }
@@ -2507,7 +2508,7 @@ namespace Skew {
             return false
           }
         }
-        return value != "" && !(value in _isKeyword)
+        return value != null && !(value in _isKeyword)
       }
       return false
     }

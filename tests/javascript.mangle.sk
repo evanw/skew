@@ -1,6 +1,34 @@
 namespace Skew.Tests {
   def testJavaScriptMangle {
 
+# Test falsy values
+test("
+class Foo {
+}
+
+@export
+def main {
+  var i int
+  var s string
+  var d double
+  var b bool
+  var f Foo
+  if i != 0 { dynamic.foo() }
+  if s != \"\" { dynamic.foo() }
+  if s != null { dynamic.foo() }
+  if d != 0.0 { dynamic.foo() }
+  if b != false { dynamic.foo() }
+  if f != null { dynamic.foo() }
+}
+", "
+(function() {
+  main = function() {
+    var b = 0, a = null, c = 0, d = false, e = null;
+    b && foo(), a !== '' && foo(), a !== null && foo(), c !== 0 && foo(), d !== !1 && foo(), e && foo();
+  };
+})();
+").jsMangle
+
 # Test default values
 test("
 @export

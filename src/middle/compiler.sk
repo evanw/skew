@@ -33,8 +33,8 @@ namespace Skew {
     var jsMinify = false
     var jsSourceMap = false
     var verbose = false
-    var outputDirectory = ""
-    var outputFile = ""
+    var outputDirectory string = null
+    var outputFile string = null
     var target = CompilerTarget.new
     var passes = [
       LexingPass.new,

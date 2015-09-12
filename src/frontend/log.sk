@@ -198,7 +198,7 @@ namespace Skew {
     }
 
     def semanticErrorArgumentCount(range Range, expected int, found int, name string, function Range) {
-      error(range, _expectedCountText("argument", expected, found) + (name != "" ? " when calling \"" + name + "\"" : ""))
+      error(range, _expectedCountText("argument", expected, found) + (name != null ? " when calling \"" + name + "\"" : ""))
       if function != null {
         note(function, "The function declaration is here")
       }

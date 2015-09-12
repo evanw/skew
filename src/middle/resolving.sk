@@ -1894,7 +1894,7 @@ namespace Skew.Resolving {
 
       # Check argument count
       if expected != count {
-        log.semanticErrorArgumentCount(node.internalRangeOrRange, expected, count, function != null ? function.name : "", function != null ? function.range : null)
+        log.semanticErrorArgumentCount(node.internalRangeOrRange, expected, count, function != null ? function.name : null, function != null ? function.range : null)
         return false
       }
 

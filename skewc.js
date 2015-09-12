@@ -1097,7 +1097,7 @@
     this._markVirtualFunctions(global);
 
     // All code in C# is inside objects, so just emit objects recursively
-    var emitIndividualFiles = this._options.outputDirectory !== '';
+    var emitIndividualFiles = this._options.outputDirectory !== null;
 
     for (var i = 0, list = this._collectObjects(global), count = list.length; i < count; ++i) {
       var object = list[i];
@@ -3577,7 +3577,7 @@
     // End the closure wrapping everything
     this._decreaseIndent();
     this._emit(this._indent + '})();\n');
-    var codeName = this._options.outputDirectory !== '' ? this._options.outputDirectory + '/compiled.js' : this._options.outputFile;
+    var codeName = this._options.outputDirectory !== null ? this._options.outputDirectory + '/compiled.js' : this._options.outputFile;
     var mapName = codeName + '.map';
 
     // Obfuscate the sourceMappingURL so it's not incorrectly picked up as the
@@ -5644,9 +5644,9 @@
 
       // "if (a != 0) b;" => "if (a) b;"
       if (replacement !== null) {
-        // This minification is not valid for floating-point values because
-        // of NaN, since NaN != 0 but NaN is falsy in JavaScript
-        if (left.resolvedType !== null && left.resolvedType !== this._cache.doubleType && right.resolvedType !== null && right.resolvedType !== this._cache.doubleType) {
+        // This minification is not valid for strings and doubles because
+        // they both have multiple falsy values (NaN and 0, null, and "")
+        if (left.resolvedType !== null && !this._cache.isEquivalentToDouble(left.resolvedType) && !this._cache.isEquivalentToString(left.resolvedType) && right.resolvedType !== null && !this._cache.isEquivalentToDouble(right.resolvedType) && !this._cache.isEquivalentToString(right.resolvedType)) {
           replacement.remove();
           node.become(kind === Skew.NodeKind.EQUAL ? Skew.Node.createUnary(Skew.NodeKind.NOT, replacement) : replacement);
         }
@@ -6300,7 +6300,7 @@
         }
       }
 
-      return value !== '' && !(value in Skew.JavaScriptEmitter._isKeyword);
+      return value !== null && !(value in Skew.JavaScriptEmitter._isKeyword);
     }
 
     return false;
@@ -6585,7 +6585,7 @@
   Skew.LispTreeEmitter.prototype.visit = function(global) {
     this._visitObject(global);
     this._emit('\n');
-    this._createSource(this._options.outputDirectory !== '' ? this._options.outputDirectory + '/compiled.lisp' : this._options.outputFile, Skew.EmitMode.ALWAYS_EMIT);
+    this._createSource(this._options.outputDirectory !== null ? this._options.outputDirectory + '/compiled.lisp' : this._options.outputFile, Skew.EmitMode.ALWAYS_EMIT);
   };
 
   Skew.LispTreeEmitter.prototype._visitObject = function(symbol) {
@@ -10487,7 +10487,7 @@
   };
 
   Skew.Log.prototype.semanticErrorArgumentCount = function(range, expected, found, name, $function) {
-    this.error(range, Skew.Log._expectedCountText('argument', expected, found) + (name !== '' ? ' when calling "' + name + '"' : ''));
+    this.error(range, Skew.Log._expectedCountText('argument', expected, found) + (name !== null ? ' when calling "' + name + '"' : ''));
 
     if ($function !== null) {
       this.note($function, 'The function declaration is here');
@@ -11553,8 +11553,8 @@
     this.jsMinify = false;
     this.jsSourceMap = false;
     this.verbose = false;
-    this.outputDirectory = '';
-    this.outputFile = '';
+    this.outputDirectory = null;
+    this.outputFile = null;
     this.target = new Skew.CompilerTarget();
     this.passes = [
       new Skew.LexingPass(),
@@ -16479,7 +16479,7 @@
 
     // Check argument count
     if (expected !== count) {
-      this.log.semanticErrorArgumentCount(node.internalRangeOrRange(), expected, count, $function !== null ? $function.name : '', $function !== null ? $function.range : null);
+      this.log.semanticErrorArgumentCount(node.internalRangeOrRange(), expected, count, $function !== null ? $function.name : null, $function !== null ? $function.range : null);
       return false;
     }
 
