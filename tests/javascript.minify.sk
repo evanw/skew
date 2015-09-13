@@ -169,5 +169,18 @@ def foo string {
 (function(){foo=function(){return null}})();
 ").jsMinify
 
+# Avoid a space after "case" if possible
+test("
+@export
+def main(x string) {
+  switch x {
+    case \"x\" {}
+    case x {}
+  }
+}
+", "
+(function(){main=function(x){switch(x){case'x':break;case x:break}}})();
+").jsMinify
+
   }
 }

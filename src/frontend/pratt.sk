@@ -22,7 +22,6 @@ namespace Skew {
   class ParserContext {
     var log Log
     var inNonVoidFunction = false
-    var needsPreprocessor = false
     var _tokens List<Token>
     var _index = 0
 
@@ -147,11 +146,6 @@ namespace Skew {
         assert(left == null || left.range != null) # Parselets must set the range of every node
       }
       return left
-    }
-
-    def hasPrefixParselet(context ParserContext) bool {
-      var parselet = _table.get(context.current.kind, null)
-      return parselet != null && parselet.prefix != null
     }
 
     def literal(kind TokenKind, callback fn(ParserContext, Token) Node) {

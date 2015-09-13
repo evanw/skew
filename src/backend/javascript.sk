@@ -1009,7 +1009,8 @@ namespace Skew {
                 if value.previousSibling != null {
                   _emit(_newline)
                 }
-                _emit(_indent + "case ")
+                _emit(_indent + "case")
+                _emitSpaceBeforeKeyword(value)
                 _emitExpression(value, .LOWEST)
                 _emit(":")
               }
