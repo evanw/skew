@@ -12863,6 +12863,7 @@
 
     if (symbol.isConst() && value !== null) {
       this.constantCache[symbol.id] = null;
+      value = value.clone();
       this.foldConstants(value);
 
       if (value.kind === Skew.NodeKind.CONSTANT) {
@@ -19544,16 +19545,16 @@
   Skew.Symbol.SHOULD_INFER_RETURN_TYPE = 1 << 7;
 
   // Modifiers
-  Skew.Symbol.IS_DEPRECATED = 256;
-  Skew.Symbol.IS_ENTRY_POINT = 512;
-  Skew.Symbol.IS_EXPORTED = 1024;
-  Skew.Symbol.IS_IMPORTED = 2048;
-  Skew.Symbol.IS_INLINING_DISABLED = 4096;
-  Skew.Symbol.IS_PREFERRED = 8192;
+  Skew.Symbol.IS_DEPRECATED = 1 << 8;
+  Skew.Symbol.IS_ENTRY_POINT = 1 << 9;
+  Skew.Symbol.IS_EXPORTED = 1 << 10;
+  Skew.Symbol.IS_IMPORTED = 1 << 11;
+  Skew.Symbol.IS_INLINING_DISABLED = 1 << 12;
+  Skew.Symbol.IS_PREFERRED = 1 << 13;
   Skew.Symbol.IS_PROTECTED = 1 << 14;
-  Skew.Symbol.IS_RENAMED = 32768;
-  Skew.Symbol.IS_SKIPPED = 65536;
-  Skew.Symbol.SHOULD_SPREAD = 131072;
+  Skew.Symbol.IS_RENAMED = 1 << 15;
+  Skew.Symbol.IS_SKIPPED = 1 << 16;
+  Skew.Symbol.SHOULD_SPREAD = 1 << 17;
 
   // Pass-specific flags
   Skew.Symbol.IS_OBSOLETE = 1 << 18;

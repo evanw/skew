@@ -890,7 +890,6 @@ def main dynamic {
 })();
 ").js.foldAllConstants
 
-
 # Make sure variable initialization works with multiple user-defined constructors
 test("
 class Foo {
@@ -924,7 +923,29 @@ def main{
 
   Foo.new2.prototype = Foo.prototype;
 })();
-").js.foldAllConstants
+").js
+
+# Make sure constant folding of compile-time guards doesn't change code emission of the variables involved
+test("
+enum Foo { FOO }
+if BAR == 0 {
+  @export
+  def main {}
+}
+@export
+const BAR = Foo.FOO
+", "
+(function() {
+  main = function() {
+  };
+
+  var Foo = {
+    FOO: 0
+  };
+
+  BAR = Foo.FOO;
+})();
+").js
 
   }
 }

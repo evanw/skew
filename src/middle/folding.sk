@@ -706,6 +706,7 @@ namespace Skew.Folding {
 
       if symbol.isConst && value != null {
         constantCache[symbol.id] = null
+        value = value.clone
         foldConstants(value)
         if value.kind == .CONSTANT {
           constant = value.content
