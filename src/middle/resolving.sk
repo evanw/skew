@@ -760,6 +760,11 @@ namespace Skew.Resolving {
 
       for variable in symbol.variables {
         resolveVariable(variable)
+
+        # The values for these variables should already be copied into the body of each constructor
+        if variable.kind == .VARIABLE_INSTANCE {
+          variable.value = null
+        }
       }
 
       checkInterfacesAndAbstractStatus(symbol)
@@ -985,7 +990,7 @@ namespace Skew.Resolving {
         if symbol.kind == .FUNCTION_CONSTRUCTOR && !symbol.isAutomaticallyGenerated {
           for variable in symbol.parent.asObjectSymbol.variables {
             if variable.kind == .VARIABLE_INSTANCE {
-              initializeSymbol(variable)
+              resolveVariable(variable)
 
               # Attempt to create a default value if absent. Right now this
               # avoids the problem of initializing type parameters:
@@ -1004,8 +1009,7 @@ namespace Skew.Resolving {
               if variable.value != null {
                 block.insertChildBefore(firstStatement, Node.createExpression(Node.createBinary(.ASSIGN,
                   Node.createMemberReference(Node.createSymbolReference(symbol.this), variable),
-                  variable.value)))
-                variable.value = null
+                  variable.value.clone)))
               }
             }
           }

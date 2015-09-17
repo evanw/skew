@@ -890,5 +890,41 @@ def main dynamic {
 })();
 ").js.foldAllConstants
 
+
+# Make sure variable initialization works with multiple user-defined constructors
+test("
+class Foo {
+  var foo = \"\"
+  var bar = [1, 2, 3]
+  def new {}
+  def new(x int) {}
+}
+
+@export
+def main{
+  Foo.new
+  Foo.new(1)
+}
+", "
+(function() {
+  main = function() {
+    new Foo();
+    new Foo.new2(1);
+  };
+
+  function Foo() {
+    this.foo = '';
+    this.bar = [1, 2, 3];
+  }
+
+  Foo.new2 = function(x) {
+    this.foo = '';
+    this.bar = [1, 2, 3];
+  };
+
+  Foo.new2.prototype = Foo.prototype;
+})();
+").js.foldAllConstants
+
   }
 }

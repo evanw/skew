@@ -15094,6 +15094,11 @@
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
       var variable = list2[i2];
       this.resolveVariable1(variable);
+
+      // The values for these variables should already be copied into the body of each constructor
+      if (variable.kind === Skew.SymbolKind.VARIABLE_INSTANCE) {
+        variable.value = null;
+      }
     }
 
     this.checkInterfacesAndAbstractStatus2(symbol);
@@ -15347,7 +15352,7 @@
           var variable = list1[i1];
 
           if (variable.kind === Skew.SymbolKind.VARIABLE_INSTANCE) {
-            this.initializeSymbol(variable);
+            this.resolveVariable1(variable);
 
             // Attempt to create a default value if absent. Right now this
             // avoids the problem of initializing type parameters:
@@ -15364,8 +15369,7 @@
             }
 
             if (variable.value !== null) {
-              block.insertChildBefore(firstStatement, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable), variable.value)));
-              variable.value = null;
+              block.insertChildBefore(firstStatement, Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable), variable.value.clone())));
             }
           }
         }
