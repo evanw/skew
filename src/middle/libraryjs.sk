@@ -210,6 +210,12 @@ class List {
   }
 }
 
+namespace List {
+  def new List<T> {
+    return [] as dynamic
+  }
+}
+
 namespace StringMap {
   def new StringMap<T> {
     return dynamic.Object.create(null)
