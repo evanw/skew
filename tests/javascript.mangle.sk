@@ -2028,5 +2028,19 @@ def main {
 })();
 ").jsMangle
 
+# Check shortening of long reciprocals
+test("
+@export
+def foo(x double) double {
+  return 0.3333333333333333 + x * 0.3333333333333333
+}
+", "
+(function() {
+  foo = function(a) {
+    return 1 / 3 + a * (1 / 3);
+  };
+})();
+").jsMangle
+
   }
 }

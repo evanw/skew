@@ -1503,6 +1503,10 @@ namespace Skew {
       return Node.createInt(value).withType(_cache.intType)
     }
 
+    def _createDouble(value double) Node {
+      return Node.createDouble(value).withType(_cache.doubleType)
+    }
+
     def _createIntBinary(kind NodeKind, left Node, right Node) Node {
       if kind == .MULTIPLY {
         return Node.createSymbolCall(_specialVariable(.MULTIPLY)).appendChild(left).appendChild(right)
@@ -1664,8 +1668,25 @@ namespace Skew {
     }
 
     def _peepholeMangleConstant(node Node) {
-      if node.content.kind == .BOOL {
-        node.become(Node.createUnary(.NOT, _createInt(node.asBool ? 0 : 1)))
+      switch node.content.kind {
+        case .BOOL {
+          node.become(Node.createUnary(.NOT, _createInt(node.asBool ? 0 : 1)))
+        }
+
+        case .DOUBLE {
+          var value = node.asDouble
+          var reciprocal = 1 / value
+
+          # Shorten long reciprocals (don't replace multiplication with division
+          # because that's not numerically identical). These should be constant-
+          # folded by the JIT at compile-time.
+          #
+          #   "x * 0.3333333333333333" => "x * (1 / 3)"
+          #
+          if reciprocal == (reciprocal as int) && value.toString.count >= 10 {
+            node.become(Node.createBinary(.DIVIDE, _createDouble(1), _createDouble(reciprocal)).withType(_cache.doubleType))
+          }
+        }
       }
     }
 

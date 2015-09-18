@@ -5160,6 +5160,10 @@
     return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(value)).withType(this._cache.intType);
   };
 
+  Skew.JavaScriptEmitter.prototype._createDouble = function(value) {
+    return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.DoubleContent(value)).withType(this._cache.doubleType);
+  };
+
   Skew.JavaScriptEmitter.prototype._createIntBinary = function(kind, left, right) {
     if (kind === Skew.NodeKind.MULTIPLY) {
       return Skew.Node.createSymbolCall(this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.MULTIPLY)).appendChild(left).appendChild(right);
@@ -5417,8 +5421,27 @@
   };
 
   Skew.JavaScriptEmitter.prototype._peepholeMangleConstant = function(node) {
-    if (node.content.kind() === Skew.ContentKind.BOOL) {
-      node.become(Skew.Node.createUnary(Skew.NodeKind.NOT, this._createInt(node.asBool() ? 0 : 1)));
+    switch (node.content.kind()) {
+      case Skew.ContentKind.BOOL: {
+        node.become(Skew.Node.createUnary(Skew.NodeKind.NOT, this._createInt(node.asBool() ? 0 : 1)));
+        break;
+      }
+
+      case Skew.ContentKind.DOUBLE: {
+        var value = node.asDouble();
+        var reciprocal = 1 / value;
+
+        // Shorten long reciprocals (don't replace multiplication with division
+        // because that's not numerically identical). These should be constant-
+        // folded by the JIT at compile-time.
+        //
+        //   "x * 0.3333333333333333" => "x * (1 / 3)"
+        //
+        if (reciprocal === (reciprocal | 0) && value.toString().length >= 10) {
+          node.become(Skew.Node.createBinary(Skew.NodeKind.DIVIDE, this._createDouble(1), this._createDouble(reciprocal)).withType(this._cache.doubleType));
+        }
+        break;
+      }
     }
   };
 
