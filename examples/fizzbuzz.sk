@@ -1,0 +1,14 @@
+@import
+def print(text string)
+
+def mod(i int, n int, text string) string {
+  return i % n == 0 ? text : ""
+}
+
+@entry
+def fizzBuzz {
+  for i in 1..101 {
+    var text = mod(i, 3, "Fizz") + mod(i, 5, "Buzz")
+    print(text == "" ? i.toString : text)
+  }
+}
