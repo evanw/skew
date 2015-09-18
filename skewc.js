@@ -6974,7 +6974,7 @@
     this._nextSibling = null;
   };
 
-  Skew.Node.prototype.cloneWithoutChildren = function() {
+  Skew.Node.prototype._cloneWithoutChildren = function() {
     var clone = new Skew.Node(this.kind);
     clone.flags = this.flags;
     clone.range = this.range;
@@ -6992,7 +6992,7 @@
   //  node.become(Node.createUnary(.NOT, node.cloneAndStealChildren))
   //
   Skew.Node.prototype.cloneAndStealChildren = function() {
-    var clone = this.cloneWithoutChildren();
+    var clone = this._cloneWithoutChildren();
 
     while (this.hasChildren()) {
       clone.appendChild(this._firstChild.remove());
@@ -7002,12 +7002,28 @@
   };
 
   Skew.Node.prototype.clone = function() {
-    // Lambda symbols reference their block, which will not get cloned
-    assert(this.kind !== Skew.NodeKind.LAMBDA);
-    var clone = this.cloneWithoutChildren();
+    var clone = this._cloneWithoutChildren();
 
-    for (var child = this._firstChild; child !== null; child = child._nextSibling) {
-      clone.appendChild(child.clone());
+    // Clone lambdas explicitly so the symbol's block still matches the one in
+    // the syntax tree
+    if (clone.kind === Skew.NodeKind.LAMBDA) {
+      assert(this.childCount() === 1);
+      clone.symbol = clone.symbol.asFunctionSymbol().clone();
+      clone.appendChild(clone.symbol.asFunctionSymbol().block);
+    }
+
+    // Clone variables explicitly too so the symbol's value still matches the
+    // one in the syntax tree
+    else if (clone.kind === Skew.NodeKind.VARIABLE) {
+      assert(this.childCount() === 1);
+      clone.symbol = clone.symbol.asVariableSymbol().clone();
+      clone.appendChild(clone.symbol.asVariableSymbol().value);
+    }
+
+    else {
+      for (var child = this._firstChild; child !== null; child = child._nextSibling) {
+        clone.appendChild(child.clone());
+      }
     }
 
     return clone;
@@ -9973,6 +9989,15 @@
     this.flags = 0;
   };
 
+  Skew.Symbol.prototype._cloneFrom = function(symbol) {
+    this.rename = symbol.rename;
+    this.range = symbol.range;
+    this.resolvedType = symbol.resolvedType;
+    this.scope = symbol.scope;
+    this.state = symbol.state;
+    this.flags = symbol.flags;
+  };
+
   // Flags
   Skew.Symbol.prototype.isAutomaticallyGenerated = function() {
     return (this.flags & Skew.Symbol.IS_AUTOMATICALLY_GENERATED) !== 0;
@@ -10212,6 +10237,27 @@
 
   __extends(Skew.FunctionSymbol, Skew.Symbol);
 
+  Skew.FunctionSymbol.prototype.clone = function() {
+    assert(this.kind === Skew.SymbolKind.FUNCTION_LOCAL);
+    var result = new Skew.FunctionSymbol(this.kind, this.name);
+    result._cloneFrom(this);
+
+    for (var i = 0, list = this.$arguments, count = list.length; i < count; ++i) {
+      var argument = list[i];
+      result.$arguments.push(argument.clone());
+    }
+
+    if (this.returnType !== null) {
+      result.returnType = this.returnType.clone();
+    }
+
+    if (this.block !== null) {
+      result.block = this.block.clone();
+    }
+
+    return result;
+  };
+
   Skew.VariableSymbol = function(kind, name) {
     Skew.Symbol.call(this, kind, name);
     this.type = null;
@@ -10219,6 +10265,22 @@
   };
 
   __extends(Skew.VariableSymbol, Skew.Symbol);
+
+  Skew.VariableSymbol.prototype.clone = function() {
+    assert(this.kind === Skew.SymbolKind.VARIABLE_ARGUMENT || this.kind === Skew.SymbolKind.VARIABLE_LOCAL);
+    var result = new Skew.VariableSymbol(this.kind, this.name);
+    result._cloneFrom(this);
+
+    if (this.type !== null) {
+      result.type = this.type.clone();
+    }
+
+    if (this.value !== null) {
+      result.value = this.value.clone();
+    }
+
+    return result;
+  };
 
   Skew.VariableSymbol.prototype.enumValue = function() {
     assert(this.kind === Skew.SymbolKind.VARIABLE_ENUM);

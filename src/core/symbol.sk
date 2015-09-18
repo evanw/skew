@@ -132,6 +132,15 @@ namespace Skew {
     var forwardTo Symbol = null # Set by the interface removal step
     var flags = 0
 
+    def _cloneFrom(symbol Symbol) {
+      rename = symbol.rename
+      range = symbol.range
+      resolvedType = symbol.resolvedType
+      scope = symbol.scope
+      state = symbol.state
+      flags = symbol.flags
+    }
+
     # Flags
     def isAutomaticallyGenerated bool { return (flags & IS_AUTOMATICALLY_GENERATED) != 0 }
     def isConst bool                  { return (flags & IS_CONST) != 0 }
@@ -290,11 +299,32 @@ namespace Skew {
     var returnType Node = null
     var block Node = null
     var namingGroup = -1 # Automatically filled out by the renaming step
+
+    def clone FunctionSymbol {
+      assert(kind == .FUNCTION_LOCAL)
+      var result = FunctionSymbol.new(kind, name)
+      result._cloneFrom(self)
+      for argument in arguments {
+        result.arguments.append(argument.clone)
+      }
+      if returnType != null { result.returnType = returnType.clone }
+      if block != null { result.block = block.clone }
+      return result
+    }
   }
 
   class VariableSymbol : Symbol {
     var type Node = null
     var value Node = null
+
+    def clone VariableSymbol {
+      assert(kind == .VARIABLE_ARGUMENT || kind == .VARIABLE_LOCAL)
+      var result = VariableSymbol.new(kind, name)
+      result._cloneFrom(self)
+      if type != null { result.type = type.clone }
+      if value != null { result.value = value.clone }
+      return result
+    }
 
     def enumValue int {
       assert(kind == .VARIABLE_ENUM)

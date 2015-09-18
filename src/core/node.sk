@@ -179,7 +179,7 @@ namespace Skew {
     var _previousSibling Node = null
     var _nextSibling Node = null
 
-    def cloneWithoutChildren Node {
+    def _cloneWithoutChildren Node {
       var clone = new(kind)
       clone.flags = flags
       clone.range = range
@@ -197,7 +197,7 @@ namespace Skew {
     #  node.become(Node.createUnary(.NOT, node.cloneAndStealChildren))
     #
     def cloneAndStealChildren Node {
-      var clone = cloneWithoutChildren
+      var clone = _cloneWithoutChildren
       while hasChildren {
         clone.appendChild(_firstChild.remove)
       }
@@ -205,11 +205,30 @@ namespace Skew {
     }
 
     def clone Node {
-      assert(kind != .LAMBDA) # Lambda symbols reference their block, which will not get cloned
-      var clone = cloneWithoutChildren
-      for child = _firstChild; child != null; child = child._nextSibling {
-        clone.appendChild(child.clone)
+      var clone = _cloneWithoutChildren
+
+      # Clone lambdas explicitly so the symbol's block still matches the one in
+      # the syntax tree
+      if clone.kind == .LAMBDA {
+        assert(childCount == 1)
+        clone.symbol = clone.symbol.asFunctionSymbol.clone
+        clone.appendChild(clone.symbol.asFunctionSymbol.block)
       }
+
+      # Clone variables explicitly too so the symbol's value still matches the
+      # one in the syntax tree
+      else if clone.kind == .VARIABLE {
+        assert(childCount == 1)
+        clone.symbol = clone.symbol.asVariableSymbol.clone
+        clone.appendChild(clone.symbol.asVariableSymbol.value)
+      }
+
+      else {
+        for child = _firstChild; child != null; child = child._nextSibling {
+          clone.appendChild(child.clone)
+        }
+      }
+
       return clone
     }
 
