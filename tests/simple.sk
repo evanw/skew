@@ -4801,5 +4801,20 @@ var foo = a
           ^
 ")
 
+# Test for an operator overload resolution bug with integer promotion to double
+test("
+def foo(count int) {
+  count + 0.0
+  count += 0.0
+}
+", "
+<stdin>:2:3: warning: Unused expression
+  count + 0.0
+  ~~~~~~~~~~~
+<stdin>:3:12: error: Cannot convert from type \"double\" to type \"int\" without a cast
+  count += 0.0
+           ~~~
+")
+
   }
 }

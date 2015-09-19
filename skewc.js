@@ -17482,7 +17482,7 @@
     }
 
     // Auto-convert int to double when it appears as the target
-    if (other !== null && type === this.cache.intType) {
+    if (other !== null && !Skew.in_NodeKind.isBinaryAssign(kind) && type === this.cache.intType) {
       this.resolveAsParameterizedExpression(other, scope);
 
       if (other.resolvedType === this.cache.doubleType) {

@@ -2691,7 +2691,7 @@ namespace Skew.Resolving {
       }
 
       # Auto-convert int to double when it appears as the target
-      if other != null && type == cache.intType {
+      if other != null && !kind.isBinaryAssign && type == cache.intType {
         resolveAsParameterizedExpression(other, scope)
         if other.resolvedType == cache.doubleType {
           checkConversion(target, cache.doubleType, .IMPLICIT)
