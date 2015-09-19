@@ -947,5 +947,49 @@ const BAR = Foo.FOO
 })();
 ").js
 
+# Check for integer casting
+test("
+@export
+def main(x int) {
+  dynamic.foo(x + 1)
+  dynamic.foo(x - 1)
+  dynamic.foo(x * 2)
+  dynamic.foo(x / 2)
+  dynamic.foo(x % 2)
+  dynamic.foo(x % 0)
+  dynamic.foo(x % x)
+  dynamic.foo(x << 1)
+  dynamic.foo(x >> 1)
+  dynamic.foo(x >>> 1)
+  dynamic.foo(x >>> 0)
+  dynamic.foo(x >>> x)
+}
+", "
+(function() {
+  var __imul = Math.imul ? Math.imul : function(a, b) {
+    var ah = a >> 16 & 65535;
+    var bh = b >> 16 & 65535;
+    var al = a & 65535;
+    var bl = b & 65535;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+
+  main = function(x) {
+    foo(x + 1 | 0);
+    foo(x - 1 | 0);
+    foo(__imul(x, 2));
+    foo(x / 2 | 0);
+    foo(x % 2);
+    foo(x % 0 | 0);
+    foo(x % x | 0);
+    foo(x << 1);
+    foo(x >> 1);
+    foo(x >>> 1);
+    foo(x >>> 0 | 0);
+    foo(x >>> x | 0);
+  };
+})();
+").js
+
   }
 }

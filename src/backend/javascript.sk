@@ -1543,7 +1543,7 @@ namespace Skew {
       # Special-case the integer "%" operator where the right operand may be
       # "0" since that generates "NaN" which is not representable as an int.
       if node.resolvedType == _cache.intType && !_alwaysConvertsOperandsToInt(node.parent) && (
-          node.kind != .REMAINDER || !node.binaryRight.isInt || node.binaryRight.asInt == 0) {
+          node.kind != .REMAINDER && node.kind != .UNSIGNED_SHIFT_RIGHT || !node.binaryRight.isInt || node.binaryRight.asInt == 0) {
         var left = node.binaryLeft
         var right = node.binaryRight
         if left.resolvedType == _cache.intType && right.resolvedType == _cache.intType {
@@ -1632,7 +1632,7 @@ namespace Skew {
 
     def _patchNodeHelper(node Node) {
       switch node.kind {
-        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER { _patchBinaryArithmetic(node) }
+        case .ADD, .SUBTRACT, .MULTIPLY, .DIVIDE, .REMAINDER, .UNSIGNED_SHIFT_RIGHT { _patchBinaryArithmetic(node) }
         case .BREAK { _patchBreak(node) }
         case .CAST { _patchCast(node) }
         case .FOREACH { _unionVariableWithFunction(node.symbol, _enclosingFunction) }

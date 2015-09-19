@@ -66,6 +66,7 @@
 "|="                              ASSIGN_BITWISE_OR;
 "^="                              ASSIGN_BITWISE_XOR;
 "<<="                             ASSIGN_SHIFT_LEFT;
+">>>="                            ASSIGN_UNSIGNED_SHIFT_RIGHT;
 ">>="                             ASSIGN_SHIFT_RIGHT;
 "**"                              POWER;
 "++"                              INCREMENT;
@@ -81,6 +82,7 @@
 "|"                               BITWISE_OR;
 "^"                               BITWISE_XOR;
 "<<"                              SHIFT_LEFT;
+">>>"                             UNSIGNED_SHIFT_RIGHT;
 ">>"                              SHIFT_RIGHT;
 "!="                              NOT_EQUAL;
 "=="                              EQUAL;

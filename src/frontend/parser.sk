@@ -717,6 +717,7 @@ namespace Skew.Parsing {
     TokenKind.ASSIGN_REMAINDER: 0,
     TokenKind.ASSIGN_SHIFT_LEFT: 0,
     TokenKind.ASSIGN_SHIFT_RIGHT: 0,
+    TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT: 0,
     TokenKind.BITWISE_AND: 0,
     TokenKind.BITWISE_OR: 0,
     TokenKind.BITWISE_XOR: 0,
@@ -737,6 +738,7 @@ namespace Skew.Parsing {
     TokenKind.SHIFT_LEFT: 0,
     TokenKind.SHIFT_RIGHT: 0,
     TokenKind.TILDE: 0,
+    TokenKind.UNSIGNED_SHIFT_RIGHT: 0,
   }
 
   def parseAfterBlock(context ParserContext) bool {
@@ -1332,6 +1334,7 @@ namespace Skew.Parsing {
     pratt.infix(.REMAINDER, .MULTIPLY, binaryInfix(.REMAINDER))
     pratt.infix(.SHIFT_LEFT, .SHIFT, binaryInfix(.SHIFT_LEFT))
     pratt.infix(.SHIFT_RIGHT, .SHIFT, binaryInfix(.SHIFT_RIGHT))
+    pratt.infix(.UNSIGNED_SHIFT_RIGHT, .SHIFT, binaryInfix(.UNSIGNED_SHIFT_RIGHT))
 
     pratt.infixRight(.ASSIGN, .ASSIGN, binaryInfix(.ASSIGN))
     pratt.infixRight(.ASSIGN_BITWISE_AND, .ASSIGN, binaryInfix(.ASSIGN_BITWISE_AND))
@@ -1345,6 +1348,7 @@ namespace Skew.Parsing {
     pratt.infixRight(.ASSIGN_REMAINDER, .ASSIGN, binaryInfix(.ASSIGN_REMAINDER))
     pratt.infixRight(.ASSIGN_SHIFT_LEFT, .ASSIGN, binaryInfix(.ASSIGN_SHIFT_LEFT))
     pratt.infixRight(.ASSIGN_SHIFT_RIGHT, .ASSIGN, binaryInfix(.ASSIGN_SHIFT_RIGHT))
+    pratt.infixRight(.ASSIGN_UNSIGNED_SHIFT_RIGHT, .ASSIGN, binaryInfix(.ASSIGN_UNSIGNED_SHIFT_RIGHT))
 
     ########################################
     # Other expressions

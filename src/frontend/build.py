@@ -99,11 +99,18 @@ namespace Skew {
         # for these tokens to be split into pieces, that way all of the tokens
         # don't have to be shifted over repeatedly inside prepareTokens(). The
         # ">>" token may become ">" + ">", the ">=" token may become ">" + "=",
-        # and the ">>=" token may become ">" + ">=" and so ">" + ">" + "=".
-        if yy_act == .ASSIGN_SHIFT_RIGHT || yy_act == .SHIFT_RIGHT || yy_act == .GREATER_THAN_OR_EQUAL {
+        # the ">>>" token may become ">" + ">>" and ultimately ">" + ">" + ">",
+        # the ">>=" token may ultimately become ">" + ">" + "=", and the ">>>="
+        # token may ultimately become ">" + ">" + ">" + "=".
+        if yy_act == .ASSIGN_SHIFT_RIGHT || yy_act == .ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == .GREATER_THAN_OR_EQUAL || yy_act == .SHIFT_RIGHT || yy_act == .UNSIGNED_SHIFT_RIGHT {
           tokens.append(null)
-          if yy_act == .ASSIGN_SHIFT_RIGHT {
+
+          if yy_act == .ASSIGN_SHIFT_RIGHT || yy_act == .ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == .UNSIGNED_SHIFT_RIGHT {
             tokens.append(null)
+
+            if yy_act == .ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == .UNSIGNED_SHIFT_RIGHT {
+              tokens.append(null)
+            }
           }
         }
       }

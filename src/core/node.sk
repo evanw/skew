@@ -68,6 +68,7 @@ namespace Skew {
     SHIFT_LEFT
     SHIFT_RIGHT
     SUBTRACT
+    UNSIGNED_SHIFT_RIGHT
 
     # Binary comparison operators
     GREATER_THAN
@@ -88,6 +89,7 @@ namespace Skew {
     ASSIGN_SHIFT_LEFT
     ASSIGN_SHIFT_RIGHT
     ASSIGN_SUBTRACT
+    ASSIGN_UNSIGNED_SHIFT_RIGHT
 
     def isStatement bool {
       return self as int >= ASSIGN as int && self as int <= WHILE as int
@@ -98,7 +100,7 @@ namespace Skew {
     }
 
     def isExpression bool {
-      return self as int >= ASSIGN_INDEX as int && self as int <= ASSIGN_SUBTRACT as int
+      return self as int >= ASSIGN_INDEX as int && self as int <= ASSIGN_UNSIGNED_SHIFT_RIGHT as int
     }
 
     def isInitializer bool {
@@ -114,11 +116,11 @@ namespace Skew {
     }
 
     def isBinary bool {
-      return self as int >= ADD as int && self as int <= ASSIGN_SUBTRACT as int
+      return self as int >= ADD as int && self as int <= ASSIGN_UNSIGNED_SHIFT_RIGHT as int
     }
 
     def isBinaryAssign bool {
-      return self as int >= ASSIGN as int && self as int <= ASSIGN_SUBTRACT as int
+      return self as int >= ASSIGN as int && self as int <= ASSIGN_UNSIGNED_SHIFT_RIGHT as int
     }
 
     # Note that add and multiply are NOT associative in finite-precision arithmetic

@@ -124,13 +124,18 @@ namespace Skew {
               assert(i + 1 < tokens.count)
               assert(tokens[i + 1] == null)
               assert(
-                tokenKind == .SHIFT_RIGHT ||
+                tokenKind == .ASSIGN_SHIFT_RIGHT ||
+                tokenKind == .ASSIGN_UNSIGNED_SHIFT_RIGHT ||
                 tokenKind == .GREATER_THAN_OR_EQUAL ||
-                tokenKind == .ASSIGN_SHIFT_RIGHT)
+                tokenKind == .SHIFT_RIGHT ||
+                tokenKind == .UNSIGNED_SHIFT_RIGHT)
               tokens[i + 1] = Token.new(Range.new(range.source, start + 1, range.end),
                 tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
+                tokenKind == .UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
                 tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
-                .GREATER_THAN_OR_EQUAL)
+                tokenKind == .ASSIGN_SHIFT_RIGHT ? .GREATER_THAN_OR_EQUAL :
+                tokenKind == .ASSIGN_UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
+                .NULL)
               token.range = Range.new(range.source, start, start + 1)
             }
 
