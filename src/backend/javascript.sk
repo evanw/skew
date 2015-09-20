@@ -1181,7 +1181,7 @@ namespace Skew {
           var value = node.callValue
           var call = value.kind == .SUPER
           var isKeyword = value.kind == .NAME && value.symbol == null && value.asString in KEYWORD_CALL_MAP
-          var parenthesize = isKeyword && Precedence.UNARY_POSTFIX as int < precedence as int
+          var parenthesize = isKeyword && Precedence.UNARY_POSTFIX < precedence
           var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
           var isNew = false
 
@@ -1289,7 +1289,7 @@ namespace Skew {
         }
 
         case .ASSIGN_INDEX {
-          if Precedence.ASSIGN as int < precedence as int {
+          if Precedence.ASSIGN < precedence {
             _emit("(")
           }
           _emitExpression(node.assignIndexLeft, .UNARY_POSTFIX)
@@ -1297,7 +1297,7 @@ namespace Skew {
           _emitExpression(node.assignIndexCenter, .LOWEST)
           _emit("]" + _space + "=" + _space + "")
           _emitExpression(node.assignIndexRight, .ASSIGN)
-          if Precedence.ASSIGN as int < precedence as int {
+          if Precedence.ASSIGN < precedence {
             _emit(")")
           }
         }
@@ -1311,11 +1311,11 @@ namespace Skew {
         }
 
         case .SEQUENCE {
-          if Precedence.COMMA as int <= precedence as int {
+          if Precedence.COMMA <= precedence {
             _emit("(")
           }
           _emitCommaSeparatedExpressions(node.firstChild, null)
-          if Precedence.COMMA as int <= precedence as int {
+          if Precedence.COMMA <= precedence {
             _emit(")")
           }
         }
@@ -1325,7 +1325,7 @@ namespace Skew {
         }
 
         case .HOOK {
-          if Precedence.ASSIGN as int < precedence as int {
+          if Precedence.ASSIGN < precedence {
             _emit("(")
           }
           _emitExpression(node.hookTest, .LOGICAL_OR)
@@ -1333,7 +1333,7 @@ namespace Skew {
           _emitExpression(node.hookTrue, .ASSIGN)
           _emit(_space + ":" + _space)
           _emitExpression(node.hookFalse, .ASSIGN)
-          if Precedence.ASSIGN as int < precedence as int {
+          if Precedence.ASSIGN < precedence {
             _emit(")")
           }
         }
@@ -1349,12 +1349,12 @@ namespace Skew {
         case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
           var value = node.unaryValue
           var info = operatorInfo[kind]
-          if info.precedence as int < precedence as int {
+          if info.precedence < precedence {
             _emit("(")
           }
           _emit(info.text)
           _emitExpression(value, info.precedence)
-          if info.precedence as int < precedence as int {
+          if info.precedence < precedence {
             _emit(")")
           }
         }
@@ -1366,7 +1366,7 @@ namespace Skew {
             resolvedType = _cache.unwrappedType(resolvedType)
           }
           if resolvedType.kind == .SYMBOL || type.kind != .TYPE {
-            if Precedence.COMPARE as int < precedence as int {
+            if Precedence.COMPARE < precedence {
               _emit("(")
             }
             _emitExpression(node.typeCheckValue, Precedence.COMPARE)
@@ -1376,7 +1376,7 @@ namespace Skew {
             } else {
               _emitExpression(type, Precedence.COMPARE)
             }
-            if Precedence.COMPARE as int < precedence as int {
+            if Precedence.COMPARE < precedence {
               _emit(")")
             }
           } else {
@@ -1389,7 +1389,7 @@ namespace Skew {
             var info = operatorInfo[kind]
             var right = node.binaryRight
 
-            if info.precedence as int < precedence as int {
+            if info.precedence < precedence {
               _emit("(")
             }
             _emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
@@ -1405,7 +1405,7 @@ namespace Skew {
             }
 
             _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
-            if info.precedence as int < precedence as int {
+            if info.precedence < precedence {
               _emit(")")
             }
           }

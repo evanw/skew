@@ -203,11 +203,11 @@ namespace Skew {
 
   enum Precedence {
     def incrementIfLeftAssociative(associativity Associativity) Precedence {
-      return ((self as int) + ((associativity == .LEFT) as int)) as Precedence
+      return (self + ((associativity == .LEFT) as int)) as Precedence
     }
 
     def incrementIfRightAssociative(associativity Associativity) Precedence {
-      return ((self as int) + ((associativity == .RIGHT) as int)) as Precedence
+      return (self + ((associativity == .RIGHT) as int)) as Precedence
     }
   }
 }

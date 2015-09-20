@@ -116,7 +116,7 @@ namespace Skew {
         var created = Parselet.new(precedence)
         parselet = created
         _table[kind] = created
-      } else if precedence as int > parselet.precedence as int {
+      } else if precedence > parselet.precedence {
         parselet.precedence = precedence
       }
       return parselet
@@ -139,7 +139,7 @@ namespace Skew {
       while left != null {
         var kind = context.current.kind
         var parselet = _table.get(kind, null)
-        if parselet == null || parselet.infix == null || parselet.precedence as int <= precedence as int {
+        if parselet == null || parselet.infix == null || parselet.precedence <= precedence {
           break
         }
         left = parselet.infix(context, left)

@@ -17415,13 +17415,31 @@
       return;
     }
 
-    // Auto-convert int to double when it appears as the target
-    if (other !== null && !Skew.in_NodeKind.isBinaryAssign(kind) && type === this.cache.intType) {
-      this.resolveAsParameterizedExpression(other, scope);
+    // Auto-convert int to double and enum to int when it appears as the target
+    if (other !== null && !Skew.in_NodeKind.isBinaryAssign(kind)) {
+      if (type === this.cache.intType) {
+        this.resolveAsParameterizedExpression(other, scope);
 
-      if (other.resolvedType === this.cache.doubleType) {
-        this.checkConversion(target, this.cache.doubleType, Skew.Resolving.ConversionKind.IMPLICIT);
-        type = this.cache.doubleType;
+        if (other.resolvedType === this.cache.doubleType) {
+          this.checkConversion(target, this.cache.doubleType, Skew.Resolving.ConversionKind.IMPLICIT);
+          type = this.cache.doubleType;
+        }
+      }
+
+      else if (type.isEnum()) {
+        this.resolveAsParameterizedExpression(other, scope);
+
+        if (this.cache.isNumeric(other.resolvedType)) {
+          type = this.cache.commonImplicitType(type, other.resolvedType);
+          assert(type !== null);
+
+          if (type.isEnum()) {
+            type = this.cache.intType;
+          }
+
+          this.checkConversion(other, type, Skew.Resolving.ConversionKind.IMPLICIT);
+          this.checkConversion(target, type, Skew.Resolving.ConversionKind.IMPLICIT);
+        }
       }
     }
 

@@ -92,7 +92,7 @@ namespace Skew {
     ASSIGN_UNSIGNED_SHIFT_RIGHT
 
     def isStatement bool {
-      return self as int >= ASSIGN as int && self as int <= WHILE as int
+      return self >= ASSIGN && self <= WHILE
     }
 
     def isLoop bool {
@@ -100,7 +100,7 @@ namespace Skew {
     }
 
     def isExpression bool {
-      return self as int >= ASSIGN_INDEX as int && self as int <= ASSIGN_UNSIGNED_SHIFT_RIGHT as int
+      return self >= ASSIGN_INDEX && self <= ASSIGN_UNSIGNED_SHIFT_RIGHT
     }
 
     def isInitializer bool {
@@ -108,19 +108,19 @@ namespace Skew {
     }
 
     def isUnary bool {
-      return self as int >= COMPLEMENT as int && self as int <= POSITIVE as int
+      return self >= COMPLEMENT && self <= POSITIVE
     }
 
     def isUnaryAssign bool {
-      return self as int >= DECREMENT as int && self as int <= INCREMENT as int
+      return self >= DECREMENT && self <= INCREMENT
     }
 
     def isBinary bool {
-      return self as int >= ADD as int && self as int <= ASSIGN_UNSIGNED_SHIFT_RIGHT as int
+      return self >= ADD && self <= ASSIGN_UNSIGNED_SHIFT_RIGHT
     }
 
     def isBinaryAssign bool {
-      return self as int >= ASSIGN as int && self as int <= ASSIGN_UNSIGNED_SHIFT_RIGHT as int
+      return self >= ASSIGN && self <= ASSIGN_UNSIGNED_SHIFT_RIGHT
     }
 
     # Note that add and multiply are NOT associative in finite-precision arithmetic
@@ -134,7 +134,7 @@ namespace Skew {
     }
 
     def isBinaryComparison bool {
-      return self as int >= GREATER_THAN as int && self as int <= LESS_THAN_OR_EQUAL as int
+      return self >= GREATER_THAN && self <= LESS_THAN_OR_EQUAL
     }
 
     def isJump bool {

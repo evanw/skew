@@ -228,10 +228,10 @@ def bar(foo int, baz fn()) {
 test("
 @export
 def foo(bar Foo, baz fn()) {
-  if bar as int < Foo.BAR as int { baz() }
-  if bar as int <= Foo.BAR as int { baz() }
-  if bar as int > Foo.BAR as int { baz() }
-  if bar as int >= Foo.BAR as int { baz() }
+  if bar < Foo.BAR { baz() }
+  if bar <= Foo.BAR { baz() }
+  if bar > Foo.BAR { baz() }
+  if bar >= Foo.BAR { baz() }
   if bar == Foo.FOO { baz() }
   if bar != Foo.FOO { baz() }
   if bar == Foo.BAR { baz() }
@@ -240,10 +240,10 @@ def foo(bar Foo, baz fn()) {
 
 @export
 def bar(foo Foo, baz fn()) {
-  if Foo.BAR as int < foo as int { baz() }
-  if Foo.BAR as int <= foo as int { baz() }
-  if Foo.BAR as int > foo as int { baz() }
-  if Foo.BAR as int >= foo as int { baz() }
+  if Foo.BAR < foo { baz() }
+  if Foo.BAR <= foo { baz() }
+  if Foo.BAR > foo { baz() }
+  if Foo.BAR >= foo { baz() }
   if Foo.FOO == foo { baz() }
   if Foo.FOO != foo { baz() }
   if Foo.BAR == foo { baz() }

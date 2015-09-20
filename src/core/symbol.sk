@@ -27,31 +27,31 @@ namespace Skew {
     VARIABLE_LOCAL
 
     def isType bool {
-      return self as int >= PARAMETER_FUNCTION as int && self as int <= OBJECT_WRAPPED as int
+      return self >= PARAMETER_FUNCTION && self <= OBJECT_WRAPPED
     }
 
     def isParameter bool {
-      return self as int >= PARAMETER_FUNCTION as int && self as int <= PARAMETER_OBJECT as int
+      return self >= PARAMETER_FUNCTION && self <= PARAMETER_OBJECT
     }
 
     def isObject bool {
-      return self as int >= OBJECT_CLASS as int && self as int <= OBJECT_WRAPPED as int
+      return self >= OBJECT_CLASS && self <= OBJECT_WRAPPED
     }
 
     def isFunction bool {
-      return self as int >= FUNCTION_ANNOTATION as int && self as int <= FUNCTION_LOCAL as int
+      return self >= FUNCTION_ANNOTATION && self <= FUNCTION_LOCAL
     }
 
     def isOverloadedFunction bool {
-      return self as int >= OVERLOADED_ANNOTATION as int && self as int <= OVERLOADED_INSTANCE as int
+      return self >= OVERLOADED_ANNOTATION && self <= OVERLOADED_INSTANCE
     }
 
     def isFunctionOrOverloadedFunction bool {
-      return self as int >= FUNCTION_ANNOTATION as int && self as int <= OVERLOADED_INSTANCE as int
+      return self >= FUNCTION_ANNOTATION && self <= OVERLOADED_INSTANCE
     }
 
     def isVariable bool {
-      return self as int >= VARIABLE_ARGUMENT as int && self as int <= VARIABLE_LOCAL as int
+      return self >= VARIABLE_ARGUMENT && self <= VARIABLE_LOCAL
     }
 
     def isLocalOrArgumentVariable bool {

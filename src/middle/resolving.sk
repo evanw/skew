@@ -2684,12 +2684,23 @@ namespace Skew.Resolving {
         return
       }
 
-      # Auto-convert int to double when it appears as the target
-      if other != null && !kind.isBinaryAssign && type == cache.intType {
-        resolveAsParameterizedExpression(other, scope)
-        if other.resolvedType == cache.doubleType {
-          checkConversion(target, cache.doubleType, .IMPLICIT)
-          type = cache.doubleType
+      # Auto-convert int to double and enum to int when it appears as the target
+      if other != null && !kind.isBinaryAssign {
+        if type == cache.intType {
+          resolveAsParameterizedExpression(other, scope)
+          if other.resolvedType == cache.doubleType {
+            checkConversion(target, cache.doubleType, .IMPLICIT)
+            type = cache.doubleType
+          }
+        } else if type.isEnum {
+          resolveAsParameterizedExpression(other, scope)
+          if cache.isNumeric(other.resolvedType) {
+            type = cache.commonImplicitType(type, other.resolvedType)
+            assert(type != null)
+            if type.isEnum { type = cache.intType }
+            checkConversion(other, type, .IMPLICIT)
+            checkConversion(target, type, .IMPLICIT)
+          }
         }
       }
 

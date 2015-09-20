@@ -1486,11 +1486,11 @@ namespace Skew.Parsing {
     # Hook expressions
     pratt.parselet(.QUESTION_MARK, .ASSIGN).infix = (context, left) => {
       context.next
-      var middle = pratt.parse(context, ((Precedence.ASSIGN as int) - 1) as Precedence)
+      var middle = pratt.parse(context, (Precedence.ASSIGN - 1) as Precedence)
       if middle == null || !context.expect(.COLON) {
         return null
       }
-      var right = pratt.parse(context, ((Precedence.ASSIGN as int) - 1) as Precedence)
+      var right = pratt.parse(context, (Precedence.ASSIGN - 1) as Precedence)
       if right == null {
         return null
       }
