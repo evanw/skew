@@ -2042,5 +2042,111 @@ def foo(x double) double {
 })();
 ").jsMangle
 
+# Check inlining of instance constants
+test("
+class Foo {
+  const foo = 1
+}
+
+@import
+class Bar {
+  const bar = 2
+}
+
+@export
+def main(foo Foo, bar Bar) int {
+  return foo.foo + bar.bar
+}
+", "
+(function() {
+  main = function(a, c) {
+    return a.a + 2 | 0;
+  };
+  var b = {};
+})();
+").jsMangle.foldAllConstants
+
+# Check lambda cloning when mangling is active
+test("
+class Foo {
+  const f = (x int) => x
+  def new {}
+  def new(x int) {}
+}
+
+@export
+def main {
+  Foo.new
+  Foo.new(0)
+}
+", "
+(function() {
+  main = function() {
+    new d, new d.c(0);
+  };
+
+  function d() {
+    this.a = function(a) {
+      return a;
+    };
+  }
+
+  d.c = function(e) {
+    this.a = function(a) {
+      return a;
+    };
+  };
+
+  d.c.prototype = d.prototype;
+})();
+").jsMangle
+
+# Basic constant folding check
+test("
+class Foo {
+  const foo = 0
+}
+
+@export
+def main {
+  Foo.new
+}
+", "
+(function() {
+  main = function() {
+    new c;
+  };
+
+  function c() {
+    this.b = 0;
+  }
+})();
+").jsMangle.foldAllConstants
+
+# Check constant folding when the constant is defined in the constructor
+test("
+class Foo {
+  const foo int
+  def new { foo = 1 }
+}
+
+@export
+def main int {
+  var x = Foo.new
+  return x.foo
+}
+", "
+(function() {
+  main = function() {
+    var a = new c;
+    return a.a;
+  };
+
+  function c() {
+    this.a = 0, this.a = 1;
+  }
+})();
+").jsMangle.foldAllConstants
+
   }
 }

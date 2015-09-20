@@ -7013,26 +7013,8 @@
   Skew.Node.prototype.clone = function() {
     var clone = this._cloneWithoutChildren();
 
-    // Clone lambdas explicitly so the symbol's block still matches the one in
-    // the syntax tree
-    if (clone.kind === Skew.NodeKind.LAMBDA) {
-      assert(this.childCount() === 1);
-      clone.symbol = clone.symbol.asFunctionSymbol().clone();
-      clone.appendChild(clone.symbol.asFunctionSymbol().block);
-    }
-
-    // Clone variables explicitly too so the symbol's value still matches the
-    // one in the syntax tree
-    else if (clone.kind === Skew.NodeKind.VARIABLE) {
-      assert(this.childCount() === 1);
-      clone.symbol = clone.symbol.asVariableSymbol().clone();
-      clone.appendChild(clone.symbol.asVariableSymbol().value);
-    }
-
-    else {
-      for (var child = this._firstChild; child !== null; child = child._nextSibling) {
-        clone.appendChild(child.clone());
-      }
+    for (var child = this._firstChild; child !== null; child = child._nextSibling) {
+      clone.appendChild(child.clone());
     }
 
     return clone;
@@ -10000,15 +9982,6 @@
     this.flags = 0;
   };
 
-  Skew.Symbol.prototype._cloneFrom = function(symbol) {
-    this.rename = symbol.rename;
-    this.range = symbol.range;
-    this.resolvedType = symbol.resolvedType;
-    this.scope = symbol.scope;
-    this.state = symbol.state;
-    this.flags = symbol.flags;
-  };
-
   // Flags
   Skew.Symbol.prototype.isAutomaticallyGenerated = function() {
     return (this.flags & Skew.Symbol.IS_AUTOMATICALLY_GENERATED) !== 0;
@@ -10248,27 +10221,6 @@
 
   __extends(Skew.FunctionSymbol, Skew.Symbol);
 
-  Skew.FunctionSymbol.prototype.clone = function() {
-    assert(this.kind === Skew.SymbolKind.FUNCTION_LOCAL);
-    var result = new Skew.FunctionSymbol(this.kind, this.name);
-    result._cloneFrom(this);
-
-    for (var i = 0, list = this.$arguments, count = list.length; i < count; ++i) {
-      var argument = list[i];
-      result.$arguments.push(argument.clone());
-    }
-
-    if (this.returnType !== null) {
-      result.returnType = this.returnType.clone();
-    }
-
-    if (this.block !== null) {
-      result.block = this.block.clone();
-    }
-
-    return result;
-  };
-
   Skew.VariableSymbol = function(kind, name) {
     Skew.Symbol.call(this, kind, name);
     this.type = null;
@@ -10276,22 +10228,6 @@
   };
 
   __extends(Skew.VariableSymbol, Skew.Symbol);
-
-  Skew.VariableSymbol.prototype.clone = function() {
-    assert(this.kind === Skew.SymbolKind.VARIABLE_ARGUMENT || this.kind === Skew.SymbolKind.VARIABLE_LOCAL);
-    var result = new Skew.VariableSymbol(this.kind, this.name);
-    result._cloneFrom(this);
-
-    if (this.type !== null) {
-      result.type = this.type.clone();
-    }
-
-    if (this.value !== null) {
-      result.value = this.value.clone();
-    }
-
-    return result;
-  };
 
   Skew.VariableSymbol.prototype.enumValue = function() {
     assert(this.kind === Skew.SymbolKind.VARIABLE_ENUM);
@@ -12321,12 +12257,16 @@
     }
   };
 
+  Skew.Folding.ConstantFolder.prototype.shouldFoldSymbol = function(symbol) {
+    return symbol !== null && symbol.isConst() && (symbol.kind !== Skew.SymbolKind.VARIABLE_INSTANCE || symbol.isImported());
+  };
+
   Skew.Folding.ConstantFolder.prototype.foldDot = function(node) {
     var symbol = node.symbol;
 
     // Only replace this with a constant if the target has no side effects.
     // This catches constants declared on imported types.
-    if (symbol !== null && symbol.isConst() && (node.dotTarget() === null || node.dotTarget().hasNoSideEffects())) {
+    if (this.shouldFoldSymbol(symbol) && !node.isAssignTarget() && (node.dotTarget() === null || node.dotTarget().hasNoSideEffects())) {
       var content = this.constantForSymbol(symbol.asVariableSymbol());
 
       if (content !== null) {
@@ -12339,7 +12279,7 @@
     var symbol = node.symbol;
 
     // Don't fold loop variables since they aren't actually constant across loop iterations
-    if (symbol !== null && symbol.isConst() && !symbol.isLoopVariable()) {
+    if (this.shouldFoldSymbol(symbol) && !node.isAssignTarget() && !symbol.isLoopVariable()) {
       var content = this.constantForSymbol(symbol.asVariableSymbol());
 
       if (content !== null) {
@@ -15193,11 +15133,6 @@
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; ++i2) {
       var variable = list2[i2];
       this.resolveVariable1(variable);
-
-      // The values for these variables should already be copied into the body of each constructor
-      if (variable.kind === Skew.SymbolKind.VARIABLE_INSTANCE) {
-        variable.value = null;
-      }
     }
 
     this.checkInterfacesAndAbstractStatus2(symbol);
@@ -15365,8 +15300,7 @@
         }
 
         else {
-          block.appendChild(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable1), variable1.value).withRange(variable1.range)));
-          variable1.value = null;
+          block.appendChild(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable1), variable1.value.clone()).withRange(variable1.range)));
         }
       }
     }

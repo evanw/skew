@@ -208,29 +208,9 @@ namespace Skew {
 
     def clone Node {
       var clone = _cloneWithoutChildren
-
-      # Clone lambdas explicitly so the symbol's block still matches the one in
-      # the syntax tree
-      if clone.kind == .LAMBDA {
-        assert(childCount == 1)
-        clone.symbol = clone.symbol.asFunctionSymbol.clone
-        clone.appendChild(clone.symbol.asFunctionSymbol.block)
+      for child = _firstChild; child != null; child = child._nextSibling {
+        clone.appendChild(child.clone)
       }
-
-      # Clone variables explicitly too so the symbol's value still matches the
-      # one in the syntax tree
-      else if clone.kind == .VARIABLE {
-        assert(childCount == 1)
-        clone.symbol = clone.symbol.asVariableSymbol.clone
-        clone.appendChild(clone.symbol.asVariableSymbol.value)
-      }
-
-      else {
-        for child = _firstChild; child != null; child = child._nextSibling {
-          clone.appendChild(child.clone)
-        }
-      }
-
       return clone
     }
 

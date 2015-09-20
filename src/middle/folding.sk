@@ -305,12 +305,16 @@ namespace Skew.Folding {
       }
     }
 
+    def shouldFoldSymbol(symbol Symbol) bool {
+      return symbol != null && symbol.isConst && (symbol.kind != .VARIABLE_INSTANCE || symbol.isImported)
+    }
+
     def foldDot(node Node) {
       var symbol = node.symbol
 
       # Only replace this with a constant if the target has no side effects.
       # This catches constants declared on imported types.
-      if symbol != null && symbol.isConst && (node.dotTarget == null || node.dotTarget.hasNoSideEffects) {
+      if shouldFoldSymbol(symbol) && !node.isAssignTarget && (node.dotTarget == null || node.dotTarget.hasNoSideEffects) {
         var content = constantForSymbol(symbol.asVariableSymbol)
         if content != null {
           flatten(node, content)
@@ -322,7 +326,7 @@ namespace Skew.Folding {
       var symbol = node.symbol
 
       # Don't fold loop variables since they aren't actually constant across loop iterations
-      if symbol != null && symbol.isConst && !symbol.isLoopVariable {
+      if shouldFoldSymbol(symbol) && !node.isAssignTarget && !symbol.isLoopVariable {
         var content = constantForSymbol(symbol.asVariableSymbol)
         if content != null {
           flatten(node, content)

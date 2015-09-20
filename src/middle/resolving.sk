@@ -760,11 +760,6 @@ namespace Skew.Resolving {
 
       for variable in symbol.variables {
         resolveVariable(variable)
-
-        # The values for these variables should already be copied into the body of each constructor
-        if variable.kind == .VARIABLE_INSTANCE {
-          variable.value = null
-        }
       }
 
       checkInterfacesAndAbstractStatus(symbol)
@@ -911,8 +906,7 @@ namespace Skew.Resolving {
           } else {
             block.appendChild(Node.createExpression(Node.createBinary(.ASSIGN,
               Node.createMemberReference(Node.createSymbolReference(symbol.this), variable),
-              variable.value).withRange(variable.range)))
-            variable.value = null
+              variable.value.clone).withRange(variable.range)))
           }
         }
       }
