@@ -991,5 +991,24 @@ def main(x int) {
 })();
 ").js
 
+# This caused an assert to fail during inlining
+test("
+interface Foo {
+  def foo int
+}
+
+class Bar :: Foo {
+  def foo int { return 0 }
+}
+
+class Baz {
+  def foo(foo Foo) int {
+    return false ? 0 : foo.foo
+  }
+}
+", "
+TODO
+").js.inlineAllFunctions.foldAllConstants.globalizeAllFunctions
+
   }
 }
