@@ -1006,8 +1006,29 @@ class Baz {
     return false ? 0 : foo.foo
   }
 }
+
+@export
+def main {
+  Baz.new.foo(null)
+}
 ", "
-TODO
+(function() {
+  main = function() {
+    Baz.foo(new Baz(), null);
+  };
+  var Bar = {};
+
+  Bar.foo = function(self) {
+    return 0;
+  };
+
+  function Baz() {
+  }
+
+  Baz.foo = function(self, foo) {
+    return Bar.foo(foo);
+  };
+})();
 ").js.inlineAllFunctions.foldAllConstants.globalizeAllFunctions
 
   }

@@ -39,8 +39,16 @@ namespace Skew.Inlining {
         continue
       }
 
+      # Make sure the call site hasn't been tampered with. An example of where
+      # this can happen is constant folding "false ? 0 : foo.foo" to "foo.foo".
+      # The children of "foo.foo" are stolen and parented under the hook
+      # expression as part of a become() call. Skipping inlining in this case
+      # just means we lose out on those inlining opportunities. This isn't the
+      # end of the world and is a pretty rare occurrence.
       var node = callSite.callNode
-      assert(node.childCount == info.symbol.arguments.count + 1)
+      if node.childCount != info.symbol.arguments.count + 1 {
+        continue
+      }
 
       # Propagate spreading annotations that must be preserved through inlining
       if spreadingAnnotations != null {
