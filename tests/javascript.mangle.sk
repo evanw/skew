@@ -2143,7 +2143,7 @@ def main int {
   };
 
   function c() {
-    this.a = 0, this.a = 1;
+    this.a = 1;
   }
 })();
 ").jsMangle.foldAllConstants

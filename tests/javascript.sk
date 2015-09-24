@@ -1031,5 +1031,248 @@ def main {
 })();
 ").js.inlineAllFunctions.foldAllConstants.globalizeAllFunctions
 
+# Check a case of assignment folding
+test("
+@export
+def main(x int, y int) int {
+  x = 0
+  x = 1
+  return x + y
+}
+", "
+(function() {
+  main = function(x, y) {
+    x = 1;
+    return x + y | 0;
+  };
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+@export
+def main(x int, y int) int {
+  x = 0
+  x = x + 1
+  return x + y
+}
+", "
+(function() {
+  main = function(x, y) {
+    x = 0;
+    x = x + 1 | 0;
+    return x + y | 0;
+  };
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+@export
+def main(x int, y int) int {
+  x = 0
+  y = 0
+  x = 1
+  return x + y
+}
+", "
+(function() {
+  main = function(x, y) {
+    y = 0;
+    x = 1;
+    return x + y | 0;
+  };
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+@export
+def main(x int, y int) int {
+  x = 0
+  dynamic.foo()
+  x = 1
+  return x + y
+}
+", "
+(function() {
+  main = function(x, y) {
+    x = 0;
+    foo();
+    x = 1;
+    return x + y | 0;
+  };
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+@export
+def main(x int, y int) int {
+  x = 0
+  y = x
+  x = 1
+  return x + y
+}
+", "
+(function() {
+  main = function(x, y) {
+    x = 0;
+    y = x;
+    x = 1;
+    return x + y | 0;
+  };
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+@export
+def main(x int, y int) int {
+  x = 0
+  y = dynamic.foo ? x : x + 1
+  x = 1
+  return x + y
+}
+", "
+(function() {
+  main = function(x, y) {
+    x = 0;
+    y = foo ? x : x + 1 | 0;
+    x = 1;
+    return x + y | 0;
+  };
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+class Foo {
+  var x = 0
+}
+
+@export
+def main int {
+  var foo = Foo.new
+  foo.x = 1
+  foo.x = 2
+  return foo.x
+}
+", "
+(function() {
+  main = function() {
+    var foo = new Foo();
+    foo.x = 2;
+    return foo.x;
+  };
+
+  function Foo() {
+    this.x = 0;
+  }
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+class Foo {
+  var x = 0
+  def foo {}
+}
+
+@export
+def main int {
+  var foo = Foo.new
+  var y Foo = null
+  var z = 0
+  foo.x = 1
+  y = foo
+  z = y.x
+  foo.x = 2
+  return foo.x
+}
+", "
+(function() {
+  main = function() {
+    var foo = new Foo();
+    var y = null;
+    var z = 0;
+    foo.x = 1;
+    y = foo;
+    z = y.x;
+    foo.x = 2;
+    return foo.x;
+  };
+
+  function Foo() {
+    this.x = 0;
+  }
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+class Foo {
+  var x = 0
+  def foo int { return x }
+}
+
+@export
+def main int {
+  var foo = Foo.new
+  foo.x = foo.foo + 1
+  foo.x = foo.foo + 2
+  return foo.x
+}
+", "
+(function() {
+  main = function() {
+    var foo = new Foo();
+    foo.x = foo.foo() + 1 | 0;
+    foo.x = foo.foo() + 2 | 0;
+    return foo.x;
+  };
+
+  function Foo() {
+    this.x = 0;
+  }
+
+  Foo.prototype.foo = function() {
+    return this.x;
+  };
+})();
+").js.foldAllConstants
+
+# Check a case of assignment folding
+test("
+class Foo {
+  var x = 0
+  def foo {}
+}
+
+@export
+def main int {
+  var foo = Foo.new
+  var bar = Foo.new
+  foo.x = 1
+  bar.x = 2
+  foo.x = 3
+  return foo.x
+}
+", "
+(function() {
+  main = function() {
+    var foo = new Foo();
+    var bar = new Foo();
+    bar.x = 2;
+    foo.x = 3;
+    return foo.x;
+  };
+
+  function Foo() {
+    this.x = 0;
+  }
+})();
+").js.foldAllConstants
+
   }
 }

@@ -12236,6 +12236,11 @@
         child.remove();
       }
 
+      // Remove dead assignments
+      else if (kind === Skew.NodeKind.EXPRESSION && child.expressionValue().kind === Skew.NodeKind.ASSIGN) {
+        this.foldAssignment(child);
+      }
+
       else if (kind === Skew.NodeKind.VARIABLES) {
         this.foldVariables(child);
       }
@@ -12254,6 +12259,104 @@
       else if (kind === Skew.NodeKind.SWITCH) {
         this.foldSwitch(child);
       }
+    }
+  };
+
+  Skew.Folding.ConstantFolder.prototype.isVariableReference = function(node) {
+    return node.kind === Skew.NodeKind.NAME && node.symbol !== null && Skew.in_SymbolKind.isVariable(node.symbol.kind);
+  };
+
+  Skew.Folding.ConstantFolder.prototype.hasNestedReference = function(node, symbol) {
+    assert(symbol !== null);
+
+    if (node.symbol === symbol) {
+      return true;
+    }
+
+    for (var child = node.firstChild(); child !== null; child = child.nextSibling()) {
+      if (this.hasNestedReference(child, symbol)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // "a = 0; b = 0; a = 1;" => "b = 0; a = 1;"
+  Skew.Folding.ConstantFolder.prototype.foldAssignment = function(node) {
+    assert(node.kind === Skew.NodeKind.EXPRESSION && node.expressionValue().kind === Skew.NodeKind.ASSIGN);
+    var value = node.expressionValue();
+    var left = value.binaryLeft();
+    var right = value.binaryRight();
+
+    // Only do this for simple variable assignments
+    var dotVariable = left.kind === Skew.NodeKind.DOT && this.isVariableReference(left.dotTarget()) ? left.dotTarget().symbol : null;
+    var variable = this.isVariableReference(left) || dotVariable !== null ? left.symbol : null;
+
+    if (variable === null) {
+      return;
+    }
+
+    // Make sure the assigned value doesn't need the previous value. We bail
+    // on expressions with side effects like function calls and on expressions
+    // that reference the variable.
+    if (!right.hasNoSideEffects() || this.hasNestedReference(right, variable)) {
+      return;
+    }
+
+    // Scan backward over previous statements
+    var previous = node.previousSibling();
+
+    while (previous !== null) {
+      // Only pattern-match expressions
+      if (previous.kind === Skew.NodeKind.EXPRESSION) {
+        var previousValue = previous.expressionValue();
+
+        // Remove duplicate assignments
+        if (previousValue.kind === Skew.NodeKind.ASSIGN) {
+          var previousLeft = previousValue.binaryLeft();
+          var previousRight = previousValue.binaryRight();
+          var previousDotVariable = previousLeft.kind === Skew.NodeKind.DOT && this.isVariableReference(previousLeft.dotTarget()) ? previousLeft.dotTarget().symbol : null;
+          var previousVariable = this.isVariableReference(previousLeft) || previousDotVariable !== null && previousDotVariable === dotVariable ? previousLeft.symbol : null;
+
+          // Check for assignment to the same variable and remove the assignment
+          // if it's a match. Make sure to keep the assigned value around if it
+          // has side effects.
+          if (previousVariable === variable) {
+            if (previousRight.hasNoSideEffects()) {
+              previous.remove();
+            }
+
+            else {
+              previousValue.replaceWith(previousRight.remove());
+            }
+
+            break;
+          }
+
+          // Stop if we can't determine that this statement doesn't involve
+          // this variable's value. If it does involve this variable's value,
+          // then it isn't safe to remove duplicate assignments past this
+          // statement.
+          if (!previousRight.hasNoSideEffects() || this.hasNestedReference(previousRight, variable)) {
+            break;
+          }
+        }
+
+        // Also stop here if we can't determine that this statement doesn't
+        // involve this variable's value
+        else if (!previousValue.hasNoSideEffects()) {
+          break;
+        }
+      }
+
+      // Also stop here if we can't determine that this statement doesn't
+      // involve this variable's value
+      else {
+        break;
+      }
+
+      previous = previous.previousSibling();
     }
   };
 
@@ -13039,8 +13142,17 @@
         continue;
       }
 
+      // Make sure the call site hasn't been tampered with. An example of where
+      // this can happen is constant folding "false ? 0 : foo.foo" to "foo.foo".
+      // The children of "foo.foo" are stolen and parented under the hook
+      // expression as part of a become() call. Skipping inlining in this case
+      // just means we lose out on those inlining opportunities. This isn't the
+      // end of the world and is a pretty rare occurrence.
       var node = callSite.callNode;
-      assert(node.childCount() === (info.symbol.$arguments.length + 1 | 0));
+
+      if (node.childCount() !== (info.symbol.$arguments.length + 1 | 0)) {
+        continue;
+      }
 
       // Propagate spreading annotations that must be preserved through inlining
       if (spreadingAnnotations !== null) {

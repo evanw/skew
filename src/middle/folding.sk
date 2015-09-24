@@ -284,6 +284,11 @@ namespace Skew.Folding {
           child.remove
         }
 
+        # Remove dead assignments
+        else if kind == .EXPRESSION && child.expressionValue.kind == .ASSIGN {
+          foldAssignment(child)
+        }
+
         else if kind == .VARIABLES {
           foldVariables(child)
         }
@@ -302,6 +307,96 @@ namespace Skew.Folding {
         else if kind == .SWITCH {
           foldSwitch(child)
         }
+      }
+    }
+
+    def isVariableReference(node Node) bool {
+      return node.kind == .NAME && node.symbol != null && node.symbol.kind.isVariable
+    }
+
+    def hasNestedReference(node Node, symbol Symbol) bool {
+      assert(symbol != null)
+      if node.symbol == symbol {
+        return true
+      }
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        if hasNestedReference(child, symbol) {
+          return true
+        }
+      }
+      return false
+    }
+
+    # "a = 0; b = 0; a = 1;" => "b = 0; a = 1;"
+    def foldAssignment(node Node) {
+      assert(node.kind == .EXPRESSION && node.expressionValue.kind == .ASSIGN)
+      var value = node.expressionValue
+      var left = value.binaryLeft
+      var right = value.binaryRight
+
+      # Only do this for simple variable assignments
+      var dotVariable = left.kind == .DOT && isVariableReference(left.dotTarget) ? left.dotTarget.symbol : null
+      var variable = isVariableReference(left) || dotVariable != null ? left.symbol : null
+      if variable == null {
+        return
+      }
+
+      # Make sure the assigned value doesn't need the previous value. We bail
+      # on expressions with side effects like function calls and on expressions
+      # that reference the variable.
+      if !right.hasNoSideEffects || hasNestedReference(right, variable) {
+        return
+      }
+
+      # Scan backward over previous statements
+      var previous = node.previousSibling
+      while previous != null {
+        # Only pattern-match expressions
+        if previous.kind == .EXPRESSION {
+          var previousValue = previous.expressionValue
+
+          # Remove duplicate assignments
+          if previousValue.kind == .ASSIGN {
+            var previousLeft = previousValue.binaryLeft
+            var previousRight = previousValue.binaryRight
+            var previousDotVariable = previousLeft.kind == .DOT && isVariableReference(previousLeft.dotTarget) ? previousLeft.dotTarget.symbol : null
+            var previousVariable = isVariableReference(previousLeft) || previousDotVariable != null && previousDotVariable == dotVariable ? previousLeft.symbol : null
+
+            # Check for assignment to the same variable and remove the assignment
+            # if it's a match. Make sure to keep the assigned value around if it
+            # has side effects.
+            if previousVariable == variable {
+              if previousRight.hasNoSideEffects {
+                previous.remove
+              } else {
+                previousValue.replaceWith(previousRight.remove)
+              }
+              break
+            }
+
+            # Stop if we can't determine that this statement doesn't involve
+            # this variable's value. If it does involve this variable's value,
+            # then it isn't safe to remove duplicate assignments past this
+            # statement.
+            if !previousRight.hasNoSideEffects || hasNestedReference(previousRight, variable) {
+              break
+            }
+          }
+
+          # Also stop here if we can't determine that this statement doesn't
+          # involve this variable's value
+          else if !previousValue.hasNoSideEffects {
+            break
+          }
+        }
+
+        # Also stop here if we can't determine that this statement doesn't
+        # involve this variable's value
+        else {
+          break
+        }
+
+        previous = previous.previousSibling
       }
     }
 
