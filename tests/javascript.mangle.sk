@@ -24,7 +24,7 @@ def main {
 (function() {
   main = function() {
     var b = 0, a = null, c = 0, d = false, e = null;
-    b && foo(), a !== '' && foo(), a !== null && foo(), c !== 0 && foo(), d !== !1 && foo(), e && foo();
+    b && foo(), a != '' && foo(), a != null && foo(), c != 0 && foo(), d != !1 && foo(), e && foo();
   };
 })();
 ").jsMangle
@@ -290,11 +290,11 @@ def bar(foo double, baz fn()) {
 ", "
 (function() {
   foo = function(a, b) {
-    a < 1 && b(), a <= 1 && b(), a > 1 && b(), a >= 1 && b(), a === 1 && b(), a !== 1 && b();
+    a < 1 && b(), a <= 1 && b(), a > 1 && b(), a >= 1 && b(), a == 1 && b(), a != 1 && b();
   };
 
   bar = function(a, b) {
-    1 < a && b(), 1 <= a && b(), 1 > a && b(), 1 >= a && b(), 1 === a && b(), 1 !== a && b();
+    1 < a && b(), 1 <= a && b(), 1 > a && b(), 1 >= a && b(), 1 == a && b(), 1 != a && b();
   };
 })();
 ").jsMangle

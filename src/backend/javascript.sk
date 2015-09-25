@@ -1401,7 +1401,9 @@ namespace Skew {
         default {
           if kind.isBinary {
             var info = operatorInfo[kind]
+            var left = node.binaryLeft
             var right = node.binaryRight
+            var extraEquals = left.resolvedType == .DYNAMIC || right.resolvedType == .DYNAMIC ? "=" : ""
 
             if info.precedence < precedence {
               _emit("(")
@@ -1409,7 +1411,7 @@ namespace Skew {
             _emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
 
             # Always emit spaces around keyword operators, even when minifying
-            _emit(kind == .IN ? " in " : _space + (kind == .EQUAL ? "===" : kind == .NOT_EQUAL ? "!==" : info.text) + _space)
+            _emit(kind == .IN ? " in " : _space + (kind == .EQUAL ? "==" + extraEquals : kind == .NOT_EQUAL ? "!=" + extraEquals : info.text) + _space)
 
             # Prevent "x - -1" from becoming "x--1"
             if _minify && (
