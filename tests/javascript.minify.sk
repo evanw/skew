@@ -192,5 +192,17 @@ def main(x string) {
 (function(){main=function(x){switch(x){case'x':break;case x:break}}})();
 ").jsMinify
 
+# Check complex post-keyword space removal
+test("
+@export
+def main(x int) int {
+  if x == -1 { dynamic.foo() }
+  else { dynamic.bar() }
+  return 0
+}
+", "
+(function(){main=function(a){return~a?bar():foo(),0}})();
+").jsMinify.jsMangle
+
   }
 }

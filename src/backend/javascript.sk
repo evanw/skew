@@ -893,8 +893,18 @@ namespace Skew {
       }
     }
 
+    def _canRemoveSpaceBeforeKeyword(node Node) bool {
+      var kind = node.kind
+      return
+        kind.isUnary ||
+        node.isString ||
+        node.isNumberLessThanZero ||
+        kind.isInitializer ||
+        (kind == .HOOK || kind == .SEQUENCE) && _canRemoveSpaceBeforeKeyword(node.firstChild)
+    }
+
     def _emitSpaceBeforeKeyword(node Node) {
-      if !_minify || !node.kind.isUnary && !node.isString && !node.isNumberLessThanZero && !node.kind.isInitializer {
+      if !_minify || !_canRemoveSpaceBeforeKeyword(node) {
         _emit(" ")
       }
     }

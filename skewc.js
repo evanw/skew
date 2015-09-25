@@ -4428,8 +4428,13 @@
     }
   };
 
+  Skew.JavaScriptEmitter.prototype._canRemoveSpaceBeforeKeyword = function(node) {
+    var kind = node.kind;
+    return Skew.in_NodeKind.isUnary(kind) || node.isString() || node.isNumberLessThanZero() || Skew.in_NodeKind.isInitializer(kind) || (kind == Skew.NodeKind.HOOK || kind == Skew.NodeKind.SEQUENCE) && this._canRemoveSpaceBeforeKeyword(node.firstChild());
+  };
+
   Skew.JavaScriptEmitter.prototype._emitSpaceBeforeKeyword = function(node) {
-    if (!this._minify || !Skew.in_NodeKind.isUnary(node.kind) && !node.isString() && !node.isNumberLessThanZero() && !Skew.in_NodeKind.isInitializer(node.kind)) {
+    if (!this._minify || !this._canRemoveSpaceBeforeKeyword(node)) {
       this._emit(' ');
     }
   };
