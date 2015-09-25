@@ -4714,7 +4714,21 @@
       }
 
       case Skew.ContentKind.DOUBLE: {
-        this._emit(Skew.in_Content.asDouble(content).toString());
+        var value = Skew.in_Content.asDouble(content).toString();
+
+        // "0.123" => ".123"
+        // "-0.123" => "-.123"
+        if (this._minify) {
+          if (in_string.startsWith(value, '0.') && value !== '0.') {
+            value = value.slice(1);
+          }
+
+          else if (in_string.startsWith(value, '-0.') && value !== '-0.') {
+            value = '-' + value.slice(2);
+          }
+        }
+
+        this._emit(value);
         break;
       }
 
@@ -5444,8 +5458,11 @@
         //
         //   "x * 0.3333333333333333" => "x * (1 / 3)"
         //
-        if (reciprocal === (reciprocal | 0) && value.toString().length >= 10) {
-          node.become(Skew.Node.createBinary(Skew.NodeKind.DIVIDE, this._createDouble(1), this._createDouble(reciprocal)).withType(this._cache.doubleType));
+        for (var i = 1; i < 10; ++i) {
+          if (reciprocal * i === (reciprocal * i | 0) && value.toString().length >= 10) {
+            node.become(Skew.Node.createBinary(Skew.NodeKind.DIVIDE, this._createDouble(i), this._createDouble(reciprocal * i)).withType(this._cache.doubleType));
+            break;
+          }
         }
         break;
       }

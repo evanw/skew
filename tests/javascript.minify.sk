@@ -52,6 +52,16 @@ def baz dynamic {
 (function(){foo=function(){return-1};bar=function(){return-1.5};baz=function(){return 0}})();
 ").jsMinify.foldAllConstants
 
+# Check for omitting the leading zero
+test("
+@export
+def foo dynamic {
+  return [-1.5, -1.0, -0.5, -0.0, 0.0, 0.5, 1.0, 1.5]
+}
+", "
+(function(){foo=function(){return[-1.5,-1,-.5,0,0,.5,1,1.5]}})();
+").jsMinify.foldAllConstants
+
 # There is no "dangling if" ambiguity here
 test("
 @export
