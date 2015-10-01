@@ -732,21 +732,22 @@ namespace Skew.Folding {
         else if leftKind == .INT && rightKind == .INT {
           switch kind {
             case .ADD { flattenInt(node, leftContent.asInt + rightContent.asInt) }
-            case .SUBTRACT { flattenInt(node, leftContent.asInt - rightContent.asInt) }
-            case .MULTIPLY { flattenInt(node, leftContent.asInt * rightContent.asInt) }
-            case .DIVIDE { flattenInt(node, leftContent.asInt / rightContent.asInt) }
-            case .REMAINDER { flattenInt(node, leftContent.asInt % rightContent.asInt) }
-            case .SHIFT_LEFT { flattenInt(node, leftContent.asInt << rightContent.asInt) }
-            case .SHIFT_RIGHT { flattenInt(node, leftContent.asInt >> rightContent.asInt) }
             case .BITWISE_AND { flattenInt(node, leftContent.asInt & rightContent.asInt) }
             case .BITWISE_OR { flattenInt(node, leftContent.asInt | rightContent.asInt) }
             case .BITWISE_XOR { flattenInt(node, leftContent.asInt ^ rightContent.asInt) }
+            case .DIVIDE { flattenInt(node, leftContent.asInt / rightContent.asInt) }
             case .EQUAL { flattenBool(node, leftContent.asInt == rightContent.asInt) }
-            case .NOT_EQUAL { flattenBool(node, leftContent.asInt != rightContent.asInt) }
-            case .LESS_THAN { flattenBool(node, leftContent.asInt < rightContent.asInt) }
             case .GREATER_THAN { flattenBool(node, leftContent.asInt > rightContent.asInt) }
-            case .LESS_THAN_OR_EQUAL { flattenBool(node, leftContent.asInt <= rightContent.asInt) }
             case .GREATER_THAN_OR_EQUAL { flattenBool(node, leftContent.asInt >= rightContent.asInt) }
+            case .LESS_THAN { flattenBool(node, leftContent.asInt < rightContent.asInt) }
+            case .LESS_THAN_OR_EQUAL { flattenBool(node, leftContent.asInt <= rightContent.asInt) }
+            case .MULTIPLY { flattenInt(node, leftContent.asInt * rightContent.asInt) }
+            case .NOT_EQUAL { flattenBool(node, leftContent.asInt != rightContent.asInt) }
+            case .REMAINDER { flattenInt(node, leftContent.asInt % rightContent.asInt) }
+            case .SHIFT_LEFT { flattenInt(node, leftContent.asInt << rightContent.asInt) }
+            case .SHIFT_RIGHT { flattenInt(node, leftContent.asInt >> rightContent.asInt) }
+            case .SUBTRACT { flattenInt(node, leftContent.asInt - rightContent.asInt) }
+            case .UNSIGNED_SHIFT_RIGHT { flattenInt(node, leftContent.asInt >>> rightContent.asInt) }
           }
           return
         }

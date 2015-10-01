@@ -12846,8 +12846,48 @@
             break;
           }
 
-          case Skew.NodeKind.SUBTRACT: {
-            this.flattenInt(node, Skew.in_Content.asInt(leftContent) - Skew.in_Content.asInt(rightContent) | 0);
+          case Skew.NodeKind.BITWISE_AND: {
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) & Skew.in_Content.asInt(rightContent));
+            break;
+          }
+
+          case Skew.NodeKind.BITWISE_OR: {
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) | Skew.in_Content.asInt(rightContent));
+            break;
+          }
+
+          case Skew.NodeKind.BITWISE_XOR: {
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) ^ Skew.in_Content.asInt(rightContent));
+            break;
+          }
+
+          case Skew.NodeKind.DIVIDE: {
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) / Skew.in_Content.asInt(rightContent) | 0);
+            break;
+          }
+
+          case Skew.NodeKind.EQUAL: {
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) == Skew.in_Content.asInt(rightContent));
+            break;
+          }
+
+          case Skew.NodeKind.GREATER_THAN: {
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) > Skew.in_Content.asInt(rightContent));
+            break;
+          }
+
+          case Skew.NodeKind.GREATER_THAN_OR_EQUAL: {
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) >= Skew.in_Content.asInt(rightContent));
+            break;
+          }
+
+          case Skew.NodeKind.LESS_THAN: {
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) < Skew.in_Content.asInt(rightContent));
+            break;
+          }
+
+          case Skew.NodeKind.LESS_THAN_OR_EQUAL: {
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) <= Skew.in_Content.asInt(rightContent));
             break;
           }
 
@@ -12856,8 +12896,8 @@
             break;
           }
 
-          case Skew.NodeKind.DIVIDE: {
-            this.flattenInt(node, Skew.in_Content.asInt(leftContent) / Skew.in_Content.asInt(rightContent) | 0);
+          case Skew.NodeKind.NOT_EQUAL: {
+            this.flattenBool(node, Skew.in_Content.asInt(leftContent) != Skew.in_Content.asInt(rightContent));
             break;
           }
 
@@ -12876,48 +12916,13 @@
             break;
           }
 
-          case Skew.NodeKind.BITWISE_AND: {
-            this.flattenInt(node, Skew.in_Content.asInt(leftContent) & Skew.in_Content.asInt(rightContent));
+          case Skew.NodeKind.SUBTRACT: {
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) - Skew.in_Content.asInt(rightContent) | 0);
             break;
           }
 
-          case Skew.NodeKind.BITWISE_OR: {
-            this.flattenInt(node, Skew.in_Content.asInt(leftContent) | Skew.in_Content.asInt(rightContent));
-            break;
-          }
-
-          case Skew.NodeKind.BITWISE_XOR: {
-            this.flattenInt(node, Skew.in_Content.asInt(leftContent) ^ Skew.in_Content.asInt(rightContent));
-            break;
-          }
-
-          case Skew.NodeKind.EQUAL: {
-            this.flattenBool(node, Skew.in_Content.asInt(leftContent) == Skew.in_Content.asInt(rightContent));
-            break;
-          }
-
-          case Skew.NodeKind.NOT_EQUAL: {
-            this.flattenBool(node, Skew.in_Content.asInt(leftContent) != Skew.in_Content.asInt(rightContent));
-            break;
-          }
-
-          case Skew.NodeKind.LESS_THAN: {
-            this.flattenBool(node, Skew.in_Content.asInt(leftContent) < Skew.in_Content.asInt(rightContent));
-            break;
-          }
-
-          case Skew.NodeKind.GREATER_THAN: {
-            this.flattenBool(node, Skew.in_Content.asInt(leftContent) > Skew.in_Content.asInt(rightContent));
-            break;
-          }
-
-          case Skew.NodeKind.LESS_THAN_OR_EQUAL: {
-            this.flattenBool(node, Skew.in_Content.asInt(leftContent) <= Skew.in_Content.asInt(rightContent));
-            break;
-          }
-
-          case Skew.NodeKind.GREATER_THAN_OR_EQUAL: {
-            this.flattenBool(node, Skew.in_Content.asInt(leftContent) >= Skew.in_Content.asInt(rightContent));
+          case Skew.NodeKind.UNSIGNED_SHIFT_RIGHT: {
+            this.flattenInt(node, Skew.in_Content.asInt(leftContent) >>> Skew.in_Content.asInt(rightContent) | 0);
             break;
           }
         }
