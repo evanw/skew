@@ -10,11 +10,12 @@ namespace Skew {
       }
 
       var options = CompilerOptions.new
-      options.foldAllConstants = !!args.foldAllConstants
-      options.globalizeAllFunctions = !!args.globalizeAllFunctions
-      options.inlineAllFunctions = !!args.inlineAllFunctions
-      options.jsMangle = !!args.jsMangle
-      options.jsMinify = !!args.jsMinify
+      var release = !!args.release
+      options.foldAllConstants = !!args.foldAllConstants || release
+      options.globalizeAllFunctions = !!args.globalizeAllFunctions || release
+      options.inlineAllFunctions = !!args.inlineAllFunctions || release
+      options.jsMangle = !!args.jsMangle || release
+      options.jsMinify = !!args.jsMinify || release
       options.jsSourceMap = !!args.jsSourceMap
       options.outputDirectory = args.outputDirectory ? args.outputDirectory + "" : null
       options.outputFile = args.outputFile ? args.outputFile + "" : null
