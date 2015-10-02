@@ -1,0 +1,127 @@
+namespace Skew {
+  @entry
+  def main {
+    var api dynamic = {}
+    var this = => dynamic.this
+
+    var parseOptions = (args dynamic, inputs List<Source>) CompilerOptions => {
+      if !(args.inputs is List<dynamic>) {
+        throw dynamic.Error.new("Missing the required 'inputs' array")
+      }
+
+      var options = CompilerOptions.new
+      options.foldAllConstants = !!args.foldAllConstants
+      options.globalizeAllFunctions = !!args.globalizeAllFunctions
+      options.inlineAllFunctions = !!args.inlineAllFunctions
+      options.jsMangle = !!args.jsMangle
+      options.jsMinify = !!args.jsMinify
+      options.jsSourceMap = !!args.jsSourceMap
+      options.outputDirectory = args.outputDirectory ? args.outputDirectory + "" : null
+      options.outputFile = args.outputFile ? args.outputFile + "" : null
+
+      if args.defines {
+        var defines = args.defines
+        for key in dynamic.Object.keys(defines) as List<string> {
+          options.defines[key] = defines[key] + ""
+        }
+      }
+
+      switch args.target {
+        case "c#" { options.target = CSharpTarget.new }
+        case "c++" { options.target = CPlusPlusTarget.new }
+        case "js" { options.target = JavaScriptTarget.new }
+        case "lisp-tree" { options.target = LispTreeTarget.new }
+        case "typecheck" { options.target = TypeCheckingCompilerTarget.new }
+        default { throw dynamic.Error.new("Invalid target '" + args.target + "'") }
+      }
+
+      for i in 0..args.inputs.length {
+        var input = args.inputs[i]
+        inputs.append(Source.new(input.name + "", input.contents + ""))
+      }
+
+      return options
+    }
+
+    var diagnosticsToJSON = (diagnostics List<Diagnostic>) dynamic => {
+      return diagnostics.map<dynamic>(diagnostic => {
+        var range = diagnostic.range
+        var source = range.source
+        var start = source.indexToLineColumn(range.start)
+        var end = source.indexToLineColumn(range.end)
+
+        return {
+          "kind": diagnostic.kind.toString.toLowerCase,
+          "range": {
+            "source": source.name,
+            "start": {
+              "line": start.line,
+              "column": start.column,
+            } as dynamic,
+            "end": {
+              "line": end.line,
+              "column": end.column,
+            } as dynamic,
+          } as dynamic,
+          "text": diagnostic.text,
+        }
+      })
+    }
+
+    var sourcesToJSON = (sources List<Source>) dynamic => {
+      return sources.map<dynamic>(source => {
+        return {
+          "name": source.name,
+          "contents": source.contents,
+        }
+      })
+    }
+
+    # JavaScript API
+    api.compile = (args dynamic) dynamic => {
+      if dynamic.arguments.length != 1 {
+        throw dynamic.Error.new("Expected a single argument")
+      }
+
+      var log = Log.new
+      var inputs List<Source> = []
+      var options = parseOptions(args, inputs)
+      var result = compile(log, options, inputs)
+
+      return {
+        "outputs": sourcesToJSON(result.outputs),
+        "log": {
+          "toString": => log.toString,
+          "diagnostics": diagnosticsToJSON(log.diagnostics),
+        } as dynamic,
+      }
+    }
+
+    # Web Worker API
+    if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && dynamic.self is dynamic.WorkerGlobalScope {
+      dynamic.onmessage = (event dynamic) => {
+        var data = event.data
+        switch data.type {
+          case "compile" {
+            var log = Log.new
+            var inputs List<Source> = []
+            var options = parseOptions(data, inputs)
+            var result = compile(log, options, inputs)
+
+            dynamic.postMessage({
+              "id": data.id | 0,
+              "outputs": sourcesToJSON(result.outputs),
+              "log": diagnosticsToJSON(log.diagnostics),
+            })
+          }
+
+          default {
+            throw dynamic.Error.new("Unexpected message type '" + data.type + "'")
+          }
+        }
+      }
+    }
+
+    this().Skew = api
+  }
+}

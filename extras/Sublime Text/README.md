@@ -1,7 +1,9 @@
-#  Sublime Text Syntax Definitions for Skew
+# Sublime Text Syntax Definitions for Skew
+
 ## Installing
 To install, copy the "Skew" folder into the appropriate location for the given platform and version listed below.
 [(more information about Sublime Text packages)](http://docs.sublimetext.info/en/latest/basic_concepts.html#the-packages-directory)
+
 ### OS X
 _Sublime Text 2_
 

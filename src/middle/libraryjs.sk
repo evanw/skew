@@ -117,6 +117,7 @@ class StringBuilder {
   }
 }
 
+@rename(\"Array\")
 class List {
   def in(value T) bool {
     return indexOf(value) != -1

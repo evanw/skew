@@ -10,8 +10,8 @@ SOURCES_SKEWC += src/driver/options.sk
 SOURCES_SKEWC += src/lib/io.sk
 SOURCES_SKEWC += src/lib/terminal.sk
 
-SOURCES_BROWSER += $(SOURCES)
-SOURCES_BROWSER += src/driver/browser.sk
+SOURCES_API += $(SOURCES)
+SOURCES_API += src/driver/jsapi.sk
 
 SOURCES_TEST += $(SOURCES)
 SOURCES_TEST += src/driver/tests.sk
@@ -29,13 +29,13 @@ CS_FLAGS += --inline-functions
 CS_FLAGS += --verbose
 CS_FLAGS += --message-limit=0
 
-default: compile-skewc compile-browser
+default: compile-skewc compile-api
 
 compile-skewc: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js
 
-compile-browser: | build
-	node skewc.js $(SOURCES_BROWSER) $(JS_FLAGS) --output-file=build/browser.js
+compile-api: | build
+	node skewc.js $(SOURCES_API) $(JS_FLAGS) --output-file=build/skew-api.js
 
 replace: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js
@@ -76,14 +76,14 @@ check-determinism: | build
 	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.cs.min.js
 	diff build/skewc.js.min.js build/skewc.cs.min.js
 
-release: compile-browser | build
+release: compile-api | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.min.js
-	node skewc.js $(SOURCES_BROWSER) $(JS_FLAGS) --release --output-file=build/browser.min.js
-	type zopfli > /dev/null 2>&1 && (zopfli -c build/browser.min.js > build/browser.min.js.gz) || (gzip -c build/browser.min.js > build/browser.min.js.gz)
-	ls -l build/browser.js build/browser.min.js build/browser.min.js.gz
+	node skewc.js $(SOURCES_API) $(JS_FLAGS) --release --output-file=build/skew-api.min.js
+	type zopfli > /dev/null 2>&1 && (zopfli -c build/skew-api.min.js > build/skew-api.min.js.gz) || (gzip -c build/skew-api.min.js > build/skew-api.min.js.gz)
+	ls -l build/skew-api.js build/skew-api.min.js build/skew-api.min.js.gz
 
 watch:
-	node_modules/.bin/watch src 'clear && make compile-browser'
+	node_modules/.bin/watch src 'clear && make compile-api'
 
 build:
 	mkdir -p build

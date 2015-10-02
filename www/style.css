@@ -34,3 +34,7 @@ label {
   margin-top: 10px;
   width: 600px;
 }
+
+#input {
+  height: 600px;
+}
