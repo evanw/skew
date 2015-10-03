@@ -23,8 +23,11 @@ namespace Skew {
       if args.defines {
         var defines = args.defines
         for key in dynamic.Object.keys(defines) as List<string> {
-          options.defines[key] = defines[key] + ""
+          options.define(key, defines[key] + "")
         }
+      }
+      if release {
+        options.define("RELEASE", "true")
       }
 
       switch args.target {
