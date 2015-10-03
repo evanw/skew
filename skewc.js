@@ -2217,6 +2217,15 @@
             this._usingNames['System.Collections.Generic'] = 0;
           }
 
+          // C# doesn't have the ">>>" operator
+          else if (kind == Skew.NodeKind.UNSIGNED_SHIFT_RIGHT && this._cache.isEquivalentToInt(left.resolvedType) && this._cache.isEquivalentToInt(right.resolvedType)) {
+            this._emit('(int)((uint)');
+            this._emitExpression(left, Skew.Precedence.UNARY_PREFIX);
+            this._emit(' >> ');
+            this._emitExpression(right, Skew.Precedence.SHIFT + 1 | 0);
+            this._emit(')');
+          }
+
           else {
             var info1 = Skew.operatorInfo[kind];
 

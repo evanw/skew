@@ -967,6 +967,15 @@ namespace Skew {
               _usingNames["System.Collections.Generic"] = 0
             }
 
+            # C# doesn't have the ">>>" operator
+            else if kind == .UNSIGNED_SHIFT_RIGHT && _cache.isEquivalentToInt(left.resolvedType) && _cache.isEquivalentToInt(right.resolvedType) {
+              _emit("(int)((uint)")
+              _emitExpression(left, .UNARY_PREFIX)
+              _emit(" >> ")
+              _emitExpression(right, (Precedence.SHIFT + 1) as Precedence)
+              _emit(")")
+            }
+
             else {
               var info = operatorInfo[kind]
               if info.precedence < precedence {
