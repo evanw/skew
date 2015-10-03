@@ -151,17 +151,6 @@ namespace Skew.Folding {
         return -1
       }
 
-      # # No need to keep an empty finally block around
-      # if finallyBlock != null && !finallyBlock.hasChildren {
-      #   finallyBlock.remove
-      #   finallyBlock = null
-      # }
-
-      # # Inline the contents of the try block into the parent if possible
-      # if node.children.count == 2 && finallyBlock == null {
-      #   node.replaceWithChildrenFrom(tryBlock)
-      # }
-
       return 0
     }
 
@@ -231,6 +220,53 @@ namespace Skew.Folding {
       if defaultCase != null && !defaultCase.caseBlock.hasChildren {
         defaultCase.remove
         defaultCase = null
+      }
+
+      # Check for a constant value and inline the corresponding case block
+      if value.kind == .CONSTANT {
+        var hasNonConstant = false
+
+        # Search all case blocks for a match
+        for child = value.nextSibling, nextChild Node = null; child != null; child = nextChild {
+          nextChild = child.nextSibling
+          var block = child.caseBlock
+
+          for caseValue = child.firstChild, nextCase Node = null; caseValue != block; caseValue = nextCase {
+            nextCase = caseValue.nextSibling
+
+            # If there's a non-constant value, we can't tell if it's taken or not
+            if caseValue.kind != .CONSTANT {
+              hasNonConstant = true
+            }
+
+            # Remove cases that definitely don't apply
+            else if !value.content.equals(caseValue.content) {
+              caseValue.remove
+            }
+
+            # Only inline this case if all previous values have been constants,
+            # otherwise we can't be sure that none of those would have matched
+            else if !hasNonConstant {
+              node.replaceWithChildrenFrom(block)
+              return
+            }
+          }
+
+          # Remove the case entirely if all values were trimmed
+          if child.hasOneChild && child != defaultCase {
+            child.remove
+          }
+        }
+
+        # Inline the default case if it's present and it can be proven to be taken
+        if !hasNonConstant {
+          if defaultCase != null {
+            node.replaceWithChildrenFrom(defaultCase.caseBlock)
+          } else {
+            node.remove
+          }
+          return
+        }
       }
 
       # If the default case is missing, all other empty cases can be removed too

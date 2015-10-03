@@ -12206,13 +12206,63 @@
       defaultCase = null;
     }
 
+    // Check for a constant value and inline the corresponding case block
+    if (value.kind == Skew.NodeKind.CONSTANT) {
+      var hasNonConstant = false;
+
+      // Search all case blocks for a match
+      for (var child1 = value.nextSibling(), nextChild = null; child1 != null; child1 = nextChild) {
+        nextChild = child1.nextSibling();
+        var block = child1.caseBlock();
+
+        for (var caseValue = child1.firstChild(), nextCase = null; caseValue != block; caseValue = nextCase) {
+          nextCase = caseValue.nextSibling();
+
+          // If there's a non-constant value, we can't tell if it's taken or not
+          if (caseValue.kind != Skew.NodeKind.CONSTANT) {
+            hasNonConstant = true;
+          }
+
+          // Remove cases that definitely don't apply
+          else if (!Skew.in_Content.equals(value.content, caseValue.content)) {
+            caseValue.remove();
+          }
+
+          // Only inline this case if all previous values have been constants,
+          // otherwise we can't be sure that none of those would have matched
+          else if (!hasNonConstant) {
+            node.replaceWithChildrenFrom(block);
+            return;
+          }
+        }
+
+        // Remove the case entirely if all values were trimmed
+        if (child1.hasOneChild() && child1 != defaultCase) {
+          child1.remove();
+        }
+      }
+
+      // Inline the default case if it's present and it can be proven to be taken
+      if (!hasNonConstant) {
+        if (defaultCase != null) {
+          node.replaceWithChildrenFrom(defaultCase.caseBlock());
+        }
+
+        else {
+          node.remove();
+        }
+
+        return;
+      }
+    }
+
     // If the default case is missing, all other empty cases can be removed too
     if (defaultCase == null) {
-      for (var child1 = node.lastChild(), previous = null; child1 != value; child1 = previous) {
-        previous = child1.previousSibling();
+      for (var child2 = node.lastChild(), previous = null; child2 != value; child2 = previous) {
+        previous = child2.previousSibling();
 
-        if (!child1.caseBlock().hasChildren()) {
-          child1.remove();
+        if (!child2.caseBlock().hasChildren()) {
+          child2.remove();
         }
       }
     }
@@ -19213,6 +19263,30 @@
   Skew.in_Content.asString = function(self) {
     assert(self.kind() == Skew.ContentKind.STRING);
     return self.value;
+  };
+
+  Skew.in_Content.equals = function(self, other) {
+    if (self.kind() == other.kind()) {
+      switch (self.kind()) {
+        case Skew.ContentKind.BOOL: {
+          return Skew.in_Content.asBool(self) == Skew.in_Content.asBool(other);
+        }
+
+        case Skew.ContentKind.INT: {
+          return Skew.in_Content.asInt(self) == Skew.in_Content.asInt(other);
+        }
+
+        case Skew.ContentKind.DOUBLE: {
+          return Skew.in_Content.asDouble(self) == Skew.in_Content.asDouble(other);
+        }
+
+        case Skew.ContentKind.STRING: {
+          return Skew.in_Content.asString(self) == Skew.in_Content.asString(other);
+        }
+      }
+    }
+
+    return false;
   };
 
   Skew.in_NodeKind = {};

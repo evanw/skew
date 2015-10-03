@@ -28,6 +28,18 @@ namespace Skew {
       assert(kind == .STRING)
       return (self as StringContent).value
     }
+
+    def equals(other Content) bool {
+      if kind == other.kind {
+        switch kind {
+          case .BOOL { return asBool == other.asBool }
+          case .INT { return asInt == other.asInt }
+          case .DOUBLE { return asDouble == other.asDouble }
+          case .STRING { return asString == other.asString }
+        }
+      }
+      return false
+    }
   }
 
   class BoolContent :: Content {

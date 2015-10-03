@@ -1274,5 +1274,90 @@ def main int {
 })();
 ").js.foldAllConstants
 
+# Check constant folding of switch statements
+test("
+@export
+def main string {
+  switch 0 {
+    case 0 { return \"0\" }
+    case 1 { return \"1\" }
+    default { return null }
+  }
+}
+", "
+(function() {
+  main = function() {
+    return '0';
+  };
+})();
+").js.foldAllConstants
+
+# Check constant folding of switch statements
+test("
+@export
+def main string {
+  switch 2 {
+    case 0 { return \"0\" }
+    case 1 { return \"1\" }
+    default { return null }
+  }
+}
+", "
+(function() {
+  main = function() {
+    return null;
+  };
+})();
+").js.foldAllConstants
+
+# Check constant folding of switch statements
+test("
+@export
+def main(x int) string {
+  switch 0 {
+    case 0 { return \"0\" }
+    case x { return \"1\" }
+    default { return null }
+  }
+}
+", "
+(function() {
+  main = function(x) {
+    return '0';
+  };
+})();
+").js.foldAllConstants
+
+# Check constant folding of switch statements
+test("
+@export
+def main(x int) string {
+  switch 1 {
+    case x { return \"0\" }
+    case 1 { return \"1\" }
+    case 2 { return \"2\" }
+    default { return null }
+  }
+}
+", "
+(function() {
+  main = function(x) {
+    switch (1) {
+      case x: {
+        return '0';
+      }
+
+      case 1: {
+        return '1';
+      }
+
+      default: {
+        return null;
+      }
+    }
+  };
+})();
+").js.foldAllConstants
+
   }
 }
