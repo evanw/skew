@@ -1,6 +1,5 @@
 .DS_Store
 *.pyc
-*.js
 /node_modules/
 /build/
 /npm/skewc
