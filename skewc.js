@@ -12761,13 +12761,8 @@
     }
   };
 
-  Skew.Folding.ConstantFolder.prototype.foldConstantMultiply = function(node, variable, constant) {
+  Skew.Folding.ConstantFolder.prototype.foldConstantIntegerMultiply = function(node, variable, constant) {
     assert(constant.isInt());
-
-    // Canonicalize multiplication order
-    if (node.binaryLeft() == constant) {
-      variable.swapWith(constant);
-    }
 
     // Apply identities
     var value = constant.asInt();
@@ -12794,6 +12789,31 @@
     if (shift != -1) {
       constant.content = new Skew.IntContent(shift);
       node.kind = Skew.NodeKind.SHIFT_LEFT;
+    }
+  };
+
+  // "((a >> 8) & 255) << 8" => "a & (255 << 8)"
+  // "((a >>> 8) & 255) << 8" => "a & (255 << 8)"
+  // "((a >> 7) & 255) << 8" => "(a << 1) & (255 << 8)"
+  // "((a >>> 7) & 255) << 8" => "(a << 1) & (255 << 8)"
+  // "((a >> 8) & 255) << 7" => "(a >> 1) & (255 << 7)"
+  // "((a >>> 8) & 255) << 7" => "(a >>> 1) & (255 << 7)"
+  Skew.Folding.ConstantFolder.prototype.foldConstantBitwiseAndInsideShift = function(node, andLeft, andRight) {
+    if (andRight.isInt() && (andLeft.kind == Skew.NodeKind.SHIFT_RIGHT || andLeft.kind == Skew.NodeKind.UNSIGNED_SHIFT_RIGHT) && andLeft.binaryRight().isInt()) {
+      var mask = andRight.asInt();
+      var leftShift = node.binaryRight().asInt();
+      var rightShift = andLeft.binaryRight().asInt();
+      var value = andLeft.binaryLeft().remove();
+
+      if (leftShift < rightShift) {
+        value = Skew.Node.createBinary(andLeft.kind, value, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(rightShift - leftShift | 0)).withType(this.cache.intType)).withType(this.cache.intType);
+      }
+
+      else if (leftShift > rightShift) {
+        value = Skew.Node.createBinary(Skew.NodeKind.SHIFT_LEFT, value, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(leftShift - rightShift | 0)).withType(this.cache.intType)).withType(this.cache.intType);
+      }
+
+      node.become(Skew.Node.createBinary(Skew.NodeKind.BITWISE_AND, value, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(mask << leftShift)).withType(this.cache.intType)).withType(node.resolvedType));
     }
   };
 
@@ -12842,12 +12862,15 @@
       }
 
       case Skew.NodeKind.MULTIPLY: {
-        if (left.isInt()) {
-          this.foldConstantMultiply(node, right, left);
+        if (right.isInt()) {
+          this.foldConstantIntegerMultiply(node, left, right);
         }
+        break;
+      }
 
-        else if (right.isInt()) {
-          this.foldConstantMultiply(node, left, right);
+      case Skew.NodeKind.SHIFT_LEFT: {
+        if (left.kind == Skew.NodeKind.BITWISE_AND && right.isInt()) {
+          this.foldConstantBitwiseAndInsideShift(node, left.binaryLeft(), left.binaryRight());
         }
         break;
       }
@@ -12864,6 +12887,14 @@
 
     var left = node.binaryLeft();
     var right = node.binaryRight();
+
+    // Canonicalize the order of commutative operators
+    if ((kind == Skew.NodeKind.MULTIPLY || kind == Skew.NodeKind.BITWISE_AND || kind == Skew.NodeKind.BITWISE_OR) && left.kind == Skew.NodeKind.CONSTANT && right.kind != Skew.NodeKind.CONSTANT) {
+      var temp = left;
+      left = right;
+      right = temp;
+      left.swapWith(right);
+    }
 
     if (left.kind == Skew.NodeKind.CONSTANT && right.kind == Skew.NodeKind.CONSTANT) {
       var leftContent = left.content;

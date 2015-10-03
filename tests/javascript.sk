@@ -1379,5 +1379,25 @@ def main {
 })();
 ").js.foldAllConstants
 
+# Check constant folding of a bitwise and nested between two shifts
+test("
+@export
+def main(x int) int {
+  x = (((x >> 8) & 255) << 8) + (((x >>> 8) & 255) << 8)
+  x = (((x >> 7) & 255) << 8) + (((x >>> 7) & 255) << 8)
+  x = (((x >> 8) & 255) << 7) + (((x >>> 8) & 255) << 7)
+  return x
+}
+", "
+(function() {
+  main = function(x) {
+    x = (x & 65280) + (x & 65280) | 0;
+    x = (x << 1 & 65280) + (x << 1 & 65280) | 0;
+    x = (x >> 1 & 32640) + (x >>> 1 & 32640) | 0;
+    return x;
+  };
+})();
+").js.foldAllConstants
+
   }
 }

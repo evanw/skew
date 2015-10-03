@@ -657,13 +657,8 @@ namespace Skew.Folding {
       }
     }
 
-    def foldConstantMultiply(node Node, variable Node, constant Node) {
+    def foldConstantIntegerMultiply(node Node, variable Node, constant Node) {
       assert(constant.isInt)
-
-      # Canonicalize multiplication order
-      if node.binaryLeft == constant {
-        variable.swapWith(constant)
-      }
 
       # Apply identities
       var value = constant.asInt
@@ -686,6 +681,34 @@ namespace Skew.Folding {
       if shift != -1 {
         constant.content = IntContent.new(shift)
         node.kind = .SHIFT_LEFT
+      }
+    }
+
+    # "((a >> 8) & 255) << 8" => "a & (255 << 8)"
+    # "((a >>> 8) & 255) << 8" => "a & (255 << 8)"
+    # "((a >> 7) & 255) << 8" => "(a << 1) & (255 << 8)"
+    # "((a >>> 7) & 255) << 8" => "(a << 1) & (255 << 8)"
+    # "((a >> 8) & 255) << 7" => "(a >> 1) & (255 << 7)"
+    # "((a >>> 8) & 255) << 7" => "(a >>> 1) & (255 << 7)"
+    def foldConstantBitwiseAndInsideShift(node Node, andLeft Node, andRight Node) {
+      if andRight.isInt && (andLeft.kind == .SHIFT_RIGHT || andLeft.kind == .UNSIGNED_SHIFT_RIGHT) && andLeft.binaryRight.isInt {
+        var mask = andRight.asInt
+        var leftShift = node.binaryRight.asInt
+        var rightShift = andLeft.binaryRight.asInt
+        var value = andLeft.binaryLeft.remove
+
+        if leftShift < rightShift {
+          value = Node.createBinary(andLeft.kind, value,
+            Node.createInt(rightShift - leftShift).withType(cache.intType)).withType(cache.intType)
+        }
+
+        else if leftShift > rightShift {
+          value = Node.createBinary(.SHIFT_LEFT, value,
+            Node.createInt(leftShift - rightShift).withType(cache.intType)).withType(cache.intType)
+        }
+
+        node.become(Node.createBinary(.BITWISE_AND, value,
+          Node.createInt(mask << leftShift).withType(cache.intType)).withType(node.resolvedType))
       }
     }
 
@@ -718,8 +741,12 @@ namespace Skew.Folding {
         # away the general-purpose Math.imul function may result in large
         # speedups when it's implemented with a polyfill.
         case .MULTIPLY {
-          if left.isInt { foldConstantMultiply(node, right, left) }
-          else if right.isInt { foldConstantMultiply(node, left, right) }
+          if right.isInt { foldConstantIntegerMultiply(node, left, right) }
+        }
+
+        # This improves generated code for inlined bit packing functions
+        case .SHIFT_LEFT {
+          if left.kind == .BITWISE_AND && right.isInt { foldConstantBitwiseAndInsideShift(node, left.binaryLeft, left.binaryRight) }
         }
       }
     }
@@ -733,6 +760,14 @@ namespace Skew.Folding {
 
       var left = node.binaryLeft
       var right = node.binaryRight
+
+      # Canonicalize the order of commutative operators
+      if (kind == .MULTIPLY || kind == .BITWISE_AND || kind == .BITWISE_OR) && left.kind == .CONSTANT && right.kind != .CONSTANT {
+        var temp = left
+        left = right
+        right = temp
+        left.swapWith(right)
+      }
 
       if left.kind == .CONSTANT && right.kind == .CONSTANT {
         var leftContent = left.content
