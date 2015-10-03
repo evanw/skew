@@ -1167,6 +1167,25 @@ namespace Skew {
       }
     }
 
+    # Calling a function in an expression that starts with something like "function(){}()"
+    # must be wrapped in parentheses to avoid looking like a function statement
+    def _lambdaMayNeedParentheses(node Node) bool {
+      var parent = node.parent
+      if parent == null {
+        return false # Expression statements always have parents
+      }
+      switch parent.kind {
+        case .CALL { return node == parent.callValue && _lambdaMayNeedParentheses(parent) }
+        case .DOT { return _lambdaMayNeedParentheses(parent) }
+        case .INDEX { return node == parent.indexLeft && _lambdaMayNeedParentheses(parent) }
+        case .ASSIGN_INDEX { return node == parent.assignIndexLeft && _lambdaMayNeedParentheses(parent) }
+        default {
+          if parent.kind.isBinary { return node == parent.binaryLeft && _lambdaMayNeedParentheses(parent) }
+          return true # Not sure, wrap to be safe
+        }
+      }
+    }
+
     def _emitExpression(node Node, precedence Precedence) {
       var kind = node.kind
       _addMapping(node.range)
@@ -1206,7 +1225,7 @@ namespace Skew {
           var call = value.kind == .SUPER
           var isKeyword = value.kind == .NAME && value.symbol == null && value.asString in KEYWORD_CALL_MAP
           var parenthesize = isKeyword && Precedence.UNARY_POSTFIX < precedence
-          var wrap = value.kind == .LAMBDA && node.parent != null && node.parent.kind == .EXPRESSION
+          var wrap = value.kind == .LAMBDA && _lambdaMayNeedParentheses(node)
           var isNew = false
 
           if parenthesize {

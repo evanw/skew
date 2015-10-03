@@ -4765,6 +4765,44 @@
     }
   };
 
+  // Calling a function in an expression that starts with something like "function(){}()"
+  // must be wrapped in parentheses to avoid looking like a function statement
+  Skew.JavaScriptEmitter.prototype._lambdaMayNeedParentheses = function(node) {
+    var parent = node.parent();
+
+    if (parent == null) {
+      // Expression statements always have parents
+      return false;
+    }
+
+    switch (parent.kind) {
+      case Skew.NodeKind.CALL: {
+        return node == parent.callValue() && this._lambdaMayNeedParentheses(parent);
+      }
+
+      case Skew.NodeKind.DOT: {
+        return this._lambdaMayNeedParentheses(parent);
+      }
+
+      case Skew.NodeKind.INDEX: {
+        return node == parent.indexLeft() && this._lambdaMayNeedParentheses(parent);
+      }
+
+      case Skew.NodeKind.ASSIGN_INDEX: {
+        return node == parent.assignIndexLeft() && this._lambdaMayNeedParentheses(parent);
+      }
+
+      default: {
+        if (Skew.in_NodeKind.isBinary(parent.kind)) {
+          return node == parent.binaryLeft() && this._lambdaMayNeedParentheses(parent);
+        }
+
+        // Not sure, wrap to be safe
+        return true;
+      }
+    }
+  };
+
   Skew.JavaScriptEmitter.prototype._emitExpression = function(node, precedence) {
     var kind = node.kind;
     this._addMapping(node.range);
@@ -4812,7 +4850,7 @@
         var call = value.kind == Skew.NodeKind.SUPER;
         var isKeyword = value.kind == Skew.NodeKind.NAME && value.symbol == null && value.asString() in Skew.JavaScriptEmitter.KEYWORD_CALL_MAP;
         var parenthesize = isKeyword && Skew.Precedence.UNARY_POSTFIX < precedence;
-        var wrap1 = value.kind == Skew.NodeKind.LAMBDA && node.parent() != null && node.parent().kind == Skew.NodeKind.EXPRESSION;
+        var wrap1 = value.kind == Skew.NodeKind.LAMBDA && this._lambdaMayNeedParentheses(node);
         var isNew = false;
 
         if (parenthesize) {

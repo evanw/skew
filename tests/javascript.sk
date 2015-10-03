@@ -1359,5 +1359,25 @@ def main(x int) string {
 })();
 ").js.foldAllConstants
 
+# Check IIFE parentheses
+test("
+@entry
+def main {
+  (=> dynamic.this)().foo[\"bar\"] = (=> dynamic.this)().foo[\"bar\"]
+}
+", "
+(function() {
+  function main() {
+    (function() {
+      return this;
+    })().foo['bar'] = function() {
+      return this;
+    }().foo['bar'];
+  }
+
+  main();
+})();
+").js.foldAllConstants
+
   }
 }
