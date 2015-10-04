@@ -12067,6 +12067,10 @@
     this.flatten(node, new Skew.StringContent(value));
   };
 
+  Skew.Folding.ConstantFolder.prototype.createInt = function(value) {
+    return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(value)).withType(this.cache.intType);
+  };
+
   Skew.Folding.ConstantFolder.prototype.foldConstants = function(node) {
     var kind = node.kind;
 
@@ -12385,6 +12389,10 @@
 
   Skew.Folding.ConstantFolder.prototype.isVariableReference = function(node) {
     return node.kind == Skew.NodeKind.NAME && node.symbol != null && Skew.in_SymbolKind.isVariable(node.symbol.kind);
+  };
+
+  Skew.Folding.ConstantFolder.prototype.isSameVariableReference = function(a, b) {
+    return this.isVariableReference(a) && this.isVariableReference(b) && a.symbol == b.symbol || a.kind == Skew.NodeKind.CAST && b.kind == Skew.NodeKind.CAST && this.isSameVariableReference(a.castValue(), b.castValue());
   };
 
   Skew.Folding.ConstantFolder.prototype.hasNestedReference = function(node, symbol) {
@@ -12799,6 +12807,8 @@
   // "((a >> 8) & 255) << 7" => "(a >> 1) & (255 << 7)"
   // "((a >>> 8) & 255) << 7" => "(a >>> 1) & (255 << 7)"
   Skew.Folding.ConstantFolder.prototype.foldConstantBitwiseAndInsideShift = function(node, andLeft, andRight) {
+    assert(node.kind == Skew.NodeKind.SHIFT_LEFT && node.binaryRight().isInt());
+
     if (andRight.isInt() && (andLeft.kind == Skew.NodeKind.SHIFT_RIGHT || andLeft.kind == Skew.NodeKind.UNSIGNED_SHIFT_RIGHT) && andLeft.binaryRight().isInt()) {
       var mask = andRight.asInt();
       var leftShift = node.binaryRight().asInt();
@@ -12806,14 +12816,30 @@
       var value = andLeft.binaryLeft().remove();
 
       if (leftShift < rightShift) {
-        value = Skew.Node.createBinary(andLeft.kind, value, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(rightShift - leftShift | 0)).withType(this.cache.intType)).withType(this.cache.intType);
+        value = Skew.Node.createBinary(andLeft.kind, value, this.createInt(rightShift - leftShift | 0)).withType(this.cache.intType);
       }
 
       else if (leftShift > rightShift) {
-        value = Skew.Node.createBinary(Skew.NodeKind.SHIFT_LEFT, value, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(leftShift - rightShift | 0)).withType(this.cache.intType)).withType(this.cache.intType);
+        value = Skew.Node.createBinary(Skew.NodeKind.SHIFT_LEFT, value, this.createInt(leftShift - rightShift | 0)).withType(this.cache.intType);
       }
 
-      node.become(Skew.Node.createBinary(Skew.NodeKind.BITWISE_AND, value, new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(mask << leftShift)).withType(this.cache.intType)).withType(node.resolvedType));
+      node.become(Skew.Node.createBinary(Skew.NodeKind.BITWISE_AND, value, this.createInt(mask << leftShift)).withType(node.resolvedType));
+    }
+  };
+
+  // "(a & b) | (a & c)" => "a & (b | c)"
+  Skew.Folding.ConstantFolder.prototype.foldConstantBitwiseAndInsideBitwiseOr = function(node) {
+    assert(node.kind == Skew.NodeKind.BITWISE_OR && node.binaryLeft().kind == Skew.NodeKind.BITWISE_AND && node.binaryRight().kind == Skew.NodeKind.BITWISE_AND);
+    var left = node.binaryLeft();
+    var right = node.binaryRight();
+    var leftLeft = left.binaryLeft();
+    var leftRight = left.binaryRight();
+    var rightLeft = right.binaryLeft();
+    var rightRight = right.binaryRight();
+
+    if (leftRight.isInt() && rightRight.isInt() && this.isSameVariableReference(leftLeft, rightLeft)) {
+      var mask = leftRight.asInt() | rightRight.asInt();
+      node.become(Skew.Node.createBinary(Skew.NodeKind.BITWISE_AND, leftLeft.remove(), this.createInt(mask)).withType(node.resolvedType));
     }
   };
 
@@ -12871,6 +12897,13 @@
       case Skew.NodeKind.SHIFT_LEFT: {
         if (left.kind == Skew.NodeKind.BITWISE_AND && right.isInt()) {
           this.foldConstantBitwiseAndInsideShift(node, left.binaryLeft(), left.binaryRight());
+        }
+        break;
+      }
+
+      case Skew.NodeKind.BITWISE_OR: {
+        if (left.kind == Skew.NodeKind.BITWISE_AND && right.kind == Skew.NodeKind.BITWISE_AND) {
+          this.foldConstantBitwiseAndInsideBitwiseOr(node);
         }
         break;
       }

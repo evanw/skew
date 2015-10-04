@@ -1379,7 +1379,7 @@ def main {
 })();
 ").js.foldAllConstants
 
-# Check constant folding of a bitwise and nested between two shifts
+# Check constant folding of a bitwise "and" nested between two shifts
 test("
 @export
 def main(x int) int {
@@ -1398,6 +1398,57 @@ def main(x int) int {
   };
 })();
 ").js.foldAllConstants
+
+# Check constant folding of two adjacent bitwise "and" operations inside a bitwise "or"
+test("
+@export
+def main(x int) int {
+  return x & 17 | 257 & x
+}
+", "
+(function() {
+  main = function(x) {
+    return x & 273;
+  };
+})();
+").js.foldAllConstants
+
+# Check constant folding of bitwise operations and inlining
+test("
+type Color : int {
+  def r int { return (self as int) & 255 }
+  def g int { return ((self as int) >> 8) & 255 }
+  def b int { return ((self as int) >> 16) & 255 }
+  def a int { return (self as int) >>> 24 }
+
+  def opaque Color {
+    return new(r, g, b, 255)
+  }
+}
+
+namespace Color {
+  def new(r int, g int, b int, a int) Color {
+    return (r | g << 8 | b << 16 | a << 24) as Color
+  }
+}
+
+@export
+def isOrange(color Color) bool {
+  return color.opaque == Color.new(255, 127, 0, 255)
+}
+", "
+(function() {
+  isOrange = function(color) {
+    return Color.opaque(color) == -16744449;
+  };
+
+  var Color = {};
+
+  Color.opaque = function(self) {
+    return self & 16777215 | -16777216;
+  };
+})();
+").js.foldAllConstants.inlineAllFunctions
 
   }
 }

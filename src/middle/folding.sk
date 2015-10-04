@@ -71,6 +71,10 @@ namespace Skew.Folding {
       flatten(node, StringContent.new(value))
     }
 
+    def createInt(value int) Node {
+      return Node.createInt(value).withType(cache.intType)
+    }
+
     def foldConstants(node Node) {
       var kind = node.kind
 
@@ -348,6 +352,12 @@ namespace Skew.Folding {
 
     def isVariableReference(node Node) bool {
       return node.kind == .NAME && node.symbol != null && node.symbol.kind.isVariable
+    }
+
+    def isSameVariableReference(a Node, b Node) bool {
+      return
+        isVariableReference(a) && isVariableReference(b) && a.symbol == b.symbol ||
+        a.kind == .CAST && b.kind == .CAST && isSameVariableReference(a.castValue, b.castValue)
     }
 
     def hasNestedReference(node Node, symbol Symbol) bool {
@@ -691,6 +701,8 @@ namespace Skew.Folding {
     # "((a >> 8) & 255) << 7" => "(a >> 1) & (255 << 7)"
     # "((a >>> 8) & 255) << 7" => "(a >>> 1) & (255 << 7)"
     def foldConstantBitwiseAndInsideShift(node Node, andLeft Node, andRight Node) {
+      assert(node.kind == .SHIFT_LEFT && node.binaryRight.isInt)
+
       if andRight.isInt && (andLeft.kind == .SHIFT_RIGHT || andLeft.kind == .UNSIGNED_SHIFT_RIGHT) && andLeft.binaryRight.isInt {
         var mask = andRight.asInt
         var leftShift = node.binaryRight.asInt
@@ -698,17 +710,31 @@ namespace Skew.Folding {
         var value = andLeft.binaryLeft.remove
 
         if leftShift < rightShift {
-          value = Node.createBinary(andLeft.kind, value,
-            Node.createInt(rightShift - leftShift).withType(cache.intType)).withType(cache.intType)
+          value = Node.createBinary(andLeft.kind, value, createInt(rightShift - leftShift)).withType(cache.intType)
         }
 
         else if leftShift > rightShift {
-          value = Node.createBinary(.SHIFT_LEFT, value,
-            Node.createInt(leftShift - rightShift).withType(cache.intType)).withType(cache.intType)
+          value = Node.createBinary(.SHIFT_LEFT, value, createInt(leftShift - rightShift)).withType(cache.intType)
         }
 
-        node.become(Node.createBinary(.BITWISE_AND, value,
-          Node.createInt(mask << leftShift).withType(cache.intType)).withType(node.resolvedType))
+        node.become(Node.createBinary(.BITWISE_AND, value, createInt(mask << leftShift)).withType(node.resolvedType))
+      }
+    }
+
+    # "(a & b) | (a & c)" => "a & (b | c)"
+    def foldConstantBitwiseAndInsideBitwiseOr(node Node) {
+      assert(node.kind == .BITWISE_OR && node.binaryLeft.kind == .BITWISE_AND && node.binaryRight.kind == .BITWISE_AND)
+
+      var left = node.binaryLeft
+      var right = node.binaryRight
+      var leftLeft = left.binaryLeft
+      var leftRight = left.binaryRight
+      var rightLeft = right.binaryLeft
+      var rightRight = right.binaryRight
+
+      if leftRight.isInt && rightRight.isInt && isSameVariableReference(leftLeft, rightLeft) {
+        var mask = leftRight.asInt | rightRight.asInt
+        node.become(Node.createBinary(.BITWISE_AND, leftLeft.remove, createInt(mask)).withType(node.resolvedType))
       }
     }
 
@@ -747,6 +773,9 @@ namespace Skew.Folding {
         # This improves generated code for inlined bit packing functions
         case .SHIFT_LEFT {
           if left.kind == .BITWISE_AND && right.isInt { foldConstantBitwiseAndInsideShift(node, left.binaryLeft, left.binaryRight) }
+        }
+        case .BITWISE_OR {
+          if left.kind == .BITWISE_AND && right.kind == .BITWISE_AND { foldConstantBitwiseAndInsideBitwiseOr(node) }
         }
       }
     }
