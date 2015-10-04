@@ -1413,6 +1413,28 @@ def main(x int) int {
 })();
 ").js.foldAllConstants
 
+# Check constant folding of a single "and" inside a bitwise "or"
+test("
+@export
+def main(x int) int {
+  x = (x & 0xFF000000) | 0xFFFFFF
+  x = (x & 0x7F000000) | 0xFFFFFF
+  x = 0xFFFFFF | (0xFF0000FF & x)
+  x = 0xFFFFFF | (0x7F0000FF & x)
+  return x
+}
+", "
+(function() {
+  main = function(x) {
+    x = x | 16777215;
+    x = x & 2130706432 | 16777215;
+    x = x | 16777215;
+    x = x & 2130706687 | 16777215;
+    return x;
+  };
+})();
+").js.foldAllConstants
+
 # Check constant folding of bitwise operations and inlining
 test("
 type Color : int {
@@ -1445,7 +1467,7 @@ def isOrange(color Color) bool {
   var Color = {};
 
   Color.opaque = function(self) {
-    return self & 16777215 | -16777216;
+    return self | -16777216;
   };
 })();
 ").js.foldAllConstants.inlineAllFunctions

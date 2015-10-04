@@ -12827,19 +12827,27 @@
     }
   };
 
-  // "(a & b) | (a & c)" => "a & (b | c)"
   Skew.Folding.ConstantFolder.prototype.foldConstantBitwiseAndInsideBitwiseOr = function(node) {
-    assert(node.kind == Skew.NodeKind.BITWISE_OR && node.binaryLeft().kind == Skew.NodeKind.BITWISE_AND && node.binaryRight().kind == Skew.NodeKind.BITWISE_AND);
+    assert(node.kind == Skew.NodeKind.BITWISE_OR && node.binaryLeft().kind == Skew.NodeKind.BITWISE_AND);
     var left = node.binaryLeft();
     var right = node.binaryRight();
     var leftLeft = left.binaryLeft();
     var leftRight = left.binaryRight();
-    var rightLeft = right.binaryLeft();
-    var rightRight = right.binaryRight();
 
-    if (leftRight.isInt() && rightRight.isInt() && this.isSameVariableReference(leftLeft, rightLeft)) {
-      var mask = leftRight.asInt() | rightRight.asInt();
-      node.become(Skew.Node.createBinary(Skew.NodeKind.BITWISE_AND, leftLeft.remove(), this.createInt(mask)).withType(node.resolvedType));
+    // "(a & b) | (a & c)" => "a & (b | c)"
+    if (right.kind == Skew.NodeKind.BITWISE_AND) {
+      var rightLeft = right.binaryLeft();
+      var rightRight = right.binaryRight();
+
+      if (leftRight.isInt() && rightRight.isInt() && this.isSameVariableReference(leftLeft, rightLeft)) {
+        var mask = leftRight.asInt() | rightRight.asInt();
+        node.become(Skew.Node.createBinary(Skew.NodeKind.BITWISE_AND, leftLeft.remove(), this.createInt(mask)).withType(node.resolvedType));
+      }
+    }
+
+    // "(a & b) | c" => "a | c" when "(a | b) == ~0"
+    else if (right.isInt() && leftRight.isInt() && (leftRight.asInt() | right.asInt()) == ~0) {
+      left.become(leftLeft.remove());
     }
   };
 
@@ -12902,7 +12910,7 @@
       }
 
       case Skew.NodeKind.BITWISE_OR: {
-        if (left.kind == Skew.NodeKind.BITWISE_AND && right.kind == Skew.NodeKind.BITWISE_AND) {
+        if (left.kind == Skew.NodeKind.BITWISE_AND) {
           this.foldConstantBitwiseAndInsideBitwiseOr(node);
         }
         break;
