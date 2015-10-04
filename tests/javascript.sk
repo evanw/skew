@@ -1435,6 +1435,82 @@ def main(x int) int {
 })();
 ").js.foldAllConstants
 
+# Check constant folding of identity operations
+test("
+@export
+def main(x int, y fn() int) {
+  # Multiplication (be careful about expressions with side effects and about NaN for dynamic values)
+  dynamic.foo(x * 0)
+  dynamic.foo(x * 1)
+  dynamic.foo(x * 2)
+  dynamic.foo(y() * 0)
+  dynamic.foo(y() * 1)
+  dynamic.foo(y() * 2)
+  dynamic.foo(dynamic.z * 0)
+  dynamic.foo(dynamic.z * 1)
+  dynamic.foo(dynamic.z * 2)
+
+  # Bitwise operations with an integer reference
+  dynamic.foo(x & 0)
+  dynamic.foo(x | 0)
+  dynamic.foo(x & ~0)
+  dynamic.foo(x | ~0)
+
+  # Bitwise operations with an integer expression with side effects
+  dynamic.foo(y() & 0)
+  dynamic.foo(y() | 0)
+  dynamic.foo(y() & ~0)
+  dynamic.foo(y() | ~0)
+
+  # Bitwise operations with a dynamically typed expression with side effects, may be a non-integer
+  dynamic.foo(dynamic.z() & 0)
+  dynamic.foo(dynamic.z() | 0)
+  dynamic.foo(dynamic.z() & ~0)
+  dynamic.foo(dynamic.z() | ~0)
+}
+", "
+(function() {
+  var __imul = Math.imul ? Math.imul : function(a, b) {
+    var ah = a >> 16 & 65535;
+    var bh = b >> 16 & 65535;
+    var al = a & 65535;
+    var bl = b & 65535;
+    return al * bl + (ah * bl + al * bh << 16) | 0;
+  };
+
+  main = function(x, y) {
+    // Multiplication (be careful about expressions with side effects and about NaN for dynamic values)
+    foo(0);
+    foo(x);
+    foo(x << 1);
+    foo(__imul(y(), 0));
+    foo(y());
+    foo(y() << 1);
+    foo(z * 0);
+    foo(z);
+    foo(z * 2);
+
+    // Bitwise operations with an integer reference
+    foo(0);
+    foo(x);
+    foo(x);
+    foo(-1);
+
+    // Bitwise operations with an integer expression with side effects
+    foo(y() & 0);
+    foo(y());
+    foo(y());
+    foo(y() | -1);
+
+    // Bitwise operations with a dynamically typed expression with side effects, may be a non-integer
+    foo(z() & 0);
+    foo(z() | 0);
+    foo(z() & -1);
+    foo(z() | -1);
+  };
+})();
+").js.foldAllConstants.inlineAllFunctions
+
 # Check constant folding of bitwise operations and inlining
 test("
 type Color : int {

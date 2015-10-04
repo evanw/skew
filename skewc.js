@@ -12797,9 +12797,12 @@
     assert(constant.isInt());
 
     // Apply identities
+    var variableIsInt = variable.resolvedType == this.cache.intType;
     var value = constant.asInt();
 
-    if (value == 0) {
+    // Replacing values with 0 only works for integers. Doubles can be NaN and
+    // NaN times anything is NaN, zero included.
+    if (value == 0 && variableIsInt) {
       if (variable.hasNoSideEffects()) {
         node.become(constant.remove());
       }
@@ -12807,6 +12810,7 @@
       return;
     }
 
+    // This identity works even with NaN
     if (value == 1) {
       node.become(variable.remove());
       return;
@@ -12816,11 +12820,13 @@
     // more concise and always faster (or at least never slower) than the
     // alternative. Division can't be replaced by a right-shift operation
     // because that would lead to incorrect results for negative numbers.
-    var shift = this.logBase2(value);
+    if (variableIsInt) {
+      var shift = this.logBase2(value);
 
-    if (shift != -1) {
-      constant.content = new Skew.IntContent(shift);
-      node.kind = Skew.NodeKind.SHIFT_LEFT;
+      if (shift != -1) {
+        constant.content = new Skew.IntContent(shift);
+        node.kind = Skew.NodeKind.SHIFT_LEFT;
+      }
     }
   };
 
@@ -12933,7 +12939,40 @@
         break;
       }
 
+      case Skew.NodeKind.BITWISE_AND: {
+        if (right.isInt() && left.resolvedType == this.cache.intType) {
+          var value = right.asInt();
+
+          // "x & ~0" => "x"
+          if (value == ~0) {
+            node.become(left.remove());
+          }
+
+          // "x & 0" => "0"
+          else if (value == 0 && left.hasNoSideEffects()) {
+            node.become(right.remove());
+          }
+        }
+        break;
+      }
+
       case Skew.NodeKind.BITWISE_OR: {
+        if (right.isInt() && left.resolvedType == this.cache.intType) {
+          var value1 = right.asInt();
+
+          // "x | 0" => "x"
+          if (value1 == 0) {
+            node.become(left.remove());
+            return;
+          }
+
+          // "x | ~0" => "~0"
+          else if (value1 == ~0 && left.hasNoSideEffects()) {
+            node.become(right.remove());
+            return;
+          }
+        }
+
         if (left.kind == Skew.NodeKind.BITWISE_AND) {
           this.foldConstantBitwiseAndInsideBitwiseOr(node);
         }

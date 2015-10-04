@@ -671,13 +671,19 @@ namespace Skew.Folding {
       assert(constant.isInt)
 
       # Apply identities
+      var variableIsInt = variable.resolvedType == cache.intType
       var value = constant.asInt
-      if value == 0 {
+
+      # Replacing values with 0 only works for integers. Doubles can be NaN and
+      # NaN times anything is NaN, zero included.
+      if value == 0 && variableIsInt {
         if variable.hasNoSideEffects {
           node.become(constant.remove)
         }
         return
       }
+
+      # This identity works even with NaN
       if value == 1 {
         node.become(variable.remove)
         return
@@ -687,10 +693,12 @@ namespace Skew.Folding {
       # more concise and always faster (or at least never slower) than the
       # alternative. Division can't be replaced by a right-shift operation
       # because that would lead to incorrect results for negative numbers.
-      var shift = logBase2(value)
-      if shift != -1 {
-        constant.content = IntContent.new(shift)
-        node.kind = .SHIFT_LEFT
+      if variableIsInt {
+        var shift = logBase2(value)
+        if shift != -1 {
+          constant.content = IntContent.new(shift)
+          node.kind = .SHIFT_LEFT
+        }
       }
     }
 
@@ -782,7 +790,37 @@ namespace Skew.Folding {
         case .SHIFT_LEFT {
           if left.kind == .BITWISE_AND && right.isInt { foldConstantBitwiseAndInsideShift(node, left.binaryLeft, left.binaryRight) }
         }
+        case .BITWISE_AND {
+          if right.isInt && left.resolvedType == cache.intType {
+            var value = right.asInt
+
+            # "x & ~0" => "x"
+            if value == ~0 {
+              node.become(left.remove)
+            }
+
+            # "x & 0" => "0"
+            else if value == 0 && left.hasNoSideEffects {
+              node.become(right.remove)
+            }
+          }
+        }
         case .BITWISE_OR {
+          if right.isInt && left.resolvedType == cache.intType {
+            var value = right.asInt
+
+            # "x | 0" => "x"
+            if value == 0 {
+              node.become(left.remove)
+              return
+            }
+
+            # "x | ~0" => "~0"
+            else if value == ~0 && left.hasNoSideEffects {
+              node.become(right.remove)
+              return
+            }
+          }
           if left.kind == .BITWISE_AND { foldConstantBitwiseAndInsideBitwiseOr(node) }
         }
       }
