@@ -1308,13 +1308,10 @@
     this._adjustNamespace(symbol);
     this._emitNewlineBeforeSymbol(symbol);
     this._emitComments(symbol.comments);
+    this._emit(this._indent + 'public ');
 
-    if (symbol.kind != Skew.SymbolKind.OBJECT_WRAPPED) {
-      this._emit(this._indent + 'public ');
-
-      if (symbol.isAbstract()) {
-        this._emit('abstract ');
-      }
+    if (symbol.isAbstract()) {
+      this._emit('abstract ');
     }
 
     switch (symbol.kind) {
@@ -1335,7 +1332,7 @@
       }
 
       case Skew.SymbolKind.OBJECT_WRAPPED: {
-        this._emit('namespace ');
+        this._emit('static class ');
         break;
       }
 

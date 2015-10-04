@@ -240,17 +240,15 @@ namespace Skew {
       _adjustNamespace(symbol)
       _emitNewlineBeforeSymbol(symbol)
       _emitComments(symbol.comments)
-      if symbol.kind != .OBJECT_WRAPPED {
-        _emit(_indent + "public ")
-        if symbol.isAbstract {
-          _emit("abstract ")
-        }
+      _emit(_indent + "public ")
+      if symbol.isAbstract {
+        _emit("abstract ")
       }
       switch symbol.kind {
         case .OBJECT_CLASS, .OBJECT_NAMESPACE { _emit("class ") }
         case .OBJECT_ENUM { _emit("enum ") }
         case .OBJECT_INTERFACE { _emit("interface ") }
-        case .OBJECT_WRAPPED { _emit("namespace ") }
+        case .OBJECT_WRAPPED { _emit("static class ") }
         default { assert(false) }
       }
       _emit(_mangleName(symbol))

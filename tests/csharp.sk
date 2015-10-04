@@ -195,7 +195,7 @@ def test(x double) Foo {
   return (x as Foo).scaleBy(Foo.FOO)
 }
 ", "
-namespace Foo
+public static class Foo
 {
     public static double FOO = 0.5;
 
