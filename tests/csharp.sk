@@ -181,29 +181,62 @@ public interface Bar
 # Type wrapping
 test("
 type Foo : double {
-  def scaleBy(scale double) Foo {
-    return ((self as double) * scale) as Foo
+  def scaleBy(scale Foo) Foo {
+    return ((self as double) * (scale as double)) as Foo
   }
+}
+
+namespace Foo {
+  const FOO = 0.5 as Foo
 }
 
 @export
 def test(x double) Foo {
-  return (x as Foo).scaleBy(2)
+  return (x as Foo).scaleBy(Foo.FOO)
 }
 ", "
-public namespace Foo
+namespace Foo
 {
-    public static Foo scaleBy(Foo self, double scale)
+    public static double FOO = 0.5;
+
+    public static double scaleBy(double self, double scale)
     {
-        return (Foo)((double)self * scale);
+        return self * scale;
     }
 }
 
 public class Globals
 {
-    public static Foo test(double x)
+    public static double test(double x)
     {
-        return Foo.scaleBy((Foo)x, (double)2);
+        return Foo.scaleBy(x, Foo.FOO);
+    }
+}
+").csharp
+
+# Casting between enums and integers must be explicit
+test("
+enum Foo {
+  FOO
+}
+
+@export
+def test Foo {
+  var x = Foo.FOO
+  return ((x as int) * 1) as Foo
+}
+", "
+public enum Foo
+{
+    FOO = 0,
+}
+
+public class Globals
+{
+    public static Foo test()
+    {
+        Foo x = Foo.FOO;
+        return (Foo)((int)x * 1);
     }
 }
 ").csharp
@@ -244,6 +277,20 @@ public class Globals
         List<int> x = new List<int> { 1, 2, 3 };
         Dictionary<int, int> y = in_IntMap.insert(in_IntMap.insert(new Dictionary<int, int>(), 1, 2), 3, 4);
         Dictionary<string, int> z = in_StringMap.insert(in_StringMap.insert(new Dictionary<string, int>(), \"1\", 2), \"3\", 4);
+    }
+}
+").csharp
+
+# Inheriting from a dynamically-specified type
+test("
+@export
+class Error : dynamic.System.Exception {
+}
+", "
+public class Error : System.Exception
+{
+    public Error()
+    {
     }
 }
 ").csharp

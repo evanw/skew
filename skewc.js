@@ -1308,10 +1308,13 @@
     this._adjustNamespace(symbol);
     this._emitNewlineBeforeSymbol(symbol);
     this._emitComments(symbol.comments);
-    this._emit(this._indent + 'public ');
 
-    if (symbol.isAbstract()) {
-      this._emit('abstract ');
+    if (symbol.kind != Skew.SymbolKind.OBJECT_WRAPPED) {
+      this._emit(this._indent + 'public ');
+
+      if (symbol.isAbstract()) {
+        this._emit('abstract ');
+      }
     }
 
     switch (symbol.kind) {
@@ -1547,9 +1550,12 @@
   Skew.CSharpEmitter.prototype._emitType = function(type) {
     if (type == null) {
       this._emit('void');
+      return;
     }
 
-    else if (type == Skew.Type.DYNAMIC) {
+    type = this._cache.unwrappedType(type);
+
+    if (type == Skew.Type.DYNAMIC) {
       this._emit('dynamic');
     }
 
@@ -1611,7 +1617,7 @@
   };
 
   Skew.CSharpEmitter.prototype._emitExpressionOrType = function(node, type) {
-    if (node != null) {
+    if (node != null && (type == null || type == Skew.Type.DYNAMIC)) {
       this._emitExpression(node, Skew.Precedence.LOWEST);
     }
 
@@ -2065,19 +2071,25 @@
           this._emitExpression(Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, value1.remove(), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0))), precedence);
         }
 
-        else {
+        // Only emit a cast if the underlying types are different
+        else if (this._cache.unwrappedType(value1.resolvedType) != this._cache.unwrappedType(type.resolvedType)) {
           if (Skew.Precedence.UNARY_POSTFIX < precedence) {
             this._emit('(');
           }
 
           this._emit('(');
-          this._emitExpression(type, Skew.Precedence.LOWEST);
+          this._emitExpressionOrType(type, type.resolvedType);
           this._emit(')');
           this._emitExpression(value1, Skew.Precedence.UNARY_POSTFIX);
 
           if (Skew.Precedence.UNARY_POSTFIX < precedence) {
             this._emit(')');
           }
+        }
+
+        // Otherwise, pretend the cast isn't there
+        else {
+          this._emitExpression(value1, precedence);
         }
         break;
       }
