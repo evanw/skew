@@ -5179,5 +5179,38 @@ const foo dynamic = {
 ", "
 ")
 
+# Check for a crash due to a bug with nested guards
+test("
+if true {
+  if FOO == .BAR {
+  }
+}
+
+enum Foo {
+  FOO
+}
+
+const FOO = Foo.FOO
+", "
+<stdin>:2:14: error: \"BAR\" is not declared on type \"Foo\"
+  if FOO == .BAR {
+             ~~~
+")
+
+# Check for a crash due to a bug with nested guards
+test("
+if true {
+  if FOO == .BAR {
+  } else {
+  }
+}
+
+const FOO = Foo.FOO
+", "
+<stdin>:7:13: error: \"Foo\" is not declared
+const FOO = Foo.FOO
+            ~~~
+")
+
   }
 }

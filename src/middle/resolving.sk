@@ -51,6 +51,36 @@ namespace Skew.Resolving {
     var constantFolder Folding.ConstantFolder = null
     var isMergingGuards = true
 
+    # Put the guts of the function inside another function because V8 doesn't
+    # optimize functions with try-catch statements
+    def initializeSymbolSwitch(symbol Symbol) {
+      switch symbol.kind {
+        case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
+          initializeObject(symbol.asObjectSymbol)
+        }
+
+        case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
+          initializeFunction(symbol.asFunctionSymbol)
+        }
+
+        case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
+          initializeVariable(symbol.asVariableSymbol)
+        }
+
+        case .PARAMETER_FUNCTION, .PARAMETER_OBJECT {
+          initializeParameter(symbol.asParameterSymbol)
+        }
+
+        case .OVERLOADED_ANNOTATION, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
+          initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol)
+        }
+
+        default {
+          assert(false)
+        }
+      }
+    }
+
     def initializeSymbol(symbol Symbol) {
       # The scope should have been set by the merging pass (or by this pass for local variables)
       assert(symbol.scope != null)
@@ -59,30 +89,14 @@ namespace Skew.Resolving {
       if symbol.state == .UNINITIALIZED {
         symbol.state = .INITIALIZING
 
-        switch symbol.kind {
-          case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
-            initializeObject(symbol.asObjectSymbol)
-          }
+        try {
+          initializeSymbolSwitch(symbol)
+        }
 
-          case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
-            initializeFunction(symbol.asFunctionSymbol)
-          }
-
-          case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
-            initializeVariable(symbol.asVariableSymbol)
-          }
-
-          case .PARAMETER_FUNCTION, .PARAMETER_OBJECT {
-            initializeParameter(symbol.asParameterSymbol)
-          }
-
-          case .OVERLOADED_ANNOTATION, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
-            initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol)
-          }
-
-          default {
-            assert(false)
-          }
+        # If guard merging failed, reset the type so we'll try again next time
+        catch failure GuardMergingFailure {
+          symbol.state = .UNINITIALIZED
+          throw failure
         }
 
         assert(symbol.resolvedType != null)
@@ -551,10 +565,6 @@ namespace Skew.Resolving {
 
     def reportGuardMergingFailure(node Node) {
       if isMergingGuards {
-        while node != null {
-          node.resolvedType = null
-          node = node.parent
-        }
         throw GuardMergingFailure.new
       }
     }
@@ -624,8 +634,11 @@ namespace Skew.Resolving {
       #
       if symbol.guards != null {
         for nested in symbol.guards {
-          nested.parent = object
           object.guards.append(nested)
+          for g = nested; g != null; g = g.elseGuard {
+            g.parent = object
+            g.contents.parent = object
+          }
         }
       }
     }
@@ -1212,12 +1225,9 @@ namespace Skew.Resolving {
       }
     }
 
-    def resolveNode(node Node, scope Scope, context Type) {
-      if node.resolvedType != null {
-        return # Only resolve once
-      }
-
-      node.resolvedType = .DYNAMIC
+    # Put the guts of the function inside another function because V8 doesn't
+    # optimize functions with try-catch statements
+    def resolveNodeSwitch(node Node, scope Scope, context Type) {
       switch node.kind {
         case .BLOCK { resolveBlock(node, scope) }
         case .PAIR { resolvePair(node, scope) }
@@ -1260,6 +1270,23 @@ namespace Skew.Resolving {
           if node.kind.isBinary { resolveBinary(node, scope) }
           else { assert(false) }
         }
+      }
+    }
+
+    def resolveNode(node Node, scope Scope, context Type) {
+      if node.resolvedType != null {
+        return # Only resolve once
+      }
+
+      node.resolvedType = .DYNAMIC
+      try {
+        resolveNodeSwitch(node, scope, context)
+      }
+
+      # If guard merging failed, reset the type so we'll try again next time
+      catch failure GuardMergingFailure {
+        node.resolvedType = null
+        throw failure
       }
 
       assert(node.resolvedType != null)

@@ -2148,5 +2148,41 @@ def main int {
 })();
 ").jsMangle.foldAllConstants
 
+# Check mangling with typed catch blocks
+test("
+class Foo {
+}
+
+@export
+def main(x int) {
+  try {
+    throw Foo.new
+  } catch e Foo {
+    throw e
+  }
+}
+", "
+(function() {
+  main = function(a) {
+    try {
+      throw new c;
+    }
+
+    catch (d) {
+      if (d instanceof c) {
+        throw d;
+      }
+
+      else {
+        throw d;
+      }
+    }
+  };
+
+  function c() {
+  }
+})();
+").jsMangle
+
   }
 }

@@ -1472,5 +1472,65 @@ def isOrange(color Color) bool {
 })();
 ").js.foldAllConstants.inlineAllFunctions
 
+# Check that compile-time if statements work
+test("
+@export {
+  if FOO == .FOO {
+    const FOO_YES = true
+  } else {
+    const FOO_NO = false
+  }
+
+  if FOO == .BAR {
+    const BAR_YES = true
+  } else {
+    const BAR_NO = false
+  }
+}
+
+const FOO = Foo.FOO
+
+enum Foo {
+  FOO
+  BAR
+}
+", "
+(function() {
+  FOO_YES = true;
+  BAR_NO = false;
+})();
+").js
+
+# Check that nested compile-time if statements work
+test("
+if true {
+  @export {
+    if FOO == .FOO {
+      const FOO_YES = true
+    } else {
+      const FOO_NO = false
+    }
+
+    if FOO == .BAR {
+      const BAR_YES = true
+    } else {
+      const BAR_NO = false
+    }
+  }
+}
+
+const FOO = Foo.FOO
+
+enum Foo {
+  FOO
+  BAR
+}
+", "
+(function() {
+  FOO_YES = true;
+  BAR_NO = false;
+})();
+").js
+
   }
 }

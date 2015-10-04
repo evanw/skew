@@ -1804,6 +1804,16 @@ namespace Skew {
       _unionVariableWithFunction(function, _enclosingFunction)
     }
 
+    def _recursiveSubstituteSymbol(node Node, old Symbol, new Symbol) {
+      if node.symbol == old {
+        node.symbol = new
+      }
+
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _recursiveSubstituteSymbol(child, old, new)
+      }
+    }
+
     def _patchTry(node Node) {
       if node.hasChildren && !node.hasOneChild {
         var tryBlock = node.tryBlock
@@ -1817,9 +1827,9 @@ namespace Skew {
         for child = firstCatch, previous = child.previousSibling; child != tryBlock; child = previous, previous = child.previousSibling {
           var catchBlock = child.remove.catchBlock.remove
 
-          # Just rename all catch symbols to the same name instead of substituting the variable
+          # Substitute the variable into the contents of the block
           if child.symbol != null {
-            child.symbol.name = variable.name
+            _recursiveSubstituteSymbol(catchBlock, child.symbol, variable)
           }
 
           # Build up the chain of tests in reverse

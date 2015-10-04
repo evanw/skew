@@ -5593,6 +5593,16 @@
     this._unionVariableWithFunction($function, this._enclosingFunction);
   };
 
+  Skew.JavaScriptEmitter.prototype._recursiveSubstituteSymbol = function(node, old, $new) {
+    if (node.symbol == old) {
+      node.symbol = $new;
+    }
+
+    for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+      this._recursiveSubstituteSymbol(child, old, $new);
+    }
+  };
+
   Skew.JavaScriptEmitter.prototype._patchTry = function(node) {
     if (node.hasChildren() && !node.hasOneChild()) {
       var tryBlock = node.tryBlock();
@@ -5605,9 +5615,9 @@
       for (var child = firstCatch, previous = child.previousSibling(); child != tryBlock; child = previous, previous = child.previousSibling()) {
         var catchBlock = child.remove().catchBlock().remove();
 
-        // Just rename all catch symbols to the same name instead of substituting the variable
+        // Substitute the variable into the contents of the block
         if (child.symbol != null) {
-          child.symbol.name = variable.name;
+          this._recursiveSubstituteSymbol(catchBlock, child.symbol, variable);
         }
 
         // Build up the chain of tests in reverse
@@ -14633,6 +14643,58 @@
     this.isMergingGuards = true;
   };
 
+  // Put the guts of the function inside another function because V8 doesn't
+  // optimize functions with try-catch statements
+  Skew.Resolving.Resolver.prototype.initializeSymbolSwitch = function(symbol) {
+    switch (symbol.kind) {
+      case Skew.SymbolKind.OBJECT_CLASS:
+      case Skew.SymbolKind.OBJECT_ENUM:
+      case Skew.SymbolKind.OBJECT_GLOBAL:
+      case Skew.SymbolKind.OBJECT_INTERFACE:
+      case Skew.SymbolKind.OBJECT_NAMESPACE:
+      case Skew.SymbolKind.OBJECT_WRAPPED: {
+        this.initializeObject(symbol.asObjectSymbol());
+        break;
+      }
+
+      case Skew.SymbolKind.FUNCTION_ANNOTATION:
+      case Skew.SymbolKind.FUNCTION_CONSTRUCTOR:
+      case Skew.SymbolKind.FUNCTION_GLOBAL:
+      case Skew.SymbolKind.FUNCTION_INSTANCE:
+      case Skew.SymbolKind.FUNCTION_LOCAL: {
+        this.initializeFunction(symbol.asFunctionSymbol());
+        break;
+      }
+
+      case Skew.SymbolKind.VARIABLE_ARGUMENT:
+      case Skew.SymbolKind.VARIABLE_ENUM:
+      case Skew.SymbolKind.VARIABLE_GLOBAL:
+      case Skew.SymbolKind.VARIABLE_INSTANCE:
+      case Skew.SymbolKind.VARIABLE_LOCAL: {
+        this.initializeVariable(symbol.asVariableSymbol());
+        break;
+      }
+
+      case Skew.SymbolKind.PARAMETER_FUNCTION:
+      case Skew.SymbolKind.PARAMETER_OBJECT: {
+        this.initializeParameter(symbol.asParameterSymbol());
+        break;
+      }
+
+      case Skew.SymbolKind.OVERLOADED_ANNOTATION:
+      case Skew.SymbolKind.OVERLOADED_GLOBAL:
+      case Skew.SymbolKind.OVERLOADED_INSTANCE: {
+        this.initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol());
+        break;
+      }
+
+      default: {
+        assert(false);
+        break;
+      }
+    }
+  };
+
   Skew.Resolving.Resolver.prototype.initializeSymbol = function(symbol) {
     // The scope should have been set by the merging pass (or by this pass for local variables)
     assert(symbol.scope != null);
@@ -14641,51 +14703,19 @@
     if (symbol.state == Skew.SymbolState.UNINITIALIZED) {
       symbol.state = Skew.SymbolState.INITIALIZING;
 
-      switch (symbol.kind) {
-        case Skew.SymbolKind.OBJECT_CLASS:
-        case Skew.SymbolKind.OBJECT_ENUM:
-        case Skew.SymbolKind.OBJECT_GLOBAL:
-        case Skew.SymbolKind.OBJECT_INTERFACE:
-        case Skew.SymbolKind.OBJECT_NAMESPACE:
-        case Skew.SymbolKind.OBJECT_WRAPPED: {
-          this.initializeObject(symbol.asObjectSymbol());
-          break;
+      try {
+        this.initializeSymbolSwitch(symbol);
+      }
+
+      catch (failure) {
+        if (failure instanceof Skew.Resolving.Resolver.GuardMergingFailure) {
+          symbol.state = Skew.SymbolState.UNINITIALIZED;
+
+          throw failure;
         }
 
-        case Skew.SymbolKind.FUNCTION_ANNOTATION:
-        case Skew.SymbolKind.FUNCTION_CONSTRUCTOR:
-        case Skew.SymbolKind.FUNCTION_GLOBAL:
-        case Skew.SymbolKind.FUNCTION_INSTANCE:
-        case Skew.SymbolKind.FUNCTION_LOCAL: {
-          this.initializeFunction(symbol.asFunctionSymbol());
-          break;
-        }
-
-        case Skew.SymbolKind.VARIABLE_ARGUMENT:
-        case Skew.SymbolKind.VARIABLE_ENUM:
-        case Skew.SymbolKind.VARIABLE_GLOBAL:
-        case Skew.SymbolKind.VARIABLE_INSTANCE:
-        case Skew.SymbolKind.VARIABLE_LOCAL: {
-          this.initializeVariable(symbol.asVariableSymbol());
-          break;
-        }
-
-        case Skew.SymbolKind.PARAMETER_FUNCTION:
-        case Skew.SymbolKind.PARAMETER_OBJECT: {
-          this.initializeParameter(symbol.asParameterSymbol());
-          break;
-        }
-
-        case Skew.SymbolKind.OVERLOADED_ANNOTATION:
-        case Skew.SymbolKind.OVERLOADED_GLOBAL:
-        case Skew.SymbolKind.OVERLOADED_INSTANCE: {
-          this.initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol());
-          break;
-        }
-
-        default: {
-          assert(false);
-          break;
+        else {
+          throw failure;
         }
       }
 
@@ -15209,11 +15239,6 @@
 
   Skew.Resolving.Resolver.prototype.reportGuardMergingFailure = function(node) {
     if (this.isMergingGuards) {
-      while (node != null) {
-        node.resolvedType = null;
-        node = node.parent();
-      }
-
       throw new Skew.Resolving.Resolver.GuardMergingFailure();
     }
   };
@@ -15297,8 +15322,12 @@
     if (symbol.guards != null) {
       for (var i = 0, list = symbol.guards, count = list.length; i < count; ++i) {
         var nested = list[i];
-        nested.parent = object;
         object.guards.push(nested);
+
+        for (var g = nested; g != null; g = g.elseGuard) {
+          g.parent = object;
+          g.contents.parent = object;
+        }
       }
     }
   };
@@ -15937,14 +15966,9 @@
     }
   };
 
-  Skew.Resolving.Resolver.prototype.resolveNode = function(node, scope, context) {
-    if (node.resolvedType != null) {
-      // Only resolve once
-      return;
-    }
-
-    node.resolvedType = Skew.Type.DYNAMIC;
-
+  // Put the guts of the function inside another function because V8 doesn't
+  // optimize functions with try-catch statements
+  Skew.Resolving.Resolver.prototype.resolveNodeSwitch = function(node, scope, context) {
     switch (node.kind) {
       case Skew.NodeKind.BLOCK: {
         this.resolveBlock(node, scope);
@@ -16121,6 +16145,31 @@
           assert(false);
         }
         break;
+      }
+    }
+  };
+
+  Skew.Resolving.Resolver.prototype.resolveNode = function(node, scope, context) {
+    if (node.resolvedType != null) {
+      // Only resolve once
+      return;
+    }
+
+    node.resolvedType = Skew.Type.DYNAMIC;
+
+    try {
+      this.resolveNodeSwitch(node, scope, context);
+    }
+
+    catch (failure) {
+      if (failure instanceof Skew.Resolving.Resolver.GuardMergingFailure) {
+        node.resolvedType = null;
+
+        throw failure;
+      }
+
+      else {
+        throw failure;
       }
     }
 
