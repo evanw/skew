@@ -1,0 +1,252 @@
+namespace Skew.Tests {
+  def testCSharp {
+
+# Test entry point
+test("
+@entry
+def main {}
+", "
+public class Globals
+{
+    public static void Main()
+    {
+    }
+}
+").csharp
+
+# Test entry point
+test("
+@entry
+def main int {
+  return 0
+}
+", "
+public class Globals
+{
+    public static int Main()
+    {
+        return 0;
+    }
+}
+").csharp
+
+# Test entry point
+test("
+@entry
+def main(x List<string>) {
+}
+", "
+using System.Collections.Generic;
+
+public class Globals
+{
+    public static void Main(string[] x1)
+    {
+        List<string> x = new List<string>(x1);
+    }
+}
+").csharp.inlineAllFunctions
+
+# Test entry point
+test("
+@entry
+def main(x List<string>) int {
+  return x.count
+}
+", "
+using System.Collections.Generic;
+
+public class Globals
+{
+    public static int Main(string[] x1)
+    {
+        List<string> x = new List<string>(x1);
+        return x.Count;
+    }
+}
+").csharp.inlineAllFunctions
+
+# Basic class hierarchy
+test("
+@export
+class Foo {
+  const instanceVariable1 int
+  const instanceVariable2 = 0
+  def instanceMethod {}
+  def instanceMethod2 {}
+}
+
+namespace Foo {
+  const staticVariable = 0
+}
+
+@export
+class Bar : Foo {
+  const instanceVariable3 int
+  const instanceVariable4 = 0
+  over instanceMethod { super }
+  def instanceMethod3 {}
+}
+
+namespace Bar {
+  const staticVariable2 = 0
+}
+", "
+public class Foo
+{
+    public int instanceVariable1;
+    public int instanceVariable2 = 0;
+    public static int staticVariable = 0;
+
+    public virtual void instanceMethod()
+    {
+    }
+
+    public void instanceMethod2()
+    {
+    }
+
+    public Foo(int instanceVariable1)
+    {
+        this.instanceVariable1 = instanceVariable1;
+        this.instanceVariable2 = 0;
+    }
+}
+
+public class Bar : Foo
+{
+    public int instanceVariable3;
+    public int instanceVariable4 = 0;
+    public static int staticVariable2 = 0;
+
+    public override void instanceMethod()
+    {
+        base.instanceMethod();
+    }
+
+    public void instanceMethod3()
+    {
+    }
+
+    public Bar(int instanceVariable1, int instanceVariable3) : base(instanceVariable1)
+    {
+        this.instanceVariable3 = instanceVariable3;
+        this.instanceVariable4 = 0;
+    }
+}
+").csharp
+
+# Basic interface usage
+test("
+@export
+class Foo :: Bar {
+  def instanceMethod {}
+  def instanceMethod(x int) {}
+  def instanceMethod2 {}
+}
+
+@export
+interface Bar {
+  def instanceMethod
+  def instanceMethod(x int)
+}
+", "
+public class Foo : Bar
+{
+    public void instanceMethod()
+    {
+    }
+
+    public void instanceMethod(int x)
+    {
+    }
+
+    public void instanceMethod2()
+    {
+    }
+
+    public Foo()
+    {
+    }
+}
+
+public interface Bar
+{
+    void instanceMethod();
+
+    void instanceMethod(int x);
+}
+").csharp
+
+# Type wrapping
+test("
+type Foo : double {
+  def scaleBy(scale double) Foo {
+    return ((self as double) * scale) as Foo
+  }
+}
+
+@export
+def test(x double) Foo {
+  return (x as Foo).scaleBy(2)
+}
+", "
+public namespace Foo
+{
+    public static Foo scaleBy(Foo self, double scale)
+    {
+        return (Foo)((double)self * scale);
+    }
+}
+
+public class Globals
+{
+    public static Foo test(double x)
+    {
+        return Foo.scaleBy((Foo)x, (double)2);
+    }
+}
+").csharp
+
+# Lists and maps
+test("
+@export
+def foo {
+  var x = [1, 2, 3]
+  var y = {1: 2, 3: 4}
+  var z = {\"1\": 2, \"3\": 4}
+}
+", "
+using System.Collections.Generic;
+
+public class in_StringMap
+{
+    public static Dictionary<string, T> insert<T>(Dictionary<string, T> self, string key, T value)
+    {
+        self.Add(key, value);
+        return self;
+    }
+}
+
+public class in_IntMap
+{
+    public static Dictionary<int, T> insert<T>(Dictionary<int, T> self, int key, T value)
+    {
+        self.Add(key, value);
+        return self;
+    }
+}
+
+public class Globals
+{
+    public static void foo()
+    {
+        List<int> x = new List<int> { 1, 2, 3 };
+        Dictionary<int, int> y = in_IntMap.insert(in_IntMap.insert(new Dictionary<int, int>(), 1, 2), 3, 4);
+        Dictionary<string, int> z = in_StringMap.insert(in_StringMap.insert(new Dictionary<string, int>(), \"1\", 2), \"3\", 4);
+    }
+}
+").csharp
+
+  }
+}

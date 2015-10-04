@@ -1331,6 +1331,11 @@
         break;
       }
 
+      case Skew.SymbolKind.OBJECT_WRAPPED: {
+        this._emit('namespace ');
+        break;
+      }
+
       default: {
         assert(false);
         break;
@@ -1340,7 +1345,7 @@
     this._emit(Skew.CSharpEmitter._mangleName(symbol));
     this._emitTypeParameters(symbol.parameters);
 
-    if (symbol.$extends != null || symbol.implements != null) {
+    if ((symbol.$extends != null || symbol.implements != null) && symbol.kind != Skew.SymbolKind.OBJECT_WRAPPED) {
       this._emit(' : ');
 
       if (symbol.$extends != null) {

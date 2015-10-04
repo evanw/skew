@@ -13,6 +13,11 @@ namespace Skew.Tests {
       expectString(trimNewlines(_expected), trimNewlines(output))
     }
 
+    def csharp CompilerTest {
+      _options.target = CSharpTarget.new
+      return self
+    }
+
     def js CompilerTest {
       _options.target = JavaScriptTarget.new
       return self
@@ -112,6 +117,7 @@ namespace Skew.Tests {
   @entry
   def main int {
     # End-to-end tests
+    testCSharp
     testJavaScript
     testJavaScriptMangle
     testJavaScriptMinify

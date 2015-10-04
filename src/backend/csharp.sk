@@ -248,11 +248,12 @@ namespace Skew {
         case .OBJECT_CLASS, .OBJECT_NAMESPACE { _emit("class ") }
         case .OBJECT_ENUM { _emit("enum ") }
         case .OBJECT_INTERFACE { _emit("interface ") }
+        case .OBJECT_WRAPPED { _emit("namespace ") }
         default { assert(false) }
       }
       _emit(_mangleName(symbol))
       _emitTypeParameters(symbol.parameters)
-      if symbol.extends != null || symbol.implements != null {
+      if (symbol.extends != null || symbol.implements != null) && symbol.kind != .OBJECT_WRAPPED {
         _emit(" : ")
         if symbol.extends != null {
           _emitExpressionOrType(symbol.extends, symbol.baseType)
