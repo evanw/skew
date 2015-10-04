@@ -50,7 +50,7 @@
   }
 
   function handleResult(result) {
-    outputLog.value = result.log instanceof Array ? JSON.stringify(result.log, null, 2) : result.log.toString();
+    outputLog.value = result.log.text;
     outputCode.value = result.outputs.length === 1 ? result.outputs[0].contents :
       result.outputs.map(function(source) { return '[' + source.name + ']\n' + source.contents; }).join('\n');
     compileTime.textContent = +(now() - start).toFixed(1) + 'ms';

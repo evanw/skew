@@ -2196,7 +2196,14 @@ namespace Skew.Resolving {
       # Make sure to resolve the children even if the initializer is invalid
       if context != null {
         if context == .DYNAMIC || !resolveInitializerWithContext(node, scope, context) {
-          resolveChildrenAsParameterizedExpressions(node, scope)
+          for child = node.firstChild; child != null; child = child.nextSibling {
+            if child.kind == .PAIR {
+              resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, .DYNAMIC)
+              resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, .DYNAMIC)
+            } else {
+              resolveAsParameterizedExpressionWithConversion(child, scope, .DYNAMIC)
+            }
+          }
         }
         return
       }

@@ -17189,7 +17189,16 @@
     // Make sure to resolve the children even if the initializer is invalid
     if (context != null) {
       if (context == Skew.Type.DYNAMIC || !this.resolveInitializerWithContext(node, scope, context)) {
-        this.resolveChildrenAsParameterizedExpressions(node, scope);
+        for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+          if (child.kind == Skew.NodeKind.PAIR) {
+            this.resolveAsParameterizedExpressionWithConversion(child.firstValue(), scope, Skew.Type.DYNAMIC);
+            this.resolveAsParameterizedExpressionWithConversion(child.secondValue(), scope, Skew.Type.DYNAMIC);
+          }
+
+          else {
+            this.resolveAsParameterizedExpressionWithConversion(child, scope, Skew.Type.DYNAMIC);
+          }
+        }
       }
 
       return;
@@ -17202,10 +17211,10 @@
           var type = null;
 
           // Resolve all children for this pass
-          for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
-            if (pass != 0 || !Skew.Resolving.Resolver.needsTypeContext(child)) {
-              this.resolveAsParameterizedExpression(child, scope);
-              type = this.mergeCommonType(type, child);
+          for (var child1 = node.firstChild(); child1 != null; child1 = child1.nextSibling()) {
+            if (pass != 0 || !Skew.Resolving.Resolver.needsTypeContext(child1)) {
+              this.resolveAsParameterizedExpression(child1, scope);
+              type = this.mergeCommonType(type, child1);
             }
           }
 
@@ -17222,9 +17231,9 @@
           var valueType = null;
 
           // Resolve all children for this pass
-          for (var child1 = node.firstChild(); child1 != null; child1 = child1.nextSibling()) {
-            var key = child1.firstValue();
-            var value = child1.secondValue();
+          for (var child2 = node.firstChild(); child2 != null; child2 = child2.nextSibling()) {
+            var key = child2.firstValue();
+            var value = child2.secondValue();
 
             if (pass != 0 || !Skew.Resolving.Resolver.needsTypeContext(key)) {
               this.resolveAsParameterizedExpression(key, scope);

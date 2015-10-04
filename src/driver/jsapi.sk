@@ -26,6 +26,7 @@ namespace Skew {
           options.define(key, defines[key] + "")
         }
       }
+
       if release {
         options.define("RELEASE", "true")
       }
@@ -50,23 +51,29 @@ namespace Skew {
     var diagnosticsToJSON = (diagnostics List<Diagnostic>) dynamic => {
       return diagnostics.map<dynamic>(diagnostic => {
         var range = diagnostic.range
-        var source = range.source
-        var start = source.indexToLineColumn(range.start)
-        var end = source.indexToLineColumn(range.end)
+        var convertedRange dynamic = null
 
-        return {
-          "kind": diagnostic.kind.toString.toLowerCase,
-          "range": {
+        if range != null {
+          var source = range.source
+          var start = source.indexToLineColumn(range.start)
+          var end = source.indexToLineColumn(range.end)
+
+          convertedRange = {
             "source": source.name,
             "start": {
               "line": start.line,
               "column": start.column,
-            } as dynamic,
+            },
             "end": {
               "line": end.line,
               "column": end.column,
-            } as dynamic,
-          } as dynamic,
+            },
+          }
+        }
+
+        return {
+          "kind": diagnostic.kind.toString.toLowerCase,
+          "range": convertedRange,
           "text": diagnostic.text,
         }
       })
@@ -95,9 +102,9 @@ namespace Skew {
       return {
         "outputs": sourcesToJSON(result.outputs),
         "log": {
-          "toString": => log.toString,
+          "text": log.toString,
           "diagnostics": diagnosticsToJSON(log.diagnostics),
-        } as dynamic,
+        },
       }
     }
 
@@ -115,7 +122,10 @@ namespace Skew {
             dynamic.postMessage({
               "id": data.id | 0,
               "outputs": sourcesToJSON(result.outputs),
-              "log": diagnosticsToJSON(log.diagnostics),
+              "log": {
+                "text": log.toString,
+                "diagnostics": diagnosticsToJSON(log.diagnostics),
+              },
             })
           }
 

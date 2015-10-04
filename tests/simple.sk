@@ -5161,5 +5161,23 @@ def foo(foo Foo, bar Bar) List<bool> {
                                                                                                                     ~~~~~~~~~~~
 ")
 
+# Test for recursive propagation of dynamic type context for list literals
+test("
+const foo dynamic = [1, [1, null]]
+", "
+")
+
+# Test for recursive propagation of dynamic type context for map literals
+test("
+const foo dynamic = {
+  \"a\": 1,
+  \"b\": {
+    \"c\": 1,
+    \"d\": null
+  }
+}
+", "
+")
+
   }
 }
