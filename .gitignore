@@ -2,4 +2,5 @@
 *.pyc
 /node_modules/
 /build/
+/npm/skew.js
 /npm/skewc

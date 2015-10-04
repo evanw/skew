@@ -2,7 +2,6 @@ namespace Skew {
   @entry
   def main {
     var api dynamic = {}
-    var this = => dynamic.this
 
     var parseOptions = (args dynamic, inputs List<Source>) CompilerOptions => {
       if !(args.inputs is List<dynamic>) {
@@ -136,6 +135,6 @@ namespace Skew {
       }
     }
 
-    this().Skew = api
+    (dynamic.typeof(dynamic.exports) != "undefined" ? dynamic.exports : (=> dynamic.this)()).Skew = api
   }
 }

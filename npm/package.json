@@ -1,9 +1,10 @@
 {
   "name": "skew",
-  "version": "0.5.13",
+  "version": "0.5.14",
   "author": "Evan Wallace",
   "description": "A compiler for the Skew programming language",
   "license": "MIT",
+  "main": "skew.js",
   "bin": {
     "skewc": "skewc"
   },
