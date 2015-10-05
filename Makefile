@@ -1,3 +1,22 @@
+BUILD_DIR = build
+NPM_DIR = npm
+
+# C-Sharp compiler
+CSC = mcs
+CSC_FLAGS = -debug
+
+DIFF = diff
+
+MONO = mono
+MONO_FLAGS = --debug
+
+NODE = node
+NPM = npm
+
+SKEWC = $(NODE) skewc.js
+
+# --------------------------------------------------
+
 SOURCES += src/backend/*.sk
 SOURCES += src/core/*.sk
 SOURCES += src/frontend/*.sk
@@ -29,94 +48,200 @@ CS_FLAGS += --inline-functions
 CS_FLAGS += --verbose
 CS_FLAGS += --message-limit=0
 
-default: compile-skewc compile-api
+# ==================================================
 
-compile-skewc: | build
-	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js
+.DEFAULT: default
 
-compile-api: | build
-	node skewc.js $(SOURCES_API) $(JS_FLAGS) --output-file=build/skew-api.js
+RULES_CHECK = check check-js check-cs check-determinism check-determinism-debug check-determinism-release
+RULES_COMPILE = compile-api compile-skewc
+RULES_TEST = test test-js test-js-debug test-js-release test-cs test-cs-basic test-cs-advanced
+RULES_BUILD = flex replace release npm-package install uninstall publish
+RULES_UTILS = list clean watch
 
-replace: | build
-	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js
-	node build/skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc2.js
-	node build/skewc2.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc3.js
-	diff build/skewc2.js build/skewc3.js
-	mv build/skewc3.js skewc.js
-	rm build/skewc2.js
+.PHONY: default $(RULES_COMPILE) $(RULES_CHECK) $(RULES_TEST) $(RULES_UTILS) $(RULES_BUILD)
 
-check: check-js check-cs check-determinism
+# ==================================================
 
-check-js: | build
-	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.min.js --release
-	node build/skewc.min.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc2.min.js --release
-	node build/skewc2.min.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc3.min.js --release
-	diff build/skewc2.min.js build/skewc3.min.js
+default: compile-api compile-skewc
 
-check-cs: | build
-	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
-	mcs -debug build/skewc.cs
-	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc2.cs
-	mcs -debug build/skewc2.cs
-	mono --debug build/skewc2.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc3.cs
-	diff build/skewc2.cs build/skewc3.cs
+clean:
+	rm -fr $(BUILD_DIR)
+	rm -f $(NPM_DIR)/*.js
 
-check-determinism: | build
-	# Debug
-	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js.js
-	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
-	mcs -debug build/skewc.cs
-	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.cs.js
-	diff build/skewc.js.js build/skewc.cs.js
+list:
+	@grep -o '^[^#[:space:].][^[:space:]]\+:' makefile | grep -o '^[^:]\+'
 
-	# Release
-	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.js.min.js
-	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
-	mcs -debug build/skewc.cs
-	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.cs.min.js
-	diff build/skewc.js.min.js build/skewc.cs.min.js
-
-release: compile-api | build
-	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.min.js
-	node skewc.js $(SOURCES_API) $(JS_FLAGS) --release --output-file=build/skew-api.min.js
-	type zopfli > /dev/null 2>&1 && (zopfli -c build/skew-api.min.js > build/skew-api.min.js.gz) || (gzip -c build/skew-api.min.js > build/skew-api.min.js.gz)
-	ls -l build/skew-api.js build/skew-api.min.js build/skew-api.min.js.gz
+flex: src/frontend/lexer.sk
 
 watch:
 	node_modules/.bin/watch src 'clear && make compile-api'
 
-build:
-	mkdir -p build
+# --------------------------------------------------
 
-flex:
-	sh -c 'cd src/frontend && python build.py'
+compile-api: $(BUILD_DIR)/skew-api.js
+
+compile-skewc: $(BUILD_DIR)/skewc.js
+
+# --------------------------------------------------
 
 test: test-js test-cs
 
-test-js: | build
-	node skewc.js $(SOURCES_TEST) $(JS_FLAGS) --output-file=build/test.js
-	node build/test.js
-	node skewc.js $(SOURCES_TEST) $(JS_FLAGS) --output-file=build/test.min.js --release
-	node build/test.min.js
+test-js: test-js-debug test-js-release
 
-test-cs: | build
-	node skewc.js $(SOURCES_TEST) $(CS_FLAGS) --output-file=build/test.cs
-	mcs -debug build/test.cs
-	mono --debug build/test.exe
-	rm -fr build/cs
-	mkdir -p build/cs
-	node skewc.js $(SOURCES_TEST) $(CS_FLAGS) --output-dir=build/cs
-	mcs -debug build/cs/*.cs -out:build/test.exe
-	mono --debug build/test.exe
+test-js-debug: $(BUILD_DIR)/test.js
+	$(NODE) $^
 
-clean:
-	rm -fr build
+test-js-release: $(BUILD_DIR)/test.min.js
+	$(NODE) $^
 
-publish: test check
-	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.min.js --release
-	node skewc.js $(SOURCES_API) $(JS_FLAGS) --output-file=build/skew-api.min.js --release
-	cp build/skew-api.min.js npm/skew.js
+test-cs: test-cs-basic test-cs-advanced
+
+test-cs-basic: $(BUILD_DIR)/test.exe
+	$(MONO) $(MONO_FLAGS) $^
+
+test-cs-advanced: $(BUILD_DIR)/cs/test.exe
+	$(MONO) $(MONO_FLAGS) $^
+
+# --------------------------------------------------
+
+check: check-js check-cs check-determinism
+
+check-js: $(BUILD_DIR)/skewc2.min.js $(BUILD_DIR)/skewc3.min.js
+	$(DIFF) $^
+
+check-cs: $(BUILD_DIR)/skewc2.cs $(BUILD_DIR)/skewc3.cs
+	$(DIFF) $^
+
+check-determinism: check-determinism-debug check-determinism-release
+
+check-determinism-debug: $(BUILD_DIR)/skewc.js $(BUILD_DIR)/skewc.cs.js
+	# Debug
+	$(DIFF) $^
+
+check-determinism-release: $(BUILD_DIR)/skewc.min.js $(BUILD_DIR)/skewc.cs.min.js
+	# Release
+	$(DIFF) $^
+
+# --------------------------------------------------
+
+release: $(BUILD_DIR)/skew-api.js $(BUILD_DIR)/skew-api.min.js $(BUILD_DIR)/skew-api.min.js.gz
+	ls -l $^
+
+replace: $(BUILD_DIR)/skewc2.js $(BUILD_DIR)/skewc3.js
+	# Replace
+	$(DIFF) $^
+	mv $(BUILD_DIR)/skewc3.js skewc.js
+	rm $(BUILD_DIR)/skewc2.js
+
+npm-package: $(NPM_DIR)/skew.js $(NPM_DIR)/skewc.js
+
+install: test-js check-js npm-package
+	# local install
+	$(NPM) install -g ./$(NPM_DIR)/
+
+uninstall:
+	# local uninstall
+	$(eval $@_NPM_PREFIX := $(shell npm config get prefix))
+	rm $($@_NPM_PREFIX)/bin/skewc
+	hash -d skewc
+
+publish: test check npm-package
+	@echo sh -c 'cd $(NPM_DIR) && $(NPM) version patch && $(NPM) publish'
+
+# ==================================================
+
+src/frontend/lexer.sk: src/frontend/flex.l
+	sh -c 'cd src/frontend && python build.py'
+
+# --------------------------------------------------
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(BUILD_DIR)/cs: | $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)/cs
+
+$(NPM_DIR):
+	mkdir -p $(NPM_DIR)
+
+# --------------------------------------------------
+
+$(BUILD_DIR)/skew-api.js: $(SOURCES_API) | $(BUILD_DIR)
+	$(SKEWC) $^ $(JS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/skew-api.min.js: $(SOURCES_API) | $(BUILD_DIR)
+	$(SKEWC) $^ $(JS_FLAGS) --output-file=$@ --release
+
+# --------------------------------------------------
+
+$(BUILD_DIR)/skewc.js: $(SOURCES_SKEWC) | $(BUILD_DIR)
+	$(SKEWC) $^ $(JS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/skewc.min.js: $(SOURCES_SKEWC) | $(BUILD_DIR)
+	$(SKEWC) $^ $(JS_FLAGS) --output-file=$@ --release
+
+$(BUILD_DIR)/skewc2.js: $(BUILD_DIR)/skewc.js $(SOURCES_SKEWC)
+	$(NODE) $^ $(JS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/skewc2.min.js: $(BUILD_DIR)/skewc.min.js $(SOURCES_SKEWC)
+	$(NODE) $^ $(JS_FLAGS) --output-file=$@ --release
+
+$(BUILD_DIR)/skewc3.js: $(BUILD_DIR)/skewc2.js $(SOURCES_SKEWC)
+	$(NODE) $^ $(JS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/skewc3.min.js: $(BUILD_DIR)/skewc2.min.js $(SOURCES_SKEWC)
+	$(NODE) $^ $(JS_FLAGS) --output-file=$@ --release
+
+# --------------------------------------------------
+
+$(BUILD_DIR)/skewc.cs: $(SOURCES_SKEWC) | $(BUILD_DIR)
+	$(SKEWC) $^ $(CS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/skewc.exe: $(BUILD_DIR)/skewc.cs
+	$(CSC) $(CSC_FLAGS) $^
+
+$(BUILD_DIR)/skewc.cs.js: $(BUILD_DIR)/skewc.exe $(SOURCES_SKEWC)
+	$(MONO) $(MONO_FLAGS) $^ $(JS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/skewc.cs.min.js: $(BUILD_DIR)/skewc.exe $(SOURCES_SKEWC)
+	$(MONO) $(MONO_FLAGS) $^ $(JS_FLAGS) --output-file=$@ --release
+
+$(BUILD_DIR)/skewc2.exe: $(BUILD_DIR)/skewc2.cs
+	$(CSC) $(CSC_FLAGS) $^
+
+$(BUILD_DIR)/skewc2.cs: $(BUILD_DIR)/skewc.exe $(SOURCES_SKEWC)
+	$(MONO) $(MONO_FLAGS) $^ $(CS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/skewc3.cs: $(BUILD_DIR)/skewc2.exe $(SOURCES_SKEWC)
+	$(MONO) $(MONO_FLAGS) $^ $(CS_FLAGS) --output-file=$@
+
+# --------------------------------------------------
+
+$(BUILD_DIR)/test.cs: $(SOURCES_TEST) | $(BUILD_DIR)
+	$(SKEWC) $^ $(CS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/test.exe: $(BUILD_DIR)/test.cs
+	$(CSC) $(CSC_FLAGS) $^
+
+$(BUILD_DIR)/cs/test.exe: $(SOURCES_TEST) | $(BUILD_DIR)/cs
+	$(SKEWC) $^ $(CS_FLAGS) --output-dir=$(BUILD_DIR)/cs
+	$(CSC) $(CSC_FLAGS) $(BUILD_DIR)/cs/*.cs -out:$@
+
+$(BUILD_DIR)/test.js: $(SOURCES_TEST) | $(BUILD_DIR)
+	$(SKEWC) $^ $(JS_FLAGS) --output-file=$@
+
+$(BUILD_DIR)/test.min.js: $(SOURCES_TEST) | $(BUILD_DIR)
+	$(SKEWC) $^ $(JS_FLAGS) --output-file=$@ --release
+
+# --------------------------------------------------
+
+$(BUILD_DIR)/skew-api.min.js.gz: $(BUILD_DIR)/skew-api.min.js
+	type zopfli > /dev/null 2>&1 && (zopfli -c $^ > $@) || (gzip -c $^ > $@)
+
+$(NPM_DIR)/skew.js: $(BUILD_DIR)/skew-api.min.js | $(NPM_DIR)
+	cp $^ $@
+
+$(NPM_DIR)/skewc.js: $(BUILD_DIR)/skewc.min.js | $(NPM_DIR)
 	echo '#!/usr/bin/env node' > npm/skewc
-	cat build/skewc.min.js >> npm/skewc
-	chmod +x npm/skewc
-	sh -c 'cd npm && npm version patch && npm publish'
+	cat $^ >> $(NPM_DIR)/skewc
+	chmod +x $(NPM_DIR)/skewc
