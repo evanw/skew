@@ -15535,7 +15535,7 @@
       var symbol = info.symbol;
 
       // Variables that are never re-assigned can safely be considered constants for constant folding
-      if (symbol.value != null && info.writeCount == 0) {
+      if (symbol.value != null && info.writeCount == 0 && this._options.foldAllConstants) {
         symbol.flags |= Skew.Symbol.IS_CONST;
       }
 
@@ -17309,7 +17309,7 @@
     }
 
     // Always access referenced globals directly
-    if (Skew.in_SymbolKind.isGlobalReference(symbol.kind)) {
+    if (!this._options.stopAfterResolve && Skew.in_SymbolKind.isGlobalReference(symbol.kind)) {
       node.kind = Skew.NodeKind.NAME;
       node.removeChildren();
     }
