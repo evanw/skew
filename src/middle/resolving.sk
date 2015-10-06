@@ -11,12 +11,7 @@ namespace Skew {
     over run(context PassContext) {
       context.cache.loadGlobals(context.log, context.global)
       if !context.log.hasErrors {
-        var resolver = Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log)
-        resolver.constantFolder = Folding.ConstantFolder.new(context.cache, context.options, symbol => resolver.initializeSymbol(symbol))
-        resolver.initializeGlobals
-        resolver.iterativelyMergeGuards
-        resolver.resolveGlobal
-        resolver.removeObsoleteFunctions(context.global)
+        Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log).resolve
       }
     }
   }
@@ -40,39 +35,47 @@ namespace Skew.Resolving {
   }
 
   class Resolver {
-    const global ObjectSymbol
-    const options CompilerOptions
-    const defines StringMap<Define>
-    const cache TypeCache
-    const log Log
-    const foreachLoops List<Node> = []
-    const localVariableStatistics IntMap<LocalVariableStatistics> = {}
-    var controlFlow = ControlFlowAnalyzer.new
-    var constantFolder Folding.ConstantFolder = null
-    var isMergingGuards = true
+    const _global ObjectSymbol
+    const _options CompilerOptions
+    const _defines StringMap<Define>
+    const _cache TypeCache
+    const _log Log
+    const _foreachLoops List<Node> = []
+    const _localVariableStatistics IntMap<LocalVariableStatistics> = {}
+    const _controlFlow = ControlFlowAnalyzer.new
+    var _constantFolder Folding.ConstantFolder = null
+    var _isMergingGuards = true
+
+    def resolve {
+      _constantFolder = Folding.ConstantFolder.new(_cache, _options, symbol => _initializeSymbol(symbol))
+      _initializeGlobals
+      _iterativelyMergeGuards
+      _resolveGlobal
+      _removeObsoleteFunctions(_global)
+    }
 
     # Put the guts of the function inside another function because V8 doesn't
     # optimize functions with try-catch statements
-    def initializeSymbolSwitch(symbol Symbol) {
+    def _initializeSymbolSwitch(symbol Symbol) {
       switch symbol.kind {
         case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
-          initializeObject(symbol.asObjectSymbol)
+          _initializeObject(symbol.asObjectSymbol)
         }
 
         case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE, .FUNCTION_LOCAL {
-          initializeFunction(symbol.asFunctionSymbol)
+          _initializeFunction(symbol.asFunctionSymbol)
         }
 
         case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
-          initializeVariable(symbol.asVariableSymbol)
+          _initializeVariable(symbol.asVariableSymbol)
         }
 
         case .PARAMETER_FUNCTION, .PARAMETER_OBJECT {
-          initializeParameter(symbol.asParameterSymbol)
+          _initializeParameter(symbol.asParameterSymbol)
         }
 
         case .OVERLOADED_ANNOTATION, .OVERLOADED_GLOBAL, .OVERLOADED_INSTANCE {
-          initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol)
+          _initializeOverloadedFunction(symbol.asOverloadedFunctionSymbol)
         }
 
         default {
@@ -81,7 +84,7 @@ namespace Skew.Resolving {
       }
     }
 
-    def initializeSymbol(symbol Symbol) {
+    def _initializeSymbol(symbol Symbol) {
       # The scope should have been set by the merging pass (or by this pass for local variables)
       assert(symbol.scope != null)
 
@@ -90,7 +93,7 @@ namespace Skew.Resolving {
         symbol.state = .INITIALIZING
 
         try {
-          initializeSymbolSwitch(symbol)
+          _initializeSymbolSwitch(symbol)
         }
 
         # If guard merging failed, reset the type so we'll try again next time
@@ -108,26 +111,26 @@ namespace Skew.Resolving {
 
           # After initializing a function symbol, ensure the entire overload set is initialized
           if overloaded != null && overloaded.state == .UNINITIALIZED {
-            initializeSymbol(overloaded)
+            _initializeSymbol(overloaded)
           }
         }
       }
 
       # Detect cyclic symbol references such as "foo foo;"
       else if symbol.state == .INITIALIZING {
-        log.semanticErrorCyclicDeclaration(symbol.range, symbol.name)
+        _log.semanticErrorCyclicDeclaration(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
       }
     }
 
-    def validateEntryPoint(symbol FunctionSymbol) {
+    def _validateEntryPoint(symbol FunctionSymbol) {
       # Detect duplicate entry points
-      if cache.entryPointSymbol != null {
-        log.semanticErrorDuplicateEntryPoint(symbol.range, cache.entryPointSymbol.range)
+      if _cache.entryPointSymbol != null {
+        _log.semanticErrorDuplicateEntryPoint(symbol.range, _cache.entryPointSymbol.range)
         return
       }
 
-      cache.entryPointSymbol = symbol
+      _cache.entryPointSymbol = symbol
 
       # Only recognize a few entry point types
       var type = symbol.resolvedType
@@ -135,27 +138,27 @@ namespace Skew.Resolving {
         var argumentTypes = type.argumentTypes
 
         # The argument list must be empty or one argument of type "List<string>"
-        if argumentTypes.count > 1 || argumentTypes.count == 1 && argumentTypes.first != cache.createListType(cache.stringType) {
-          log.semanticErrorInvalidEntryPointArguments(Range.span(symbol.arguments.first.range, symbol.arguments.last.type.range), symbol.name)
+        if argumentTypes.count > 1 || argumentTypes.count == 1 && argumentTypes.first != _cache.createListType(_cache.stringType) {
+          _log.semanticErrorInvalidEntryPointArguments(Range.span(symbol.arguments.first.range, symbol.arguments.last.type.range), symbol.name)
         }
 
         # The return type must be nothing or "int"
-        else if type.returnType != null && type.returnType != cache.intType {
-          log.semanticErrorInvalidEntryPointReturnType(symbol.returnType.range, symbol.name)
+        else if type.returnType != null && type.returnType != _cache.intType {
+          _log.semanticErrorInvalidEntryPointReturnType(symbol.returnType.range, symbol.name)
         }
       }
     }
 
-    def resolveDefines(symbol VariableSymbol) {
+    def _resolveDefines(symbol VariableSymbol) {
       var key = symbol.fullName
-      var define = defines.get(key, null)
+      var define = _defines.get(key, null)
 
       if define == null {
         return
       }
 
-      # Remove the define so we can tell what defines weren't used later on
-      defines.remove(key)
+      # Remove the define so we can tell what _defines weren't used later on
+      _defines.remove(key)
 
       var type = symbol.resolvedType
       var range = define.value
@@ -163,14 +166,14 @@ namespace Skew.Resolving {
       var node Node = null
 
       # Special-case booleans
-      if type == cache.boolType {
+      if type == _cache.boolType {
         if value == "true" || value == "false" {
           node = Node.createBool(value == "true")
         }
       }
 
       # Special-case doubles
-      else if type == cache.doubleType {
+      else if type == _cache.doubleType {
         var number = Parsing.parseDoubleLiteral(value)
         if !number.isNaN {
           node = Node.createDouble(number)
@@ -178,7 +181,7 @@ namespace Skew.Resolving {
       }
 
       # Special-case strings
-      else if type == cache.stringType {
+      else if type == _cache.stringType {
         node = Node.createString(value)
       }
 
@@ -188,7 +191,7 @@ namespace Skew.Resolving {
       }
 
       # Integers can also apply to doubles
-      if node == null && cache.isNumeric(type) {
+      if node == null && _cache.isNumeric(type) {
         var box = Parsing.parseIntLiteral(value)
         if box != null {
           node = Node.createInt(box.value)
@@ -197,15 +200,15 @@ namespace Skew.Resolving {
 
       # Stop if anything failed above
       if node == null {
-        log.semanticErrorInvalidDefine(range, value, type, key)
+        _log.semanticErrorInvalidDefine(range, value, type, key)
         return
       }
 
-      resolveAsParameterizedExpressionWithConversion(node.withRange(range), global.scope, type)
+      _resolveAsParameterizedExpressionWithConversion(node.withRange(range), _global.scope, type)
       symbol.value = node
     }
 
-    def resolveAnnotations(symbol Symbol) {
+    def _resolveAnnotations(symbol Symbol) {
       var parent = symbol.parent
       var annotations = symbol.annotations
 
@@ -217,7 +220,7 @@ namespace Skew.Resolving {
       # Resolve annotations on this symbol after annotation inheritance. Don't
       # use removeIf() since this annotation list may be shared elsewhere.
       if annotations != null {
-        symbol.annotations = annotations.filter(annotation => resolveAnnotation(annotation, symbol))
+        symbol.annotations = annotations.filter(annotation => _resolveAnnotation(annotation, symbol))
       }
 
       # Protected access used to be an annotation. It's now indicated with just
@@ -227,27 +230,27 @@ namespace Skew.Resolving {
       }
     }
 
-    def resolveParameters(parameters List<ParameterSymbol>) {
+    def _resolveParameters(parameters List<ParameterSymbol>) {
       if parameters != null {
         for parameter in parameters {
-          resolveParameter(parameter)
+          _resolveParameter(parameter)
         }
       }
     }
 
-    def initializeParameter(symbol ParameterSymbol) {
+    def _initializeParameter(symbol ParameterSymbol) {
       if symbol.resolvedType == null {
         symbol.resolvedType = Type.new(.SYMBOL, symbol)
       }
 
-      resolveAnnotations(symbol)
+      _resolveAnnotations(symbol)
     }
 
-    def resolveParameter(symbol ParameterSymbol) {
-      initializeSymbol(symbol)
+    def _resolveParameter(symbol ParameterSymbol) {
+      _initializeSymbol(symbol)
     }
 
-    def initializeObject(symbol ObjectSymbol) {
+    def _initializeObject(symbol ObjectSymbol) {
       var kind = symbol.kind
       var extends = symbol.extends
       var implements = symbol.implements
@@ -256,17 +259,17 @@ namespace Skew.Resolving {
         symbol.resolvedType = Type.new(.SYMBOL, symbol)
       }
 
-      resolveParameters(symbol.parameters)
+      _resolveParameters(symbol.parameters)
 
       # Resolve the base type (only for classes and wrapped types)
       if extends != null {
-        resolveAsParameterizedType(extends, symbol.scope)
+        _resolveAsParameterizedType(extends, symbol.scope)
         var baseType = extends.resolvedType
         if kind == .OBJECT_WRAPPED {
           symbol.wrappedType = baseType
           symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
         } else if kind != .OBJECT_CLASS || (baseType != .DYNAMIC && (!baseType.isClass || baseType.symbol.isValueType)) {
-          log.semanticErrorInvalidExtends(extends.range, baseType)
+          _log.semanticErrorInvalidExtends(extends.range, baseType)
         } else if baseType != .DYNAMIC {
           symbol.baseType = baseType
           symbol.baseClass = baseType.symbol.asObjectSymbol
@@ -297,19 +300,19 @@ namespace Skew.Resolving {
             else if !memberKind.isParameter {
               var other = symbol.members.get(member.name, null)
               if other != null {
-                log.semanticErrorBadOverride(other.range, other.name, baseType, member.range)
+                _log.semanticErrorBadOverride(other.range, other.name, baseType, member.range)
               } else {
                 symbol.members[member.name] = member
               }
             }
           }
-          Merging.mergeFunctions(log, symbol, functions, .INTO_DERIVED_CLASS)
+          Merging.mergeFunctions(_log, symbol, functions, .INTO_DERIVED_CLASS)
         }
       }
 
       # Wrapped types without something to wrap don't make sense
       else if kind == .OBJECT_WRAPPED {
-        log.semanticErrorMissingWrappedType(symbol.range, symbol.fullName)
+        _log.semanticErrorMissingWrappedType(symbol.range, symbol.fullName)
       }
 
       # Resolve the base interface types
@@ -317,7 +320,7 @@ namespace Skew.Resolving {
         symbol.interfaceTypes = []
         for i in 0..implements.count {
           var type = implements[i]
-          resolveAsParameterizedType(type, symbol.scope)
+          _resolveAsParameterizedType(type, symbol.scope)
 
           # Ignore the dynamic type, which will be from errors and dynamic expressions used for exports
           var interfaceType = type.resolvedType
@@ -327,7 +330,7 @@ namespace Skew.Resolving {
 
           # Only classes can derive from interfaces
           if kind != .OBJECT_CLASS || !interfaceType.isInterface {
-            log.semanticErrorInvalidImplements(type.range, interfaceType)
+            _log.semanticErrorInvalidImplements(type.range, interfaceType)
             continue
           }
 
@@ -335,7 +338,7 @@ namespace Skew.Resolving {
           for j in 0..i {
             var other = implements[j]
             if other.resolvedType == interfaceType {
-              log.semanticErrorDuplicateImplements(type.range, interfaceType, other.range)
+              _log.semanticErrorDuplicateImplements(type.range, interfaceType, other.range)
               break
             }
           }
@@ -356,7 +359,7 @@ namespace Skew.Resolving {
         symbol.flags |= Symbol.IS_VALUE_TYPE
       }
 
-      resolveAnnotations(symbol)
+      _resolveAnnotations(symbol)
 
       # Create a default constructor if one doesn't exist
       var constructor = symbol.members.get("new", null)
@@ -402,7 +405,7 @@ namespace Skew.Resolving {
       }
     }
 
-    def checkInterfacesAndAbstractStatus(object ObjectSymbol, function FunctionSymbol) {
+    def _checkInterfacesAndAbstractStatus(object ObjectSymbol, function FunctionSymbol) {
       assert(function.kind == .FUNCTION_INSTANCE)
       assert(function.state == .INITIALIZED)
 
@@ -411,7 +414,7 @@ namespace Skew.Resolving {
       }
     }
 
-    def checkInterfacesAndAbstractStatus(symbol ObjectSymbol) {
+    def _checkInterfacesAndAbstractStatus(symbol ObjectSymbol) {
       assert(symbol.state == .INITIALIZED)
 
       if symbol.hasCheckedInterfacesAndAbstractStatus || symbol.kind != .OBJECT_CLASS {
@@ -423,13 +426,13 @@ namespace Skew.Resolving {
       # Check to see if this class is abstract (as unimplemented members)
       for member in symbol.members.values {
         if member.kind == .OVERLOADED_INSTANCE {
-          initializeSymbol(member)
+          _initializeSymbol(member)
           for function in member.asOverloadedFunctionSymbol.symbols {
-            checkInterfacesAndAbstractStatus(symbol, function)
+            _checkInterfacesAndAbstractStatus(symbol, function)
           }
         } else if member.kind == .FUNCTION_INSTANCE {
-          initializeSymbol(member)
-          checkInterfacesAndAbstractStatus(symbol, member.asFunctionSymbol)
+          _initializeSymbol(member)
+          _checkInterfacesAndAbstractStatus(symbol, member.asFunctionSymbol)
         }
         if symbol.isAbstract {
           break
@@ -443,7 +446,7 @@ namespace Skew.Resolving {
             if function.kind != .FUNCTION_INSTANCE || function.block != null {
               continue
             }
-            initializeSymbol(function)
+            _initializeSymbol(function)
 
             var member = symbol.members.get(function.name, null)
             var match FunctionSymbol = null
@@ -466,9 +469,9 @@ namespace Skew.Resolving {
 
             # Validate use of the interface
             if match == null {
-              log.semanticErrorBadInterfaceImplementation(symbol.range, symbol.resolvedType, interfaceType, function.name, function.range)
+              _log.semanticErrorBadInterfaceImplementation(symbol.range, symbol.resolvedType, interfaceType, function.name, function.range)
             } else if function.resolvedType.returnType != match.resolvedType.returnType {
-              log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function.range)
+              _log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function.range)
             } else {
               if function.implementations == null {
                 function.implementations = []
@@ -480,21 +483,21 @@ namespace Skew.Resolving {
       }
     }
 
-    def initializeGlobals {
-      initializeSymbol(cache.boolType.symbol)
-      initializeSymbol(cache.doubleType.symbol)
-      initializeSymbol(cache.intMapType.symbol)
-      initializeSymbol(cache.intType.symbol)
-      initializeSymbol(cache.listType.symbol)
-      initializeSymbol(cache.stringMapType.symbol)
-      initializeSymbol(cache.stringType.symbol)
+    def _initializeGlobals {
+      _initializeSymbol(_cache.boolType.symbol)
+      _initializeSymbol(_cache.doubleType.symbol)
+      _initializeSymbol(_cache.intMapType.symbol)
+      _initializeSymbol(_cache.intType.symbol)
+      _initializeSymbol(_cache.listType.symbol)
+      _initializeSymbol(_cache.stringMapType.symbol)
+      _initializeSymbol(_cache.stringType.symbol)
     }
 
-    def resolveGlobal {
-      resolveObject(global)
-      convertForeachLoops
-      scanLocalVariables
-      discardUnusedDefines
+    def _resolveGlobal {
+      _resolveObject(_global)
+      _convertForeachLoops
+      _scanLocalVariables
+      _discardUnusedDefines
     }
 
     # An obsolete function is one without an implementation that was dropped in
@@ -507,49 +510,49 @@ namespace Skew.Resolving {
     #     def foo
     #   }
     #
-    def removeObsoleteFunctions(symbol ObjectSymbol) {
+    def _removeObsoleteFunctions(symbol ObjectSymbol) {
       for object in symbol.objects {
-        removeObsoleteFunctions(object)
+        _removeObsoleteFunctions(object)
       }
       symbol.functions.removeIf(function => function.isObsolete)
     }
 
-    def iterativelyMergeGuards {
+    def _iterativelyMergeGuards {
       var guards List<Guard>
 
       # Iterate until a fixed point is reached
       while true {
         guards = []
-        scanForGuards(global, guards)
+        _scanForGuards(_global, guards)
         if guards.isEmpty {
           break
         }
 
         # Each iteration must remove at least one guard to continue
-        if !processGuards(guards) {
+        if !_processGuards(guards) {
           break
         }
       }
 
-      isMergingGuards = false
+      _isMergingGuards = false
 
       # All remaining guards are errors
       for guard in guards {
-        var count = log.errorCount
-        resolveAsParameterizedExpressionWithConversion(guard.test, guard.parent.scope, cache.boolType)
-        if log.errorCount == count {
-          log.semanticErrorExpectedConstant(guard.test.range)
+        var count = _log.errorCount
+        _resolveAsParameterizedExpressionWithConversion(guard.test, guard.parent.scope, _cache.boolType)
+        if _log.errorCount == count {
+          _log.semanticErrorExpectedConstant(guard.test.range)
         }
       }
     }
 
-    def scanForGuards(symbol ObjectSymbol, guards List<Guard>) {
+    def _scanForGuards(symbol ObjectSymbol, guards List<Guard>) {
       if symbol.guards != null {
         guards.append(symbol.guards)
       }
 
       for object in symbol.objects {
-        scanForGuards(object, guards)
+        _scanForGuards(object, guards)
       }
     }
 
@@ -563,24 +566,24 @@ namespace Skew.Resolving {
       }
     }
 
-    def reportGuardMergingFailure(node Node) {
-      if isMergingGuards {
+    def _reportGuardMergingFailure(node Node) {
+      if _isMergingGuards {
         throw GuardMergingFailure.new
       }
     }
 
-    def attemptToResolveGuardConstant(node Node, scope Scope) bool {
+    def _attemptToResolveGuardConstant(node Node, scope Scope) bool {
       assert(scope != null)
       try {
-        resolveAsParameterizedExpressionWithConversion(node, scope, cache.boolType)
-        constantFolder.foldConstants(node)
+        _resolveAsParameterizedExpressionWithConversion(node, scope, _cache.boolType)
+        _constantFolder.foldConstants(node)
         return true
       } catch failure GuardMergingFailure {
       }
       return false
     }
 
-    def processGuards(guards List<Guard>) bool {
+    def _processGuards(guards List<Guard>) bool {
       var wasGuardRemoved = false
 
       for guard in guards {
@@ -588,7 +591,7 @@ namespace Skew.Resolving {
         var parent = guard.parent
 
         # If it's not a constant, we'll just try again in the next iteration
-        if !attemptToResolveGuardConstant(test, parent.scope) {
+        if !_attemptToResolveGuardConstant(test, parent.scope) {
           continue
         }
 
@@ -597,7 +600,7 @@ namespace Skew.Resolving {
           wasGuardRemoved = true
 
           if test.isTrue {
-            mergeGuardIntoObject(guard, parent)
+            _mergeGuardIntoObject(guard, parent)
           } else {
             var elseGuard = guard.elseGuard
             if elseGuard != null {
@@ -605,7 +608,7 @@ namespace Skew.Resolving {
                 elseGuard.parent = parent
                 parent.guards.append(elseGuard)
               } else {
-                mergeGuardIntoObject(elseGuard, parent)
+                _mergeGuardIntoObject(elseGuard, parent)
               }
             }
           }
@@ -615,11 +618,11 @@ namespace Skew.Resolving {
       return wasGuardRemoved
     }
 
-    def mergeGuardIntoObject(guard Guard, object ObjectSymbol) {
+    def _mergeGuardIntoObject(guard Guard, object ObjectSymbol) {
       var symbol = guard.contents
-      Merging.mergeObjects(log, object, symbol.objects)
-      Merging.mergeFunctions(log, object, symbol.functions, .NORMAL)
-      Merging.mergeVariables(log, object, symbol.variables)
+      Merging.mergeObjects(_log, object, symbol.objects)
+      Merging.mergeFunctions(_log, object, symbol.functions, .NORMAL)
+      Merging.mergeVariables(_log, object, symbol.variables)
       object.objects.append(symbol.objects)
       object.functions.append(symbol.functions)
       object.variables.append(symbol.variables)
@@ -647,8 +650,8 @@ namespace Skew.Resolving {
     # because that process needs to generate symbol names and it's much easier
     # to generate non-conflicting symbol names after all local variables have
     # been defined.
-    def convertForeachLoops {
-      for node in foreachLoops {
+    def _convertForeachLoops {
+      for node in _foreachLoops {
         var symbol = node.symbol.asVariableSymbol
         var scope = symbol.scope.findEnclosingFunctionOrLambda # Generate names at the function level to avoid conflicts with local scopes
         var value = node.foreachValue
@@ -671,7 +674,7 @@ namespace Skew.Resolving {
           # Otherwise, save the iteration limit in case it changes during iteration
           else {
             var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("count"))
-            count.resolvedType = cache.intType
+            count.resolvedType = _cache.intType
             count.value = second.remove
             count.state = .INITIALIZED
             setup.appendChild(Node.createVariable(count))
@@ -684,15 +687,15 @@ namespace Skew.Resolving {
           node.become(Node.createFor(setup, test, update, block.remove).withComments(node.comments).withRange(node.range))
 
           # Make sure the new expressions are resolved
-          resolveNode(test, symbol.scope, null)
-          resolveNode(update, symbol.scope, null)
+          _resolveNode(test, symbol.scope, null)
+          _resolveNode(update, symbol.scope, null)
         }
 
-        else if cache.isList(value.resolvedType) && !options.target.supportsListForeach {
+        else if _cache.isList(value.resolvedType) && !_options.target.supportsListForeach {
           # Create the index variable
           var index = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("i"))
-          index.resolvedType = cache.intType
-          index.value = Node.createInt(0).withType(cache.intType)
+          index.resolvedType = _cache.intType
+          index.value = Node.createInt(0).withType(_cache.intType)
           index.state = .INITIALIZED
           var indexName = Node.createSymbolReference(index)
 
@@ -705,7 +708,7 @@ namespace Skew.Resolving {
 
           # Create the count variable
           var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("count"))
-          count.resolvedType = cache.intType
+          count.resolvedType = _cache.intType
           count.value = Node.createDot(listName, "count")
           count.state = .INITIALIZED
           var countName = Node.createSymbolReference(count)
@@ -721,16 +724,16 @@ namespace Skew.Resolving {
           node.become(Node.createFor(setup, test, update, block.remove).withComments(node.comments).withRange(node.range))
 
           # Make sure the new expressions are resolved
-          resolveNode(symbol.value, symbol.scope, null)
-          resolveNode(count.value, symbol.scope, null)
-          resolveNode(test, symbol.scope, null)
-          resolveNode(update, symbol.scope, null)
+          _resolveNode(symbol.value, symbol.scope, null)
+          _resolveNode(count.value, symbol.scope, null)
+          _resolveNode(test, symbol.scope, null)
+          _resolveNode(update, symbol.scope, null)
         }
       }
     }
 
-    def scanLocalVariables {
-      for info in localVariableStatistics.values {
+    def _scanLocalVariables {
+      for info in _localVariableStatistics.values {
         var symbol = info.symbol
 
         # Variables that are never re-assigned can safely be considered constants for constant folding
@@ -740,7 +743,7 @@ namespace Skew.Resolving {
 
         # Unused local variables can safely be removed, but don't warn about "for i in 0..10 {}"
         if info.readCount == 0 && !symbol.isLoopVariable {
-          log.semanticWarningUnreadLocalVariable(symbol.range, symbol.name)
+          _log.semanticWarningUnreadLocalVariable(symbol.range, symbol.name)
         }
 
         # Rename local variables that conflict
@@ -754,31 +757,31 @@ namespace Skew.Resolving {
       }
     }
 
-    def discardUnusedDefines {
-      for key in defines.keys {
-        log.semanticErrorInvalidDefine(defines[key].name, key)
+    def _discardUnusedDefines {
+      for key in _defines.keys {
+        _log.semanticErrorInvalidDefine(_defines[key].name, key)
       }
     }
 
-    def resolveObject(symbol ObjectSymbol) {
-      initializeSymbol(symbol)
+    def _resolveObject(symbol ObjectSymbol) {
+      _initializeSymbol(symbol)
 
       for object in symbol.objects {
-        resolveObject(object)
+        _resolveObject(object)
       }
 
       for function in symbol.functions {
-        resolveFunction(function)
+        _resolveFunction(function)
       }
 
       for variable in symbol.variables {
-        resolveVariable(variable)
+        _resolveVariable(variable)
       }
 
-      checkInterfacesAndAbstractStatus(symbol)
+      _checkInterfacesAndAbstractStatus(symbol)
     }
 
-    def initializeFunction(symbol FunctionSymbol) {
+    def _initializeFunction(symbol FunctionSymbol) {
       if symbol.resolvedType == null {
         symbol.resolvedType = Type.new(.SYMBOL, symbol)
       }
@@ -788,7 +791,7 @@ namespace Skew.Resolving {
       if symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR {
         symbol.this = VariableSymbol.new(.VARIABLE_ARGUMENT, "self")
         symbol.this.flags |= Symbol.IS_CONST
-        symbol.this.resolvedType = cache.parameterize(symbol.parent.resolvedType)
+        symbol.this.resolvedType = _cache.parameterize(symbol.parent.resolvedType)
         symbol.this.state = .INITIALIZED
       }
 
@@ -796,54 +799,54 @@ namespace Skew.Resolving {
       if symbol.isAutomaticallyGenerated {
         if symbol.kind == .FUNCTION_CONSTRUCTOR {
           assert(symbol.name == "new")
-          automaticallyGenerateClassConstructor(symbol)
+          _automaticallyGenerateClassConstructor(symbol)
         } else if symbol.kind == .FUNCTION_INSTANCE {
           assert(symbol.name == "toString")
-          automaticallyGenerateEnumToString(symbol)
+          _automaticallyGenerateEnumToString(symbol)
         }
       }
 
-      resolveParameters(symbol.parameters)
+      _resolveParameters(symbol.parameters)
 
       # Resolve the argument variables
       symbol.resolvedType.argumentTypes = []
       for argument in symbol.arguments {
         argument.scope = symbol.scope
-        resolveVariable(argument)
+        _resolveVariable(argument)
         symbol.resolvedType.argumentTypes.append(argument.resolvedType)
       }
-      symbol.argumentOnlyType = cache.createLambdaType(symbol.resolvedType.argumentTypes, null)
+      symbol.argumentOnlyType = _cache.createLambdaType(symbol.resolvedType.argumentTypes, null)
 
       # Resolve the return type if present (no return type means "void")
       var returnType Type = null
       if symbol.returnType != null {
         if symbol.kind == .FUNCTION_CONSTRUCTOR {
-          log.semanticErrorConstructorReturnType(symbol.returnType.range)
+          _log.semanticErrorConstructorReturnType(symbol.returnType.range)
         } else {
-          resolveAsParameterizedType(symbol.returnType, symbol.scope)
+          _resolveAsParameterizedType(symbol.returnType, symbol.scope)
           returnType = symbol.returnType.resolvedType
         }
       }
 
       # Constructors always return the type they construct
       if symbol.kind == .FUNCTION_CONSTRUCTOR {
-        returnType = cache.parameterize(symbol.parent.resolvedType)
+        returnType = _cache.parameterize(symbol.parent.resolvedType)
       }
 
       # The "<=>" operator must return a numeric value for comparison with zero
       var count = symbol.arguments.count
       if symbol.name == "<=>" {
-        if returnType == null || returnType != cache.intType {
-          log.semanticErrorComparisonOperatorNotInt(symbol.returnType != null ? symbol.returnType.range : symbol.range)
+        if returnType == null || returnType != _cache.intType {
+          _log.semanticErrorComparisonOperatorNotInt(symbol.returnType != null ? symbol.returnType.range : symbol.range)
           returnType = .DYNAMIC
         } else if count != 1 {
-          log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
+          _log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
         }
       }
 
       # Setters must have one argument
       else if symbol.isSetter && count != 1 {
-        log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
+        _log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
         symbol.flags &= ~Symbol.IS_SETTER
       }
 
@@ -852,7 +855,7 @@ namespace Skew.Resolving {
         var argumentCount = argumentCountForOperator(symbol.name)
 
         if argumentCount != null && !(count in argumentCount) {
-          log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, argumentCount)
+          _log.semanticErrorWrongArgumentCountRange(symbol.range, symbol.name, argumentCount)
         }
 
         # Enforce that the initializer constructor operators take lists of
@@ -860,30 +863,30 @@ namespace Skew.Resolving {
         # for initializer expressions
         else if symbol.name == "{new}" || symbol.name == "[new]" {
           for argument in symbol.arguments {
-            if argument.resolvedType != .DYNAMIC && !cache.isList(argument.resolvedType) {
-              log.semanticErrorExpectedList(argument.range, argument.name, argument.resolvedType)
+            if argument.resolvedType != .DYNAMIC && !_cache.isList(argument.resolvedType) {
+              _log.semanticErrorExpectedList(argument.range, argument.name, argument.resolvedType)
             }
           }
         }
       }
 
       symbol.resolvedType.returnType = returnType
-      resolveAnnotations(symbol)
+      _resolveAnnotations(symbol)
 
       # Validate the entry point after this symbol has a type
       if symbol.isEntryPoint {
-        validateEntryPoint(symbol)
+        _validateEntryPoint(symbol)
       }
     }
 
-    def automaticallyGenerateClassConstructor(symbol FunctionSymbol) {
+    def _automaticallyGenerateClassConstructor(symbol FunctionSymbol) {
       # Create the function body
       var block = Node.createBlock
       symbol.block = block
 
       # Mirror the base constructor's arguments
       if symbol.overridden != null {
-        initializeSymbol(symbol.overridden)
+        _initializeSymbol(symbol.overridden)
         var arguments = symbol.overridden.arguments
         var base = Node.createSuper.withRange(symbol.overridden.range)
         if arguments.isEmpty {
@@ -903,10 +906,10 @@ namespace Skew.Resolving {
 
       # Add an argument for every uninitialized variable
       var parent = symbol.parent.asObjectSymbol
-      initializeSymbol(parent)
+      _initializeSymbol(parent)
       for variable in parent.variables {
         if variable.kind == .VARIABLE_INSTANCE {
-          initializeSymbol(variable)
+          _initializeSymbol(variable)
           if variable.value == null {
             var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
             argument.resolvedType = variable.resolvedType
@@ -930,10 +933,10 @@ namespace Skew.Resolving {
       }
     }
 
-    def automaticallyGenerateEnumToString(symbol FunctionSymbol) {
+    def _automaticallyGenerateEnumToString(symbol FunctionSymbol) {
       var parent = symbol.parent.asObjectSymbol
       var names = Node.createList
-      initializeSymbol(parent)
+      _initializeSymbol(parent)
 
       for variable in parent.variables {
         if variable.kind == .VARIABLE_ENUM {
@@ -948,41 +951,41 @@ namespace Skew.Resolving {
       strings.state = .INITIALIZED
       strings.parent = parent
       strings.scope = parent.scope
-      strings.resolvedType = cache.createListType(cache.stringType)
+      strings.resolvedType = _cache.createListType(_cache.stringType)
       parent.variables.append(strings)
-      resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType)
+      _resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType)
 
-      symbol.returnType = Node.createType(cache.stringType)
+      symbol.returnType = Node.createType(_cache.stringType)
       symbol.block = Node.createBlock.appendChild(Node.createReturn(Node.createIndex(Node.createSymbolReference(strings), Node.createName("self"))))
       symbol.flags |= Symbol.IS_GETTER
     }
 
-    def resolveFunction(symbol FunctionSymbol) {
-      initializeSymbol(symbol)
+    def _resolveFunction(symbol FunctionSymbol) {
+      _initializeSymbol(symbol)
 
       # Validate use of "def" vs "over"
       if !symbol.isObsolete {
         if symbol.overridden != null && symbol.kind == .FUNCTION_INSTANCE {
           if !symbol.isOver {
-            log.semanticErrorModifierMissingOverride(symbol.range, symbol.name, symbol.overridden.range)
+            _log.semanticErrorModifierMissingOverride(symbol.range, symbol.name, symbol.overridden.range)
           }
         } else {
           if symbol.isOver {
-            log.semanticErrorModifierUnusedOverride(symbol.range, symbol.name)
+            _log.semanticErrorModifierUnusedOverride(symbol.range, symbol.name)
           }
         }
       }
 
       var scope = LocalScope.new(symbol.scope, .NORMAL)
       if symbol.this != null {
-        scope.define(symbol.this, log)
+        scope.define(symbol.this, _log)
       }
 
       # Default values for argument variables aren't resolved with this local
       # scope since they are evaluated at the call site, not inside the
       # function body, and shouldn't have access to other arguments
       for argument in symbol.arguments {
-        scope.define(argument, log)
+        scope.define(argument, _log)
       }
 
       # The function is considered abstract if the body is missing
@@ -997,7 +1000,7 @@ namespace Skew.Resolving {
         if symbol.kind == .FUNCTION_CONSTRUCTOR && !symbol.isAutomaticallyGenerated {
           for variable in symbol.parent.asObjectSymbol.variables {
             if variable.kind == .VARIABLE_INSTANCE {
-              resolveVariable(variable)
+              _resolveVariable(variable)
 
               # Attempt to create a default value if absent. Right now this
               # avoids the problem of initializing type parameters:
@@ -1010,7 +1013,7 @@ namespace Skew.Resolving {
               #
               # This should be fixed at some point.
               if variable.value == null && !variable.resolvedType.isParameter {
-                variable.value = createDefaultValueForType(variable.resolvedType, variable.range)
+                variable.value = _createDefaultValueForType(variable.resolvedType, variable.range)
               }
 
               if variable.value != null {
@@ -1022,13 +1025,13 @@ namespace Skew.Resolving {
           }
         }
 
-        resolveNode(block, scope, null)
+        _resolveNode(block, scope, null)
 
         # Missing a return statement is an error
         if symbol.kind != .FUNCTION_CONSTRUCTOR {
           var returnType = symbol.resolvedType.returnType
           if returnType != null && returnType != .DYNAMIC && block.hasControlFlowAtEnd {
-            log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
+            _log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
           }
         }
 
@@ -1036,15 +1039,15 @@ namespace Skew.Resolving {
         else if symbol.parent.asObjectSymbol.baseClass != null {
           var first = block.firstChild
           if first == null || !first.isSuperCallStatement {
-            log.semanticErrorMissingSuper(firstStatement == null ? symbol.range : firstStatement.range)
+            _log.semanticErrorMissingSuper(firstStatement == null ? symbol.range : firstStatement.range)
           }
         }
       }
     }
 
-    def recordStatistic(symbol Symbol, statistic SymbolStatistic) {
+    def _recordStatistic(symbol Symbol, statistic SymbolStatistic) {
       if symbol != null && symbol.kind == .VARIABLE_LOCAL {
-        var info = localVariableStatistics.get(symbol.id, null)
+        var info = _localVariableStatistics.get(symbol.id, null)
         if info != null {
           switch statistic {
             case .READ { info.readCount++ }
@@ -1054,15 +1057,15 @@ namespace Skew.Resolving {
       }
     }
 
-    def initializeVariable(symbol VariableSymbol) {
+    def _initializeVariable(symbol VariableSymbol) {
       # Normal variables may omit the initializer if the type is present
       if symbol.type != null {
-        resolveAsParameterizedType(symbol.type, symbol.scope)
+        _resolveAsParameterizedType(symbol.type, symbol.scope)
         symbol.resolvedType = symbol.type.resolvedType
 
         # Resolve the constant now so initialized constants always have a value
         if symbol.isConst && symbol.value != null {
-          resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
+          _resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
         }
       }
 
@@ -1073,72 +1076,72 @@ namespace Skew.Resolving {
 
       # Implicitly-typed variables take their type from their initializer
       else if symbol.value != null {
-        resolveAsParameterizedExpression(symbol.value, symbol.scope)
+        _resolveAsParameterizedExpression(symbol.value, symbol.scope)
         var type = symbol.value.resolvedType
         symbol.resolvedType = type
 
         # Forbid certain types
-        if !isValidVariableType(type) {
-          log.semanticErrorBadImplicitVariableType(symbol.range, type)
+        if !_isValidVariableType(type) {
+          _log.semanticErrorBadImplicitVariableType(symbol.range, type)
           symbol.resolvedType = .DYNAMIC
         }
       }
 
       # Use a different error for constants which must have a type and lambda arguments which cannot have an initializer
       else if symbol.isConst || symbol.scope.kind == .FUNCTION && symbol.scope.asFunctionScope.symbol.kind == .FUNCTION_LOCAL {
-        log.semanticErrorVarMissingType(symbol.range, symbol.name)
+        _log.semanticErrorVarMissingType(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
       }
 
       # Variables without a type are an error
       else {
-        log.semanticErrorVarMissingValue(symbol.range, symbol.name)
+        _log.semanticErrorVarMissingValue(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
       }
 
-      resolveDefines(symbol)
-      resolveAnnotations(symbol)
+      _resolveDefines(symbol)
+      _resolveAnnotations(symbol)
 
       # Run post-annotation checks
       if symbol.resolvedType != .DYNAMIC && symbol.isConst && !symbol.isImported && symbol.value == null && symbol.kind != .VARIABLE_ENUM && symbol.kind != .VARIABLE_INSTANCE {
-        log.semanticErrorConstMissingValue(symbol.range, symbol.name)
+        _log.semanticErrorConstMissingValue(symbol.range, symbol.name)
       }
     }
 
-    def resolveVariable(symbol VariableSymbol) {
-      initializeSymbol(symbol)
+    def _resolveVariable(symbol VariableSymbol) {
+      _initializeSymbol(symbol)
 
       if symbol.value != null {
-        resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
+        _resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
       }
 
       # Default-initialize variables
       else if symbol.kind != .VARIABLE_ARGUMENT && symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM {
-        symbol.value = createDefaultValueForType(symbol.resolvedType, symbol.range)
+        symbol.value = _createDefaultValueForType(symbol.resolvedType, symbol.range)
       }
     }
 
-    def createDefaultValueForType(type Type, range Range) Node {
-      var unwrapped = cache.unwrappedType(type)
+    def _createDefaultValueForType(type Type, range Range) Node {
+      var unwrapped = _cache.unwrappedType(type)
 
-      if unwrapped == cache.intType {
+      if unwrapped == _cache.intType {
         return Node.createInt(0).withType(type)
       }
 
-      if unwrapped == cache.doubleType {
+      if unwrapped == _cache.doubleType {
         return Node.createDouble(0).withType(type)
       }
 
-      if unwrapped == cache.boolType {
+      if unwrapped == _cache.boolType {
         return Node.createBool(false).withType(type)
       }
 
       if unwrapped.isEnum {
-        return Node.createCast(Node.createInt(0).withType(cache.intType), Node.createType(type)).withType(type)
+        return Node.createCast(Node.createInt(0).withType(_cache.intType), Node.createType(type)).withType(type)
       }
 
       if unwrapped.isParameter {
-        log.semanticErrorNoDefaultValue(range, type)
+        _log.semanticErrorNoDefaultValue(range, type)
         return null
       }
 
@@ -1146,7 +1149,7 @@ namespace Skew.Resolving {
       return Node.createNull.withType(type)
     }
 
-    def initializeOverloadedFunction(symbol OverloadedFunctionSymbol) {
+    def _initializeOverloadedFunction(symbol OverloadedFunctionSymbol) {
       var symbols = symbol.symbols
 
       if symbol.resolvedType == null {
@@ -1158,7 +1161,7 @@ namespace Skew.Resolving {
       var i = 0
       while i < symbols.count {
         var function = symbols[i]
-        initializeSymbol(function)
+        _initializeSymbol(function)
         symbol.flags |= function.flags & Symbol.IS_SETTER
 
         var index = types.indexOf(function.argumentOnlyType)
@@ -1175,7 +1178,7 @@ namespace Skew.Resolving {
           if !isFromSameObject && areReturnTypesDifferent {
             var derived = function.parent == parent ? function : other
             var base = derived == function ? other : function
-            log.semanticErrorBadOverrideReturnType(derived.range, derived.name, parent.asObjectSymbol.baseType, base.range)
+            _log.semanticErrorBadOverrideReturnType(derived.range, derived.name, parent.asObjectSymbol.baseType, base.range)
             if isFromSameObject {
               function.flags |= Symbol.IS_OBSOLETE
             }
@@ -1186,7 +1189,7 @@ namespace Skew.Resolving {
           # Mark the obsolete function as obsolete instead of removing it so it
           # doesn't potentially mess up iteration in a parent call stack.
           else if areReturnTypesDifferent || isFromSameObject && (function.block != null) == (other.block != null) {
-            log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
+            _log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
             if isFromSameObject {
               function.flags |= Symbol.IS_OBSOLETE
             }
@@ -1227,60 +1230,60 @@ namespace Skew.Resolving {
 
     # Put the guts of the function inside another function because V8 doesn't
     # optimize functions with try-catch statements
-    def resolveNodeSwitch(node Node, scope Scope, context Type) {
+    def _resolveNodeSwitch(node Node, scope Scope, context Type) {
       switch node.kind {
-        case .BLOCK { resolveBlock(node, scope) }
-        case .PAIR { resolvePair(node, scope) }
+        case .BLOCK { _resolveBlock(node, scope) }
+        case .PAIR { _resolvePair(node, scope) }
 
         # Statements
-        case .BREAK, .CONTINUE { resolveJump(node, scope) }
-        case .EXPRESSION { resolveExpression(node, scope) }
-        case .FOR { resolveFor(node, scope) }
-        case .FOREACH { resolveForeach(node, scope) }
-        case .IF { resolveIf(node, scope) }
-        case .RETURN { resolveReturn(node, scope) }
-        case .SWITCH { resolveSwitch(node, scope) }
-        case .THROW { resolveThrow(node, scope) }
-        case .TRY { resolveTry(node, scope) }
-        case .VARIABLE { resolveVariable(node, scope) }
-        case .VARIABLES { resolveVariables(node, scope) }
-        case .WHILE { resolveWhile(node, scope) }
+        case .BREAK, .CONTINUE { _resolveJump(node, scope) }
+        case .EXPRESSION { _resolveExpression(node, scope) }
+        case .FOR { _resolveFor(node, scope) }
+        case .FOREACH { _resolveForeach(node, scope) }
+        case .IF { _resolveIf(node, scope) }
+        case .RETURN { _resolveReturn(node, scope) }
+        case .SWITCH { _resolveSwitch(node, scope) }
+        case .THROW { _resolveThrow(node, scope) }
+        case .TRY { _resolveTry(node, scope) }
+        case .VARIABLE { _resolveVariable(node, scope) }
+        case .VARIABLES { _resolveVariables(node, scope) }
+        case .WHILE { _resolveWhile(node, scope) }
 
         # Expressions
-        case .ASSIGN_INDEX { resolveOperatorOverload(node, scope) }
-        case .CALL { resolveCall(node, scope) }
-        case .CAST { resolveCast(node, scope, context) }
-        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { resolveOperatorOverload(node, scope) }
-        case .CONSTANT { resolveConstant(node, scope) }
-        case .DOT { resolveDot(node, scope, context) }
-        case .HOOK { resolveHook(node, scope, context) }
-        case .INDEX { resolveOperatorOverload(node, scope) }
-        case .INITIALIZER_LIST, .INITIALIZER_MAP { resolveInitializer(node, scope, context) }
-        case .LAMBDA { resolveLambda(node, scope, context) }
-        case .LAMBDA_TYPE { resolveLambdaType(node, scope) }
-        case .NAME { resolveName(node, scope) }
+        case .ASSIGN_INDEX { _resolveOperatorOverload(node, scope) }
+        case .CALL { _resolveCall(node, scope) }
+        case .CAST { _resolveCast(node, scope, context) }
+        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { _resolveOperatorOverload(node, scope) }
+        case .CONSTANT { _resolveConstant(node, scope) }
+        case .DOT { _resolveDot(node, scope, context) }
+        case .HOOK { _resolveHook(node, scope, context) }
+        case .INDEX { _resolveOperatorOverload(node, scope) }
+        case .INITIALIZER_LIST, .INITIALIZER_MAP { _resolveInitializer(node, scope, context) }
+        case .LAMBDA { _resolveLambda(node, scope, context) }
+        case .LAMBDA_TYPE { _resolveLambdaType(node, scope) }
+        case .NAME { _resolveName(node, scope) }
         case .NULL { node.resolvedType = .NULL }
-        case .PARAMETERIZE { resolveParameterize(node, scope) }
-        case .SEQUENCE { resolveSequence(node, scope, context) }
-        case .SUPER { resolveSuper(node, scope) }
+        case .PARAMETERIZE { _resolveParameterize(node, scope) }
+        case .SEQUENCE { _resolveSequence(node, scope, context) }
+        case .SUPER { _resolveSuper(node, scope) }
         case .TYPE {}
-        case .TYPE_CHECK { resolveTypeCheck(node, scope) }
+        case .TYPE_CHECK { _resolveTypeCheck(node, scope) }
 
         default {
-          if node.kind.isBinary { resolveBinary(node, scope) }
+          if node.kind.isBinary { _resolveBinary(node, scope) }
           else { assert(false) }
         }
       }
     }
 
-    def resolveNode(node Node, scope Scope, context Type) {
+    def _resolveNode(node Node, scope Scope, context Type) {
       if node.resolvedType != null {
         return # Only resolve once
       }
 
       node.resolvedType = .DYNAMIC
       try {
-        resolveNodeSwitch(node, scope, context)
+        _resolveNodeSwitch(node, scope, context)
       }
 
       # If guard merging failed, reset the type so we'll try again next time
@@ -1292,75 +1295,75 @@ namespace Skew.Resolving {
       assert(node.resolvedType != null)
     }
 
-    def resolveAsParameterizedType(node Node, scope Scope) {
+    def _resolveAsParameterizedType(node Node, scope Scope) {
       assert(node.kind.isExpression)
-      resolveNode(node, scope, null)
-      checkIsType(node)
-      checkIsParameterized(node)
+      _resolveNode(node, scope, null)
+      _checkIsType(node)
+      _checkIsParameterized(node)
     }
 
-    def resolveAsParameterizedExpression(node Node, scope Scope) {
+    def _resolveAsParameterizedExpression(node Node, scope Scope) {
       assert(node.kind.isExpression)
-      resolveNode(node, scope, null)
-      checkIsInstance(node)
-      checkIsParameterized(node)
+      _resolveNode(node, scope, null)
+      _checkIsInstance(node)
+      _checkIsParameterized(node)
     }
 
-    def resolveAsParameterizedExpressionWithTypeContext(node Node, scope Scope, type Type) {
+    def _resolveAsParameterizedExpressionWithTypeContext(node Node, scope Scope, type Type) {
       assert(node.kind.isExpression)
-      resolveNode(node, scope, type)
-      checkIsInstance(node)
-      checkIsParameterized(node)
+      _resolveNode(node, scope, type)
+      _checkIsInstance(node)
+      _checkIsParameterized(node)
     }
 
-    def resolveAsParameterizedExpressionWithConversion(node Node, scope Scope, type Type) {
-      resolveAsParameterizedExpressionWithTypeContext(node, scope, type)
-      checkConversion(node, type, .IMPLICIT)
+    def _resolveAsParameterizedExpressionWithConversion(node Node, scope Scope, type Type) {
+      _resolveAsParameterizedExpressionWithTypeContext(node, scope, type)
+      _checkConversion(node, type, .IMPLICIT)
     }
 
-    def resolveChildrenAsParameterizedExpressions(node Node, scope Scope) {
+    def _resolveChildrenAsParameterizedExpressions(node Node, scope Scope) {
       for child = node.firstChild; child != null; child = child.nextSibling {
-        resolveAsParameterizedExpression(child, scope)
+        _resolveAsParameterizedExpression(child, scope)
       }
     }
 
-    def checkUnusedExpression(node Node) {
+    def _checkUnusedExpression(node Node) {
       var kind = node.kind
       if kind == .HOOK {
-        checkUnusedExpression(node.hookTrue)
-        checkUnusedExpression(node.hookFalse)
+        _checkUnusedExpression(node.hookTrue)
+        _checkUnusedExpression(node.hookFalse)
       } else if node.range != null && node.resolvedType != .DYNAMIC && kind != .CALL && !kind.isBinaryAssign {
-        log.semanticWarningUnusedExpression(node.range)
+        _log.semanticWarningUnusedExpression(node.range)
       }
     }
 
-    def checkIsInstance(node Node) {
+    def _checkIsInstance(node Node) {
       if node.resolvedType != .DYNAMIC && node.isType {
-        log.semanticErrorUnexpectedType(node.range, node.resolvedType)
+        _log.semanticErrorUnexpectedType(node.range, node.resolvedType)
         node.resolvedType = .DYNAMIC
       }
     }
 
-    def checkIsType(node Node) {
+    def _checkIsType(node Node) {
       if node.resolvedType != .DYNAMIC && !node.isType {
-        log.semanticErrorUnexpectedExpression(node.range, node.resolvedType)
+        _log.semanticErrorUnexpectedExpression(node.range, node.resolvedType)
         node.resolvedType = .DYNAMIC
       }
     }
 
-    def checkIsParameterized(node Node) {
+    def _checkIsParameterized(node Node) {
       if node.resolvedType.parameters != null && !node.resolvedType.isParameterized {
-        log.semanticErrorUnparameterizedType(node.range, node.resolvedType)
+        _log.semanticErrorUnparameterizedType(node.range, node.resolvedType)
         node.resolvedType = .DYNAMIC
       }
     }
 
-    def checkStorage(node Node, scope Scope) {
+    def _checkStorage(node Node, scope Scope) {
       var symbol = node.symbol
 
       # Only allow storage to variables
       if node.kind != .NAME && node.kind != .DOT || symbol != null && !symbol.kind.isVariable {
-        log.semanticErrorBadStorage(node.range)
+        _log.semanticErrorBadStorage(node.range)
       }
 
       # Forbid storage to constants
@@ -1369,12 +1372,12 @@ namespace Skew.Resolving {
 
         # Allow assignments to constants inside constructors
         if function == null || function.symbol.kind != .FUNCTION_CONSTRUCTOR || function.symbol.parent != symbol.parent || symbol.kind != .VARIABLE_INSTANCE {
-          log.semanticErrorStorageToConstSymbol(node.internalRangeOrRange, symbol.name)
+          _log.semanticErrorStorageToConstSymbol(node.internalRangeOrRange, symbol.name)
         }
       }
     }
 
-    def checkAccess(node Node, range Range, scope Scope) {
+    def _checkAccess(node Node, range Range, scope Scope) {
       var symbol = node.symbol
       if symbol == null {
         return
@@ -1391,7 +1394,7 @@ namespace Skew.Resolving {
           }
           scope = scope.parent
         }
-        log.semanticErrorAccessViolation(range, symbol.name)
+        _log.semanticErrorAccessViolation(range, symbol.name)
       }
 
       # Deprecation annotations optionally provide a warning message
@@ -1402,17 +1405,17 @@ namespace Skew.Resolving {
             if value.kind == .CALL && value.hasTwoChildren {
               var last = value.lastChild
               if last.kind == .CONSTANT && last.content.kind == .STRING {
-                log.warning(range, last.content.asString)
+                _log.warning(range, last.content.asString)
                 return
               }
             }
           }
         }
-        log.semanticWarningDeprecatedUsage(range, symbol.name)
+        _log.semanticWarningDeprecatedUsage(range, symbol.name)
       }
     }
 
-    def checkConversion(node Node, to Type, kind ConversionKind) {
+    def _checkConversion(node Node, to Type, kind ConversionKind) {
       var from = node.resolvedType
       assert(from != null)
       assert(to != null)
@@ -1428,9 +1431,9 @@ namespace Skew.Resolving {
       }
 
       # The implicit conversion must be valid
-      if kind == .IMPLICIT && !cache.canImplicitlyConvert(from, to) ||
-          kind == .EXPLICIT && !cache.canExplicitlyConvert(from, to) {
-        log.semanticErrorIncompatibleTypes(node.range, from, to, cache.canExplicitlyConvert(from, to))
+      if kind == .IMPLICIT && !_cache.canImplicitlyConvert(from, to) ||
+          kind == .EXPLICIT && !_cache.canExplicitlyConvert(from, to) {
+        _log.semanticErrorIncompatibleTypes(node.range, from, to, _cache.canExplicitlyConvert(from, to))
         node.resolvedType = .DYNAMIC
         return
       }
@@ -1441,13 +1444,13 @@ namespace Skew.Resolving {
       }
     }
 
-    def resolveAnnotation(node Node, symbol Symbol) bool {
+    def _resolveAnnotation(node Node, symbol Symbol) bool {
       var value = node.annotationValue
       var test = node.annotationTest
 
-      resolveNode(value, symbol.scope, null)
+      _resolveNode(value, symbol.scope, null)
       if test != null {
-        resolveAsParameterizedExpressionWithConversion(test, symbol.scope, cache.boolType)
+        _resolveAsParameterizedExpressionWithConversion(test, symbol.scope, _cache.boolType)
       }
 
       # Terminate early when there were errors
@@ -1457,14 +1460,14 @@ namespace Skew.Resolving {
 
       # Make sure annotations have the arguments they need
       if value.kind != .CALL {
-        log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.count, 0, value.symbol.name, value.symbol.range)
+        _log.semanticErrorArgumentCount(value.range, value.symbol.resolvedType.argumentTypes.count, 0, value.symbol.name, value.symbol.range)
         return false
       }
 
       # Ensure all arguments are constants
       var isValid = true
       for child = value.callValue.nextSibling; child != null; child = child.nextSibling {
-        isValid = isValid && recursivelyResolveAsConstant(child)
+        isValid = isValid && _recursivelyResolveAsConstant(child)
       }
       if !isValid {
         return false
@@ -1474,7 +1477,7 @@ namespace Skew.Resolving {
       node.symbol = value.symbol
 
       # Apply built-in annotation logic
-      var flag = annotationSymbolFlags.get(value.symbol.fullName, 0)
+      var flag = _annotationSymbolFlags.get(value.symbol.fullName, 0)
       if flag != 0 {
         switch flag {
           case Symbol.IS_DEPRECATED {}
@@ -1488,18 +1491,18 @@ namespace Skew.Resolving {
           case Symbol.SHOULD_SPREAD { isValid = symbol.kind == .FUNCTION_ANNOTATION }
         }
         if !isValid {
-          log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
+          _log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
           return false
         }
 
         # Don't add an annotation when the test expression is false
-        if test != null && recursivelyResolveAsConstant(test) && test.isFalse {
+        if test != null && _recursivelyResolveAsConstant(test) && test.isFalse {
           return false
         }
 
         # Only warn about duplicate annotations after checking the test expression
         if (symbol.flags & flag) != 0 {
-          log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
+          _log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
         }
 
         symbol.flags |= flag
@@ -1513,20 +1516,20 @@ namespace Skew.Resolving {
       return true
     }
 
-    def recursivelyResolveAsConstant(node Node) bool {
-      constantFolder.foldConstants(node)
+    def _recursivelyResolveAsConstant(node Node) bool {
+      _constantFolder.foldConstants(node)
 
       if node.kind != .CONSTANT {
-        log.semanticErrorExpectedConstant(node.range)
+        _log.semanticErrorExpectedConstant(node.range)
         return false
       }
 
       return true
     }
 
-    def resolveBlock(node Node, scope Scope) {
+    def _resolveBlock(node Node, scope Scope) {
       assert(node.kind == .BLOCK)
-      controlFlow.pushBlock(node)
+      _controlFlow.pushBlock(node)
 
       for child = node.firstChild, next Node = null; child != null; child = next {
         next = child.nextSibling
@@ -1547,8 +1550,8 @@ namespace Skew.Resolving {
           }
         }
 
-        resolveNode(child, scope, null)
-        controlFlow.visitStatementInPostOrder(child)
+        _resolveNode(child, scope, null)
+        _controlFlow.visitStatementInPostOrder(child)
 
         # The "@skip" annotation removes function calls after type checking
         if child.kind == .EXPRESSION {
@@ -1559,32 +1562,32 @@ namespace Skew.Resolving {
         }
       }
 
-      controlFlow.popBlock(node)
+      _controlFlow.popBlock(node)
     }
 
-    def resolvePair(node Node, scope Scope) {
-      resolveAsParameterizedExpression(node.firstValue, scope)
-      resolveAsParameterizedExpression(node.secondValue, scope)
+    def _resolvePair(node Node, scope Scope) {
+      _resolveAsParameterizedExpression(node.firstValue, scope)
+      _resolveAsParameterizedExpression(node.secondValue, scope)
     }
 
-    def resolveJump(node Node, scope Scope) {
+    def _resolveJump(node Node, scope Scope) {
       if scope.findEnclosingLoop == null {
-        log.semanticErrorBadJump(node.range, node.kind == .BREAK ? "break" : "continue")
+        _log.semanticErrorBadJump(node.range, node.kind == .BREAK ? "break" : "continue")
       }
     }
 
-    def resolveExpression(node Node, scope Scope) {
+    def _resolveExpression(node Node, scope Scope) {
       var value = node.expressionValue
-      resolveAsParameterizedExpression(value, scope)
-      checkUnusedExpression(value)
+      _resolveAsParameterizedExpression(value, scope)
+      _checkUnusedExpression(value)
     }
 
-    def resolveFor(node Node, scope Scope) {
+    def _resolveFor(node Node, scope Scope) {
       var setup = node.forSetup
       var update = node.forUpdate
       scope = LocalScope.new(scope, .LOOP)
       if setup.kind == .VARIABLES {
-        resolveNode(setup, scope, null)
+        _resolveNode(setup, scope, null)
 
         # All for loop variables must have the same type. This is a requirement
         # for one-to-one code emission in the languages we want to target.
@@ -1592,79 +1595,79 @@ namespace Skew.Resolving {
         for child = setup.firstChild.nextSibling; child != null; child = child.nextSibling {
           var symbol = child.symbol
           if symbol.resolvedType != type {
-            log.semanticErrorForLoopDifferentType(symbol.range, symbol.name, symbol.resolvedType, type)
+            _log.semanticErrorForLoopDifferentType(symbol.range, symbol.name, symbol.resolvedType, type)
             break
           }
         }
       } else {
-        resolveAsParameterizedExpression(setup, scope)
+        _resolveAsParameterizedExpression(setup, scope)
       }
-      resolveAsParameterizedExpressionWithConversion(node.forTest, scope, cache.boolType)
-      resolveAsParameterizedExpression(update, scope)
+      _resolveAsParameterizedExpressionWithConversion(node.forTest, scope, _cache.boolType)
+      _resolveAsParameterizedExpression(update, scope)
       if update.kind == .SEQUENCE {
         for child = update.firstChild; child != null; child = child.nextSibling {
-          checkUnusedExpression(child)
+          _checkUnusedExpression(child)
         }
       }
-      resolveBlock(node.forBlock, scope)
+      _resolveBlock(node.forBlock, scope)
     }
 
-    def resolveForeach(node Node, scope Scope) {
+    def _resolveForeach(node Node, scope Scope) {
       var type Type = .DYNAMIC
       scope = LocalScope.new(scope, .LOOP)
 
       var value = node.foreachValue
-      resolveAsParameterizedExpression(value, scope)
+      _resolveAsParameterizedExpression(value, scope)
 
       # Support "for i in 0..10"
       if value.kind == .PAIR {
         var first = value.firstValue
         var second = value.secondValue
-        type = cache.intType
-        checkConversion(first, cache.intType, .IMPLICIT)
-        checkConversion(second, cache.intType, .IMPLICIT)
+        type = _cache.intType
+        _checkConversion(first, _cache.intType, .IMPLICIT)
+        _checkConversion(second, _cache.intType, .IMPLICIT)
 
         # The ".." syntax only counts up, unlike CoffeeScript
         if first.isInt && second.isInt && first.asInt >= second.asInt {
-          log.semanticWarningEmptyRange(value.range)
+          _log.semanticWarningEmptyRange(value.range)
         }
       }
 
       # Support "for i in [1, 2, 3]"
-      else if cache.isList(value.resolvedType) {
+      else if _cache.isList(value.resolvedType) {
         type = value.resolvedType.substitutions[0]
       }
 
       # Anything else is an error
       else if value.resolvedType != .DYNAMIC {
-        log.semanticErrorBadForValue(value.range, value.resolvedType)
+        _log.semanticErrorBadForValue(value.range, value.resolvedType)
       }
 
       # Special-case symbol initialization with the type
       var symbol = node.symbol.asVariableSymbol
-      scope.asLocalScope.define(symbol, log)
-      localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
+      scope.asLocalScope.define(symbol, _log)
+      _localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
       symbol.resolvedType = type
       symbol.flags |= Symbol.IS_CONST | Symbol.IS_LOOP_VARIABLE
       symbol.state = .INITIALIZED
 
-      resolveBlock(node.foreachBlock, scope)
+      _resolveBlock(node.foreachBlock, scope)
 
       # Collect foreach loops and convert them in another pass
-      foreachLoops.append(node)
+      _foreachLoops.append(node)
     }
 
-    def resolveIf(node Node, scope Scope) {
+    def _resolveIf(node Node, scope Scope) {
       var test = node.ifTest
       var ifFalse = node.ifFalse
-      resolveAsParameterizedExpressionWithConversion(test, scope, cache.boolType)
-      resolveBlock(node.ifTrue, LocalScope.new(scope, .NORMAL))
+      _resolveAsParameterizedExpressionWithConversion(test, scope, _cache.boolType)
+      _resolveBlock(node.ifTrue, LocalScope.new(scope, .NORMAL))
       if ifFalse != null {
-        resolveBlock(ifFalse, LocalScope.new(scope, .NORMAL))
+        _resolveBlock(ifFalse, LocalScope.new(scope, .NORMAL))
       }
     }
 
-    def resolveReturn(node Node, scope Scope) {
+    def _resolveReturn(node Node, scope Scope) {
       var value = node.returnValue
       var function = scope.findEnclosingFunctionOrLambda.symbol
       var returnType = function.kind != .FUNCTION_CONSTRUCTOR ? function.resolvedType.returnType : null
@@ -1672,37 +1675,37 @@ namespace Skew.Resolving {
       # Check for a returned value
       if value == null {
         if returnType != null {
-          log.semanticErrorExpectedReturnValue(node.range, returnType)
+          _log.semanticErrorExpectedReturnValue(node.range, returnType)
         }
         return
       }
 
       # Check the type of the returned value
       if returnType != null {
-        resolveAsParameterizedExpressionWithConversion(value, scope, returnType)
+        _resolveAsParameterizedExpressionWithConversion(value, scope, returnType)
         return
       }
 
       # If there's no return type, still check for other errors
-      resolveAsParameterizedExpression(value, scope)
+      _resolveAsParameterizedExpression(value, scope)
 
       # Lambdas without a return type or an explicit "return" statement get special treatment
       if !node.isImplicitReturn {
-        log.semanticErrorUnexpectedReturnValue(value.range)
+        _log.semanticErrorUnexpectedReturnValue(value.range)
         return
       }
 
       # Check for a return value of type "void"
       if !function.shouldInferReturnType || value.kind == .CALL && value.symbol != null && value.symbol.resolvedType.returnType == null {
-        checkUnusedExpression(value)
+        _checkUnusedExpression(value)
         node.kind = .EXPRESSION
         return
       }
 
       # Check for an invalid return type
       var type = value.resolvedType
-      if !isValidVariableType(type) {
-        log.semanticErrorBadReturnType(value.range, type)
+      if !_isValidVariableType(type) {
+        _log.semanticErrorBadReturnType(value.range, type)
         node.kind = .EXPRESSION
         return
       }
@@ -1711,19 +1714,19 @@ namespace Skew.Resolving {
       function.returnType = Node.createType(type)
     }
 
-    def resolveSwitch(node Node, scope Scope) {
+    def _resolveSwitch(node Node, scope Scope) {
       var duplicateCases IntMap<Range> = {}
-      var mustEnsureConstantIntegers = options.target.requiresIntegerSwitchStatements
+      var mustEnsureConstantIntegers = _options.target.requiresIntegerSwitchStatements
       var allValuesAreIntegers = true
       var value = node.switchValue
-      resolveAsParameterizedExpression(value, scope)
+      _resolveAsParameterizedExpression(value, scope)
 
       for child = value.nextSibling; child != null; child = child.nextSibling {
         var block = child.caseBlock
 
         # Resolve all case values
         for caseValue = child.firstChild; caseValue != block; caseValue = caseValue.nextSibling {
-          resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType)
+          _resolveAsParameterizedExpressionWithConversion(caseValue, scope, value.resolvedType)
 
           var symbol = caseValue.symbol
           var integer = 0
@@ -1731,7 +1734,7 @@ namespace Skew.Resolving {
           # Check for a constant variable, which may just be read-only with a
           # value determined at runtime
           if symbol != null && (mustEnsureConstantIntegers ? symbol.kind == .VARIABLE_ENUM : symbol.kind.isVariable && symbol.isConst) {
-            var constant = constantFolder.constantForSymbol(symbol.asVariableSymbol)
+            var constant = _constantFolder.constantForSymbol(symbol.asVariableSymbol)
             if constant == null || constant.kind != .INT {
               allValuesAreIntegers = false
               continue
@@ -1742,7 +1745,7 @@ namespace Skew.Resolving {
           # Fall back to the constant folder only as a last resort because it
           # mutates the syntax tree and harms readability
           else {
-            constantFolder.foldConstants(caseValue)
+            _constantFolder.foldConstants(caseValue)
             if !caseValue.isInt {
               allValuesAreIntegers = false
               continue
@@ -1753,7 +1756,7 @@ namespace Skew.Resolving {
           # Duplicate case detection
           var previous = duplicateCases.get(integer, null)
           if previous != null {
-            log.semanticErrorDuplicateCase(caseValue.range, previous)
+            _log.semanticErrorDuplicateCase(caseValue.range, previous)
           } else {
             duplicateCases[integer] = caseValue.range
           }
@@ -1761,41 +1764,41 @@ namespace Skew.Resolving {
 
         # The default case must be last, makes changing into an if chain easier later
         if child.hasOneChild && child.nextSibling != null {
-          log.semanticErrorDefaultCaseNotLast(child.range)
+          _log.semanticErrorDefaultCaseNotLast(child.range)
         }
 
-        resolveBlock(block, LocalScope.new(scope, .NORMAL))
+        _resolveBlock(block, LocalScope.new(scope, .NORMAL))
       }
 
       # Fall back to an if statement if the case values aren't compile-time
       # integer constants, which is requried by many language targets
       if !allValuesAreIntegers && mustEnsureConstantIntegers {
-        convertSwitchToIfChain(node, scope)
+        _convertSwitchToIfChain(node, scope)
       }
     }
 
-    def resolveThrow(node Node, scope Scope) {
+    def _resolveThrow(node Node, scope Scope) {
       var value = node.throwValue
-      resolveAsParameterizedExpression(value, scope)
+      _resolveAsParameterizedExpression(value, scope)
     }
 
-    def resolveVariable(node Node, scope Scope) {
+    def _resolveVariable(node Node, scope Scope) {
       var symbol = node.symbol.asVariableSymbol
-      scope.asLocalScope.define(symbol, log)
-      localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
-      resolveVariable(symbol)
+      scope.asLocalScope.define(symbol, _log)
+      _localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
+      _resolveVariable(symbol)
     }
 
-    def resolveVariables(node Node, scope Scope) {
+    def _resolveVariables(node Node, scope Scope) {
       for child = node.firstChild; child != null; child = child.nextSibling {
-        resolveVariable(child, scope)
+        _resolveVariable(child, scope)
       }
     }
 
-    def resolveTry(node Node, scope Scope) {
+    def _resolveTry(node Node, scope Scope) {
       var tryBlock = node.tryBlock
       var finallyBlock = node.finallyBlock
-      resolveBlock(tryBlock, LocalScope.new(scope, .NORMAL))
+      _resolveBlock(tryBlock, LocalScope.new(scope, .NORMAL))
 
       # Bare try statements catch all thrown values
       if node.hasOneChild {
@@ -1807,39 +1810,39 @@ namespace Skew.Resolving {
         var childScope = LocalScope.new(scope, .NORMAL)
         if child.symbol != null {
           var symbol = child.symbol.asVariableSymbol
-          childScope.define(symbol, log)
-          resolveVariable(symbol)
+          childScope.define(symbol, _log)
+          _resolveVariable(symbol)
         }
-        resolveBlock(child.catchBlock, childScope)
+        _resolveBlock(child.catchBlock, childScope)
       }
 
       # Check finally block
       if finallyBlock != null {
-        resolveBlock(finallyBlock, LocalScope.new(scope, .NORMAL))
+        _resolveBlock(finallyBlock, LocalScope.new(scope, .NORMAL))
       }
     }
 
-    def resolveWhile(node Node, scope Scope) {
-      resolveAsParameterizedExpressionWithConversion(node.whileTest, scope, cache.boolType)
-      resolveBlock(node.whileBlock, LocalScope.new(scope, .LOOP))
+    def _resolveWhile(node Node, scope Scope) {
+      _resolveAsParameterizedExpressionWithConversion(node.whileTest, scope, _cache.boolType)
+      _resolveBlock(node.whileBlock, LocalScope.new(scope, .LOOP))
     }
 
-    def resolveCall(node Node, scope Scope) {
+    def _resolveCall(node Node, scope Scope) {
       var value = node.callValue
-      resolveAsParameterizedExpression(value, scope)
+      _resolveAsParameterizedExpression(value, scope)
       var type = value.resolvedType
 
       switch type.kind {
         # Each function has its own type for simplicity
         case .SYMBOL {
-          if resolveSymbolCall(node, scope, type) {
+          if _resolveSymbolCall(node, scope, type) {
             return
           }
         }
 
         # Lambda types look like "fn(int, int) int"
         case .LAMBDA {
-          if resolveFunctionCall(node, scope, type) {
+          if _resolveFunctionCall(node, scope, type) {
             return
           }
         }
@@ -1847,7 +1850,7 @@ namespace Skew.Resolving {
         # Can't call other types (the null type, for example)
         default {
           if type != .DYNAMIC {
-            log.semanticErrorInvalidCall(node.internalRangeOrRange, value.resolvedType)
+            _log.semanticErrorInvalidCall(node.internalRangeOrRange, value.resolvedType)
           }
         }
       }
@@ -1855,11 +1858,11 @@ namespace Skew.Resolving {
       # If there was an error, resolve the arguments to check for further
       # errors but use a dynamic type context to avoid introducing errors
       for child = value.nextSibling; child != null; child = child.nextSibling {
-        resolveAsParameterizedExpressionWithConversion(child, scope, .DYNAMIC)
+        _resolveAsParameterizedExpressionWithConversion(child, scope, .DYNAMIC)
       }
     }
 
-    def resolveSymbolCall(node Node, scope Scope, type Type) bool {
+    def _resolveSymbolCall(node Node, scope Scope, type Type) bool {
       var symbol = type.symbol
 
       # Getters are called implicitly, so explicitly calling one is an error.
@@ -1873,31 +1876,31 @@ namespace Skew.Resolving {
       #     (foo)() # Correct
       #   }
       #
-      if symbol.isGetter && isCallValue(node) && !node.callValue.isInsideParentheses {
+      if symbol.isGetter && _isCallValue(node) && !node.callValue.isInsideParentheses {
         if symbol.resolvedType.returnType != null && symbol.resolvedType.returnType.kind == .LAMBDA {
-          log.semanticErrorGetterRequiresWrap(node.range, symbol.name, symbol.range)
+          _log.semanticErrorGetterRequiresWrap(node.range, symbol.name, symbol.range)
         } else {
-          log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange, symbol.name, symbol.range)
+          _log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange, symbol.name, symbol.range)
         }
         return false
       }
 
       # Check for calling a function directly
       if symbol.kind.isFunction {
-        return resolveFunctionCall(node, scope, type)
+        return _resolveFunctionCall(node, scope, type)
       }
 
       # Check for calling a set of functions, must not be ambiguous
       if symbol.kind.isOverloadedFunction {
-        return resolveOverloadedFunctionCall(node, scope, type)
+        return _resolveOverloadedFunctionCall(node, scope, type)
       }
 
       # Can't call other symbols
-      log.semanticErrorInvalidCall(node.internalRangeOrRange, node.callValue.resolvedType)
+      _log.semanticErrorInvalidCall(node.internalRangeOrRange, node.callValue.resolvedType)
       return false
     }
 
-    def resolveFunctionCall(node Node, scope Scope, type Type) bool {
+    def _resolveFunctionCall(node Node, scope Scope, type Type) bool {
       var function = type.symbol != null ? type.symbol.asFunctionSymbol : null
       var expected = type.argumentTypes.count
       var count = node.childCount - 1
@@ -1909,17 +1912,17 @@ namespace Skew.Resolving {
       }
 
       # There is no "void" type, so make sure this return value isn't used
-      else if isVoidExpressionUsed(node) {
+      else if _isVoidExpressionUsed(node) {
         if function != null {
-          log.semanticErrorUseOfVoidFunction(node.range, function.name, function.range)
+          _log.semanticErrorUseOfVoidFunction(node.range, function.name, function.range)
         } else {
-          log.semanticErrorUseOfVoidLambda(node.range)
+          _log.semanticErrorUseOfVoidLambda(node.range)
         }
       }
 
       # Check argument count
       if expected != count {
-        log.semanticErrorArgumentCount(node.internalRangeOrRange, expected, count, function != null ? function.name : null, function != null ? function.range : null)
+        _log.semanticErrorArgumentCount(node.internalRangeOrRange, expected, count, function != null ? function.name : null, function != null ? function.range : null)
         return false
       }
 
@@ -1927,16 +1930,16 @@ namespace Skew.Resolving {
       var value = node.firstChild
       var child = value.nextSibling
       for argumentType in type.argumentTypes {
-        resolveAsParameterizedExpressionWithConversion(child, scope, argumentType)
+        _resolveAsParameterizedExpressionWithConversion(child, scope, argumentType)
         child = child.nextSibling
       }
 
       # Forbid constructing an abstract type
-      if !options.target.allowAbstractConstruction && function != null && function.kind == .FUNCTION_CONSTRUCTOR && value.kind != .SUPER {
-        checkInterfacesAndAbstractStatus(function.parent.asObjectSymbol)
+      if !_options.target.allowAbstractConstruction && function != null && function.kind == .FUNCTION_CONSTRUCTOR && value.kind != .SUPER {
+        _checkInterfacesAndAbstractStatus(function.parent.asObjectSymbol)
         var reason = function.parent.asObjectSymbol.isAbstractBecauseOf
         if reason != null {
-          log.semanticErrorAbstractNew(node.internalRangeOrRange, function.parent.resolvedType, reason.range, reason.name)
+          _log.semanticErrorAbstractNew(node.internalRangeOrRange, function.parent.resolvedType, reason.range, reason.name)
         }
       }
 
@@ -1948,7 +1951,7 @@ namespace Skew.Resolving {
       return true
     }
 
-    def resolveOverloadedFunction(range Range, node Node, scope Scope, symbolType Type) Type {
+    def _resolveOverloadedFunction(range Range, node Node, scope Scope, symbolType Type) Type {
       var overloaded = symbolType.symbol.asOverloadedFunctionSymbol
       var firstArgument = node.firstChild.nextSibling
       var count = node.childCount - 1
@@ -1957,13 +1960,13 @@ namespace Skew.Resolving {
       # Filter by argument length and substitute using the current type environment
       for symbol in overloaded.symbols {
         if symbol.arguments.count == count || overloaded.symbols.count == 1 {
-          candidates.append(cache.substitute(symbol.resolvedType, symbolType.environment))
+          candidates.append(_cache.substitute(symbol.resolvedType, symbolType.environment))
         }
       }
 
       # Check for matches
       if candidates.isEmpty {
-        log.semanticErrorNoMatchingOverload(range, overloaded.name, count, null)
+        _log.semanticErrorNoMatchingOverload(range, overloaded.name, count, null)
         return null
       }
 
@@ -1982,8 +1985,8 @@ namespace Skew.Resolving {
         for type in candidates[index].argumentTypes {
           var kind = child.kind
           if kind == .NULL && !type.isReference ||
-              kind == .INITIALIZER_LIST && findMember(type, "[new]") == null && findMember(type, "[...]") == null ||
-              kind == .INITIALIZER_MAP && findMember(type, "{new}") == null && findMember(type, "{...}") == null {
+              kind == .INITIALIZER_LIST && _findMember(type, "[new]") == null && _findMember(type, "[...]") == null ||
+              kind == .INITIALIZER_MAP && _findMember(type, "{new}") == null && _findMember(type, "{...}") == null {
             candidates.removeAt(index)
             index--
             break
@@ -2000,7 +2003,7 @@ namespace Skew.Resolving {
 
       # If that still didn't work, resolve the arguments without type context
       for child = firstArgument; child != null; child = child.nextSibling {
-        resolveAsParameterizedExpression(child, scope)
+        _resolveAsParameterizedExpression(child, scope)
       }
 
       # Try again, this time discarding all implicit conversion failures
@@ -2008,7 +2011,7 @@ namespace Skew.Resolving {
       while index < candidates.count {
         var child = firstArgument
         for type in candidates[index].argumentTypes {
-          if !cache.canImplicitlyConvert(child.resolvedType, type) {
+          if !_cache.canImplicitlyConvert(child.resolvedType, type) {
             candidates.removeAt(index)
             index--
             break
@@ -2031,7 +2034,7 @@ namespace Skew.Resolving {
 
       # Give up without a match
       if candidates.isEmpty {
-        log.semanticErrorNoMatchingOverload(range, overloaded.name, count, childTypes)
+        _log.semanticErrorNoMatchingOverload(range, overloaded.name, count, childTypes)
         return null
       }
 
@@ -2065,53 +2068,53 @@ namespace Skew.Resolving {
       }
 
       # Give up since the overload is ambiguous
-      log.semanticErrorAmbiguousOverload(range, overloaded.name, count, childTypes)
+      _log.semanticErrorAmbiguousOverload(range, overloaded.name, count, childTypes)
       return null
     }
 
-    def resolveOverloadedFunctionCall(node Node, scope Scope, type Type) bool {
-      var match = resolveOverloadedFunction(node.callValue.range, node, scope, type)
-      if match != null && resolveFunctionCall(node, scope, match) {
-        checkAccess(node, node.callValue.internalRangeOrRange, scope)
+    def _resolveOverloadedFunctionCall(node Node, scope Scope, type Type) bool {
+      var match = _resolveOverloadedFunction(node.callValue.range, node, scope, type)
+      if match != null && _resolveFunctionCall(node, scope, match) {
+        _checkAccess(node, node.callValue.internalRangeOrRange, scope)
         return true
       }
       return false
     }
 
-    def resolveCast(node Node, scope Scope, context Type) {
+    def _resolveCast(node Node, scope Scope, context Type) {
       var value = node.castValue
       var type = node.castType
-      var neededTypeContext = needsTypeContext(value)
+      var neededTypeContext = _needsTypeContext(value)
 
-      resolveAsParameterizedType(type, scope)
-      resolveAsParameterizedExpressionWithTypeContext(value, scope, type.resolvedType)
-      checkConversion(value, type.resolvedType, .EXPLICIT)
+      _resolveAsParameterizedType(type, scope)
+      _resolveAsParameterizedExpressionWithTypeContext(value, scope, type.resolvedType)
+      _checkConversion(value, type.resolvedType, .EXPLICIT)
       node.resolvedType = type.resolvedType
 
       # Warn about unnecessary casts
       if type.resolvedType != .DYNAMIC && !neededTypeContext && (value.resolvedType == type.resolvedType ||
-          context == type.resolvedType && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
-        log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
+          context == type.resolvedType && _cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
+        _log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }
     }
 
-    def resolveConstant(node Node, scope Scope) {
+    def _resolveConstant(node Node, scope Scope) {
       switch node.content.kind {
-        case .BOOL { node.resolvedType = cache.boolType }
-        case .DOUBLE { node.resolvedType = cache.doubleType }
-        case .INT { node.resolvedType = cache.intType }
-        case .STRING { node.resolvedType = cache.stringType }
+        case .BOOL { node.resolvedType = _cache.boolType }
+        case .DOUBLE { node.resolvedType = _cache.doubleType }
+        case .INT { node.resolvedType = _cache.intType }
+        case .STRING { node.resolvedType = _cache.stringType }
         default { assert(false) }
       }
     }
 
-    def findMember(type Type, name string) Symbol {
+    def _findMember(type Type, name string) Symbol {
       if type.kind == .SYMBOL {
         var symbol = type.symbol
         if symbol.kind.isObject {
           var member = symbol.asObjectSymbol.members.get(name, null)
           if member != null {
-            initializeSymbol(member)
+            _initializeSymbol(member)
             return member
           }
         }
@@ -2119,34 +2122,34 @@ namespace Skew.Resolving {
       return null
     }
 
-    def resolveDot(node Node, scope Scope, context Type) {
+    def _resolveDot(node Node, scope Scope, context Type) {
       var target = node.dotTarget
       var name = node.asString
 
       # Infer the target from the type context if it's omitted
       if target == null {
         if context == null {
-          log.semanticErrorMissingDotContext(node.range, name)
+          _log.semanticErrorMissingDotContext(node.range, name)
           return
         }
         target = Node.createType(context)
         node.appendChild(target)
         assert(node.dotTarget == target)
       } else {
-        resolveNode(target, scope, null)
+        _resolveNode(target, scope, null)
       }
 
       # Search for a setter first, then search for a normal member
       var symbol Symbol = null
-      if shouldCheckForSetter(node) {
-        symbol = findMember(target.resolvedType, name + "=")
+      if _shouldCheckForSetter(node) {
+        symbol = _findMember(target.resolvedType, name + "=")
       }
       if symbol == null {
-        symbol = findMember(target.resolvedType, name)
+        symbol = _findMember(target.resolvedType, name)
         if symbol == null {
           if target.resolvedType != .DYNAMIC {
-            reportGuardMergingFailure(node)
-            log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
+            _reportGuardMergingFailure(node)
+            _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
           }
           if target.kind == .TYPE && target.resolvedType == .DYNAMIC {
             node.kind = .NAME
@@ -2156,26 +2159,26 @@ namespace Skew.Resolving {
         }
       }
 
-      # Forbid referencing a base class global or constructor function from a derived class
-      if isBaseGlobalReference(target.resolvedType.symbol, symbol) {
-        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
+      # Forbid referencing a base class _global or constructor function from a derived class
+      if _isBaseGlobalReference(target.resolvedType.symbol, symbol) {
+        _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
         return
       }
 
       var isType = target.isType
       var needsType = !symbol.kind.isOnInstances
 
-      # Make sure the global/instance context matches the intended usage
+      # Make sure the _global/instance context matches the intended usage
       if isType {
         if !needsType {
-          log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange, symbol.name)
+          _log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange, symbol.name)
         } else if symbol.kind.isFunctionOrOverloadedFunction {
-          checkIsParameterized(target)
+          _checkIsParameterized(target)
         } else if target.resolvedType.isParameterized {
-          log.semanticErrorParameterizedType(target.range, target.resolvedType)
+          _log.semanticErrorParameterizedType(target.range, target.resolvedType)
         }
       } else if needsType {
-        log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange, symbol.name)
+        _log.semanticErrorMemberUnexpectedGlobal(node.internalRangeOrRange, symbol.name)
       }
 
       # Always access referenced globals directly
@@ -2185,50 +2188,50 @@ namespace Skew.Resolving {
       }
 
       node.symbol = symbol
-      node.resolvedType = cache.substitute(symbol.resolvedType, target.resolvedType.environment)
-      automaticallyCallGetter(node, scope)
+      node.resolvedType = _cache.substitute(symbol.resolvedType, target.resolvedType.environment)
+      _automaticallyCallGetter(node, scope)
     }
 
-    def resolveHook(node Node, scope Scope, context Type) {
-      resolveAsParameterizedExpressionWithConversion(node.hookTest, scope, cache.boolType)
+    def _resolveHook(node Node, scope Scope, context Type) {
+      _resolveAsParameterizedExpressionWithConversion(node.hookTest, scope, _cache.boolType)
 
       var trueValue = node.hookTrue
       var falseValue = node.hookFalse
 
       # Use the type context from the parent
       if context != null {
-        resolveAsParameterizedExpressionWithConversion(trueValue, scope, context)
-        resolveAsParameterizedExpressionWithConversion(falseValue, scope, context)
+        _resolveAsParameterizedExpressionWithConversion(trueValue, scope, context)
+        _resolveAsParameterizedExpressionWithConversion(falseValue, scope, context)
         node.resolvedType = context
       }
 
       # Find the common type from both branches
       else {
-        resolveAsParameterizedExpression(trueValue, scope)
-        resolveAsParameterizedExpression(falseValue, scope)
-        var commonType = cache.commonImplicitType(trueValue.resolvedType, falseValue.resolvedType)
+        _resolveAsParameterizedExpression(trueValue, scope)
+        _resolveAsParameterizedExpression(falseValue, scope)
+        var commonType = _cache.commonImplicitType(trueValue.resolvedType, falseValue.resolvedType)
 
         # Insert casts if needed since some targets can't perform this type inference
         if commonType != null {
-          checkConversion(trueValue, commonType, .IMPLICIT)
-          checkConversion(falseValue, commonType, .IMPLICIT)
+          _checkConversion(trueValue, commonType, .IMPLICIT)
+          _checkConversion(falseValue, commonType, .IMPLICIT)
           node.resolvedType = commonType
         } else {
-          log.semanticErrorNoCommonType(Range.span(trueValue.range, falseValue.range), trueValue.resolvedType, falseValue.resolvedType)
+          _log.semanticErrorNoCommonType(Range.span(trueValue.range, falseValue.range), trueValue.resolvedType, falseValue.resolvedType)
         }
       }
     }
 
-    def resolveInitializer(node Node, scope Scope, context Type) {
+    def _resolveInitializer(node Node, scope Scope, context Type) {
       # Make sure to resolve the children even if the initializer is invalid
       if context != null {
-        if context == .DYNAMIC || !resolveInitializerWithContext(node, scope, context) {
+        if context == .DYNAMIC || !_resolveInitializerWithContext(node, scope, context) {
           for child = node.firstChild; child != null; child = child.nextSibling {
             if child.kind == .PAIR {
-              resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, .DYNAMIC)
-              resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, .DYNAMIC)
+              _resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, .DYNAMIC)
+              _resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, .DYNAMIC)
             } else {
-              resolveAsParameterizedExpressionWithConversion(child, scope, .DYNAMIC)
+              _resolveAsParameterizedExpressionWithConversion(child, scope, .DYNAMIC)
             }
           }
         }
@@ -2243,15 +2246,15 @@ namespace Skew.Resolving {
 
             # Resolve all children for this pass
             for child = node.firstChild; child != null; child = child.nextSibling {
-              if pass != 0 || !needsTypeContext(child) {
-                resolveAsParameterizedExpression(child, scope)
-                type = mergeCommonType(type, child)
+              if pass != 0 || !_needsTypeContext(child) {
+                _resolveAsParameterizedExpression(child, scope)
+                type = _mergeCommonType(type, child)
               }
             }
 
             # Resolve remaining children using the type context if valid
-            if type != null && isValidVariableType(type) {
-              resolveInitializerWithContext(node, scope, cache.createListType(type))
+            if type != null && _isValidVariableType(type) {
+              _resolveInitializerWithContext(node, scope, _cache.createListType(type))
               return
             }
           }
@@ -2264,24 +2267,24 @@ namespace Skew.Resolving {
             for child = node.firstChild; child != null; child = child.nextSibling {
               var key = child.firstValue
               var value = child.secondValue
-              if pass != 0 || !needsTypeContext(key) {
-                resolveAsParameterizedExpression(key, scope)
-                keyType = mergeCommonType(keyType, key)
+              if pass != 0 || !_needsTypeContext(key) {
+                _resolveAsParameterizedExpression(key, scope)
+                keyType = _mergeCommonType(keyType, key)
               }
-              if pass != 0 || !needsTypeContext(value) {
-                resolveAsParameterizedExpression(value, scope)
-                valueType = mergeCommonType(valueType, value)
+              if pass != 0 || !_needsTypeContext(value) {
+                _resolveAsParameterizedExpression(value, scope)
+                valueType = _mergeCommonType(valueType, value)
               }
             }
 
             # Resolve remaining children using the type context if valid
-            if keyType != null && valueType != null && isValidVariableType(keyType) && isValidVariableType(valueType) {
-              if keyType == cache.intType {
-                resolveInitializerWithContext(node, scope, cache.createIntMapType(valueType))
+            if keyType != null && valueType != null && _isValidVariableType(keyType) && _isValidVariableType(valueType) {
+              if keyType == _cache.intType {
+                _resolveInitializerWithContext(node, scope, _cache.createIntMapType(valueType))
                 return
               }
-              if keyType == cache.stringType {
-                resolveInitializerWithContext(node, scope, cache.createStringMapType(valueType))
+              if keyType == _cache.stringType {
+                _resolveInitializerWithContext(node, scope, _cache.createStringMapType(valueType))
                 return
               }
             }
@@ -2289,25 +2292,25 @@ namespace Skew.Resolving {
         }
       }
 
-      log.semanticErrorInitializerTypeInferenceFailed(node.range)
+      _log.semanticErrorInitializerTypeInferenceFailed(node.range)
     }
 
-    def resolveInitializerWithContext(node Node, scope Scope, context Type) bool {
+    def _resolveInitializerWithContext(node Node, scope Scope, context Type) bool {
       var isList = node.kind == .INITIALIZER_LIST
-      var create = findMember(context, isList ? "[new]" : "{new}")
-      var add = findMember(context, isList ? "[...]" : "{...}")
+      var create = _findMember(context, isList ? "[new]" : "{new}")
+      var add = _findMember(context, isList ? "[...]" : "{...}")
 
       # Special-case imported literals to prevent an infinite loop for list literals
       if add != null && add.isImported {
         var function = add.asFunctionSymbol
         if function.arguments.count == (isList ? 1 : 2) {
-          var functionType = cache.substitute(function.resolvedType, context.environment)
+          var functionType = _cache.substitute(function.resolvedType, context.environment)
           for child = node.firstChild; child != null; child = child.nextSibling {
             if child.kind == .PAIR {
-              resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, functionType.argumentTypes[0])
-              resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, functionType.argumentTypes[1])
+              _resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, functionType.argumentTypes[0])
+              _resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, functionType.argumentTypes[1])
             } else {
-              resolveAsParameterizedExpressionWithConversion(child, scope, functionType.argumentTypes[0])
+              _resolveAsParameterizedExpressionWithConversion(child, scope, functionType.argumentTypes[0])
             }
           }
           node.resolvedType = context
@@ -2329,13 +2332,13 @@ namespace Skew.Resolving {
           }
         }
         node.become(chain)
-        resolveAsParameterizedExpressionWithConversion(node, scope, context)
+        _resolveAsParameterizedExpressionWithConversion(node, scope, context)
         return true
       }
 
       # Make sure there's a constructor to call
       if create == null {
-        log.semanticErrorInitializerTypeInferenceFailed(node.range)
+        _log.semanticErrorInitializerTypeInferenceFailed(node.range)
         return false
       }
 
@@ -2355,25 +2358,25 @@ namespace Skew.Resolving {
       } else {
         node.become(Node.createCall(dot).withRange(node.range).appendChild(Node.createList.appendChildrenFrom(node)))
       }
-      resolveAsParameterizedExpressionWithConversion(node, scope, context)
+      _resolveAsParameterizedExpressionWithConversion(node, scope, context)
       return true
     }
 
-    def mergeCommonType(commonType Type, child Node) Type {
+    def _mergeCommonType(commonType Type, child Node) Type {
       if commonType == null || child.resolvedType == .DYNAMIC {
         return child.resolvedType
       }
 
-      var result = cache.commonImplicitType(commonType, child.resolvedType)
+      var result = _cache.commonImplicitType(commonType, child.resolvedType)
       if result != null {
         return result
       }
 
-      log.semanticErrorNoCommonType(child.range, commonType, child.resolvedType)
+      _log.semanticErrorNoCommonType(child.range, commonType, child.resolvedType)
       return .DYNAMIC
     }
 
-    def resolveLambda(node Node, scope Scope, context Type) {
+    def _resolveLambda(node Node, scope Scope, context Type) {
       var symbol = node.symbol.asFunctionSymbol
       symbol.scope = FunctionScope.new(scope, symbol)
 
@@ -2407,12 +2410,12 @@ namespace Skew.Resolving {
         #
         #   var sum = ((a, b) => a + b)(1, 2)
         #
-        if isCallValue(node) && node.parent.childCount == symbol.arguments.count + 1 {
+        if _isCallValue(node) && node.parent.childCount == symbol.arguments.count + 1 {
           var child = node.nextSibling
           for i in 0..symbol.arguments.count {
             var argument = symbol.arguments[i]
             if argument.type == null {
-              resolveAsParameterizedExpression(child, scope)
+              _resolveAsParameterizedExpression(child, scope)
               argument.type = Node.createType(child.resolvedType)
             }
             child = child.nextSibling
@@ -2420,7 +2423,7 @@ namespace Skew.Resolving {
         }
       }
 
-      resolveFunction(symbol)
+      _resolveFunction(symbol)
 
       # Use a LambdaType instead of a SymbolType for the node
       var argumentTypes List<Type> = []
@@ -2428,35 +2431,35 @@ namespace Skew.Resolving {
       for argument in symbol.arguments {
         argumentTypes.append(argument.resolvedType)
       }
-      node.resolvedType = cache.createLambdaType(argumentTypes, returnType != null ? returnType.resolvedType : null)
+      node.resolvedType = _cache.createLambdaType(argumentTypes, returnType != null ? returnType.resolvedType : null)
     }
 
-    def resolveLambdaType(node Node, scope Scope) {
+    def _resolveLambdaType(node Node, scope Scope) {
       var lambdaReturnType = node.lambdaReturnType
       var argumentTypes List<Type> = []
       var returnType Type = null
 
       for child = node.firstChild; child != lambdaReturnType; child = child.nextSibling {
-        resolveAsParameterizedType(child, scope)
+        _resolveAsParameterizedType(child, scope)
         argumentTypes.append(child.resolvedType)
       }
 
       # An empty return type is signaled by the type "null"
       if lambdaReturnType.kind != .TYPE || lambdaReturnType.resolvedType != null {
-        resolveAsParameterizedType(lambdaReturnType, scope)
+        _resolveAsParameterizedType(lambdaReturnType, scope)
         returnType = lambdaReturnType.resolvedType
       }
 
-      node.resolvedType = cache.createLambdaType(argumentTypes, returnType)
+      node.resolvedType = _cache.createLambdaType(argumentTypes, returnType)
     }
 
-    def resolveName(node Node, scope Scope) {
+    def _resolveName(node Node, scope Scope) {
       var enclosingFunction = scope.findEnclosingFunction
       var name = node.asString
       var symbol Symbol = null
 
       # Search for a setter first, then search for a normal symbol
-      if shouldCheckForSetter(node) {
+      if _shouldCheckForSetter(node) {
         symbol = scope.find(name + "=")
       }
 
@@ -2464,20 +2467,20 @@ namespace Skew.Resolving {
       if symbol == null {
         symbol = scope.find(name)
         if symbol == null {
-          reportGuardMergingFailure(node)
-          log.semanticErrorUndeclaredSymbol(node.range, name)
+          _reportGuardMergingFailure(node)
+          _log.semanticErrorUndeclaredSymbol(node.range, name)
           return
         }
       }
 
-      initializeSymbol(symbol)
+      _initializeSymbol(symbol)
 
       # Track reads and writes of local variables for later use
-      recordStatistic(symbol, node.isAssignTarget ? .WRITE : .READ)
+      _recordStatistic(symbol, node.isAssignTarget ? .WRITE : .READ)
 
-      # Forbid referencing a base class global or constructor function from a derived class
-      if enclosingFunction != null && isBaseGlobalReference(enclosingFunction.symbol.parent, symbol) {
-        log.semanticErrorUndeclaredSymbol(node.range, name)
+      # Forbid referencing a base class _global or constructor function from a derived class
+      if enclosingFunction != null && _isBaseGlobalReference(enclosingFunction.symbol.parent, symbol) {
+        _log.semanticErrorUndeclaredSymbol(node.range, name)
         return
       }
 
@@ -2487,7 +2490,7 @@ namespace Skew.Resolving {
         if variable != null && enclosingFunction.symbol.parent.asObjectSymbol.isSameOrHasBaseClass(symbol.parent) {
           node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range))
         } else {
-          log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
+          _log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
         }
       }
 
@@ -2522,24 +2525,24 @@ namespace Skew.Resolving {
         }
 
         if !isValid {
-          log.semanticErrorMemberUnexpectedTypeParameter(node.range, symbol.name)
+          _log.semanticErrorMemberUnexpectedTypeParameter(node.range, symbol.name)
         }
       }
 
       node.symbol = symbol
       node.resolvedType = symbol.resolvedType
-      automaticallyCallGetter(node, scope)
+      _automaticallyCallGetter(node, scope)
     }
 
-    def resolveParameterize(node Node, scope Scope) {
+    def _resolveParameterize(node Node, scope Scope) {
       var value = node.parameterizeValue
-      resolveNode(value, scope, null)
+      _resolveNode(value, scope, null)
 
       # Resolve parameter types
       var substitutions List<Type> = []
       var count = 0
       for child = value.nextSibling; child != null; child = child.nextSibling {
-        resolveAsParameterizedType(child, scope)
+        _resolveAsParameterizedType(child, scope)
         substitutions.append(child.resolvedType)
         count++
       }
@@ -2549,7 +2552,7 @@ namespace Skew.Resolving {
       var parameters = type.parameters
       if parameters == null || type.isParameterized {
         if type != .DYNAMIC {
-          log.semanticErrorCannotParameterize(node.range, type)
+          _log.semanticErrorCannotParameterize(node.range, type)
         }
         value.resolvedType = .DYNAMIC
         return
@@ -2558,35 +2561,35 @@ namespace Skew.Resolving {
       # Check parameter count
       var expected = parameters.count
       if count != expected {
-        log.semanticErrorParameterCount(node.internalRangeOrRange, expected, count)
+        _log.semanticErrorParameterCount(node.internalRangeOrRange, expected, count)
         value.resolvedType = .DYNAMIC
         return
       }
 
       # Make sure all parameters have types
       for parameter in parameters {
-        initializeSymbol(parameter)
+        _initializeSymbol(parameter)
       }
 
       # Include the symbol for use with Node.isType
-      node.resolvedType = cache.substitute(type, cache.mergeEnvironments(type.environment, cache.createEnvironment(parameters, substitutions), null))
+      node.resolvedType = _cache.substitute(type, _cache.mergeEnvironments(type.environment, _cache.createEnvironment(parameters, substitutions), null))
       node.symbol = value.symbol
     }
 
-    def resolveSequence(node Node, scope Scope, context Type) {
+    def _resolveSequence(node Node, scope Scope, context Type) {
       for child = node.firstChild; child != null; child = child.nextSibling {
-        resolveAsParameterizedExpressionWithTypeContext(child, scope, child.nextSibling == null ? context : null)
+        _resolveAsParameterizedExpressionWithTypeContext(child, scope, child.nextSibling == null ? context : null)
       }
     }
 
-    def resolveSuper(node Node, scope Scope) {
+    def _resolveSuper(node Node, scope Scope) {
       var function = scope.findEnclosingFunction
       var symbol = function == null ? null : function.symbol
       var baseType = symbol == null ? null : symbol.parent.asObjectSymbol.baseType
-      var overridden = baseType == null ? null : findMember(baseType, symbol.name)
+      var overridden = baseType == null ? null : _findMember(baseType, symbol.name)
 
       if overridden == null {
-        log.semanticErrorBadSuper(node.range)
+        _log.semanticErrorBadSuper(node.range)
         return
       }
 
@@ -2597,53 +2600,53 @@ namespace Skew.Resolving {
 
       node.resolvedType = overridden.resolvedType
       node.symbol = overridden
-      automaticallyCallGetter(node, scope)
+      _automaticallyCallGetter(node, scope)
     }
 
-    def resolveTypeCheck(node Node, scope Scope) {
+    def _resolveTypeCheck(node Node, scope Scope) {
       var value = node.typeCheckValue
       var type = node.typeCheckType
 
-      resolveAsParameterizedExpression(value, scope)
-      resolveAsParameterizedType(type, scope)
-      checkConversion(value, type.resolvedType, .EXPLICIT)
-      node.resolvedType = cache.boolType
+      _resolveAsParameterizedExpression(value, scope)
+      _resolveAsParameterizedType(type, scope)
+      _checkConversion(value, type.resolvedType, .EXPLICIT)
+      node.resolvedType = _cache.boolType
 
       # Type checks don't work against interfaces
       if type.resolvedType.isInterface {
-        log.semanticWarningBadTypeCheck(type.range, type.resolvedType)
+        _log.semanticWarningBadTypeCheck(type.range, type.resolvedType)
       }
 
       # Warn about unnecessary type checks
-      else if value.resolvedType != .DYNAMIC && cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) && (type.resolvedType != .DYNAMIC || type.kind == .TYPE) {
-        log.semanticWarningExtraTypeCheck(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
+      else if value.resolvedType != .DYNAMIC && _cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) && (type.resolvedType != .DYNAMIC || type.kind == .TYPE) {
+        _log.semanticWarningExtraTypeCheck(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }
     }
 
-    def resolveBinary(node Node, scope Scope) {
+    def _resolveBinary(node Node, scope Scope) {
       var kind = node.kind
       var left = node.binaryLeft
       var right = node.binaryRight
 
       # Special-case the equality operators
       if kind == .EQUAL || kind == .NOT_EQUAL {
-        if needsTypeContext(left) {
-          resolveAsParameterizedExpression(right, scope)
-          resolveAsParameterizedExpressionWithTypeContext(left, scope, right.resolvedType)
-        } else if needsTypeContext(right) {
-          resolveAsParameterizedExpression(left, scope)
-          resolveAsParameterizedExpressionWithTypeContext(right, scope, left.resolvedType)
+        if _needsTypeContext(left) {
+          _resolveAsParameterizedExpression(right, scope)
+          _resolveAsParameterizedExpressionWithTypeContext(left, scope, right.resolvedType)
+        } else if _needsTypeContext(right) {
+          _resolveAsParameterizedExpression(left, scope)
+          _resolveAsParameterizedExpressionWithTypeContext(right, scope, left.resolvedType)
         } else {
-          resolveAsParameterizedExpression(left, scope)
-          resolveAsParameterizedExpression(right, scope)
+          _resolveAsParameterizedExpression(left, scope)
+          _resolveAsParameterizedExpression(right, scope)
         }
 
         # The two types must be compatible
-        var commonType = cache.commonImplicitType(left.resolvedType, right.resolvedType)
+        var commonType = _cache.commonImplicitType(left.resolvedType, right.resolvedType)
         if commonType == null {
-          log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
+          _log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
         } else {
-          node.resolvedType = cache.boolType
+          node.resolvedType = _cache.boolType
         }
 
         return
@@ -2651,19 +2654,19 @@ namespace Skew.Resolving {
 
       # Special-case assignment since it's not overridable
       if kind == .ASSIGN {
-        resolveAsParameterizedExpression(left, scope)
+        _resolveAsParameterizedExpression(left, scope)
 
         # Automatically call setters
         if left.symbol != null && left.symbol.isSetter {
           node.become(Node.createCall(left.remove).withRange(node.range).withInternalRange(right.range).appendChild(right.remove))
-          resolveAsParameterizedExpression(node, scope)
+          _resolveAsParameterizedExpression(node, scope)
         }
 
         # Resolve the right side using type context from the left side
         else {
-          resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
+          _resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType)
           node.resolvedType = left.resolvedType
-          checkStorage(left, scope)
+          _checkStorage(left, scope)
         }
 
         return
@@ -2671,16 +2674,16 @@ namespace Skew.Resolving {
 
       # Special-case short-circuit logical operators since they aren't overridable
       if kind == .LOGICAL_AND || kind == .LOGICAL_OR {
-        resolveAsParameterizedExpressionWithConversion(left, scope, cache.boolType)
-        resolveAsParameterizedExpressionWithConversion(right, scope, cache.boolType)
-        node.resolvedType = cache.boolType
+        _resolveAsParameterizedExpressionWithConversion(left, scope, _cache.boolType)
+        _resolveAsParameterizedExpressionWithConversion(right, scope, _cache.boolType)
+        node.resolvedType = _cache.boolType
         return
       }
 
-      resolveOperatorOverload(node, scope)
+      _resolveOperatorOverload(node, scope)
     }
 
-    def resolveOperatorOverload(node Node, scope Scope) {
+    def _resolveOperatorOverload(node Node, scope Scope) {
       # The order of operands are reversed for the "in" operator
       var kind = node.kind
       var reverseBinaryOrder = kind == .IN
@@ -2690,50 +2693,50 @@ namespace Skew.Resolving {
       var other = kind.isBinary ? reverseBinaryOrder ? first : second : null
 
       # Allow "foo in [.FOO, .BAR]"
-      if kind == .IN && target.kind == .INITIALIZER_LIST && !needsTypeContext(other) {
-        resolveAsParameterizedExpression(other, scope)
-        resolveAsParameterizedExpressionWithTypeContext(target, scope, other.resolvedType != .DYNAMIC ? cache.createListType(other.resolvedType) : null)
+      if kind == .IN && target.kind == .INITIALIZER_LIST && !_needsTypeContext(other) {
+        _resolveAsParameterizedExpression(other, scope)
+        _resolveAsParameterizedExpressionWithTypeContext(target, scope, other.resolvedType != .DYNAMIC ? _cache.createListType(other.resolvedType) : null)
       }
 
       # Resolve just the target since the other arguments may need type context from overload resolution
       else {
-        resolveAsParameterizedExpression(target, scope)
+        _resolveAsParameterizedExpression(target, scope)
       }
 
       # Can't do overload resolution on the dynamic type
       var type = target.resolvedType
       if type == .DYNAMIC {
         if kind.isAssign {
-          checkStorage(target, scope)
+          _checkStorage(target, scope)
         }
-        resolveChildrenAsParameterizedExpressions(node, scope)
+        _resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
 
       # Check if the operator can be overridden at all
       var info = operatorInfo[kind]
       if info.kind != .OVERRIDABLE {
-        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, info.text, type)
-        resolveChildrenAsParameterizedExpressions(node, scope)
+        _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, info.text, type)
+        _resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
 
       # Auto-convert int to double and enum to int when it appears as the target
       if other != null && !kind.isBinaryAssign {
-        if type == cache.intType {
-          resolveAsParameterizedExpression(other, scope)
-          if other.resolvedType == cache.doubleType {
-            checkConversion(target, cache.doubleType, .IMPLICIT)
-            type = cache.doubleType
+        if type == _cache.intType {
+          _resolveAsParameterizedExpression(other, scope)
+          if other.resolvedType == _cache.doubleType {
+            _checkConversion(target, _cache.doubleType, .IMPLICIT)
+            type = _cache.doubleType
           }
         } else if type.isEnum {
-          resolveAsParameterizedExpression(other, scope)
-          if cache.isNumeric(other.resolvedType) {
-            type = cache.commonImplicitType(type, other.resolvedType)
+          _resolveAsParameterizedExpression(other, scope)
+          if _cache.isNumeric(other.resolvedType) {
+            type = _cache.commonImplicitType(type, other.resolvedType)
             assert(type != null)
-            if type.isEnum { type = cache.intType }
-            checkConversion(other, type, .IMPLICIT)
-            checkConversion(target, type, .IMPLICIT)
+            if type.isEnum { type = _cache.intType }
+            _checkConversion(other, type, .IMPLICIT)
+            _checkConversion(target, type, .IMPLICIT)
           }
         }
       }
@@ -2741,25 +2744,25 @@ namespace Skew.Resolving {
       # Find the operator method
       var isComparison = kind.isBinaryComparison
       var name = isComparison ? "<=>" : info.text
-      var symbol = findMember(type, name)
+      var symbol = _findMember(type, name)
       if symbol == null {
-        log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, type)
-        resolveChildrenAsParameterizedExpressions(node, scope)
+        _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, type)
+        _resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
-      var symbolType = cache.substitute(symbol.resolvedType, type.environment)
+      var symbolType = _cache.substitute(symbol.resolvedType, type.environment)
 
       # Resolve the overload now so the symbol's properties can be inspected
       if symbol.kind.isOverloadedFunction {
         if reverseBinaryOrder {
           first.swapWith(second)
         }
-        symbolType = resolveOverloadedFunction(node.internalRangeOrRange, node, scope, symbolType)
+        symbolType = _resolveOverloadedFunction(node.internalRangeOrRange, node, scope, symbolType)
         if reverseBinaryOrder {
           first.swapWith(second)
         }
         if symbolType == null {
-          resolveChildrenAsParameterizedExpressions(node, scope)
+          _resolveChildrenAsParameterizedExpressions(node, scope)
           return
         }
         symbol = symbolType.symbol
@@ -2767,26 +2770,26 @@ namespace Skew.Resolving {
 
       var isRawImport = symbol.isImported && !symbol.isRenamed
       node.symbol = symbol
-      checkAccess(node, node.internalRangeOrRange, scope)
+      _checkAccess(node, node.internalRangeOrRange, scope)
 
       # Check for a valid storage location for imported operators
       if kind.isAssign && symbol.isImported {
-        checkStorage(target, scope)
+        _checkStorage(target, scope)
       }
 
       # "<", ">", "<=", or ">="
-      if isComparison && (isRawImport || type == cache.doubleType) {
-        resolveChildrenAsParameterizedExpressions(node, scope)
-        node.resolvedType = cache.boolType
+      if isComparison && (isRawImport || type == _cache.doubleType) {
+        _resolveChildrenAsParameterizedExpressions(node, scope)
+        node.resolvedType = _cache.boolType
         node.symbol = null
         return
       }
 
       # "<=>"
       if kind == .COMPARE && isRawImport {
-        resolveChildrenAsParameterizedExpressions(node, scope)
+        _resolveChildrenAsParameterizedExpressions(node, scope)
         node.kind = .SUBTRACT
-        node.resolvedType = cache.intType
+        node.resolvedType = _cache.intType
         node.symbol = null
         return
       }
@@ -2796,8 +2799,8 @@ namespace Skew.Resolving {
         if reverseBinaryOrder {
           first.swapWith(second)
         }
-        if !resolveFunctionCall(node, scope, symbolType) {
-          resolveChildrenAsParameterizedExpressions(node, scope)
+        if !_resolveFunctionCall(node, scope, symbolType) {
+          _resolveChildrenAsParameterizedExpressions(node, scope)
         }
         if reverseBinaryOrder {
           first.swapWith(second)
@@ -2816,18 +2819,18 @@ namespace Skew.Resolving {
       if isComparison {
         var call = Node.new(.CALL).appendChildrenFrom(node).withRange(node.range)
         node.appendChild(call)
-        node.appendChild(Node.createInt(0).withType(cache.intType))
-        node.resolvedType = cache.boolType
-        resolveFunctionCall(call, scope, symbolType)
+        node.appendChild(Node.createInt(0).withType(_cache.intType))
+        node.resolvedType = _cache.boolType
+        _resolveFunctionCall(call, scope, symbolType)
         return
       }
 
       # All other operators are just normal method calls
       node.kind = .CALL
-      resolveFunctionCall(node, scope, symbolType)
+      _resolveFunctionCall(node, scope, symbolType)
     }
 
-    def automaticallyCallGetter(node Node, scope Scope) bool {
+    def _automaticallyCallGetter(node Node, scope Scope) bool {
       var symbol = node.symbol
       if symbol == null {
         return false
@@ -2836,14 +2839,14 @@ namespace Skew.Resolving {
       var parent = node.parent
 
       # The check for getters is complicated by overloaded functions
-      if !symbol.isGetter && kind.isOverloadedFunction && (!isCallValue(node) || parent.hasOneChild) {
+      if !symbol.isGetter && kind.isOverloadedFunction && (!_isCallValue(node) || parent.hasOneChild) {
         var overloaded = symbol.asOverloadedFunctionSymbol
         for getter in overloaded.symbols {
 
           # Just return the first getter assuming errors for duplicate getters
           # were already logged when the overloaded symbol was initialized
           if getter.isGetter {
-            node.resolvedType = cache.substitute(getter.resolvedType, node.resolvedType.environment)
+            node.resolvedType = _cache.substitute(getter.resolvedType, node.resolvedType.environment)
             node.symbol = getter
             symbol = getter
             break
@@ -2851,26 +2854,26 @@ namespace Skew.Resolving {
         }
       }
 
-      checkAccess(node, node.internalRangeOrRange, scope)
+      _checkAccess(node, node.internalRangeOrRange, scope)
 
       # Automatically wrap the getter in a call expression
       if symbol.isGetter {
         node.become(Node.createCall(node.cloneAndStealChildren).withRange(node.range))
-        resolveAsParameterizedExpression(node, scope)
+        _resolveAsParameterizedExpression(node, scope)
         return true
       }
 
       # Forbid bare function references
       if !symbol.isSetter && node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction && kind != .FUNCTION_ANNOTATION &&
-          !isCallValue(node) && (parent == null || parent.kind != .PARAMETERIZE || !isCallValue(parent)) {
-        log.semanticErrorMustCallFunction(node.internalRangeOrRange, symbol.name)
+          !_isCallValue(node) && (parent == null || parent.kind != .PARAMETERIZE || !_isCallValue(parent)) {
+        _log.semanticErrorMustCallFunction(node.internalRangeOrRange, symbol.name)
         node.resolvedType = .DYNAMIC
       }
 
       return false
     }
 
-    def convertSwitchToIfChain(node Node, scope Scope) {
+    def _convertSwitchToIfChain(node Node, scope Scope) {
       var variable = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("value"))
       var value = node.switchValue.remove
       var block Node = null
@@ -2888,8 +2891,8 @@ namespace Skew.Resolving {
 
         # Combine adjacent cases in a "||" chain
         while child.hasChildren {
-          var caseValue = Node.createBinary(.EQUAL, Node.createSymbolReference(variable), child.firstChild.remove).withType(cache.boolType)
-          test = test != null ? Node.createBinary(.LOGICAL_OR, test, caseValue).withType(cache.boolType) : caseValue
+          var caseValue = Node.createBinary(.EQUAL, Node.createSymbolReference(variable), child.firstChild.remove).withType(_cache.boolType)
+          test = test != null ? Node.createBinary(.LOGICAL_OR, test, caseValue).withType(_cache.boolType) : caseValue
         }
 
         # Chain if-else statements together
@@ -2906,7 +2909,7 @@ namespace Skew.Resolving {
   }
 
   namespace Resolver {
-    const annotationSymbolFlags = {
+    const _annotationSymbolFlags = {
       "@deprecated": Symbol.IS_DEPRECATED,
       "@entry": Symbol.IS_ENTRY_POINT,
       "@export": Symbol.IS_EXPORTED,
@@ -2918,11 +2921,11 @@ namespace Skew.Resolving {
       "@spreads": Symbol.SHOULD_SPREAD,
     }
 
-    def shouldCheckForSetter(node Node) bool {
+    def _shouldCheckForSetter(node Node) bool {
       return node.parent != null && node.parent.kind == .ASSIGN && node == node.parent.binaryLeft
     }
 
-    def isVoidExpressionUsed(node Node) bool {
+    def _isVoidExpressionUsed(node Node) bool {
       # Check for a null parent to handle variable initializers
       var parent = node.parent
       return parent == null || parent.kind != .EXPRESSION && !parent.isImplicitReturn &&
@@ -2931,28 +2934,28 @@ namespace Skew.Resolving {
         parent.kind != .SEQUENCE
     }
 
-    def isValidVariableType(type Type) bool {
+    def _isValidVariableType(type Type) bool {
       return type != .NULL && (type.kind != .SYMBOL || !type.symbol.kind.isFunctionOrOverloadedFunction)
     }
 
-    def isBaseGlobalReference(parent Symbol, member Symbol) bool {
+    def _isBaseGlobalReference(parent Symbol, member Symbol) bool {
       return parent != null && parent.kind == .OBJECT_CLASS && member.kind.isGlobalReference && member.parent != parent &&
         member.parent.kind == .OBJECT_CLASS && parent.asObjectSymbol.hasBaseClass(member.parent)
     }
 
-    def isCallValue(node Node) bool {
+    def _isCallValue(node Node) bool {
       var parent = node.parent
       return parent != null && parent.kind == .CALL && node == parent.callValue
     }
 
-    def needsTypeContext(node Node) bool {
+    def _needsTypeContext(node Node) bool {
       return
         node.kind == .DOT && node.dotTarget == null ||
-        node.kind == .HOOK && needsTypeContext(node.hookTrue) && needsTypeContext(node.hookFalse) ||
+        node.kind == .HOOK && _needsTypeContext(node.hookTrue) && _needsTypeContext(node.hookFalse) ||
         node.kind.isInitializer
     }
 
-    def ensureFunctionIsOverloaded(symbol FunctionSymbol) {
+    def _ensureFunctionIsOverloaded(symbol FunctionSymbol) {
       if symbol.overloaded == null {
         var overloaded = OverloadedFunctionSymbol.new(Merging.overloadedKind(symbol.kind), symbol.name, [symbol])
         overloaded.parent = symbol.parent

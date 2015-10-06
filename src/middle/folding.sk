@@ -16,10 +16,10 @@ namespace Skew {
 
 namespace Skew.Folding {
   class ConstantFolder {
-    const cache TypeCache
-    const options CompilerOptions
-    const prepareSymbol fn(Symbol)
-    const constantCache IntMap<Content> = {}
+    const _cache TypeCache
+    const _options CompilerOptions
+    const _prepareSymbol fn(Symbol)
+    const _constantCache IntMap<Content> = {}
 
     def visitObject(symbol ObjectSymbol) {
       for object in symbol.objects {
@@ -40,7 +40,7 @@ namespace Skew.Folding {
     }
 
     # Use this instead of node.become(Node.createConstant(content)) to avoid more GC
-    def flatten(node Node, content Content) {
+    def _flatten(node Node, content Content) {
       node.removeChildren
       node.kind = .CONSTANT
       node.content = content
@@ -48,39 +48,39 @@ namespace Skew.Folding {
     }
 
     # Use this instead of node.become(Node.createBool(value)) to avoid more GC
-    def flattenBool(node Node, value bool) {
-      assert(cache.isEquivalentToBool(node.resolvedType) || node.resolvedType == .DYNAMIC)
-      flatten(node, BoolContent.new(value))
+    def _flattenBool(node Node, value bool) {
+      assert(_cache.isEquivalentToBool(node.resolvedType) || node.resolvedType == .DYNAMIC)
+      _flatten(node, BoolContent.new(value))
     }
 
     # Use this instead of node.become(Node.createInt(value)) to avoid more GC
-    def flattenInt(node Node, value int) {
-      assert(cache.isEquivalentToInt(node.resolvedType) || node.resolvedType == .DYNAMIC)
-      flatten(node, IntContent.new(value))
+    def _flattenInt(node Node, value int) {
+      assert(_cache.isEquivalentToInt(node.resolvedType) || node.resolvedType == .DYNAMIC)
+      _flatten(node, IntContent.new(value))
     }
 
     # Use this instead of node.become(Node.createDouble(value)) to avoid more GC
-    def flattenDouble(node Node, value double) {
-      assert(cache.isEquivalentToDouble(node.resolvedType) || node.resolvedType == .DYNAMIC)
-      flatten(node, DoubleContent.new(value))
+    def _flattenDouble(node Node, value double) {
+      assert(_cache.isEquivalentToDouble(node.resolvedType) || node.resolvedType == .DYNAMIC)
+      _flatten(node, DoubleContent.new(value))
     }
 
     # Use this instead of node.become(Node.createString(value)) to avoid more GC
-    def flattenString(node Node, value string) {
-      assert(cache.isEquivalentToString(node.resolvedType) || node.resolvedType == .DYNAMIC)
-      flatten(node, StringContent.new(value))
+    def _flattenString(node Node, value string) {
+      assert(_cache.isEquivalentToString(node.resolvedType) || node.resolvedType == .DYNAMIC)
+      _flatten(node, StringContent.new(value))
     }
 
-    def createInt(value int) Node {
-      return Node.createInt(value).withType(cache.intType)
+    def _createInt(value int) Node {
+      return Node.createInt(value).withType(_cache.intType)
     }
 
     def foldConstants(node Node) {
       var kind = node.kind
 
       # Transform "a + (b + c)" => "(a + b) + c" before operands are folded
-      if kind == .ADD && node.resolvedType == cache.stringType && node.binaryLeft.resolvedType == cache.stringType && node.binaryRight.resolvedType == cache.stringType {
-        rotateStringConcatenation(node)
+      if kind == .ADD && node.resolvedType == _cache.stringType && node.binaryLeft.resolvedType == _cache.stringType && node.binaryRight.resolvedType == _cache.stringType {
+        _rotateStringConcatenation(node)
       }
 
       # Fold operands before folding this node
@@ -90,62 +90,62 @@ namespace Skew.Folding {
 
       # Separating the case bodies into separate functions makes the JavaScript JIT go faster
       switch kind {
-        case .BLOCK { foldBlock(node) }
-        case .CALL { foldCall(node) }
-        case .CAST { foldCast(node) }
-        case .DOT { foldDot(node) }
-        case .HOOK { foldHook(node) }
-        case .NAME { foldName(node) }
-        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { foldUnary(node) }
+        case .BLOCK { _foldBlock(node) }
+        case .CALL { _foldCall(node) }
+        case .CAST { _foldCast(node) }
+        case .DOT { _foldDot(node) }
+        case .HOOK { _foldHook(node) }
+        case .NAME { _foldName(node) }
+        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { _foldUnary(node) }
         default {
-          if kind.isBinary { foldBinary(node) }
+          if kind.isBinary { _foldBinary(node) }
         }
       }
     }
 
-    def rotateStringConcatenation(node Node) {
+    def _rotateStringConcatenation(node Node) {
       var left = node.binaryLeft
       var right = node.binaryRight
       assert(node.kind == .ADD)
-      assert(left.resolvedType == cache.stringType || left.resolvedType == .DYNAMIC)
-      assert(right.resolvedType == cache.stringType || right.resolvedType == .DYNAMIC)
+      assert(left.resolvedType == _cache.stringType || left.resolvedType == .DYNAMIC)
+      assert(right.resolvedType == _cache.stringType || right.resolvedType == .DYNAMIC)
 
       # "a + (b + c)" => "(a + b) + c"
       if right.kind == .ADD {
-        assert(right.binaryLeft.resolvedType == cache.stringType || right.binaryLeft.resolvedType == .DYNAMIC)
-        assert(right.binaryRight.resolvedType == cache.stringType || right.binaryRight.resolvedType == .DYNAMIC)
+        assert(right.binaryLeft.resolvedType == _cache.stringType || right.binaryLeft.resolvedType == .DYNAMIC)
+        assert(right.binaryRight.resolvedType == _cache.stringType || right.binaryRight.resolvedType == .DYNAMIC)
         node.rotateBinaryRightToLeft
       }
     }
 
-    def foldStringConcatenation(node Node) {
+    def _foldStringConcatenation(node Node) {
       var left = node.binaryLeft
       var right = node.binaryRight
-      assert(left.resolvedType == cache.stringType || left.resolvedType == .DYNAMIC)
-      assert(right.resolvedType == cache.stringType || right.resolvedType == .DYNAMIC)
+      assert(left.resolvedType == _cache.stringType || left.resolvedType == .DYNAMIC)
+      assert(right.resolvedType == _cache.stringType || right.resolvedType == .DYNAMIC)
 
       if right.isString {
         # "a" + "b" => "ab"
         if left.isString {
-          flattenString(node, left.asString + right.asString)
+          _flattenString(node, left.asString + right.asString)
         }
 
         else if left.kind == .ADD {
           var leftLeft = left.binaryLeft
           var leftRight = left.binaryRight
-          assert(leftLeft.resolvedType == cache.stringType || leftLeft.resolvedType == .DYNAMIC)
-          assert(leftRight.resolvedType == cache.stringType || leftRight.resolvedType == .DYNAMIC)
+          assert(leftLeft.resolvedType == _cache.stringType || leftLeft.resolvedType == .DYNAMIC)
+          assert(leftRight.resolvedType == _cache.stringType || leftRight.resolvedType == .DYNAMIC)
 
           # (a + "b") + "c" => a + "bc"
           if leftRight.isString {
-            flattenString(leftRight, leftRight.asString + right.asString)
+            _flattenString(leftRight, leftRight.asString + right.asString)
             node.become(left.remove)
           }
         }
       }
     }
 
-    def foldTry(node Node) int {
+    def _foldTry(node Node) int {
       var tryBlock = node.tryBlock
       # var finallyBlock = node.finallyBlock
 
@@ -158,7 +158,7 @@ namespace Skew.Folding {
       return 0
     }
 
-    def foldIf(node Node) {
+    def _foldIf(node Node) {
       var test = node.ifTest
       var trueBlock = node.ifTrue
       var falseBlock = node.ifFalse
@@ -192,7 +192,7 @@ namespace Skew.Folding {
       else if !trueBlock.hasChildren {
         # "if (a) {} else b;" => "if (!a) b;"
         if falseBlock != null && falseBlock.hasChildren {
-          test.invertBooleanCondition(cache)
+          test.invertBooleanCondition(_cache)
           trueBlock.remove
         }
 
@@ -208,7 +208,7 @@ namespace Skew.Folding {
       }
     }
 
-    def foldSwitch(node Node) {
+    def _foldSwitch(node Node) {
       var value = node.switchValue
       var defaultCase Node = null
 
@@ -289,7 +289,7 @@ namespace Skew.Folding {
       }
     }
 
-    def foldVariables(node Node) {
+    def _foldVariables(node Node) {
       # Remove symbols entirely that are being inlined everywhere
       for child = node.firstChild, next Node = null; child != null; child = next {
         assert(child.kind == .VARIABLE)
@@ -306,7 +306,7 @@ namespace Skew.Folding {
       }
     }
 
-    def foldBlock(node Node) {
+    def _foldBlock(node Node) {
       for child = node.firstChild, next Node = null; child != null; child = next {
         next = child.nextSibling
         var kind = child.kind
@@ -326,63 +326,40 @@ namespace Skew.Folding {
 
         # Remove dead assignments
         else if kind == .EXPRESSION && child.expressionValue.kind == .ASSIGN {
-          foldAssignment(child)
+          _foldAssignment(child)
         }
 
         else if kind == .VARIABLES {
-          foldVariables(child)
+          _foldVariables(child)
         }
 
         # Remove unused try statements since they can cause deoptimizations
         else if kind == .TRY {
-          foldTry(child)
+          _foldTry(child)
         }
 
         # Statically evaluate if statements where possible
         else if kind == .IF {
-          foldIf(child)
+          _foldIf(child)
         }
 
         # Fold switch statements
         else if kind == .SWITCH {
-          foldSwitch(child)
+          _foldSwitch(child)
         }
       }
-    }
-
-    def isVariableReference(node Node) bool {
-      return node.kind == .NAME && node.symbol != null && node.symbol.kind.isVariable
-    }
-
-    def isSameVariableReference(a Node, b Node) bool {
-      return
-        isVariableReference(a) && isVariableReference(b) && a.symbol == b.symbol ||
-        a.kind == .CAST && b.kind == .CAST && isSameVariableReference(a.castValue, b.castValue)
-    }
-
-    def hasNestedReference(node Node, symbol Symbol) bool {
-      assert(symbol != null)
-      if node.symbol == symbol {
-        return true
-      }
-      for child = node.firstChild; child != null; child = child.nextSibling {
-        if hasNestedReference(child, symbol) {
-          return true
-        }
-      }
-      return false
     }
 
     # "a = 0; b = 0; a = 1;" => "b = 0; a = 1;"
-    def foldAssignment(node Node) {
+    def _foldAssignment(node Node) {
       assert(node.kind == .EXPRESSION && node.expressionValue.kind == .ASSIGN)
       var value = node.expressionValue
       var left = value.binaryLeft
       var right = value.binaryRight
 
       # Only do this for simple variable assignments
-      var dotVariable = left.kind == .DOT && isVariableReference(left.dotTarget) ? left.dotTarget.symbol : null
-      var variable = isVariableReference(left) || dotVariable != null ? left.symbol : null
+      var dotVariable = left.kind == .DOT && _isVariableReference(left.dotTarget) ? left.dotTarget.symbol : null
+      var variable = _isVariableReference(left) || dotVariable != null ? left.symbol : null
       if variable == null {
         return
       }
@@ -390,7 +367,7 @@ namespace Skew.Folding {
       # Make sure the assigned value doesn't need the previous value. We bail
       # on expressions with side effects like function calls and on expressions
       # that reference the variable.
-      if !right.hasNoSideEffects || hasNestedReference(right, variable) {
+      if !right.hasNoSideEffects || _hasNestedReference(right, variable) {
         return
       }
 
@@ -405,8 +382,8 @@ namespace Skew.Folding {
           if previousValue.kind == .ASSIGN {
             var previousLeft = previousValue.binaryLeft
             var previousRight = previousValue.binaryRight
-            var previousDotVariable = previousLeft.kind == .DOT && isVariableReference(previousLeft.dotTarget) ? previousLeft.dotTarget.symbol : null
-            var previousVariable = isVariableReference(previousLeft) || previousDotVariable != null && previousDotVariable == dotVariable ? previousLeft.symbol : null
+            var previousDotVariable = previousLeft.kind == .DOT && _isVariableReference(previousLeft.dotTarget) ? previousLeft.dotTarget.symbol : null
+            var previousVariable = _isVariableReference(previousLeft) || previousDotVariable != null && previousDotVariable == dotVariable ? previousLeft.symbol : null
 
             # Check for assignment to the same variable and remove the assignment
             # if it's a match. Make sure to keep the assigned value around if it
@@ -424,7 +401,7 @@ namespace Skew.Folding {
             # this variable's value. If it does involve this variable's value,
             # then it isn't safe to remove duplicate assignments past this
             # statement.
-            if !previousRight.hasNoSideEffects || hasNestedReference(previousRight, variable) {
+            if !previousRight.hasNoSideEffects || _hasNestedReference(previousRight, variable) {
               break
             }
           }
@@ -446,44 +423,32 @@ namespace Skew.Folding {
       }
     }
 
-    def shouldFoldSymbol(symbol Symbol) bool {
-      return symbol != null && symbol.isConst && (symbol.kind != .VARIABLE_INSTANCE || symbol.isImported)
-    }
-
-    def foldDot(node Node) {
+    def _foldDot(node Node) {
       var symbol = node.symbol
 
       # Only replace this with a constant if the target has no side effects.
       # This catches constants declared on imported types.
-      if shouldFoldSymbol(symbol) && !node.isAssignTarget && (node.dotTarget == null || node.dotTarget.hasNoSideEffects) {
+      if _shouldFoldSymbol(symbol) && !node.isAssignTarget && (node.dotTarget == null || node.dotTarget.hasNoSideEffects) {
         var content = constantForSymbol(symbol.asVariableSymbol)
         if content != null {
-          flatten(node, content)
+          _flatten(node, content)
         }
       }
     }
 
-    def foldName(node Node) {
+    def _foldName(node Node) {
       var symbol = node.symbol
 
       # Don't fold loop variables since they aren't actually constant across loop iterations
-      if shouldFoldSymbol(symbol) && !node.isAssignTarget && !symbol.isLoopVariable {
+      if _shouldFoldSymbol(symbol) && !node.isAssignTarget && !symbol.isLoopVariable {
         var content = constantForSymbol(symbol.asVariableSymbol)
         if content != null {
-          flatten(node, content)
+          _flatten(node, content)
         }
       }
     }
 
-    def isKnownCall(symbol Symbol, knownSymbol Symbol) bool {
-      return symbol == knownSymbol || symbol != null && symbol.kind.isFunction && (
-        symbol.asFunctionSymbol.overloaded == knownSymbol ||
-        knownSymbol.kind.isFunction && symbol.asFunctionSymbol.overloaded != null &&
-          symbol.asFunctionSymbol.overloaded == knownSymbol.asFunctionSymbol.overloaded &&
-          symbol.asFunctionSymbol.argumentOnlyType == knownSymbol.asFunctionSymbol.argumentOnlyType)
-    }
-
-    def foldCall(node Node) {
+    def _foldCall(node Node) {
       var value = node.callValue
       var symbol = value.symbol
 
@@ -495,38 +460,38 @@ namespace Skew.Folding {
         # "doubleValue.toString"
         # "intValue.toString"
         if target != null && target.kind == .CONSTANT {
-          if isKnownCall(symbol, cache.boolToStringSymbol) { flattenString(node, target.asBool.toString) }
-          else if isKnownCall(symbol, cache.doubleToStringSymbol) { flattenString(node, target.asDouble.toString) }
-          else if isKnownCall(symbol, cache.intToStringSymbol) { flattenString(node, target.asInt.toString) }
+          if _isKnownCall(symbol, _cache.boolToStringSymbol) { _flattenString(node, target.asBool.toString) }
+          else if _isKnownCall(symbol, _cache.doubleToStringSymbol) { _flattenString(node, target.asDouble.toString) }
+          else if _isKnownCall(symbol, _cache.intToStringSymbol) { _flattenString(node, target.asInt.toString) }
         }
       }
 
       # Fold global function calls
       else if value.kind == .NAME {
         # "\"abc\".count" => "3"
-        if isKnownCall(symbol, cache.stringCountSymbol) && node.lastChild.isString {
-          flattenInt(node, Unicode.codeUnitCountForCodePoints(node.lastChild.asString.codePoints, options.target.stringEncoding))
+        if _isKnownCall(symbol, _cache.stringCountSymbol) && node.lastChild.isString {
+          _flattenInt(node, Unicode.codeUnitCountForCodePoints(node.lastChild.asString.codePoints, _options.target.stringEncoding))
         }
 
         # "3 ** 2" => "9"
-        else if isKnownCall(symbol, cache.intPowerSymbol) && node.lastChild.isInt && value.nextSibling.isInt {
-          flattenInt(node, value.nextSibling.asInt ** node.lastChild.asInt)
+        else if _isKnownCall(symbol, _cache.intPowerSymbol) && node.lastChild.isInt && value.nextSibling.isInt {
+          _flattenInt(node, value.nextSibling.asInt ** node.lastChild.asInt)
         }
 
         # "0.0625 ** 0.25" => "0.5"
-        else if isKnownCall(symbol, cache.doublePowerSymbol) && node.lastChild.isDouble && value.nextSibling.isDouble {
-          flattenDouble(node, value.nextSibling.asDouble ** node.lastChild.asDouble)
+        else if _isKnownCall(symbol, _cache.doublePowerSymbol) && node.lastChild.isDouble && value.nextSibling.isDouble {
+          _flattenDouble(node, value.nextSibling.asDouble ** node.lastChild.asDouble)
         }
 
         # "string.fromCodePoint(100)" => "\"d\""
         # "string.fromCodeUnit(100)" => "\"d\""
-        else if (isKnownCall(symbol, cache.stringFromCodePointSymbol) || isKnownCall(symbol, cache.stringFromCodeUnitSymbol)) && node.lastChild.isInt {
-          flattenString(node, string.fromCodePoint(node.lastChild.asInt)) # "fromCodePoint" is a superset of "fromCodeUnit"
+        else if (_isKnownCall(symbol, _cache.stringFromCodePointSymbol) || _isKnownCall(symbol, _cache.stringFromCodeUnitSymbol)) && node.lastChild.isInt {
+          _flattenString(node, string.fromCodePoint(node.lastChild.asInt)) # "fromCodePoint" is a superset of "fromCodeUnit"
         }
 
         # "string.fromCodePoints([97, 98, 99])" => "\"abc\""
         # "string.fromCodeUnits([97, 98, 99])" => "\"abc\""
-        else if (isKnownCall(symbol, cache.stringFromCodePointsSymbol) || isKnownCall(symbol, cache.stringFromCodeUnitsSymbol)) && node.lastChild.kind == .INITIALIZER_LIST {
+        else if (_isKnownCall(symbol, _cache.stringFromCodePointsSymbol) || _isKnownCall(symbol, _cache.stringFromCodeUnitsSymbol)) && node.lastChild.kind == .INITIALIZER_LIST {
           var codePoints List<int> = []
           for child = node.lastChild.firstChild; child != null; child = child.nextSibling {
             if !child.isInt {
@@ -534,12 +499,12 @@ namespace Skew.Folding {
             }
             codePoints.append(child.asInt)
           }
-          flattenString(node, string.fromCodePoints(codePoints)) # "fromCodePoints" is a superset of "fromCodeUnits"
+          _flattenString(node, string.fromCodePoints(codePoints)) # "fromCodePoints" is a superset of "fromCodeUnits"
         }
       }
     }
 
-    def foldCast(node Node) {
+    def _foldCast(node Node) {
       var type = node.castType.resolvedType
       var value = node.castValue
 
@@ -549,28 +514,28 @@ namespace Skew.Folding {
 
         # Cast "bool" values
         if kind == .BOOL {
-          if cache.isEquivalentToBool(type) { flattenBool(node, value.asBool) }
-          else if cache.isEquivalentToInt(type) { flattenInt(node, value.asBool as int) }
-          else if cache.isEquivalentToDouble(type) { flattenDouble(node, value.asBool as double) }
+          if _cache.isEquivalentToBool(type) { _flattenBool(node, value.asBool) }
+          else if _cache.isEquivalentToInt(type) { _flattenInt(node, value.asBool as int) }
+          else if _cache.isEquivalentToDouble(type) { _flattenDouble(node, value.asBool as double) }
         }
 
         # Cast "int" values
         else if kind == .INT {
-          if cache.isEquivalentToBool(type) { flattenBool(node, value.asInt as bool) }
-          else if cache.isEquivalentToInt(type) { flattenInt(node, value.asInt) }
-          else if cache.isEquivalentToDouble(type) { flattenDouble(node, value.asInt) }
+          if _cache.isEquivalentToBool(type) { _flattenBool(node, value.asInt as bool) }
+          else if _cache.isEquivalentToInt(type) { _flattenInt(node, value.asInt) }
+          else if _cache.isEquivalentToDouble(type) { _flattenDouble(node, value.asInt) }
         }
 
         # Cast "double" values
         else if kind == .DOUBLE {
-          if cache.isEquivalentToBool(type) { flattenBool(node, value.asDouble as bool) }
-          else if cache.isEquivalentToInt(type) { flattenInt(node, value.asDouble as int) }
-          else if cache.isEquivalentToDouble(type) { flattenDouble(node, value.asDouble) }
+          if _cache.isEquivalentToBool(type) { _flattenBool(node, value.asDouble as bool) }
+          else if _cache.isEquivalentToInt(type) { _flattenInt(node, value.asDouble as int) }
+          else if _cache.isEquivalentToDouble(type) { _flattenDouble(node, value.asDouble) }
         }
       }
     }
 
-    def foldUnary(node Node) {
+    def _foldUnary(node Node) {
       var value = node.unaryValue
       var kind = node.kind
 
@@ -580,20 +545,20 @@ namespace Skew.Folding {
 
         # Fold "bool" values
         if contentKind == .BOOL {
-          if kind == .NOT { flattenBool(node, !value.asBool) }
+          if kind == .NOT { _flattenBool(node, !value.asBool) }
         }
 
         # Fold "int" values
         else if contentKind == .INT {
-          if kind == .POSITIVE { flattenInt(node, +value.asInt) }
-          else if kind == .NEGATIVE { flattenInt(node, -value.asInt) }
-          else if kind == .COMPLEMENT { flattenInt(node, ~value.asInt) }
+          if kind == .POSITIVE { _flattenInt(node, +value.asInt) }
+          else if kind == .NEGATIVE { _flattenInt(node, -value.asInt) }
+          else if kind == .COMPLEMENT { _flattenInt(node, ~value.asInt) }
         }
 
         # Fold "float" or "double" values
         else if contentKind == .DOUBLE {
-          if kind == .POSITIVE { flattenDouble(node, +value.asDouble) }
-          else if kind == .NEGATIVE { flattenDouble(node, -value.asDouble) }
+          if kind == .POSITIVE { _flattenDouble(node, +value.asDouble) }
+          else if kind == .NEGATIVE { _flattenDouble(node, -value.asDouble) }
         }
       }
 
@@ -601,14 +566,14 @@ namespace Skew.Folding {
       else if kind == .NOT && value.resolvedType != .DYNAMIC {
         switch value.kind {
           case .NOT, .EQUAL, .NOT_EQUAL, .LOGICAL_OR, .LOGICAL_AND, .LESS_THAN, .GREATER_THAN, .LESS_THAN_OR_EQUAL, .GREATER_THAN_OR_EQUAL {
-            value.invertBooleanCondition(cache)
+            value.invertBooleanCondition(_cache)
             node.become(value.remove)
           }
         }
       }
     }
 
-    def foldConstantAddOrSubtract(node Node, variable Node, constant Node, delta int) {
+    def _foldConstantAddOrSubtract(node Node, variable Node, constant Node, delta int) {
       var isAdd = node.kind == .ADD
       var needsContentUpdate = delta != 0
       var isRightConstant = constant == node.binaryRight
@@ -633,13 +598,13 @@ namespace Skew.Folding {
       if variable.kind == .ADD || variable.kind == .SUBTRACT {
         var left = variable.binaryLeft
         var right = variable.binaryRight
-        assert(left.resolvedType == cache.intType || left.resolvedType == .DYNAMIC)
-        assert(right.resolvedType == cache.intType || right.resolvedType == .DYNAMIC)
+        assert(left.resolvedType == _cache.intType || left.resolvedType == .DYNAMIC)
+        assert(right.resolvedType == _cache.intType || right.resolvedType == .DYNAMIC)
 
         # (a + 1) + 2 => a + 3
         var isLeftConstant = left.isInt
         if isLeftConstant || right.isInt {
-          foldConstantAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value)
+          _foldConstantAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value)
           node.become(variable.remove)
           return
         }
@@ -675,10 +640,10 @@ namespace Skew.Folding {
       }
 
       # Also handle unary negation on "variable"
-      foldAddOrSubtract(node)
+      _foldAddOrSubtract(node)
     }
 
-    def foldAddOrSubtract(node Node) {
+    def _foldAddOrSubtract(node Node) {
       var isAdd = node.kind == .ADD
       var left = node.binaryLeft
       var right = node.binaryRight
@@ -698,11 +663,11 @@ namespace Skew.Folding {
       }
     }
 
-    def foldConstantIntegerMultiply(node Node, variable Node, constant Node) {
+    def _foldConstantIntegerMultiply(node Node, variable Node, constant Node) {
       assert(constant.isInt)
 
       # Apply identities
-      var variableIsInt = variable.resolvedType == cache.intType
+      var variableIsInt = variable.resolvedType == _cache.intType
       var value = constant.asInt
 
       # Replacing values with 0 only works for integers. Doubles can be NaN and
@@ -725,7 +690,7 @@ namespace Skew.Folding {
       # alternative. Division can't be replaced by a right-shift operation
       # because that would lead to incorrect results for negative numbers.
       if variableIsInt {
-        var shift = logBase2(value)
+        var shift = _logBase2(value)
         if shift != -1 {
           constant.content = IntContent.new(shift)
           node.kind = .SHIFT_LEFT
@@ -739,7 +704,7 @@ namespace Skew.Folding {
     # "((a >>> 7) & 255) << 8" => "(a << 1) & (255 << 8)"
     # "((a >> 8) & 255) << 7" => "(a >> 1) & (255 << 7)"
     # "((a >>> 8) & 255) << 7" => "(a >>> 1) & (255 << 7)"
-    def foldConstantBitwiseAndInsideShift(node Node, andLeft Node, andRight Node) {
+    def _foldConstantBitwiseAndInsideShift(node Node, andLeft Node, andRight Node) {
       assert(node.kind == .SHIFT_LEFT && node.binaryRight.isInt)
 
       if andRight.isInt && (andLeft.kind == .SHIFT_RIGHT || andLeft.kind == .UNSIGNED_SHIFT_RIGHT) && andLeft.binaryRight.isInt {
@@ -749,18 +714,18 @@ namespace Skew.Folding {
         var value = andLeft.binaryLeft.remove
 
         if leftShift < rightShift {
-          value = Node.createBinary(andLeft.kind, value, createInt(rightShift - leftShift)).withType(cache.intType)
+          value = Node.createBinary(andLeft.kind, value, _createInt(rightShift - leftShift)).withType(_cache.intType)
         }
 
         else if leftShift > rightShift {
-          value = Node.createBinary(.SHIFT_LEFT, value, createInt(leftShift - rightShift)).withType(cache.intType)
+          value = Node.createBinary(.SHIFT_LEFT, value, _createInt(leftShift - rightShift)).withType(_cache.intType)
         }
 
-        node.become(Node.createBinary(.BITWISE_AND, value, createInt(mask << leftShift)).withType(node.resolvedType))
+        node.become(Node.createBinary(.BITWISE_AND, value, _createInt(mask << leftShift)).withType(node.resolvedType))
       }
     }
 
-    def foldConstantBitwiseAndInsideBitwiseOr(node Node) {
+    def _foldConstantBitwiseAndInsideBitwiseOr(node Node) {
       assert(node.kind == .BITWISE_OR && node.binaryLeft.kind == .BITWISE_AND)
 
       var left = node.binaryLeft
@@ -773,9 +738,9 @@ namespace Skew.Folding {
         var rightLeft = right.binaryLeft
         var rightRight = right.binaryRight
 
-        if leftRight.isInt && rightRight.isInt && isSameVariableReference(leftLeft, rightLeft) {
+        if leftRight.isInt && rightRight.isInt && _isSameVariableReference(leftLeft, rightLeft) {
           var mask = leftRight.asInt | rightRight.asInt
-          node.become(Node.createBinary(.BITWISE_AND, leftLeft.remove, createInt(mask)).withType(node.resolvedType))
+          node.become(Node.createBinary(.BITWISE_AND, leftLeft.remove, _createInt(mask)).withType(node.resolvedType))
         }
       }
 
@@ -785,7 +750,7 @@ namespace Skew.Folding {
       }
     }
 
-    def foldBinaryWithConstant(node Node, left Node, right Node) {
+    def _foldBinaryWithConstant(node Node, left Node, right Node) {
       # There are lots of other folding opportunities for most binary operators
       # here but those usually have a negligible performance and/or size impact
       # on the generated code and instead slow the compiler down. Only certain
@@ -805,16 +770,16 @@ namespace Skew.Folding {
         # addition/subtraction improves minification in JavaScript and often
         # helps with readability.
         case .ADD, .SUBTRACT {
-          if left.isInt { foldConstantAddOrSubtract(node, right, left, 0) }
-          else if right.isInt { foldConstantAddOrSubtract(node, left, right, 0) }
-          else { foldAddOrSubtract(node) }
+          if left.isInt { _foldConstantAddOrSubtract(node, right, left, 0) }
+          else if right.isInt { _foldConstantAddOrSubtract(node, left, right, 0) }
+          else { _foldAddOrSubtract(node) }
         }
 
         # Multiplication is special-cased here because in JavaScript, optimizing
         # away the general-purpose Math.imul function may result in large
         # speedups when it's implemented with a polyfill.
         case .MULTIPLY {
-          if right.isInt { foldConstantIntegerMultiply(node, left, right) }
+          if right.isInt { _foldConstantIntegerMultiply(node, left, right) }
         }
 
         # This improves generated code for inlined bit packing functions
@@ -822,17 +787,17 @@ namespace Skew.Folding {
           # "x << 0" => "x"
           # "x >> 0" => "x"
           # "x >>> 0" => "x"
-          if cache.isEquivalentToInt(left.resolvedType) && right.isInt && right.asInt == 0 {
+          if _cache.isEquivalentToInt(left.resolvedType) && right.isInt && right.asInt == 0 {
             node.become(left.remove)
           }
 
           # Handle special cases of "&" nested inside "<<"
           else if node.kind == .SHIFT_LEFT && left.kind == .BITWISE_AND && right.isInt {
-            foldConstantBitwiseAndInsideShift(node, left.binaryLeft, left.binaryRight)
+            _foldConstantBitwiseAndInsideShift(node, left.binaryLeft, left.binaryRight)
           }
         }
         case .BITWISE_AND {
-          if right.isInt && cache.isEquivalentToInt(left.resolvedType) {
+          if right.isInt && _cache.isEquivalentToInt(left.resolvedType) {
             var value = right.asInt
 
             # "x & ~0" => "x"
@@ -847,7 +812,7 @@ namespace Skew.Folding {
           }
         }
         case .BITWISE_OR {
-          if right.isInt && cache.isEquivalentToInt(left.resolvedType) {
+          if right.isInt && _cache.isEquivalentToInt(left.resolvedType) {
             var value = right.asInt
 
             # "x | 0" => "x"
@@ -862,15 +827,15 @@ namespace Skew.Folding {
               return
             }
           }
-          if left.kind == .BITWISE_AND { foldConstantBitwiseAndInsideBitwiseOr(node) }
+          if left.kind == .BITWISE_AND { _foldConstantBitwiseAndInsideBitwiseOr(node) }
         }
       }
     }
 
-    def foldBinary(node Node) {
+    def _foldBinary(node Node) {
       var kind = node.kind
-      if kind == .ADD && node.resolvedType == cache.stringType {
-        foldStringConcatenation(node)
+      if kind == .ADD && node.resolvedType == _cache.stringType {
+        _foldStringConcatenation(node)
         return
       }
 
@@ -894,12 +859,12 @@ namespace Skew.Folding {
         # Fold equality operators
         if leftKind == .STRING && rightKind == .STRING {
           switch kind {
-            case .EQUAL { flattenBool(node, leftContent.asString == rightContent.asString) }
-            case .NOT_EQUAL { flattenBool(node, leftContent.asString != rightContent.asString) }
-            case .LESS_THAN { flattenBool(node, leftContent.asString < rightContent.asString) }
-            case .GREATER_THAN { flattenBool(node, leftContent.asString > rightContent.asString) }
-            case .LESS_THAN_OR_EQUAL { flattenBool(node, leftContent.asString <= rightContent.asString) }
-            case .GREATER_THAN_OR_EQUAL { flattenBool(node, leftContent.asString >= rightContent.asString) }
+            case .EQUAL { _flattenBool(node, leftContent.asString == rightContent.asString) }
+            case .NOT_EQUAL { _flattenBool(node, leftContent.asString != rightContent.asString) }
+            case .LESS_THAN { _flattenBool(node, leftContent.asString < rightContent.asString) }
+            case .GREATER_THAN { _flattenBool(node, leftContent.asString > rightContent.asString) }
+            case .LESS_THAN_OR_EQUAL { _flattenBool(node, leftContent.asString <= rightContent.asString) }
+            case .GREATER_THAN_OR_EQUAL { _flattenBool(node, leftContent.asString >= rightContent.asString) }
           }
           return
         }
@@ -907,10 +872,10 @@ namespace Skew.Folding {
         # Fold "bool" values
         else if leftKind == .BOOL && rightKind == .BOOL {
           switch kind {
-            case .LOGICAL_AND { flattenBool(node, leftContent.asBool && rightContent.asBool) }
-            case .LOGICAL_OR { flattenBool(node, leftContent.asBool || rightContent.asBool) }
-            case .EQUAL { flattenBool(node, leftContent.asBool == rightContent.asBool) }
-            case .NOT_EQUAL { flattenBool(node, leftContent.asBool != rightContent.asBool) }
+            case .LOGICAL_AND { _flattenBool(node, leftContent.asBool && rightContent.asBool) }
+            case .LOGICAL_OR { _flattenBool(node, leftContent.asBool || rightContent.asBool) }
+            case .EQUAL { _flattenBool(node, leftContent.asBool == rightContent.asBool) }
+            case .NOT_EQUAL { _flattenBool(node, leftContent.asBool != rightContent.asBool) }
           }
           return
         }
@@ -918,23 +883,23 @@ namespace Skew.Folding {
         # Fold "int" values
         else if leftKind == .INT && rightKind == .INT {
           switch kind {
-            case .ADD { flattenInt(node, leftContent.asInt + rightContent.asInt) }
-            case .BITWISE_AND { flattenInt(node, leftContent.asInt & rightContent.asInt) }
-            case .BITWISE_OR { flattenInt(node, leftContent.asInt | rightContent.asInt) }
-            case .BITWISE_XOR { flattenInt(node, leftContent.asInt ^ rightContent.asInt) }
-            case .DIVIDE { flattenInt(node, leftContent.asInt / rightContent.asInt) }
-            case .EQUAL { flattenBool(node, leftContent.asInt == rightContent.asInt) }
-            case .GREATER_THAN { flattenBool(node, leftContent.asInt > rightContent.asInt) }
-            case .GREATER_THAN_OR_EQUAL { flattenBool(node, leftContent.asInt >= rightContent.asInt) }
-            case .LESS_THAN { flattenBool(node, leftContent.asInt < rightContent.asInt) }
-            case .LESS_THAN_OR_EQUAL { flattenBool(node, leftContent.asInt <= rightContent.asInt) }
-            case .MULTIPLY { flattenInt(node, leftContent.asInt * rightContent.asInt) }
-            case .NOT_EQUAL { flattenBool(node, leftContent.asInt != rightContent.asInt) }
-            case .REMAINDER { flattenInt(node, leftContent.asInt % rightContent.asInt) }
-            case .SHIFT_LEFT { flattenInt(node, leftContent.asInt << rightContent.asInt) }
-            case .SHIFT_RIGHT { flattenInt(node, leftContent.asInt >> rightContent.asInt) }
-            case .SUBTRACT { flattenInt(node, leftContent.asInt - rightContent.asInt) }
-            case .UNSIGNED_SHIFT_RIGHT { flattenInt(node, leftContent.asInt >>> rightContent.asInt) }
+            case .ADD { _flattenInt(node, leftContent.asInt + rightContent.asInt) }
+            case .BITWISE_AND { _flattenInt(node, leftContent.asInt & rightContent.asInt) }
+            case .BITWISE_OR { _flattenInt(node, leftContent.asInt | rightContent.asInt) }
+            case .BITWISE_XOR { _flattenInt(node, leftContent.asInt ^ rightContent.asInt) }
+            case .DIVIDE { _flattenInt(node, leftContent.asInt / rightContent.asInt) }
+            case .EQUAL { _flattenBool(node, leftContent.asInt == rightContent.asInt) }
+            case .GREATER_THAN { _flattenBool(node, leftContent.asInt > rightContent.asInt) }
+            case .GREATER_THAN_OR_EQUAL { _flattenBool(node, leftContent.asInt >= rightContent.asInt) }
+            case .LESS_THAN { _flattenBool(node, leftContent.asInt < rightContent.asInt) }
+            case .LESS_THAN_OR_EQUAL { _flattenBool(node, leftContent.asInt <= rightContent.asInt) }
+            case .MULTIPLY { _flattenInt(node, leftContent.asInt * rightContent.asInt) }
+            case .NOT_EQUAL { _flattenBool(node, leftContent.asInt != rightContent.asInt) }
+            case .REMAINDER { _flattenInt(node, leftContent.asInt % rightContent.asInt) }
+            case .SHIFT_LEFT { _flattenInt(node, leftContent.asInt << rightContent.asInt) }
+            case .SHIFT_RIGHT { _flattenInt(node, leftContent.asInt >> rightContent.asInt) }
+            case .SUBTRACT { _flattenInt(node, leftContent.asInt - rightContent.asInt) }
+            case .UNSIGNED_SHIFT_RIGHT { _flattenInt(node, leftContent.asInt >>> rightContent.asInt) }
           }
           return
         }
@@ -942,32 +907,94 @@ namespace Skew.Folding {
         # Fold "double" values
         else if leftKind == .DOUBLE && rightKind == .DOUBLE {
           switch kind {
-            case .ADD { flattenDouble(node, leftContent.asDouble + rightContent.asDouble) }
-            case .SUBTRACT { flattenDouble(node, leftContent.asDouble - rightContent.asDouble) }
-            case .MULTIPLY { flattenDouble(node, leftContent.asDouble * rightContent.asDouble) }
-            case .DIVIDE { flattenDouble(node, leftContent.asDouble / rightContent.asDouble) }
-            case .EQUAL { flattenBool(node, leftContent.asDouble == rightContent.asDouble) }
-            case .NOT_EQUAL { flattenBool(node, leftContent.asDouble != rightContent.asDouble) }
-            case .LESS_THAN { flattenBool(node, leftContent.asDouble < rightContent.asDouble) }
-            case .GREATER_THAN { flattenBool(node, leftContent.asDouble > rightContent.asDouble) }
-            case .LESS_THAN_OR_EQUAL { flattenBool(node, leftContent.asDouble <= rightContent.asDouble) }
-            case .GREATER_THAN_OR_EQUAL { flattenBool(node, leftContent.asDouble >= rightContent.asDouble) }
+            case .ADD { _flattenDouble(node, leftContent.asDouble + rightContent.asDouble) }
+            case .SUBTRACT { _flattenDouble(node, leftContent.asDouble - rightContent.asDouble) }
+            case .MULTIPLY { _flattenDouble(node, leftContent.asDouble * rightContent.asDouble) }
+            case .DIVIDE { _flattenDouble(node, leftContent.asDouble / rightContent.asDouble) }
+            case .EQUAL { _flattenBool(node, leftContent.asDouble == rightContent.asDouble) }
+            case .NOT_EQUAL { _flattenBool(node, leftContent.asDouble != rightContent.asDouble) }
+            case .LESS_THAN { _flattenBool(node, leftContent.asDouble < rightContent.asDouble) }
+            case .GREATER_THAN { _flattenBool(node, leftContent.asDouble > rightContent.asDouble) }
+            case .LESS_THAN_OR_EQUAL { _flattenBool(node, leftContent.asDouble <= rightContent.asDouble) }
+            case .GREATER_THAN_OR_EQUAL { _flattenBool(node, leftContent.asDouble >= rightContent.asDouble) }
           }
           return
         }
       }
 
-      foldBinaryWithConstant(node, left, right)
+      _foldBinaryWithConstant(node, left, right)
     }
 
-    def foldHook(node Node) {
+    def _foldHook(node Node) {
       var test = node.hookTest
       if test.isTrue { node.become(node.hookTrue.remove) }
       else if test.isFalse { node.become(node.hookFalse.remove) }
     }
 
+    def constantForSymbol(symbol VariableSymbol) Content {
+      if symbol.id in _constantCache {
+        return _constantCache[symbol.id]
+      }
+
+      if _prepareSymbol != null {
+        _prepareSymbol(symbol)
+      }
+
+      var constant Content = null
+      var value = symbol.value
+
+      if symbol.isConst && value != null {
+        _constantCache[symbol.id] = null
+        value = value.clone
+        foldConstants(value)
+        if value.kind == .CONSTANT {
+          constant = value.content
+        }
+      }
+
+      _constantCache[symbol.id] = constant
+      return constant
+    }
+  }
+
+  namespace ConstantFolder {
+    def _isVariableReference(node Node) bool {
+      return node.kind == .NAME && node.symbol != null && node.symbol.kind.isVariable
+    }
+
+    def _isSameVariableReference(a Node, b Node) bool {
+      return
+        _isVariableReference(a) && _isVariableReference(b) && a.symbol == b.symbol ||
+        a.kind == .CAST && b.kind == .CAST && _isSameVariableReference(a.castValue, b.castValue)
+    }
+
+    def _hasNestedReference(node Node, symbol Symbol) bool {
+      assert(symbol != null)
+      if node.symbol == symbol {
+        return true
+      }
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        if _hasNestedReference(child, symbol) {
+          return true
+        }
+      }
+      return false
+    }
+
+    def _shouldFoldSymbol(symbol Symbol) bool {
+      return symbol != null && symbol.isConst && (symbol.kind != .VARIABLE_INSTANCE || symbol.isImported)
+    }
+
+    def _isKnownCall(symbol Symbol, knownSymbol Symbol) bool {
+      return symbol == knownSymbol || symbol != null && symbol.kind.isFunction && (
+        symbol.asFunctionSymbol.overloaded == knownSymbol ||
+        knownSymbol.kind.isFunction && symbol.asFunctionSymbol.overloaded != null &&
+          symbol.asFunctionSymbol.overloaded == knownSymbol.asFunctionSymbol.overloaded &&
+          symbol.asFunctionSymbol.argumentOnlyType == knownSymbol.asFunctionSymbol.argumentOnlyType)
+    }
+
     # Returns the log2(value) or -1 if log2(value) is not an integer
-    def logBase2(value int) int {
+    def _logBase2(value int) int {
       if value < 1 || (value & (value - 1)) != 0 {
         return -1
       }
@@ -977,31 +1004,6 @@ namespace Skew.Folding {
         result++
       }
       return result
-    }
-
-    def constantForSymbol(symbol VariableSymbol) Content {
-      if symbol.id in constantCache {
-        return constantCache[symbol.id]
-      }
-
-      if prepareSymbol != null {
-        prepareSymbol(symbol)
-      }
-
-      var constant Content = null
-      var value = symbol.value
-
-      if symbol.isConst && value != null {
-        constantCache[symbol.id] = null
-        value = value.clone
-        foldConstants(value)
-        if value.kind == .CONSTANT {
-          constant = value.content
-        }
-      }
-
-      constantCache[symbol.id] = constant
-      return constant
     }
   }
 }
