@@ -8,18 +8,25 @@ namespace Skew {
     var listType Type = null
     var stringMapType Type = null
     var stringType Type = null
-    var intToStringSymbol Symbol = null
+
     var boolToStringSymbol Symbol = null
+    var doublePowerSymbol Symbol = null
     var doubleToStringSymbol Symbol = null
     var intPowerSymbol Symbol = null
-    var doublePowerSymbol Symbol = null
+    var intToStringSymbol Symbol = null
     var stringCountSymbol Symbol = null
+    var stringFromCodePointsSymbol Symbol = null
+    var stringFromCodePointSymbol Symbol = null
+    var stringFromCodeUnitsSymbol Symbol = null
+    var stringFromCodeUnitSymbol Symbol = null
+
     var entryPointSymbol FunctionSymbol = null
     const _environments = IntMap<List<Environment>>.new
     const _lambdaTypes = IntMap<List<Type>>.new
 
     def loadGlobals(log Log, global ObjectSymbol) {
       Type.initialize
+
       boolType = _loadGlobalClass(global, "bool", Symbol.IS_VALUE_TYPE)
       boxType = _loadGlobalClass(global, "Box", 0)
       doubleType = _loadGlobalClass(global, "double", Symbol.IS_VALUE_TYPE)
@@ -28,12 +35,17 @@ namespace Skew {
       listType = _loadGlobalClass(global, "List", 0)
       stringMapType = _loadGlobalClass(global, "StringMap", 0)
       stringType = _loadGlobalClass(global, "string", 0)
-      intToStringSymbol = _loadInstanceFunction(intType, "toString")
+
       boolToStringSymbol = _loadInstanceFunction(boolType, "toString")
+      doublePowerSymbol = _loadInstanceFunction(doubleType, "**")
       doubleToStringSymbol = _loadInstanceFunction(doubleType, "toString")
       intPowerSymbol = _loadInstanceFunction(intType, "**")
-      doublePowerSymbol = _loadInstanceFunction(doubleType, "**")
+      intToStringSymbol = _loadInstanceFunction(intType, "toString")
       stringCountSymbol = _loadInstanceFunction(stringType, "count")
+      stringFromCodePointsSymbol = _loadGlobalFunction(stringType, "fromCodePoints")
+      stringFromCodePointSymbol = _loadGlobalFunction(stringType, "fromCodePoint")
+      stringFromCodeUnitsSymbol = _loadGlobalFunction(stringType, "fromCodeUnits")
+      stringFromCodeUnitSymbol = _loadGlobalFunction(stringType, "fromCodeUnit")
     }
 
     def isEquivalentToBool(type Type) bool {
@@ -392,6 +404,13 @@ namespace Skew {
       var symbol = type.symbol.asObjectSymbol.members.get(name, null)
       assert(symbol != null)
       assert(symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .OVERLOADED_INSTANCE)
+      return symbol
+    }
+
+    def _loadGlobalFunction(type Type, name string) Symbol {
+      var symbol = type.symbol.asObjectSymbol.members.get(name, null)
+      assert(symbol != null)
+      assert(symbol.kind == .FUNCTION_GLOBAL || symbol.kind == .OVERLOADED_GLOBAL)
       return symbol
     }
 

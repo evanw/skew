@@ -1620,5 +1620,81 @@ enum Foo {
 })();
 ").js
 
+# Check constant folding of unicode string factory functions
+test("
+@export
+def main string {
+  return
+    string.fromCodePoint('😄') +
+    string.fromCodeUnit('x') +
+    string.fromCodePoints(['💾', '💿']) +
+    string.fromCodeUnits(['y', 'z'])
+}
+", "
+(function() {
+  main = function() {
+    return '😄x💾💿yz';
+  };
+})();
+").js.foldAllConstants
+
+# Check constant folding of unicode string factory functions
+test("
+@export
+def main(x int) string {
+  return
+    string.fromCodePoint(x) +
+    string.fromCodeUnit(x) +
+    string.fromCodePoints(['x', x]) +
+    string.fromCodeUnits([x, x])
+}
+", "
+(function() {
+  main = function(x) {
+    return in_string.fromCodePoint(x) + String.fromCharCode(x) + in_string.fromCodePoints([120, x]) + in_string.fromCodeUnits([x, x]);
+  };
+
+  function StringBuilder() {
+    this.buffer = '';
+  }
+
+  StringBuilder.prototype.append = function(x) {
+    this.buffer += x;
+  };
+
+  StringBuilder.prototype.toString = function() {
+    return this.buffer;
+  };
+
+  var in_string = {};
+
+  in_string.fromCodePoints = function(codePoints) {
+    var builder = new StringBuilder();
+
+    for (var i = 0, list = codePoints, count1 = list.length; i < count1; ++i) {
+      var codePoint = list[i];
+      builder.append(in_string.fromCodePoint(codePoint));
+    }
+
+    return builder.toString();
+  };
+
+  in_string.fromCodeUnits = function(codeUnits) {
+    var result = '';
+
+    for (var i = 0, list = codeUnits, count1 = list.length; i < count1; ++i) {
+      var codeUnit = list[i];
+      result += String.fromCharCode(codeUnit);
+    }
+
+    return result;
+  };
+
+  in_string.fromCodePoint = function(codePoint) {
+    return codePoint < 65536 ? String.fromCharCode(codePoint) : String.fromCharCode((codePoint - 65536 >> 10) + 55296 | 0) + String.fromCharCode((codePoint - 65536 & 1023) + 56320 | 0);
+  };
+})();
+").js.foldAllConstants.inlineAllFunctions
+
   }
 }

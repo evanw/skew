@@ -12545,16 +12545,20 @@
   };
 
   Skew.Folding.ConstantFolder.prototype.isKnownCall = function(symbol, knownSymbol) {
-    return symbol == knownSymbol || symbol != null && Skew.in_SymbolKind.isFunction(symbol.kind) && symbol.asFunctionSymbol().overloaded == knownSymbol;
+    return symbol == knownSymbol || symbol != null && Skew.in_SymbolKind.isFunction(symbol.kind) && (symbol.asFunctionSymbol().overloaded == knownSymbol || Skew.in_SymbolKind.isFunction(knownSymbol.kind) && symbol.asFunctionSymbol().overloaded != null && symbol.asFunctionSymbol().overloaded == knownSymbol.asFunctionSymbol().overloaded && symbol.asFunctionSymbol().argumentOnlyType == knownSymbol.asFunctionSymbol().argumentOnlyType);
   };
 
   Skew.Folding.ConstantFolder.prototype.foldCall = function(node) {
     var value = node.callValue();
     var symbol = value.symbol;
 
+    // Fold instance function calls
     if (value.kind == Skew.NodeKind.DOT) {
       var target = value.dotTarget();
 
+      // "boolValue.toString"
+      // "doubleValue.toString"
+      // "intValue.toString"
       if (target != null && target.kind == Skew.NodeKind.CONSTANT) {
         if (this.isKnownCall(symbol, this.cache.boolToStringSymbol)) {
           this.flattenString(node, target.asBool().toString());
@@ -12570,17 +12574,45 @@
       }
     }
 
+    // Fold global function calls
     else if (value.kind == Skew.NodeKind.NAME) {
+      // "\"abc\".count" => "3"
       if (this.isKnownCall(symbol, this.cache.stringCountSymbol) && node.lastChild().isString()) {
         this.flattenInt(node, Unicode.codeUnitCountForCodePoints(in_string.codePoints(node.lastChild().asString()), this.options.target.stringEncoding()));
       }
 
+      // "3 ** 2" => "9"
       else if (this.isKnownCall(symbol, this.cache.intPowerSymbol) && node.lastChild().isInt() && value.nextSibling().isInt()) {
         this.flattenInt(node, in_int.power(value.nextSibling().asInt(), node.lastChild().asInt()));
       }
 
+      // "0.0625 ** 0.25" => "0.5"
       else if (this.isKnownCall(symbol, this.cache.doublePowerSymbol) && node.lastChild().isDouble() && value.nextSibling().isDouble()) {
         this.flattenDouble(node, Math.pow(value.nextSibling().asDouble(), node.lastChild().asDouble()));
+      }
+
+      // "string.fromCodePoint(100)" => "\"d\""
+      // "string.fromCodeUnit(100)" => "\"d\""
+      else if ((this.isKnownCall(symbol, this.cache.stringFromCodePointSymbol) || this.isKnownCall(symbol, this.cache.stringFromCodeUnitSymbol)) && node.lastChild().isInt()) {
+        // "fromCodePoint" is a superset of "fromCodeUnit"
+        this.flattenString(node, in_string.fromCodePoint(node.lastChild().asInt()));
+      }
+
+      // "string.fromCodePoints([97, 98, 99])" => "\"abc\""
+      // "string.fromCodeUnits([97, 98, 99])" => "\"abc\""
+      else if ((this.isKnownCall(symbol, this.cache.stringFromCodePointsSymbol) || this.isKnownCall(symbol, this.cache.stringFromCodeUnitsSymbol)) && node.lastChild().kind == Skew.NodeKind.INITIALIZER_LIST) {
+        var codePoints = [];
+
+        for (var child = node.lastChild().firstChild(); child != null; child = child.nextSibling()) {
+          if (!child.isInt()) {
+            return;
+          }
+
+          codePoints.push(child.asInt());
+        }
+
+        // "fromCodePoints" is a superset of "fromCodeUnits"
+        this.flattenString(node, in_string.fromCodePoints(codePoints));
       }
     }
   };
@@ -18696,12 +18728,16 @@
     this.listType = null;
     this.stringMapType = null;
     this.stringType = null;
-    this.intToStringSymbol = null;
     this.boolToStringSymbol = null;
+    this.doublePowerSymbol = null;
     this.doubleToStringSymbol = null;
     this.intPowerSymbol = null;
-    this.doublePowerSymbol = null;
+    this.intToStringSymbol = null;
     this.stringCountSymbol = null;
+    this.stringFromCodePointsSymbol = null;
+    this.stringFromCodePointSymbol = null;
+    this.stringFromCodeUnitsSymbol = null;
+    this.stringFromCodeUnitSymbol = null;
     this.entryPointSymbol = null;
     this._environments = {};
     this._lambdaTypes = {};
@@ -18717,12 +18753,16 @@
     this.listType = Skew.TypeCache._loadGlobalClass(global, 'List', 0);
     this.stringMapType = Skew.TypeCache._loadGlobalClass(global, 'StringMap', 0);
     this.stringType = Skew.TypeCache._loadGlobalClass(global, 'string', 0);
-    this.intToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.intType, 'toString');
     this.boolToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.boolType, 'toString');
+    this.doublePowerSymbol = Skew.TypeCache._loadInstanceFunction(this.doubleType, '**');
     this.doubleToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.doubleType, 'toString');
     this.intPowerSymbol = Skew.TypeCache._loadInstanceFunction(this.intType, '**');
-    this.doublePowerSymbol = Skew.TypeCache._loadInstanceFunction(this.doubleType, '**');
+    this.intToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.intType, 'toString');
     this.stringCountSymbol = Skew.TypeCache._loadInstanceFunction(this.stringType, 'count');
+    this.stringFromCodePointsSymbol = Skew.TypeCache._loadGlobalFunction(this.stringType, 'fromCodePoints');
+    this.stringFromCodePointSymbol = Skew.TypeCache._loadGlobalFunction(this.stringType, 'fromCodePoint');
+    this.stringFromCodeUnitsSymbol = Skew.TypeCache._loadGlobalFunction(this.stringType, 'fromCodeUnits');
+    this.stringFromCodeUnitSymbol = Skew.TypeCache._loadGlobalFunction(this.stringType, 'fromCodeUnit');
   };
 
   Skew.TypeCache.prototype.isEquivalentToBool = function(type) {
@@ -19169,6 +19209,13 @@
     var symbol = in_StringMap.get(type.symbol.asObjectSymbol().members, name, null);
     assert(symbol != null);
     assert(symbol.kind == Skew.SymbolKind.FUNCTION_INSTANCE || symbol.kind == Skew.SymbolKind.OVERLOADED_INSTANCE);
+    return symbol;
+  };
+
+  Skew.TypeCache._loadGlobalFunction = function(type, name) {
+    var symbol = in_StringMap.get(type.symbol.asObjectSymbol().members, name, null);
+    assert(symbol != null);
+    assert(symbol.kind == Skew.SymbolKind.FUNCTION_GLOBAL || symbol.kind == Skew.SymbolKind.OVERLOADED_GLOBAL);
     return symbol;
   };
 

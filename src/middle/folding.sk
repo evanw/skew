@@ -476,16 +476,24 @@ namespace Skew.Folding {
     }
 
     def isKnownCall(symbol Symbol, knownSymbol Symbol) bool {
-      return symbol == knownSymbol || symbol != null && symbol.kind.isFunction && symbol.asFunctionSymbol.overloaded == knownSymbol
+      return symbol == knownSymbol || symbol != null && symbol.kind.isFunction && (
+        symbol.asFunctionSymbol.overloaded == knownSymbol ||
+        knownSymbol.kind.isFunction && symbol.asFunctionSymbol.overloaded != null &&
+          symbol.asFunctionSymbol.overloaded == knownSymbol.asFunctionSymbol.overloaded &&
+          symbol.asFunctionSymbol.argumentOnlyType == knownSymbol.asFunctionSymbol.argumentOnlyType)
     }
 
     def foldCall(node Node) {
       var value = node.callValue
       var symbol = value.symbol
 
+      # Fold instance function calls
       if value.kind == .DOT {
         var target = value.dotTarget
 
+        # "boolValue.toString"
+        # "doubleValue.toString"
+        # "intValue.toString"
         if target != null && target.kind == .CONSTANT {
           if isKnownCall(symbol, cache.boolToStringSymbol) { flattenString(node, target.asBool.toString) }
           else if isKnownCall(symbol, cache.doubleToStringSymbol) { flattenString(node, target.asDouble.toString) }
@@ -493,17 +501,40 @@ namespace Skew.Folding {
         }
       }
 
+      # Fold global function calls
       else if value.kind == .NAME {
+        # "\"abc\".count" => "3"
         if isKnownCall(symbol, cache.stringCountSymbol) && node.lastChild.isString {
           flattenInt(node, Unicode.codeUnitCountForCodePoints(node.lastChild.asString.codePoints, options.target.stringEncoding))
         }
 
+        # "3 ** 2" => "9"
         else if isKnownCall(symbol, cache.intPowerSymbol) && node.lastChild.isInt && value.nextSibling.isInt {
           flattenInt(node, value.nextSibling.asInt ** node.lastChild.asInt)
         }
 
+        # "0.0625 ** 0.25" => "0.5"
         else if isKnownCall(symbol, cache.doublePowerSymbol) && node.lastChild.isDouble && value.nextSibling.isDouble {
           flattenDouble(node, value.nextSibling.asDouble ** node.lastChild.asDouble)
+        }
+
+        # "string.fromCodePoint(100)" => "\"d\""
+        # "string.fromCodeUnit(100)" => "\"d\""
+        else if (isKnownCall(symbol, cache.stringFromCodePointSymbol) || isKnownCall(symbol, cache.stringFromCodeUnitSymbol)) && node.lastChild.isInt {
+          flattenString(node, string.fromCodePoint(node.lastChild.asInt)) # "fromCodePoint" is a superset of "fromCodeUnit"
+        }
+
+        # "string.fromCodePoints([97, 98, 99])" => "\"abc\""
+        # "string.fromCodeUnits([97, 98, 99])" => "\"abc\""
+        else if (isKnownCall(symbol, cache.stringFromCodePointsSymbol) || isKnownCall(symbol, cache.stringFromCodeUnitsSymbol)) && node.lastChild.kind == .INITIALIZER_LIST {
+          var codePoints List<int> = []
+          for child = node.lastChild.firstChild; child != null; child = child.nextSibling {
+            if !child.isInt {
+              return
+            }
+            codePoints.append(child.asInt)
+          }
+          flattenString(node, string.fromCodePoints(codePoints)) # "fromCodePoints" is a superset of "fromCodeUnits"
         }
       }
     }
