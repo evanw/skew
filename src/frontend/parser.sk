@@ -22,7 +22,8 @@ namespace Skew.Parsing {
 
   def parseDoubleLiteral(text string) double
 
-  def parseIntLiteral(text string) Box<int> {
+  def parseIntLiteral(log Log, range Range) Box<int> {
+    var text = range.toString
     var isNegative = text.startsWith("-") # Parse negative signs for use with the "--define" flag
     var start = isNegative as int
     var count = text.count
@@ -69,6 +70,12 @@ namespace Skew.Parsing {
         }
         value = value * base + c - '0'
       }
+    }
+
+    # Warn about decimal integers that start with "0" because other languages
+    # strangely treat these numbers as octal instead of decimal
+    if base == 10 && value != 0 && text[0] == '0' {
+      log.syntaxWarningOctal(range)
     }
 
     return Box<int>.new(isNegative ? -value : value)
@@ -1157,7 +1164,7 @@ namespace Skew.Parsing {
     return builder.toString
   }
 
-  const intLiteral = (context ParserContext, token Token) Node => Node.createInt(parseIntLiteral(token.range.toString).value).withRange(token.range)
+  const intLiteral = (context ParserContext, token Token) Node => Node.createInt(parseIntLiteral(context.log, token.range).value).withRange(token.range)
   const stringLiteral = (context ParserContext, token Token) Node => Node.createString(parseStringLiteral(context.log, token.range)).withRange(token.range)
 
   def boolLiteral(value bool) fn(ParserContext, Token) Node {

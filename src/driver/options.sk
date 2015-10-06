@@ -168,7 +168,7 @@ namespace Skew.Options {
             } else if argument[separator] != '=' {
               log.commandLineErrorExpectedToken(separatorRange, "=", argument.get(separator), argument)
             } else {
-              var box = Parsing.parseIntLiteral(text)
+              var box = Parsing.parseIntLiteral(log, textRange)
               if box == null {
                 log.commandLineErrorNonIntegerValue(textRange, text, argument)
               } else {

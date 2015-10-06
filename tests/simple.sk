@@ -79,9 +79,13 @@ def main List<double> {
     0.5e100.toString,
     0.5e+100.toString,
     0.5e-100.toString,
+    01,
   ]
 }
 ", "
+<stdin>:22:5: warning: Number interpreted as decimal (use the prefix \"0o\" for octal numbers)
+    01,
+    ~~
 <stdin>:14:5: error: Cannot convert from type \"string\" to type \"double\"
     0.toString,
     ~~~~~~~~~~

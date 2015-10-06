@@ -192,7 +192,7 @@ namespace Skew.Resolving {
 
       # Integers can also apply to doubles
       if node == null && _cache.isNumeric(type) {
-        var box = Parsing.parseIntLiteral(value)
+        var box = Parsing.parseIntLiteral(_log, range)
         if box != null {
           node = Node.createInt(box.value)
         }

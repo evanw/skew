@@ -73,6 +73,10 @@ namespace Skew {
   }
 
   class Log {
+    def syntaxWarningOctal(range Range) {
+      warning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)")
+    }
+
     def syntaxErrorInvalidEscapeSequence(range Range) {
       error(range, "Invalid escape sequence")
     }
