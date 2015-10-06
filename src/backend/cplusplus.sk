@@ -2,7 +2,7 @@ namespace Skew {
   class CPlusPlusTarget : CompilerTarget {
     over name string { return "C++" }
     over extension string { return "cpp" }
-    over runPostResolvePasses bool { return true }
+    over stopAfterResolve bool { return false }
     over requiresIntegerSwitchStatements bool { return true }
     over supportsListForeach bool { return true }
     over needsLambdaLifting bool { return true }

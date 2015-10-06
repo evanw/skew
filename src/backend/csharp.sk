@@ -2,7 +2,7 @@ namespace Skew {
   class CSharpTarget : CompilerTarget {
     over name string { return "C#" }
     over extension string { return "cs" }
-    over runPostResolvePasses bool { return true }
+    over stopAfterResolve bool { return false }
     over requiresIntegerSwitchStatements bool { return true }
     over supportsListForeach bool { return true }
     over supportsNestedTypes bool { return true }

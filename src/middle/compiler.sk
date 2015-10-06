@@ -2,8 +2,7 @@ namespace Skew {
   class CompilerTarget {
     def name string { return "" }
     def extension string { return "" }
-    def runPostResolvePasses bool { return false }
-    def allowAbstractConstruction bool { return false }
+    def stopAfterResolve bool { return true }
     def requiresIntegerSwitchStatements bool { return false }
     def supportsListForeach bool { return false }
     def supportsNestedTypes bool { return false }
@@ -13,10 +12,6 @@ namespace Skew {
     def editOptions(options CompilerOptions) {}
     def includeSources(sources List<Source>) {}
     def createEmitter(context PassContext) Emitter { return null }
-  }
-
-  class TypeCheckingCompilerTarget : CompilerTarget {
-    over allowAbstractConstruction bool { return true }
   }
 
   class Define {
@@ -33,32 +28,41 @@ namespace Skew {
     var jsMinify = false
     var jsSourceMap = false
     var verbose = false
+    var stopAfterResolve = false
     var outputDirectory string = null
     var outputFile string = null
     var target = CompilerTarget.new
-    var passes = [
-      LexingPass.new,
-      TokenProcessingPass.new,
-      ParsingPass.new,
-      MergingPass.new,
-      ResolvingPass.new,
-      LambdaLiftingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.target.needsLambdaLifting),
-      InterfaceRemovalPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.target.removeSingletonInterfaces && options.globalizeAllFunctions),
+    var passes List<Pass> = null
 
-      # The call graph is used as a shortcut so the tree only needs to be scanned once for all call-based optimizations
-      CallGraphPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
-      GlobalizingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
-      MotionPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
-      RenamingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses),
-      FoldingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.foldAllConstants),
-      InliningPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.inlineAllFunctions),
-      FoldingPass.new.onlyRunWhen(options => options.target.runPostResolvePasses && options.inlineAllFunctions && options.foldAllConstants),
-      EmittingPass.new,
-    ]
+    def new {
+      passes = [
+        LexingPass.new,
+        TokenProcessingPass.new,
+        ParsingPass.new,
+        MergingPass.new,
+        ResolvingPass.new,
+        LambdaLiftingPass.new.onlyRunWhen(=> _continueAfterResolve && target.needsLambdaLifting),
+        InterfaceRemovalPass.new.onlyRunWhen(=> _continueAfterResolve && target.removeSingletonInterfaces && globalizeAllFunctions),
+
+        # The call graph is used as a shortcut so the tree only needs to be scanned once for all call-based optimizations
+        CallGraphPass.new.onlyRunWhen(=> _continueAfterResolve),
+        GlobalizingPass.new.onlyRunWhen(=> _continueAfterResolve),
+        MotionPass.new.onlyRunWhen(=> _continueAfterResolve),
+        RenamingPass.new.onlyRunWhen(=> _continueAfterResolve),
+        FoldingPass.new.onlyRunWhen(=> _continueAfterResolve && foldAllConstants),
+        InliningPass.new.onlyRunWhen(=> _continueAfterResolve && inlineAllFunctions),
+        FoldingPass.new.onlyRunWhen(=> _continueAfterResolve && inlineAllFunctions && foldAllConstants),
+        EmittingPass.new,
+      ]
+    }
 
     def define(name string, value string) {
       var range = Source.new("<internal>", "--define:" + name + "=" + value).entireRange
       defines[name] = Define.new(range.slice(9, 9 + name.count), range.fromEnd(value.count))
+    }
+
+    def _continueAfterResolve bool {
+      return !stopAfterResolve && !target.stopAfterResolve
     }
   }
 
@@ -104,16 +108,16 @@ namespace Skew {
   }
 
   class Pass {
-    var _shouldRun fn(CompilerOptions) bool = null
+    var _shouldRun fn() bool = null
 
     def kind PassKind
     def run(context PassContext)
 
-    def shouldRun(options CompilerOptions) bool {
-      return _shouldRun != null ? _shouldRun(options) : true
+    def shouldRun bool {
+      return _shouldRun != null ? _shouldRun() : true
     }
 
-    def onlyRunWhen(callback fn(CompilerOptions) bool) Pass {
+    def onlyRunWhen(callback fn() bool) Pass {
       _shouldRun = callback
       return self
     }
@@ -174,7 +178,7 @@ namespace Skew {
       if log.hasErrors {
         break
       }
-      if pass.shouldRun(options) {
+      if pass.shouldRun {
         var passTimer = PassTimer.new(pass.kind)
         passTimers.append(passTimer)
         passTimer.timer.start

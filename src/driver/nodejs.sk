@@ -9,6 +9,7 @@ namespace Skew {
     JS_MINIFY
     JS_SOURCE_MAP
     MESSAGE_LIMIT
+    NO_OUTPUT
     OUTPUT_DIRECTORY
     OUTPUT_FILE
     RELEASE
@@ -33,7 +34,7 @@ namespace Skew {
       # Write all outputs
       if !log.hasErrors {
         for output in result.outputs {
-          if !IO.writeFile(output.name, output.contents) {
+          if output.name != null && !IO.writeFile(output.name, output.contents) {
             var outputFile = parser.rangeForOption(.OUTPUT_FILE)
             var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
             log.commandLineErrorUnwritableFile(outputFile != null ? outputFile : outputDirectory, output.name)
@@ -154,6 +155,7 @@ namespace Skew {
     parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + joinKeys(VALID_TARGETS.keys) + ".")
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
+    parser.define(.BOOL, .NO_OUTPUT, "--no-output", "Stops after the type checking pass and does not generate any output.")
     parser.define(.BOOL, .RELEASE, "--release", "Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.")
     parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.")
     parser.define(.INT, .MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is " + DEFAULT_MESSAGE_LIMIT.toString + ".")
@@ -180,13 +182,14 @@ namespace Skew {
     # Set up the options for the compiler
     var options = CompilerOptions.new
     var releaseFlag = parser.boolForOption(.RELEASE, false)
-    options.verbose = parser.boolForOption(.VERBOSE, false)
     options.foldAllConstants = parser.boolForOption(.FOLD_CONSTANTS, releaseFlag)
     options.globalizeAllFunctions = parser.boolForOption(.GLOBALIZE_FUNCTIONS, releaseFlag)
     options.inlineAllFunctions = parser.boolForOption(.INLINE_FUNCTIONS, releaseFlag)
     options.jsMangle = parser.boolForOption(.JS_MANGLE, releaseFlag)
     options.jsMinify = parser.boolForOption(.JS_MINIFY, releaseFlag)
     options.jsSourceMap = parser.boolForOption(.JS_SOURCE_MAP, false)
+    options.stopAfterResolve = parser.boolForOption(.NO_OUTPUT, false)
+    options.verbose = parser.boolForOption(.VERBOSE, false)
 
     # Prepare the defines
     if releaseFlag {
@@ -205,7 +208,7 @@ namespace Skew {
     # There must be at least one source file
     var end = parser.source.contents.count
     var trailingSpace = Range.new(parser.source, end - 1, end)
-    if parser.normalArguments.isEmpty {
+    if parser.normalArguments.isEmpty && !options.stopAfterResolve {
       log.commandLineErrorNoInputFiles(trailingSpace)
     }
 
@@ -218,7 +221,7 @@ namespace Skew {
     }
 
     # Parse the output location
-    if target != null && target.toString != "typecheck" {
+    if !options.stopAfterResolve {
       var outputFile = parser.rangeForOption(.OUTPUT_FILE)
       var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
       if outputFile == null && outputDirectory == null {
@@ -286,7 +289,6 @@ namespace Skew {
   }
 
   const VALID_TARGETS = {
-    "typecheck": TypeCheckingCompilerTarget.new,
     "cpp": CPlusPlusTarget.new,
     "cs": CSharpTarget.new,
     "js": JavaScriptTarget.new,

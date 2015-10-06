@@ -2,7 +2,7 @@ namespace Skew {
   class JavaScriptTarget : CompilerTarget {
     over name string { return "JavaScript" }
     over extension string { return "js" }
-    over runPostResolvePasses bool { return true }
+    over stopAfterResolve bool { return false }
     over supportsNestedTypes bool { return true }
     over removeSingletonInterfaces bool { return true }
     over stringEncoding Unicode.Encoding { return .UTF16 }

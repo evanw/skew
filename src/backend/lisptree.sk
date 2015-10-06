@@ -2,7 +2,6 @@ namespace Skew {
   class LispTreeTarget : CompilerTarget {
     over name string { return "S-expression" }
     over extension string { return "lisp" }
-    over runPostResolvePasses bool { return false }
     over createEmitter(context PassContext) Emitter { return LispTreeEmitter.new(context.options) }
   }
 

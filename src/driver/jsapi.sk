@@ -24,6 +24,7 @@ namespace Skew {
       options.jsSourceMap = !!args.jsSourceMap
       options.outputDirectory = args.outputDirectory ? args.outputDirectory + "" : null
       options.outputFile = args.outputFile ? args.outputFile + "" : null
+      options.stopAfterResolve = !!args.stopAfterResolve
 
       if args.defines {
         var defines = args.defines
@@ -41,7 +42,6 @@ namespace Skew {
         case "c++" { options.target = CPlusPlusTarget.new }
         case "js" { options.target = JavaScriptTarget.new }
         case "lisp-tree" { options.target = LispTreeTarget.new }
-        case "typecheck" { options.target = TypeCheckingCompilerTarget.new }
         default { throw dynamic.Error.new("Invalid target '" + args.target + "'") }
       }
 
@@ -117,6 +117,7 @@ namespace Skew {
     if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && dynamic.self is dynamic.WorkerGlobalScope {
       dynamic.onmessage = (event dynamic) => {
         var data = event.data
+
         switch data.type {
           case "compile" {
             var log = Log.new

@@ -1940,7 +1940,7 @@ namespace Skew.Resolving {
       }
 
       # Forbid constructing an abstract type
-      if !_options.target.allowAbstractConstruction && function != null && function.kind == .FUNCTION_CONSTRUCTOR && value.kind != .SUPER {
+      if function != null && function.kind == .FUNCTION_CONSTRUCTOR && value.kind != .SUPER {
         _checkInterfacesAndAbstractStatus(function.parent.asObjectSymbol)
         var reason = function.parent.asObjectSymbol.isAbstractBecauseOf
         if reason != null {
