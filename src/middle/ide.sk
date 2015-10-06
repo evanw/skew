@@ -1,0 +1,158 @@
+namespace Skew.IDE {
+  class TooltipQuery {
+    const source Source
+    const index int
+
+    var symbol Symbol = null
+    var range Range = null
+
+    def generateTooltip string {
+      if symbol == null {
+        return null
+      }
+
+      var text = ""
+      if symbol.comments != null {
+        for comment in symbol.comments {
+          text += "#" + comment
+        }
+      }
+
+      switch symbol.kind {
+        case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
+          var arguments = symbol.asFunctionSymbol.arguments
+          text += "def " + symbol.name
+          if !arguments.isEmpty {
+            text += "("
+            for i in 0..arguments.count {
+              if i != 0 {
+                text += ", "
+              }
+              text += arguments[i].name + " " + symbol.resolvedType.argumentTypes[i].toString
+            }
+            text += ")"
+            if symbol.resolvedType.returnType != null {
+              text += " " + symbol.resolvedType.returnType.toString
+            }
+          }
+        }
+
+        case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
+          text += (symbol.isConst ? "const " : "var ") + symbol.name + " " + symbol.resolvedType.toString
+        }
+
+        case .OBJECT_CLASS {
+          text += "class " + symbol.name
+          if symbol.asObjectSymbol.baseType != null {
+            text += " : " + symbol.asObjectSymbol.baseType.toString
+          }
+          if symbol.asObjectSymbol.interfaceTypes != null {
+            var types = symbol.asObjectSymbol.interfaceTypes
+            for i in 0..types.count {
+              text += (i != 0 ? ", " : " :: ") + types[i].toString
+            }
+          }
+        }
+
+        case .OBJECT_WRAPPED {
+          text += "type " + symbol.name
+          if symbol.asObjectSymbol.wrappedType != null {
+            text += " = " + symbol.asObjectSymbol.wrappedType.toString
+          }
+        }
+
+        case .OBJECT_ENUM {
+          text += "enum " + symbol.name
+        }
+
+        case .OBJECT_INTERFACE {
+          text += "interface " + symbol.name
+        }
+
+        case .OBJECT_NAMESPACE {
+          text += "namespace " + symbol.name
+        }
+
+        default {
+          text += symbol.name
+        }
+      }
+
+      return text
+    }
+
+    def run(global ObjectSymbol) {
+      var findSymbolInObject fn(ObjectSymbol) bool
+      var findSymbolInParameter fn(ParameterSymbol) bool
+      var findSymbolInFunction fn(FunctionSymbol) bool
+      var findSymbolInVariable fn(VariableSymbol) bool
+
+      findSymbolInObject = symbol => {
+        return
+          _findSymbolInSymbol(symbol) ||
+          symbol.objects.any(findSymbolInObject) ||
+          symbol.parameters != null && symbol.parameters.any(findSymbolInParameter) ||
+          symbol.functions.any(findSymbolInFunction) ||
+          symbol.variables.any(findSymbolInVariable)
+      }
+
+      findSymbolInParameter = symbol => {
+        return _findSymbolInSymbol(symbol)
+      }
+
+      findSymbolInFunction = symbol => {
+        return
+          _findSymbolInSymbol(symbol) ||
+          symbol.parameters != null && symbol.parameters.any(findSymbolInParameter) ||
+          symbol.arguments.any(findSymbolInVariable) ||
+          _findSymbolInNode(symbol.block)
+      }
+
+      findSymbolInVariable = symbol => {
+        return
+          _findSymbolInSymbol(symbol) ||
+          _findSymbolInNode(symbol.value)
+      }
+
+      findSymbolInObject(global)
+    }
+
+    def _findSymbolInRange(queryRange Range, querySymbol Symbol) bool {
+      if queryRange != null && queryRange.source == source && queryRange.touches(index) {
+        symbol = querySymbol
+        range = queryRange
+        return true
+      }
+
+      return false
+    }
+
+    def _findSymbolInSymbol(check Symbol) bool {
+      return _findSymbolInRange(check.range, check)
+    }
+
+    def _findSymbolInNode(node Node) bool {
+      if node != null {
+        if node.kind == .NAME && _findSymbolInRange(node.range, node.symbol) {
+          return true
+        }
+
+        if node.kind == .DOT && _findSymbolInRange(node.internalRange, node.symbol) {
+          return true
+        }
+
+        if node.kind == .VARIABLE && _findSymbolInRange(node.symbol.range, node.symbol) {
+          return true
+        }
+
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          if _findSymbolInNode(child) {
+            return true
+          }
+        }
+      }
+
+      return false
+    }
+  }
+}

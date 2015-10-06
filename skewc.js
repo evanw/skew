@@ -11722,7 +11722,9 @@
       new Skew.FoldingPass().onlyRunWhen(function() {
         return self._continueAfterResolve() && self.inlineAllFunctions && self.foldAllConstants;
       }),
-      new Skew.EmittingPass()
+      new Skew.EmittingPass().onlyRunWhen(function() {
+        return !self.stopAfterResolve;
+      })
     ];
   };
 

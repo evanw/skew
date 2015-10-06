@@ -52,7 +52,7 @@ namespace Skew {
         FoldingPass.new.onlyRunWhen(=> _continueAfterResolve && foldAllConstants),
         InliningPass.new.onlyRunWhen(=> _continueAfterResolve && inlineAllFunctions),
         FoldingPass.new.onlyRunWhen(=> _continueAfterResolve && inlineAllFunctions && foldAllConstants),
-        EmittingPass.new,
+        EmittingPass.new.onlyRunWhen(=> !stopAfterResolve),
       ]
     }
 

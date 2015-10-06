@@ -53,32 +53,33 @@ namespace Skew {
       return options
     }
 
+    var rangeToJSON = (range Range) dynamic => {
+      if range == null {
+        return null
+      }
+
+      var source = range.source
+      var start = source.indexToLineColumn(range.start)
+      var end = source.indexToLineColumn(range.end)
+
+      return {
+        "source": source.name,
+        "start": {
+          "line": start.line,
+          "column": start.column,
+        },
+        "end": {
+          "line": end.line,
+          "column": end.column,
+        },
+      }
+    }
+
     var diagnosticsToJSON = (diagnostics List<Diagnostic>) dynamic => {
       return diagnostics.map<dynamic>(diagnostic => {
-        var range = diagnostic.range
-        var convertedRange dynamic = null
-
-        if range != null {
-          var source = range.source
-          var start = source.indexToLineColumn(range.start)
-          var end = source.indexToLineColumn(range.end)
-
-          convertedRange = {
-            "source": source.name,
-            "start": {
-              "line": start.line,
-              "column": start.column,
-            },
-            "end": {
-              "line": end.line,
-              "column": end.column,
-            },
-          }
-        }
-
         return {
           "kind": diagnostic.kind.toString.toLowerCase,
-          "range": convertedRange,
+          "range": rangeToJSON(diagnostic.range),
           "text": diagnostic.text,
         }
       })
@@ -115,23 +116,60 @@ namespace Skew {
 
     # Web Worker API
     if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && dynamic.self is dynamic.WorkerGlobalScope {
+      var result CompilerResult = null
+      var inputs List<Source> = null
+
       dynamic.onmessage = (event dynamic) => {
         var data = event.data
 
         switch data.type {
           case "compile" {
+            inputs = []
             var log = Log.new
-            var inputs List<Source> = []
             var options = parseOptions(data, inputs)
-            var result = compile(log, options, inputs)
+            result = compile(log, options, inputs)
 
             dynamic.postMessage({
+              "type": "compile",
               "id": data.id | 0,
               "outputs": sourcesToJSON(result.outputs),
               "log": {
                 "text": log.toString,
                 "diagnostics": diagnosticsToJSON(log.diagnostics),
               },
+            })
+          }
+
+          case "tooltip-query" {
+            var name string = data.source + ""
+            var line int = data.line | 0
+            var column int = data.column | 0
+            var info dynamic = null
+
+            if result != null && result.global != null && inputs != null {
+              for source in inputs {
+                if source.name == name {
+                  var index = source.lineColumnToIndex(line, column)
+                  if index != -1 {
+                    var query = IDE.TooltipQuery.new(source, index)
+                    query.run(result.global)
+                    if query.symbol != null {
+                      info = {
+                        "name": query.symbol.fullName,
+                        "range": rangeToJSON(query.range),
+                        "tooltip": query.generateTooltip,
+                      }
+                    }
+                  }
+                  break
+                }
+              }
+            }
+
+            dynamic.postMessage({
+              "type": "tooltip-query",
+              "id": data.id | 0,
+              "symbol": info,
             })
           }
 
