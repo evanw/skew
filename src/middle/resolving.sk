@@ -1063,14 +1063,17 @@ namespace Skew.Resolving {
     }
 
     def _initializeVariable(symbol VariableSymbol) {
+      var value = symbol.value
+
       # Normal variables may omit the initializer if the type is present
       if symbol.type != null {
         _resolveAsParameterizedType(symbol.type, symbol.scope)
         symbol.resolvedType = symbol.type.resolvedType
+        symbol.state = .INITIALIZED
 
         # Resolve the constant now so initialized constants always have a value
-        if symbol.isConst && symbol.value != null {
-          _resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType)
+        if symbol.isConst && value != null {
+          _resolveAsParameterizedExpressionWithConversion(value, symbol.scope, symbol.resolvedType)
         }
       }
 
@@ -1080,9 +1083,9 @@ namespace Skew.Resolving {
       }
 
       # Implicitly-typed variables take their type from their initializer
-      else if symbol.value != null {
-        _resolveAsParameterizedExpression(symbol.value, symbol.scope)
-        var type = symbol.value.resolvedType
+      else if value != null {
+        _resolveAsParameterizedExpression(value, symbol.scope)
+        var type = value.resolvedType
         symbol.resolvedType = type
 
         # Forbid certain types
@@ -1108,7 +1111,7 @@ namespace Skew.Resolving {
       _resolveAnnotations(symbol)
 
       # Run post-annotation checks
-      if symbol.resolvedType != .DYNAMIC && symbol.isConst && !symbol.isImported && symbol.value == null && symbol.kind != .VARIABLE_ENUM && symbol.kind != .VARIABLE_INSTANCE {
+      if symbol.resolvedType != .DYNAMIC && symbol.isConst && !symbol.isImported && value == null && symbol.kind != .VARIABLE_ENUM && symbol.kind != .VARIABLE_INSTANCE {
         _log.semanticErrorConstMissingValue(symbol.range, symbol.name)
       }
     }

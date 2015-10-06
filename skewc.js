@@ -15901,14 +15901,17 @@
   };
 
   Skew.Resolving.Resolver.prototype._initializeVariable = function(symbol) {
+    var value = symbol.value;
+
     // Normal variables may omit the initializer if the type is present
     if (symbol.type != null) {
       this._resolveAsParameterizedType(symbol.type, symbol.scope);
       symbol.resolvedType = symbol.type.resolvedType;
+      symbol.state = Skew.SymbolState.INITIALIZED;
 
       // Resolve the constant now so initialized constants always have a value
-      if (symbol.isConst() && symbol.value != null) {
-        this._resolveAsParameterizedExpressionWithConversion(symbol.value, symbol.scope, symbol.resolvedType);
+      if (symbol.isConst() && value != null) {
+        this._resolveAsParameterizedExpressionWithConversion(value, symbol.scope, symbol.resolvedType);
       }
     }
 
@@ -15918,9 +15921,9 @@
     }
 
     // Implicitly-typed variables take their type from their initializer
-    else if (symbol.value != null) {
-      this._resolveAsParameterizedExpression(symbol.value, symbol.scope);
-      var type = symbol.value.resolvedType;
+    else if (value != null) {
+      this._resolveAsParameterizedExpression(value, symbol.scope);
+      var type = value.resolvedType;
       symbol.resolvedType = type;
 
       // Forbid certain types
@@ -15946,7 +15949,7 @@
     this._resolveAnnotations(symbol);
 
     // Run post-annotation checks
-    if (symbol.resolvedType != Skew.Type.DYNAMIC && symbol.isConst() && !symbol.isImported() && symbol.value == null && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
+    if (symbol.resolvedType != Skew.Type.DYNAMIC && symbol.isConst() && !symbol.isImported() && value == null && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
       this._log.semanticErrorConstMissingValue(symbol.range, symbol.name);
     }
   };

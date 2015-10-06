@@ -5222,5 +5222,27 @@ const FOO = Foo.FOO
             ~~~
 ")
 
+# Check cyclic declarations involving lambdas
+test("
+# Cyclic declaration
+const a = => a()
+const b = (=> b() + 1)()
+const c = => { c() }
+
+# Not cyclic declarations
+const d fn() = => d()
+const e fn() = => { e() }
+", "
+<stdin>:2:7: error: Cyclic declaration of \"a\"
+const a = => a()
+      ^
+<stdin>:3:7: error: Cyclic declaration of \"b\"
+const b = (=> b() + 1)()
+      ^
+<stdin>:4:7: error: Cyclic declaration of \"c\"
+const c = => { c() }
+      ^
+")
+
   }
 }
