@@ -12932,15 +12932,25 @@
         break;
       }
 
-      case Skew.NodeKind.SHIFT_LEFT: {
-        if (left.kind == Skew.NodeKind.BITWISE_AND && right.isInt()) {
+      case Skew.NodeKind.SHIFT_LEFT:
+      case Skew.NodeKind.SHIFT_RIGHT:
+      case Skew.NodeKind.UNSIGNED_SHIFT_RIGHT: {
+        // "x << 0" => "x"
+        // "x >> 0" => "x"
+        // "x >>> 0" => "x"
+        if (this.cache.isEquivalentToInt(left.resolvedType) && right.isInt() && right.asInt() == 0) {
+          node.become(left.remove());
+        }
+
+        // Handle special cases of "&" nested inside "<<"
+        else if (node.kind == Skew.NodeKind.SHIFT_LEFT && left.kind == Skew.NodeKind.BITWISE_AND && right.isInt()) {
           this.foldConstantBitwiseAndInsideShift(node, left.binaryLeft(), left.binaryRight());
         }
         break;
       }
 
       case Skew.NodeKind.BITWISE_AND: {
-        if (right.isInt() && left.resolvedType == this.cache.intType) {
+        if (right.isInt() && this.cache.isEquivalentToInt(left.resolvedType)) {
           var value = right.asInt();
 
           // "x & ~0" => "x"
@@ -12957,7 +12967,7 @@
       }
 
       case Skew.NodeKind.BITWISE_OR: {
-        if (right.isInt() && left.resolvedType == this.cache.intType) {
+        if (right.isInt() && this.cache.isEquivalentToInt(left.resolvedType)) {
           var value1 = right.asInt();
 
           // "x | 0" => "x"

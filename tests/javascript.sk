@@ -1455,6 +1455,9 @@ def main(x int, y fn() int) {
   dynamic.foo(x | 0)
   dynamic.foo(x & ~0)
   dynamic.foo(x | ~0)
+  dynamic.foo(x << 0)
+  dynamic.foo(x >> 0)
+  dynamic.foo(x >>> 0)
 
   # Bitwise operations with an integer expression with side effects
   dynamic.foo(y() & 0)
@@ -1467,6 +1470,9 @@ def main(x int, y fn() int) {
   dynamic.foo(dynamic.z() | 0)
   dynamic.foo(dynamic.z() & ~0)
   dynamic.foo(dynamic.z() | ~0)
+  dynamic.foo(dynamic.z() << 0)
+  dynamic.foo(dynamic.z() >> 0)
+  dynamic.foo(dynamic.z() >>> 0)
 }
 ", "
 (function() {
@@ -1495,6 +1501,9 @@ def main(x int, y fn() int) {
     foo(x);
     foo(x);
     foo(-1);
+    foo(x);
+    foo(x);
+    foo(x);
 
     // Bitwise operations with an integer expression with side effects
     foo(y() & 0);
@@ -1507,6 +1516,9 @@ def main(x int, y fn() int) {
     foo(z() | 0);
     foo(z() & -1);
     foo(z() | -1);
+    foo(z() << 0);
+    foo(z() >> 0);
+    foo(z() >>> 0);
   };
 })();
 ").js.foldAllConstants.inlineAllFunctions

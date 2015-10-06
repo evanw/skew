@@ -787,11 +787,21 @@ namespace Skew.Folding {
         }
 
         # This improves generated code for inlined bit packing functions
-        case .SHIFT_LEFT {
-          if left.kind == .BITWISE_AND && right.isInt { foldConstantBitwiseAndInsideShift(node, left.binaryLeft, left.binaryRight) }
+        case .SHIFT_LEFT, .SHIFT_RIGHT, .UNSIGNED_SHIFT_RIGHT {
+          # "x << 0" => "x"
+          # "x >> 0" => "x"
+          # "x >>> 0" => "x"
+          if cache.isEquivalentToInt(left.resolvedType) && right.isInt && right.asInt == 0 {
+            node.become(left.remove)
+          }
+
+          # Handle special cases of "&" nested inside "<<"
+          else if node.kind == .SHIFT_LEFT && left.kind == .BITWISE_AND && right.isInt {
+            foldConstantBitwiseAndInsideShift(node, left.binaryLeft, left.binaryRight)
+          }
         }
         case .BITWISE_AND {
-          if right.isInt && left.resolvedType == cache.intType {
+          if right.isInt && cache.isEquivalentToInt(left.resolvedType) {
             var value = right.asInt
 
             # "x & ~0" => "x"
@@ -806,7 +816,7 @@ namespace Skew.Folding {
           }
         }
         case .BITWISE_OR {
-          if right.isInt && left.resolvedType == cache.intType {
+          if right.isInt && cache.isEquivalentToInt(left.resolvedType) {
             var value = right.asInt
 
             # "x | 0" => "x"
