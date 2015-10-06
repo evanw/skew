@@ -511,6 +511,10 @@ namespace Skew {
       }
     }
 
+    def semanticErrorUnimplementedFunction(range Range, name string) {
+      error(range, "Non-imported function \"" + name + "\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)")
+    }
+
     def semanticErrorDefaultCaseNotLast(range Range) {
       error(range, "The default case in a switch statement must come last")
     }

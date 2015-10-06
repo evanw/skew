@@ -454,7 +454,7 @@ namespace foo {
 
 @foo.bar.bax
 @foo.bar.baz
-def main
+def main {}
 ", "
 <stdin>:7:10: error: \"@bax\" is not declared on type \"foo.bar\"
 @foo.bar.bax
@@ -468,7 +468,7 @@ def @bar
 @foo
 @foo(1, 2)
 @bar(1)
-def main
+def main {}
 ", "
 <stdin>:4:1: error: Expected 1 argument but found 0 arguments when calling \"@foo\"
 @foo
@@ -496,21 +496,21 @@ def @foo
 
 class foo {
   def -
-  def new
+  def new {}
 }
 
 class bar {
   def -
 
   @foo
-  def new
+  def new {}
 }
 
 class baz {
   def -
 
   # foo
-  def new
+  def new {}
 }
 
 def main bool {
@@ -620,11 +620,11 @@ var a int
 
 @skip
 @skip
-def b
+def b {}
 
 @skip
 @skip {
-  def c
+  def c {}
 }
 ", "
 <stdin>:10:1: error: Duplicate annotation \"@skip\" on \"b\"
@@ -1178,21 +1178,21 @@ def main {
 
 test("
 class Foo {
-  def [new](x int, y int, z int) int
-  def {new}(x int, y int, z int) int
+  def [new](x int, y int, z int) int {}
+  def {new}(x int, y int, z int) int {}
 }
 ", "
 <stdin>:2:34: error: Constructors cannot have a return type
-  def [new](x int, y int, z int) int
+  def [new](x int, y int, z int) int {}
                                  ~~~
 <stdin>:2:7: error: Expected \"[new]\" to take at most 1 argument
-  def [new](x int, y int, z int) int
+  def [new](x int, y int, z int) int {}
       ~~~~~
 <stdin>:3:34: error: Constructors cannot have a return type
-  def {new}(x int, y int, z int) int
+  def {new}(x int, y int, z int) int {}
                                  ~~~
 <stdin>:3:7: error: Expected \"{new}\" to take either 0 or 2 arguments
-  def {new}(x int, y int, z int) int
+  def {new}(x int, y int, z int) int {}
       ~~~~~
 ")
 
@@ -1385,9 +1385,9 @@ class Bar : Foo {
 ")
 
 test("
-def bar(x int) int
-def bar(x double) double
-def bar(x List<int>) List<int>
+def bar(x int) int { return 0 }
+def bar(x double) double { return 0 }
+def bar(x List<int>) List<int> { return null }
 
 def main {
   var w bool = bar(null)
@@ -2032,7 +2032,7 @@ class Foo<T> {
 }
 
 namespace Foo {
-  def foo
+  def foo {}
 }
 
 class Bar : Foo<int> {
@@ -2043,7 +2043,7 @@ class Bar : Foo<int> {
   def foo
       ~~~
 <stdin>:5:7: note: The overridden declaration is here
-  def foo
+  def foo {}
       ~~~
 ")
 
@@ -2056,11 +2056,11 @@ class Bar : Foo<int> {
 }
 
 namespace Bar {
-  def foo
+  def foo {}
 }
 ", "
 <stdin>:9:7: error: \"foo\" overrides another declaration with the same name in base type \"Foo<int>\"
-  def foo
+  def foo {}
       ~~~
 <stdin>:2:7: note: The overridden declaration is here
   def foo
@@ -2069,21 +2069,21 @@ namespace Bar {
 
 test("
 class Foo<T> {
-  def new
+  def new {}
   def foo
 }
 
 class Bar : Foo<int> {
-  def new
+  def new { super }
   over foo
 }
 
 namespace Foo {
-  def bar
+  def bar {}
 }
 
 namespace Bar {
-  def bar
+  def bar {}
 }
 ", "
 ")
@@ -2638,12 +2638,12 @@ enum Foo {
 ")
 
 test("
-def foo(x double, y double) double
-def foo(x int, y int) int
+def foo(x double, y double) double { return 0 }
+def foo(x int, y int) int { return 0 }
 
 @prefer
-def bar(x double, y double) double
-def bar(x int, y int) int
+def bar(x double, y double) double { return 0 }
+def bar(x int, y int) int { return 0 }
 
 def main {
   var a bool = foo(1, 2)
@@ -2903,6 +2903,9 @@ def foo
 <stdin>:1:5: note: The previous declaration is here
 def foo
     ~~~
+<stdin>:1:5: error: Non-imported function \"foo\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+def foo
+    ~~~
 ")
 
 test("
@@ -2958,6 +2961,9 @@ def foo double { return 0 }
 def foo double { return 0 }
     ~~~
 <stdin>:1:5: note: The previous declaration is here
+def foo int
+    ~~~
+<stdin>:1:5: error: Non-imported function \"foo\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
 def foo int
     ~~~
 ")
@@ -4114,8 +4120,8 @@ def main {
 ")
 
 test("
-def foo fn()
-def bar
+def foo fn() { return null }
+def bar {}
 
 def main {
   foo()
@@ -4128,13 +4134,13 @@ def main {
   foo()
   ~~~
 <stdin>:1:5: note: The function declaration is here
-def foo fn()
+def foo fn() { return null }
     ~~~
 <stdin>:7:6: error: Cannot call the value returned from the function \"bar\" (this function was called automatically because it takes no arguments)
   bar()
      ~~
 <stdin>:2:5: note: The function declaration is here
-def bar
+def bar {}
     ~~~
 ")
 

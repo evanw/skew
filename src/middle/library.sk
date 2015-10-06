@@ -27,6 +27,7 @@ def @spreads
   def @include(name string) # For use with C++
 }
 
+@import if TARGET == .NONE
 @skip if RELEASE
 def assert(truth bool)
 

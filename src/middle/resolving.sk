@@ -1043,6 +1043,11 @@ namespace Skew.Resolving {
           }
         }
       }
+
+      # Global functions can't be abstract
+      else if !symbol.isImported && !symbol.isObsolete && (symbol.kind == .FUNCTION_GLOBAL || symbol.kind == .FUNCTION_CONSTRUCTOR) {
+        _log.semanticErrorUnimplementedFunction(symbol.range, symbol.name)
+      }
     }
 
     def _recordStatistic(symbol Symbol, statistic SymbolStatistic) {
