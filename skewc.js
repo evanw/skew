@@ -10558,6 +10558,10 @@
     this.warning(range, 'Result of comparison is always ' + value.toString() + ', is this a bug?');
   };
 
+  Skew.Log.prototype.semanticWarningShiftByZero = function(range) {
+    this.warning(range, "Shifting an integer by zero doesn't do anything, is this a bug?");
+  };
+
   Skew.Log.prototype.semanticWarningExtraParentheses = function(range) {
     this.warning(range, 'Unnecessary parentheses');
   };
@@ -17885,6 +17889,12 @@
     // Resolve just the target since the other arguments may need type context from overload resolution
     else {
       this._resolveAsParameterizedExpression(target, scope);
+    }
+
+    // Warn about shifting by 0 in the original source code, since that doesn't
+    // do anything when the arguments are integers and so is likely a mistake
+    if (kind == Skew.NodeKind.UNSIGNED_SHIFT_RIGHT && this._cache.isEquivalentToInt(target.resolvedType) && other.isInt() && other.asInt() == 0) {
+      this._log.semanticWarningShiftByZero(node.range);
     }
 
     // Can't do overload resolution on the dynamic type

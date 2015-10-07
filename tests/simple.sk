@@ -5250,33 +5250,49 @@ const c = => { c() }
       ^
 ")
 
-# Check warning meant to prevent bugs
+# Check equality operator warnings meant to prevent bugs, but don't warn on values that may be NaN
 test("
-def main(x int, y double, z Foo) bool {
+def main(i int, d double, y dynamic, foo Foo) bool {
   return
-    x == x && x != x ||
+    i == i && i != i ||
+    d == d && d != d ||
     y == y && y != y ||
-    z.foo == z.foo && z.foo != z.foo ||
-    z.bar == z.bar && z.bar != z.bar
+    foo.i == foo.i && foo.i != foo.i ||
+    foo.d == foo.d && foo.d != foo.d ||
+    foo.y == foo.y && foo.y != foo.y
 }
 
 class Foo {
-  var foo int
-  var bar double
+  var i int
+  var d double
+  var y dynamic
 }
 ", "
 <stdin>:3:5: warning: Result of comparison is always true, is this a bug?
-    x == x && x != x ||
+    i == i && i != i ||
     ~~~~~~
 <stdin>:3:15: warning: Result of comparison is always false, is this a bug?
-    x == x && x != x ||
+    i == i && i != i ||
               ~~~~~~
-<stdin>:5:5: warning: Result of comparison is always true, is this a bug?
-    z.foo == z.foo && z.foo != z.foo ||
+<stdin>:6:5: warning: Result of comparison is always true, is this a bug?
+    foo.i == foo.i && foo.i != foo.i ||
     ~~~~~~~~~~~~~~
-<stdin>:5:23: warning: Result of comparison is always false, is this a bug?
-    z.foo == z.foo && z.foo != z.foo ||
+<stdin>:6:23: warning: Result of comparison is always false, is this a bug?
+    foo.i == foo.i && foo.i != foo.i ||
                       ~~~~~~~~~~~~~~
+")
+
+# Check warnings for no-op shifts, which potentially don't behave the same on int types as they do on dynamic types
+test("
+def main(i int, y dynamic) int {
+  return
+    i << 0 | i >> 0 | i >>> 0 |
+    y << 0 | y >> 0 | y >>> 0
+}
+", "
+<stdin>:3:23: warning: Shifting an integer by zero doesn't do anything, is this a bug?
+    i << 0 | i >> 0 | i >>> 0 |
+                      ~~~~~~~
 ")
 
   }

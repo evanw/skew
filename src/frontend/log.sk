@@ -132,6 +132,10 @@ namespace Skew {
       warning(range, "Result of comparison is always " + value.toString + ", is this a bug?")
     }
 
+    def semanticWarningShiftByZero(range Range) {
+      warning(range, "Shifting an integer by zero doesn't do anything, is this a bug?")
+    }
+
     def semanticWarningExtraParentheses(range Range) {
       warning(range, "Unnecessary parentheses")
     }

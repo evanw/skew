@@ -2716,6 +2716,12 @@ namespace Skew.Resolving {
         _resolveAsParameterizedExpression(target, scope)
       }
 
+      # Warn about shifting by 0 in the original source code, since that doesn't
+      # do anything when the arguments are integers and so is likely a mistake
+      if kind == .UNSIGNED_SHIFT_RIGHT && _cache.isEquivalentToInt(target.resolvedType) && other.isInt && other.asInt == 0 {
+        _log.semanticWarningShiftByZero(node.range)
+      }
+
       # Can't do overload resolution on the dynamic type
       var type = target.resolvedType
       if type == .DYNAMIC {
