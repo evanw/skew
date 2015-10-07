@@ -294,7 +294,7 @@ def main(x int) {
 <stdin>:5:3: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   x ? x : x
   ^
-<stdin>:5:7: warning: Both sides of \"?:\" are identical, is this a bug?
+<stdin>:5:7: warning: Both sides of \":\" are identical, is this a bug?
   x ? x : x
       ~~~~~
 <stdin>:5:7: warning: Unused expression
@@ -5314,10 +5314,10 @@ def main int {
 <stdin>:6:6: warning: Both sides of \"||\" are identical, is this a bug?
     (dynamic.foo || dynamic.foo ? 1 : 0) +
      ~~~~~~~~~~~~~~~~~~~~~~~~~~
-<stdin>:9:13: warning: Both sides of \"?:\" are identical, is this a bug?
+<stdin>:9:13: warning: Both sides of \":\" are identical, is this a bug?
     (true ? 0 : 0) +
             ~~~~~
-<stdin>:10:13: warning: Both sides of \"?:\" are identical, is this a bug?
+<stdin>:10:13: warning: Both sides of \":\" are identical, is this a bug?
     (true ? dynamic.bar() : dynamic.bar())
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ")

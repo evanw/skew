@@ -3963,12 +3963,12 @@
     // names for more frequently used symbols.
     var sortedGroups = [];
 
-    for (var i3 = 0, list3 = this._extractGroups(namingGroupsUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ALL_SYMBOLS), count4 = list3.length; i3 < count4; ++i3) {
-      var group = list3[i3];
+    for (var i3 = 0, list2 = this._extractGroups(namingGroupsUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ALL_SYMBOLS), count4 = list2.length; i3 < count4; ++i3) {
+      var group = list2[i3];
       var count = 0;
 
-      for (var i2 = 0, list2 = group, count3 = list2.length; i2 < count3; ++i2) {
-        var symbol2 = list2[i2];
+      for (var i2 = 0, count3 = group.length; i2 < count3; ++i2) {
+        var symbol2 = group[i2];
 
         if (Skew.JavaScriptEmitter._shouldRenameSymbol(symbol2)) {
           count += in_IntMap.get(this._symbolCounts, symbol2.id, 0);
@@ -3993,12 +3993,12 @@
       return difference;
     });
 
-    for (var i5 = 0, list5 = sortedGroups, count6 = list5.length; i5 < count6; ++i5) {
-      var group1 = list5[i5];
+    for (var i5 = 0, list4 = sortedGroups, count6 = list4.length; i5 < count6; ++i5) {
+      var group1 = list4[i5];
       var name = '';
 
-      for (var i4 = 0, list4 = group1.symbols, count5 = list4.length; i4 < count5; ++i4) {
-        var symbol3 = list4[i4];
+      for (var i4 = 0, list3 = group1.symbols, count5 = list3.length; i4 < count5; ++i4) {
+        var symbol3 = list3[i4];
 
         if (Skew.JavaScriptEmitter._shouldRenameSymbol(symbol3)) {
           if (name == '') {
@@ -13709,8 +13709,8 @@
         // only inline functions where each argument is used exactly once.
         var argumentCounts = {};
 
-        for (var i1 = 0, list = symbol.$arguments, count2 = list.length; i1 < count2; ++i1) {
-          var argument = list[i1];
+        for (var i2 = 0, list = symbol.$arguments, count2 = list.length; i2 < count2; ++i2) {
+          var argument = list[i2];
           argumentCounts[argument.id] = 0;
         }
 
@@ -13718,11 +13718,11 @@
           var unusedArguments1 = [];
           var isSimpleSubstitution = true;
 
-          for (var i2 = 0, count3 = symbol.$arguments.length; i2 < count3; ++i2) {
-            var count = argumentCounts[symbol.$arguments[i2].id];
+          for (var i1 = 0, count3 = symbol.$arguments.length; i1 < count3; ++i1) {
+            var count = argumentCounts[symbol.$arguments[i1].id];
 
             if (count == 0) {
-              unusedArguments1.push(i2);
+              unusedArguments1.push(i1);
             }
 
             else if (count != 1) {
@@ -14551,8 +14551,8 @@
     }
 
     // Rename stuff
-    for (var i7 = 0, list6 = groups, count8 = list6.length; i7 < count8; ++i7) {
-      var group1 = list6[i7];
+    for (var i7 = 0, list3 = groups, count8 = list3.length; i7 < count8; ++i7) {
+      var group1 = list3[i7];
 
       if (group1 == null) {
         continue;
@@ -14562,8 +14562,8 @@
       var shouldRename = false;
       var rename = null;
 
-      for (var i4 = 0, list3 = group1, count5 = list3.length; i4 < count5; ++i4) {
-        var function2 = list3[i4];
+      for (var i4 = 0, count5 = group1.length; i4 < count5; ++i4) {
+        var function2 = group1[i4];
 
         if (function2.isImportedOrExported()) {
           isImportedOrExported = true;
@@ -14586,8 +14586,8 @@
 
       // Bake in the rename annotation now
       if (rename != null) {
-        for (var i5 = 0, list4 = group1, count6 = list4.length; i5 < count6; ++i5) {
-          var function3 = list4[i5];
+        for (var i5 = 0, count6 = group1.length; i5 < count6; ++i5) {
+          var function3 = group1[i5];
           function3.flags |= Skew.Symbol.IS_RENAMED;
           function3.name = rename;
           function3.rename = null;
@@ -14634,8 +14634,8 @@
         name = start + count.toString();
       }
 
-      for (var i6 = 0, list5 = group1, count7 = list5.length; i6 < count7; ++i6) {
-        var function4 = list5[i6];
+      for (var i6 = 0, count7 = group1.length; i6 < count7; ++i6) {
+        var function4 = group1[i6];
         function4.scope.parent.reserveName(name, null);
         function4.name = name;
       }
@@ -15292,8 +15292,8 @@
 
   Skew.Resolving.Resolver.prototype._resolveGlobal = function() {
     this._resolveObject(this._global);
-    this._convertForeachLoops();
     this._scanLocalVariables();
+    this._convertForeachLoops();
     this._discardUnusedDefines();
   };
 
@@ -15461,7 +15461,7 @@
   // to generate non-conflicting symbol names after all local variables have
   // been defined.
   Skew.Resolving.Resolver.prototype._convertForeachLoops = function() {
-    for (var i = 0, list1 = this._foreachLoops, count1 = list1.length; i < count1; ++i) {
+    for (var i = 0, list1 = this._foreachLoops, count2 = list1.length; i < count2; ++i) {
       var node = list1[i];
       var symbol = node.symbol.asVariableSymbol();
 
@@ -15510,35 +15510,46 @@
         index.resolvedType = this._cache.intType;
         index.value = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this._cache.intType);
         index.state = Skew.SymbolState.INITIALIZED;
+        var setup1 = new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(index));
         var indexName = Skew.Node.createSymbolReference(index);
 
         // Create the list variable
-        var list = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('list'));
-        list.resolvedType = value.resolvedType;
-        list.value = value.remove();
-        list.state = Skew.SymbolState.INITIALIZED;
+        var list = null;
+
+        if (value.kind == Skew.NodeKind.NAME && value.symbol != null && Skew.in_SymbolKind.isVariable(value.symbol.kind) && value.symbol.isConst()) {
+          list = value.symbol.asVariableSymbol();
+        }
+
+        else {
+          list = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('list'));
+          list.resolvedType = value.resolvedType;
+          list.value = value.remove();
+          list.state = Skew.SymbolState.INITIALIZED;
+          setup1.appendChild(Skew.Node.createVariable(list));
+        }
+
         var listName = Skew.Node.createSymbolReference(list);
 
         // Create the count variable
-        var count2 = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('count'));
-        count2.resolvedType = this._cache.intType;
-        count2.value = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('count')).appendChild(listName);
-        count2.state = Skew.SymbolState.INITIALIZED;
-        var countName = Skew.Node.createSymbolReference(count2);
+        var count1 = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('count'));
+        count1.resolvedType = this._cache.intType;
+        count1.value = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('count')).appendChild(listName);
+        count1.state = Skew.SymbolState.INITIALIZED;
+        setup1.appendChild(Skew.Node.createVariable(count1));
+        var countName = Skew.Node.createSymbolReference(count1);
 
         // Move the loop variable into the loop body
         symbol.value = Skew.Node.createIndex(listName.clone(), indexName);
         block.prependChild(new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(symbol)));
 
         // Use a C-style for loop to implement this foreach loop
-        var setup1 = new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(index)).appendChild(Skew.Node.createVariable(list)).appendChild(Skew.Node.createVariable(count2));
         var test1 = Skew.Node.createBinary(Skew.NodeKind.LESS_THAN, indexName.clone(), countName);
         var update1 = Skew.Node.createUnary(Skew.NodeKind.INCREMENT, indexName.clone());
         node.become(Skew.Node.createFor(setup1, test1, update1, block.remove()).withComments(node.comments).withRange(node.range));
 
         // Make sure the new expressions are resolved
         this._resolveNode(symbol.value, symbol.scope, null);
-        this._resolveNode(count2.value, symbol.scope, null);
+        this._resolveNode(count1.value, symbol.scope, null);
         this._resolveNode(test1, symbol.scope, null);
         this._resolveNode(update1, symbol.scope, null);
       }
@@ -17373,7 +17384,7 @@
 
     // Check for likely bugs where both branches look the same
     if (trueValue.looksTheSameAs(falseValue)) {
-      this._log.semanticWarningIdenticalOperands(Skew.Range.span(trueValue.range, falseValue.range), '?:');
+      this._log.semanticWarningIdenticalOperands(Skew.Range.span(trueValue.range, falseValue.range), ':');
     }
   };
 
@@ -17592,8 +17603,8 @@
       if (Skew.Resolving.Resolver._isCallValue(node) && node.parent().childCount() == (symbol.$arguments.length + 1 | 0)) {
         var child = node.nextSibling();
 
-        for (var i2 = 0, count1 = symbol.$arguments.length; i2 < count1; ++i2) {
-          var argument1 = symbol.$arguments[i2];
+        for (var i1 = 0, count1 = symbol.$arguments.length; i1 < count1; ++i1) {
+          var argument1 = symbol.$arguments[i1];
 
           if (argument1.type == null) {
             this._resolveAsParameterizedExpression(child, scope);
@@ -17611,8 +17622,8 @@
     var argumentTypes = [];
     var returnType = symbol.returnType;
 
-    for (var i1 = 0, list = symbol.$arguments, count2 = list.length; i1 < count2; ++i1) {
-      var argument2 = list[i1];
+    for (var i2 = 0, list = symbol.$arguments, count2 = list.length; i2 < count2; ++i2) {
+      var argument2 = list[i2];
       argumentTypes.push(argument2.resolvedType);
     }
 

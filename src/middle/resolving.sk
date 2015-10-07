@@ -495,8 +495,8 @@ namespace Skew.Resolving {
 
     def _resolveGlobal {
       _resolveObject(_global)
-      _convertForeachLoops
       _scanLocalVariables
+      _convertForeachLoops
       _discardUnusedDefines
     }
 
@@ -697,13 +697,20 @@ namespace Skew.Resolving {
           index.resolvedType = _cache.intType
           index.value = Node.createInt(0).withType(_cache.intType)
           index.state = .INITIALIZED
+          var setup = Node.createVariables.appendChild(Node.createVariable(index))
           var indexName = Node.createSymbolReference(index)
 
           # Create the list variable
-          var list = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("list"))
-          list.resolvedType = value.resolvedType
-          list.value = value.remove
-          list.state = .INITIALIZED
+          var list VariableSymbol = null
+          if value.kind == .NAME && value.symbol != null && value.symbol.kind.isVariable && value.symbol.isConst {
+            list = value.symbol.asVariableSymbol
+          } else {
+            list = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("list"))
+            list.resolvedType = value.resolvedType
+            list.value = value.remove
+            list.state = .INITIALIZED
+            setup.appendChild(Node.createVariable(list))
+          }
           var listName = Node.createSymbolReference(list)
 
           # Create the count variable
@@ -711,6 +718,7 @@ namespace Skew.Resolving {
           count.resolvedType = _cache.intType
           count.value = Node.createDot(listName, "count")
           count.state = .INITIALIZED
+          setup.appendChild(Node.createVariable(count))
           var countName = Node.createSymbolReference(count)
 
           # Move the loop variable into the loop body
@@ -718,7 +726,6 @@ namespace Skew.Resolving {
           block.prependChild(Node.createVariables.appendChild(Node.createVariable(symbol)))
 
           # Use a C-style for loop to implement this foreach loop
-          var setup = Node.createVariables.appendChild(Node.createVariable(index)).appendChild(Node.createVariable(list)).appendChild(Node.createVariable(count))
           var test = Node.createBinary(.LESS_THAN, indexName.clone, countName)
           var update = Node.createUnary(.INCREMENT, indexName.clone)
           node.become(Node.createFor(setup, test, update, block.remove).withComments(node.comments).withRange(node.range))
@@ -2235,7 +2242,7 @@ namespace Skew.Resolving {
 
       # Check for likely bugs where both branches look the same
       if trueValue.looksTheSameAs(falseValue) {
-        _log.semanticWarningIdenticalOperands(Range.span(trueValue.range, falseValue.range), "?:")
+        _log.semanticWarningIdenticalOperands(Range.span(trueValue.range, falseValue.range), ":")
       }
     }
 

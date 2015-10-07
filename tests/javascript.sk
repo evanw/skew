@@ -1696,5 +1696,34 @@ def main(x int) string {
 })();
 ").js.foldAllConstants.inlineAllFunctions
 
+# Check that iterating over a local constant doesn't generate an extra variable
+test("
+@export
+def main {
+  var foo = [0, 1, 2]
+  var bar = [0, 1, 2]
+  bar = []
+
+  for i in foo {}
+  for i in bar {}
+}
+", "
+(function() {
+  main = function() {
+    var foo = [0, 1, 2];
+    var bar = [0, 1, 2];
+    bar = [];
+
+    for (var i2 = 0, count = foo.length; i2 < count; ++i2) {
+      var i = foo[i2];
+    }
+
+    for (var i3 = 0, list = bar, count1 = list.length; i3 < count1; ++i3) {
+      var i1 = list[i3];
+    }
+  };
+})();
+").js.foldAllConstants.inlineAllFunctions
+
   }
 }
