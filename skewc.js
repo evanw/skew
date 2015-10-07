@@ -5687,7 +5687,7 @@
 
           var previousRight = this._assignSourceIfNoSideEffects(previous);
 
-          if (previousRight == null || !Skew.JavaScriptEmitter._looksTheSame(previousRight, childRight)) {
+          if (previousRight == null || !previousRight.looksTheSameAs(childRight)) {
             break;
           }
 
@@ -5956,19 +5956,19 @@
     }
 
     // "a ? a : b" => "a || b"
-    if (Skew.JavaScriptEmitter._looksTheSame(test, trueValue) && test.hasNoSideEffects()) {
+    if (test.looksTheSameAs(trueValue) && test.hasNoSideEffects()) {
       node.become(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test.remove(), falseValue.remove()));
       return;
     }
 
     // "a ? b : a" => "a && b"
-    if (Skew.JavaScriptEmitter._looksTheSame(test, falseValue) && test.hasNoSideEffects()) {
+    if (test.looksTheSameAs(falseValue) && test.hasNoSideEffects()) {
       node.become(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_AND, test.remove(), trueValue.remove()));
       return;
     }
 
     // "a ? b : b" => "a, b"
-    if (Skew.JavaScriptEmitter._looksTheSame(trueValue, falseValue)) {
+    if (trueValue.looksTheSameAs(falseValue)) {
       node.become(test.hasNoSideEffects() ? trueValue.remove() : new Skew.Node(Skew.NodeKind.SEQUENCE).appendChild(test.remove()).appendChild(trueValue.remove()));
       return;
     }
@@ -5981,7 +5981,7 @@
 
       // "a ? b : c ? b : d" => "a || c ? b : d"
       // "a ? b : c || d ? b : e" => "a || c || d ? b : e"
-      if (Skew.JavaScriptEmitter._looksTheSame(trueValue, falseTrueValue)) {
+      if (trueValue.looksTheSameAs(falseTrueValue)) {
         var both = Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test.cloneAndStealChildren(), falseTest.remove());
         this._peepholeMangleBinary(both);
         test.replaceWith(both);
@@ -5999,14 +5999,14 @@
       var falseRight = falseValue.binaryRight();
 
       // "a ? b = c : b = d;" => "b = a ? c : d;"
-      if (Skew.JavaScriptEmitter._looksTheSame(trueLeft, falseLeft)) {
+      if (trueLeft.looksTheSameAs(falseLeft)) {
         var hook = Skew.Node.createHook(test.remove(), trueRight.remove(), falseRight.remove());
         this._peepholeMangleHook(hook);
         node.become(Skew.Node.createBinary(trueValue.kind, trueLeft.remove(), hook));
       }
 
       // "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
-      else if (Skew.JavaScriptEmitter._looksTheSame(trueRight, falseRight) && !Skew.in_NodeKind.isBinaryAssign(trueValue.kind)) {
+      else if (trueRight.looksTheSameAs(falseRight) && !Skew.in_NodeKind.isBinaryAssign(trueValue.kind)) {
         var hook1 = Skew.Node.createHook(test.remove(), trueLeft.remove(), falseLeft.remove());
         this._peepholeMangleHook(hook1);
         node.become(Skew.Node.createBinary(trueValue.kind, hook1, trueRight.remove()));
@@ -6102,7 +6102,7 @@
         case Skew.NodeKind.IF: {
           while (previous != null) {
             // "if (a) b; if (c) b;" => "if (a || c) b;"
-            if (child.ifFalse() == null && previous.kind == Skew.NodeKind.IF && previous.ifFalse() == null && Skew.JavaScriptEmitter._looksTheSame(previous.ifTrue(), child.ifTrue())) {
+            if (child.ifFalse() == null && previous.kind == Skew.NodeKind.IF && previous.ifFalse() == null && previous.ifTrue().looksTheSameAs(child.ifTrue())) {
               child.ifTest().replaceWith(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, previous.remove().ifTest().remove(), child.ifTest().cloneAndStealChildren()));
             }
 
@@ -6446,108 +6446,6 @@
     }
 
     return null;
-  };
-
-  Skew.JavaScriptEmitter._symbolsOrStringsLookTheSame = function(left, right) {
-    return left.symbol != null && left.symbol == right.symbol || left.symbol == null && right.symbol == null && left.asString() == right.asString();
-  };
-
-  Skew.JavaScriptEmitter._childrenLookTheSame = function(left, right) {
-    var leftChild = left.firstChild();
-    var rightChild = right.firstChild();
-
-    while (leftChild != null && rightChild != null) {
-      if (!Skew.JavaScriptEmitter._looksTheSame(leftChild, rightChild)) {
-        return false;
-      }
-
-      leftChild = leftChild.nextSibling();
-      rightChild = rightChild.nextSibling();
-    }
-
-    return leftChild == null && rightChild == null;
-  };
-
-  Skew.JavaScriptEmitter._looksTheSame = function(left, right) {
-    if (left.kind == right.kind) {
-      switch (left.kind) {
-        case Skew.NodeKind.NULL: {
-          return true;
-        }
-
-        case Skew.NodeKind.NAME: {
-          return Skew.JavaScriptEmitter._symbolsOrStringsLookTheSame(left, right);
-        }
-
-        case Skew.NodeKind.DOT: {
-          return Skew.JavaScriptEmitter._symbolsOrStringsLookTheSame(left, right) && Skew.JavaScriptEmitter._looksTheSame(left.dotTarget(), right.dotTarget());
-        }
-
-        case Skew.NodeKind.CONSTANT: {
-          switch (left.content.kind()) {
-            case Skew.ContentKind.INT: {
-              return right.isInt() && left.asInt() == right.asInt();
-            }
-
-            case Skew.ContentKind.BOOL: {
-              return right.isBool() && left.asBool() == right.asBool();
-            }
-
-            case Skew.ContentKind.DOUBLE: {
-              return right.isDouble() && left.asDouble() == right.asDouble();
-            }
-
-            case Skew.ContentKind.STRING: {
-              return right.isString() && left.asString() == right.asString();
-            }
-          }
-          break;
-        }
-
-        case Skew.NodeKind.BLOCK:
-        case Skew.NodeKind.BREAK:
-        case Skew.NodeKind.CONTINUE:
-        case Skew.NodeKind.EXPRESSION:
-        case Skew.NodeKind.IF:
-        case Skew.NodeKind.RETURN:
-        case Skew.NodeKind.THROW:
-        case Skew.NodeKind.WHILE:
-        case Skew.NodeKind.ASSIGN_INDEX:
-        case Skew.NodeKind.CALL:
-        case Skew.NodeKind.HOOK:
-        case Skew.NodeKind.INDEX:
-        case Skew.NodeKind.INITIALIZER_LIST:
-        case Skew.NodeKind.INITIALIZER_MAP:
-        case Skew.NodeKind.PAIR:
-        case Skew.NodeKind.SEQUENCE:
-        case Skew.NodeKind.COMPLEMENT:
-        case Skew.NodeKind.DECREMENT:
-        case Skew.NodeKind.INCREMENT:
-        case Skew.NodeKind.NEGATIVE:
-        case Skew.NodeKind.NOT:
-        case Skew.NodeKind.POSITIVE: {
-          return Skew.JavaScriptEmitter._childrenLookTheSame(left, right);
-        }
-
-        default: {
-          if (Skew.in_NodeKind.isBinary(left.kind)) {
-            return Skew.JavaScriptEmitter._childrenLookTheSame(left, right);
-          }
-          break;
-        }
-      }
-    }
-
-    // Null literals are always implicitly casted, so unwrap implicit casts
-    if (left.kind == Skew.NodeKind.CAST) {
-      return Skew.JavaScriptEmitter._looksTheSame(left.castValue(), right);
-    }
-
-    if (right.kind == Skew.NodeKind.CAST) {
-      return Skew.JavaScriptEmitter._looksTheSame(left, right.castValue());
-    }
-
-    return false;
   };
 
   Skew.JavaScriptEmitter._numberToName = function(number) {
@@ -7478,6 +7376,108 @@
     return Skew.Node._nextID;
   };
 
+  Skew.Node._symbolsOrStringsLookTheSame = function(left, right) {
+    return left.symbol != null && left.symbol == right.symbol || left.symbol == null && right.symbol == null && left.asString() == right.asString();
+  };
+
+  Skew.Node._childrenLookTheSame = function(left, right) {
+    var leftChild = left.firstChild();
+    var rightChild = right.firstChild();
+
+    while (leftChild != null && rightChild != null) {
+      if (!Skew.Node._looksTheSame(leftChild, rightChild)) {
+        return false;
+      }
+
+      leftChild = leftChild.nextSibling();
+      rightChild = rightChild.nextSibling();
+    }
+
+    return leftChild == null && rightChild == null;
+  };
+
+  Skew.Node._looksTheSame = function(left, right) {
+    if (left.kind == right.kind) {
+      switch (left.kind) {
+        case Skew.NodeKind.NULL: {
+          return true;
+        }
+
+        case Skew.NodeKind.NAME: {
+          return Skew.Node._symbolsOrStringsLookTheSame(left, right);
+        }
+
+        case Skew.NodeKind.DOT: {
+          return Skew.Node._symbolsOrStringsLookTheSame(left, right) && Skew.Node._looksTheSame(left.dotTarget(), right.dotTarget());
+        }
+
+        case Skew.NodeKind.CONSTANT: {
+          switch (left.content.kind()) {
+            case Skew.ContentKind.INT: {
+              return right.isInt() && left.asInt() == right.asInt();
+            }
+
+            case Skew.ContentKind.BOOL: {
+              return right.isBool() && left.asBool() == right.asBool();
+            }
+
+            case Skew.ContentKind.DOUBLE: {
+              return right.isDouble() && left.asDouble() == right.asDouble();
+            }
+
+            case Skew.ContentKind.STRING: {
+              return right.isString() && left.asString() == right.asString();
+            }
+          }
+          break;
+        }
+
+        case Skew.NodeKind.BLOCK:
+        case Skew.NodeKind.BREAK:
+        case Skew.NodeKind.CONTINUE:
+        case Skew.NodeKind.EXPRESSION:
+        case Skew.NodeKind.IF:
+        case Skew.NodeKind.RETURN:
+        case Skew.NodeKind.THROW:
+        case Skew.NodeKind.WHILE:
+        case Skew.NodeKind.ASSIGN_INDEX:
+        case Skew.NodeKind.CALL:
+        case Skew.NodeKind.HOOK:
+        case Skew.NodeKind.INDEX:
+        case Skew.NodeKind.INITIALIZER_LIST:
+        case Skew.NodeKind.INITIALIZER_MAP:
+        case Skew.NodeKind.PAIR:
+        case Skew.NodeKind.SEQUENCE:
+        case Skew.NodeKind.COMPLEMENT:
+        case Skew.NodeKind.DECREMENT:
+        case Skew.NodeKind.INCREMENT:
+        case Skew.NodeKind.NEGATIVE:
+        case Skew.NodeKind.NOT:
+        case Skew.NodeKind.POSITIVE: {
+          return Skew.Node._childrenLookTheSame(left, right);
+        }
+
+        default: {
+          if (Skew.in_NodeKind.isBinary(left.kind)) {
+            return Skew.Node._childrenLookTheSame(left, right);
+          }
+          break;
+        }
+      }
+    }
+
+    // Null literals are always implicitly casted, so unwrap implicit casts
+    if (left.kind == Skew.NodeKind.CAST) {
+      return Skew.Node._looksTheSame(left.castValue(), right);
+    }
+
+    if (right.kind == Skew.NodeKind.CAST) {
+      return Skew.Node._looksTheSame(left, right.castValue());
+    }
+
+    return false;
+  };
+
   Skew.Node.prototype.isSuperCallStatement = function() {
     return this.kind == Skew.NodeKind.EXPRESSION && (this.expressionValue().kind == Skew.NodeKind.SUPER || this.expressionValue().kind == Skew.NodeKind.CALL && this.expressionValue().callValue().kind == Skew.NodeKind.SUPER);
   };
@@ -7546,6 +7546,10 @@
     }
 
     return false;
+  };
+
+  Skew.Node.prototype.looksTheSameAs = function(node) {
+    return Skew.Node._looksTheSame(this, node);
   };
 
   Skew.Node.prototype.invertBooleanCondition = function(cache) {
@@ -10554,8 +10558,8 @@
     return ' of type' + (types.length == 1 ? '' : 's') + ' ' + Skew.PrettyPrint.join(names, 'and');
   };
 
-  Skew.Log.prototype.semanticWarningUnintentionalConstantBool = function(range, value) {
-    this.warning(range, 'Result of comparison is always ' + value.toString() + ', is this a bug?');
+  Skew.Log.prototype.semanticWarningIdenticalOperands = function(range, operator) {
+    this.warning(range, 'Both sides of "' + operator + '" are identical, is this a bug?');
   };
 
   Skew.Log.prototype.semanticWarningShiftByZero = function(range) {
@@ -17366,6 +17370,11 @@
         this._log.semanticErrorNoCommonType(Skew.Range.span(trueValue.range, falseValue.range), trueValue.resolvedType, falseValue.resolvedType);
       }
     }
+
+    // Check for likely bugs where both branches look the same
+    if (trueValue.looksTheSameAs(falseValue)) {
+      this._log.semanticWarningIdenticalOperands(Skew.Range.span(trueValue.range, falseValue.range), '?:');
+    }
   };
 
   Skew.Resolving.Resolver.prototype._resolveInitializer = function(node, scope, context) {
@@ -17832,8 +17841,8 @@
       }
 
       // Check for likely bugs "x == x" or "x != x", except when this is used to test for NaN
-      if (Skew.Resolving.Resolver._isSameReference(left, right) && !this._cache.isEquivalentToDouble(left.resolvedType) && left.resolvedType != Skew.Type.DYNAMIC) {
-        this._log.semanticWarningUnintentionalConstantBool(node.range, kind == Skew.NodeKind.EQUAL);
+      if (left.looksTheSameAs(right) && left.hasNoSideEffects() && right.hasNoSideEffects() && !this._cache.isEquivalentToDouble(left.resolvedType) && left.resolvedType != Skew.Type.DYNAMIC) {
+        this._log.semanticWarningIdenticalOperands(node.range, kind == Skew.NodeKind.EQUAL ? '==' : '!=');
       }
 
       // The two types must be compatible
@@ -17875,6 +17884,12 @@
       this._resolveAsParameterizedExpressionWithConversion(left, scope, this._cache.boolType);
       this._resolveAsParameterizedExpressionWithConversion(right, scope, this._cache.boolType);
       node.resolvedType = this._cache.boolType;
+
+      // Check for likely bugs "x && x" or "x || x"
+      if (left.looksTheSameAs(right) && left.hasNoSideEffects() && right.hasNoSideEffects()) {
+        this._log.semanticWarningIdenticalOperands(node.range, kind == Skew.NodeKind.LOGICAL_AND ? '&&' : '||');
+      }
+
       return;
     }
 
@@ -18135,10 +18150,6 @@
     else {
       node.remove();
     }
-  };
-
-  Skew.Resolving.Resolver._isSameReference = function(left, right) {
-    return left.kind == right.kind && left.symbol == right.symbol && left.symbol != null && (left.kind == Skew.NodeKind.NAME || left.kind == Skew.NodeKind.DOT && Skew.Resolving.Resolver._isSameReference(left.dotTarget(), right.dotTarget()));
   };
 
   Skew.Resolving.Resolver._shouldCheckForSetter = function(node) {

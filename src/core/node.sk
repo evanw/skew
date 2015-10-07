@@ -558,6 +558,63 @@ namespace Skew {
     }
 
     var _nextID = 0
+
+    def _symbolsOrStringsLookTheSame(left Node, right Node) bool {
+      return
+        left.symbol != null && left.symbol == right.symbol ||
+        left.symbol == null && right.symbol == null && left.asString == right.asString
+    }
+
+    def _childrenLookTheSame(left Node, right Node) bool {
+      var leftChild = left.firstChild
+      var rightChild = right.firstChild
+
+      while leftChild != null && rightChild != null {
+        if !_looksTheSame(leftChild, rightChild) {
+          return false
+        }
+
+        leftChild = leftChild.nextSibling
+        rightChild = rightChild.nextSibling
+      }
+
+      return leftChild == null && rightChild == null
+    }
+
+    def _looksTheSame(left Node, right Node) bool {
+      if left.kind == right.kind {
+        switch left.kind {
+          case .NULL { return true }
+          case .NAME { return _symbolsOrStringsLookTheSame(left, right) }
+          case .DOT { return _symbolsOrStringsLookTheSame(left, right) && _looksTheSame(left.dotTarget, right.dotTarget) }
+
+          case .CONSTANT {
+            switch left.content.kind {
+              case .INT { return right.isInt && left.asInt == right.asInt }
+              case .BOOL { return right.isBool && left.asBool == right.asBool }
+              case .DOUBLE { return right.isDouble && left.asDouble == right.asDouble }
+              case .STRING { return right.isString && left.asString == right.asString }
+            }
+          }
+
+          case
+            .BLOCK, .BREAK, .CONTINUE, .EXPRESSION, .IF, .RETURN, .THROW, .WHILE,
+            .ASSIGN_INDEX, .CALL, .HOOK, .INDEX, .INITIALIZER_LIST, .INITIALIZER_MAP, .PAIR, .SEQUENCE,
+            .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
+            return _childrenLookTheSame(left, right)
+          }
+
+          default {
+            if left.kind.isBinary { return _childrenLookTheSame(left, right) }
+          }
+        }
+      }
+
+      # Null literals are always implicitly casted, so unwrap implicit casts
+      if left.kind == .CAST { return _looksTheSame(left.castValue, right) }
+      if right.kind == .CAST { return _looksTheSame(left, right.castValue) }
+      return false
+    }
   }
 
   # Node-specific queries
@@ -603,6 +660,10 @@ namespace Skew {
         }
       }
       return false
+    }
+
+    def looksTheSameAs(node Node) bool {
+      return _looksTheSame(self, node)
     }
 
     def invertBooleanCondition(cache TypeCache) {

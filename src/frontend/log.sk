@@ -128,8 +128,8 @@ namespace Skew {
   }
 
   class Log {
-    def semanticWarningUnintentionalConstantBool(range Range, value bool) {
-      warning(range, "Result of comparison is always " + value.toString + ", is this a bug?")
+    def semanticWarningIdenticalOperands(range Range, operator string) {
+      warning(range, "Both sides of \"" + operator + "\" are identical, is this a bug?")
     }
 
     def semanticWarningShiftByZero(range Range) {

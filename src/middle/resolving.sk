@@ -2232,6 +2232,11 @@ namespace Skew.Resolving {
           _log.semanticErrorNoCommonType(Range.span(trueValue.range, falseValue.range), trueValue.resolvedType, falseValue.resolvedType)
         }
       }
+
+      # Check for likely bugs where both branches look the same
+      if trueValue.looksTheSameAs(falseValue) {
+        _log.semanticWarningIdenticalOperands(Range.span(trueValue.range, falseValue.range), "?:")
+      }
     }
 
     def _resolveInitializer(node Node, scope Scope, context Type) {
@@ -2654,8 +2659,9 @@ namespace Skew.Resolving {
         }
 
         # Check for likely bugs "x == x" or "x != x", except when this is used to test for NaN
-        if _isSameReference(left, right) && !_cache.isEquivalentToDouble(left.resolvedType) && left.resolvedType != .DYNAMIC {
-          _log.semanticWarningUnintentionalConstantBool(node.range, kind == .EQUAL)
+        if left.looksTheSameAs(right) && left.hasNoSideEffects && right.hasNoSideEffects &&
+            !_cache.isEquivalentToDouble(left.resolvedType) && left.resolvedType != .DYNAMIC {
+          _log.semanticWarningIdenticalOperands(node.range, kind == .EQUAL ? "==" : "!=")
         }
 
         # The two types must be compatible
@@ -2694,6 +2700,11 @@ namespace Skew.Resolving {
         _resolveAsParameterizedExpressionWithConversion(left, scope, _cache.boolType)
         _resolveAsParameterizedExpressionWithConversion(right, scope, _cache.boolType)
         node.resolvedType = _cache.boolType
+
+        # Check for likely bugs "x && x" or "x || x"
+        if left.looksTheSameAs(right) && left.hasNoSideEffects && right.hasNoSideEffects {
+          _log.semanticWarningIdenticalOperands(node.range, kind == .LOGICAL_AND ? "&&" : "||")
+        }
         return
       }
 
@@ -2942,11 +2953,6 @@ namespace Skew.Resolving {
       "@rename": Symbol.IS_RENAMED,
       "@skip": Symbol.IS_SKIPPED,
       "@spreads": Symbol.SHOULD_SPREAD,
-    }
-
-    def _isSameReference(left Node, right Node) bool {
-      return left.kind == right.kind && left.symbol == right.symbol && left.symbol != null && (
-        left.kind == .NAME || left.kind == .DOT && _isSameReference(left.dotTarget, right.dotTarget))
     }
 
     def _shouldCheckForSetter(node Node) bool {

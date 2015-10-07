@@ -1879,7 +1879,7 @@ namespace Skew {
               break
             }
             var previousRight = _assignSourceIfNoSideEffects(previous)
-            if previousRight == null || !_looksTheSame(previousRight, childRight) {
+            if previousRight == null || !previousRight.looksTheSameAs(childRight) {
               break
             }
             previousRight.become(child.remove)
@@ -2141,19 +2141,19 @@ namespace Skew {
       }
 
       # "a ? a : b" => "a || b"
-      if _looksTheSame(test, trueValue) && test.hasNoSideEffects {
+      if test.looksTheSameAs(trueValue) && test.hasNoSideEffects {
         node.become(Node.createBinary(.LOGICAL_OR, test.remove, falseValue.remove))
         return
       }
 
       # "a ? b : a" => "a && b"
-      if _looksTheSame(test, falseValue) && test.hasNoSideEffects {
+      if test.looksTheSameAs(falseValue) && test.hasNoSideEffects {
         node.become(Node.createBinary(.LOGICAL_AND, test.remove, trueValue.remove))
         return
       }
 
       # "a ? b : b" => "a, b"
-      if _looksTheSame(trueValue, falseValue) {
+      if trueValue.looksTheSameAs(falseValue) {
         node.become(test.hasNoSideEffects ? trueValue.remove : Node.createSequence.appendChild(test.remove).appendChild(trueValue.remove))
         return
       }
@@ -2166,7 +2166,7 @@ namespace Skew {
 
         # "a ? b : c ? b : d" => "a || c ? b : d"
         # "a ? b : c || d ? b : e" => "a || c || d ? b : e"
-        if _looksTheSame(trueValue, falseTrueValue) {
+        if trueValue.looksTheSameAs(falseTrueValue) {
           var both = Node.createBinary(.LOGICAL_OR, test.cloneAndStealChildren, falseTest.remove)
           _peepholeMangleBinary(both)
           test.replaceWith(both)
@@ -2184,14 +2184,14 @@ namespace Skew {
         var falseRight = falseValue.binaryRight
 
         # "a ? b = c : b = d;" => "b = a ? c : d;"
-        if _looksTheSame(trueLeft, falseLeft) {
+        if trueLeft.looksTheSameAs(falseLeft) {
           var hook = Node.createHook(test.remove, trueRight.remove, falseRight.remove)
           _peepholeMangleHook(hook)
           node.become(Node.createBinary(trueValue.kind, trueLeft.remove, hook))
         }
 
         # "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
-        else if _looksTheSame(trueRight, falseRight) && !trueValue.kind.isBinaryAssign {
+        else if trueRight.looksTheSameAs(falseRight) && !trueValue.kind.isBinaryAssign {
           var hook = Node.createHook(test.remove, trueLeft.remove, falseLeft.remove)
           _peepholeMangleHook(hook)
           node.become(Node.createBinary(trueValue.kind, hook, trueRight.remove))
@@ -2282,7 +2282,7 @@ namespace Skew {
           case .IF {
             while previous != null {
               # "if (a) b; if (c) b;" => "if (a || c) b;"
-              if child.ifFalse == null && previous.kind == .IF && previous.ifFalse == null && _looksTheSame(previous.ifTrue, child.ifTrue) {
+              if child.ifFalse == null && previous.kind == .IF && previous.ifFalse == null && previous.ifTrue.looksTheSameAs(child.ifTrue) {
                 child.ifTest.replaceWith(Node.createBinary(.LOGICAL_OR, previous.remove.ifTest.remove, child.ifTest.cloneAndStealChildren))
               }
 
@@ -2602,63 +2602,6 @@ namespace Skew {
         return statement
       }
       return null
-    }
-
-    def _symbolsOrStringsLookTheSame(left Node, right Node) bool {
-      return
-        left.symbol != null && left.symbol == right.symbol ||
-        left.symbol == null && right.symbol == null && left.asString == right.asString
-    }
-
-    def _childrenLookTheSame(left Node, right Node) bool {
-      var leftChild = left.firstChild
-      var rightChild = right.firstChild
-
-      while leftChild != null && rightChild != null {
-        if !_looksTheSame(leftChild, rightChild) {
-          return false
-        }
-
-        leftChild = leftChild.nextSibling
-        rightChild = rightChild.nextSibling
-      }
-
-      return leftChild == null && rightChild == null
-    }
-
-    def _looksTheSame(left Node, right Node) bool {
-      if left.kind == right.kind {
-        switch left.kind {
-          case .NULL { return true }
-          case .NAME { return _symbolsOrStringsLookTheSame(left, right) }
-          case .DOT { return _symbolsOrStringsLookTheSame(left, right) && _looksTheSame(left.dotTarget, right.dotTarget) }
-
-          case .CONSTANT {
-            switch left.content.kind {
-              case .INT { return right.isInt && left.asInt == right.asInt }
-              case .BOOL { return right.isBool && left.asBool == right.asBool }
-              case .DOUBLE { return right.isDouble && left.asDouble == right.asDouble }
-              case .STRING { return right.isString && left.asString == right.asString }
-            }
-          }
-
-          case
-            .BLOCK, .BREAK, .CONTINUE, .EXPRESSION, .IF, .RETURN, .THROW, .WHILE,
-            .ASSIGN_INDEX, .CALL, .HOOK, .INDEX, .INITIALIZER_LIST, .INITIALIZER_MAP, .PAIR, .SEQUENCE,
-            .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
-            return _childrenLookTheSame(left, right)
-          }
-
-          default {
-            if left.kind.isBinary { return _childrenLookTheSame(left, right) }
-          }
-        }
-      }
-
-      # Null literals are always implicitly casted, so unwrap implicit casts
-      if left.kind == .CAST { return _looksTheSame(left.castValue, right) }
-      if right.kind == .CAST { return _looksTheSame(left, right.castValue) }
-      return false
     }
 
     const _first = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$"
