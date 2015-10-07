@@ -627,10 +627,10 @@ def b {}
   def c {}
 }
 ", "
-<stdin>:10:1: error: Duplicate annotation \"@skip\" on \"b\"
+<stdin>:10:1: warning: Duplicate annotation \"@skip\" on \"b\"
 @skip
 ~~~~~
-<stdin>:14:1: error: Duplicate annotation \"@skip\" on \"c\"
+<stdin>:14:1: warning: Duplicate annotation \"@skip\" on \"c\"
 @skip {
 ~~~~~
 <stdin>:1:1: error: Cannot use the annotation \"@skip\" on \"a\"
@@ -5293,6 +5293,46 @@ def main(i int, y dynamic) int {
 <stdin>:3:23: warning: Shifting an integer by zero doesn't do anything, is this a bug?
     i << 0 | i >> 0 | i >>> 0 |
                       ~~~~~~~
+")
+
+# Make sure redundant inherited import/export annotations have appropriate warnings
+test("
+@import
+class Foo {
+  def foo
+}
+
+class Foo {
+  @import
+  def foo(x int)
+}
+
+@export
+class Bar {
+  def foo {}
+}
+
+class Bar {
+  @export
+  def foo(x int) {}
+}
+
+@rename(\"Baz\")
+class Baz {
+  def foo {}
+}
+
+class Baz {
+  @rename(\"foo\")
+  def foo(x int) {}
+}
+", "
+<stdin>:7:3: warning: Redundant annotation \"@import\" on \"foo\" is already inherited from type \"Foo\"
+  @import
+  ~~~~~~~
+<stdin>:17:3: warning: Redundant annotation \"@export\" on \"foo\" is already inherited from type \"Bar\"
+  @export
+  ~~~~~~~
 ")
 
   }

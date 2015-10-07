@@ -10829,8 +10829,12 @@
     this.error(range, 'Cannot use the annotation "' + annotation + '" on "' + name + '"');
   };
 
-  Skew.Log.prototype.semanticErrorDuplicateAnnotation = function(range, annotation, name) {
-    this.error(range, 'Duplicate annotation "' + annotation + '" on "' + name + '"');
+  Skew.Log.prototype.semanticWarningDuplicateAnnotation = function(range, annotation, name) {
+    this.warning(range, 'Duplicate annotation "' + annotation + '" on "' + name + '"');
+  };
+
+  Skew.Log.prototype.semanticWarningRedundantAnnotation = function(range, annotation, name, parent) {
+    this.warning(range, 'Redundant annotation "' + annotation + '" on "' + name + '" is already inherited from type "' + parent + '"');
   };
 
   Skew.Log.prototype.semanticErrorBadForValue = function(range, type) {
@@ -16555,7 +16559,13 @@
 
       // Only warn about duplicate annotations after checking the test expression
       if ((symbol.flags & flag) != 0) {
-        this._log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name);
+        if ((symbol.parent.flags & flag & (Skew.Symbol.IS_IMPORTED | Skew.Symbol.IS_EXPORTED)) != 0) {
+          this._log.semanticWarningRedundantAnnotation(value.range, value.symbol.name, symbol.name, symbol.parent.name);
+        }
+
+        else {
+          this._log.semanticWarningDuplicateAnnotation(value.range, value.symbol.name, symbol.name);
+        }
       }
 
       symbol.flags |= flag;

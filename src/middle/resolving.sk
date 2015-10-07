@@ -1510,7 +1510,11 @@ namespace Skew.Resolving {
 
         # Only warn about duplicate annotations after checking the test expression
         if (symbol.flags & flag) != 0 {
-          _log.semanticErrorDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
+          if (symbol.parent.flags & flag & (Symbol.IS_IMPORTED | Symbol.IS_EXPORTED)) != 0 {
+            _log.semanticWarningRedundantAnnotation(value.range, value.symbol.name, symbol.name, symbol.parent.name)
+          } else {
+            _log.semanticWarningDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
+          }
         }
 
         symbol.flags |= flag

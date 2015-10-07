@@ -394,8 +394,12 @@ namespace Skew {
       error(range, "Cannot use the annotation \"" + annotation + "\" on \"" + name + "\"")
     }
 
-    def semanticErrorDuplicateAnnotation(range Range, annotation string, name string) {
-      error(range, "Duplicate annotation \"" + annotation + "\" on \"" + name + "\"")
+    def semanticWarningDuplicateAnnotation(range Range, annotation string, name string) {
+      warning(range, "Duplicate annotation \"" + annotation + "\" on \"" + name + "\"")
+    }
+
+    def semanticWarningRedundantAnnotation(range Range, annotation string, name string, parent string) {
+      warning(range, "Redundant annotation \"" + annotation + "\" on \"" + name + "\" is already inherited from type \"" + parent + "\"")
     }
 
     def semanticErrorBadForValue(range Range, type Type) {
