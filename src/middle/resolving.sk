@@ -2649,6 +2649,11 @@ namespace Skew.Resolving {
           _resolveAsParameterizedExpression(right, scope)
         }
 
+        # Check for likely bugs "x == x" or "x != x", except when this is used to test for NaN
+        if _isSameReference(left, right) && !_cache.isEquivalentToDouble(left.resolvedType) && left.resolvedType != .DYNAMIC {
+          _log.semanticWarningUnintentionalConstantBool(node.range, kind == .EQUAL)
+        }
+
         # The two types must be compatible
         var commonType = _cache.commonImplicitType(left.resolvedType, right.resolvedType)
         if commonType == null {
@@ -2927,6 +2932,11 @@ namespace Skew.Resolving {
       "@rename": Symbol.IS_RENAMED,
       "@skip": Symbol.IS_SKIPPED,
       "@spreads": Symbol.SHOULD_SPREAD,
+    }
+
+    def _isSameReference(left Node, right Node) bool {
+      return left.kind == right.kind && left.symbol == right.symbol && left.symbol != null && (
+        left.kind == .NAME || left.kind == .DOT && _isSameReference(left.dotTarget, right.dotTarget))
     }
 
     def _shouldCheckForSetter(node Node) bool {

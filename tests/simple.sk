@@ -4846,6 +4846,12 @@ def foo(foo Foo, bar Bar) bool {
     (false < foo || false > foo || false <= foo || false >= foo || false == foo || false != foo)
 }
 ", "
+<stdin>:12:60: warning: Result of comparison is always true, is this a bug?
+    (foo < foo || foo > foo || foo <= foo || foo >= foo || foo == foo || foo != foo) &&
+                                                           ~~~~~~~~~~
+<stdin>:12:74: warning: Result of comparison is always false, is this a bug?
+    (foo < foo || foo > foo || foo <= foo || foo >= foo || foo == foo || foo != foo) &&
+                                                                         ~~~~~~~~~~
 <stdin>:15:10: error: \"<=>\" is not declared on type \"Foo\"
     (foo < false || foo > false || foo <= false || foo >= false || foo == false || foo != false) &&
          ^
@@ -5242,6 +5248,35 @@ const b = (=> b() + 1)()
 <stdin>:4:7: error: Cyclic declaration of \"c\"
 const c = => { c() }
       ^
+")
+
+# Check warning meant to prevent bugs
+test("
+def main(x int, y double, z Foo) bool {
+  return
+    x == x && x != x ||
+    y == y && y != y ||
+    z.foo == z.foo && z.foo != z.foo ||
+    z.bar == z.bar && z.bar != z.bar
+}
+
+class Foo {
+  var foo int
+  var bar double
+}
+", "
+<stdin>:3:5: warning: Result of comparison is always true, is this a bug?
+    x == x && x != x ||
+    ~~~~~~
+<stdin>:3:15: warning: Result of comparison is always false, is this a bug?
+    x == x && x != x ||
+              ~~~~~~
+<stdin>:5:5: warning: Result of comparison is always true, is this a bug?
+    z.foo == z.foo && z.foo != z.foo ||
+    ~~~~~~~~~~~~~~
+<stdin>:5:23: warning: Result of comparison is always false, is this a bug?
+    z.foo == z.foo && z.foo != z.foo ||
+                      ~~~~~~~~~~~~~~
 ")
 
   }

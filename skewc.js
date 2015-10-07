@@ -10554,6 +10554,10 @@
     return ' of type' + (types.length == 1 ? '' : 's') + ' ' + Skew.PrettyPrint.join(names, 'and');
   };
 
+  Skew.Log.prototype.semanticWarningUnintentionalConstantBool = function(range, value) {
+    this.warning(range, 'Result of comparison is always ' + value.toString() + ', is this a bug?');
+  };
+
   Skew.Log.prototype.semanticWarningExtraParentheses = function(range) {
     this.warning(range, 'Unnecessary parentheses');
   };
@@ -17813,6 +17817,11 @@
         this._resolveAsParameterizedExpression(right, scope);
       }
 
+      // Check for likely bugs "x == x" or "x != x", except when this is used to test for NaN
+      if (Skew.Resolving.Resolver._isSameReference(left, right) && !this._cache.isEquivalentToDouble(left.resolvedType) && left.resolvedType != Skew.Type.DYNAMIC) {
+        this._log.semanticWarningUnintentionalConstantBool(node.range, kind == Skew.NodeKind.EQUAL);
+      }
+
       // The two types must be compatible
       var commonType = this._cache.commonImplicitType(left.resolvedType, right.resolvedType);
 
@@ -18106,6 +18115,10 @@
     else {
       node.remove();
     }
+  };
+
+  Skew.Resolving.Resolver._isSameReference = function(left, right) {
+    return left.kind == right.kind && left.symbol == right.symbol && left.symbol != null && (left.kind == Skew.NodeKind.NAME || left.kind == Skew.NodeKind.DOT && Skew.Resolving.Resolver._isSameReference(left.dotTarget(), right.dotTarget()));
   };
 
   Skew.Resolving.Resolver._shouldCheckForSetter = function(node) {
