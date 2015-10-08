@@ -15474,6 +15474,8 @@
       if (value.kind == Skew.NodeKind.PAIR) {
         var first = value.firstValue();
         var second = value.secondValue();
+        symbol.flags &= ~Skew.Symbol.IS_CONST;
+        symbol.value = first.remove();
         var setup = new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(symbol));
         var symbolName = Skew.Node.createSymbolReference(symbol);
         var update = Skew.Node.createUnary(Skew.NodeKind.INCREMENT, symbolName);
@@ -15495,8 +15497,6 @@
         }
 
         // Use a C-style for loop to implement this foreach loop
-        symbol.flags &= ~Skew.Symbol.IS_CONST;
-        symbol.value = first.remove();
         node.become(Skew.Node.createFor(setup, test, update, block.remove()).withComments(node.comments).withRange(node.range));
 
         // Make sure the new expressions are resolved

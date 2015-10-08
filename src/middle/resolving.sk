@@ -661,6 +661,8 @@ namespace Skew.Resolving {
         if value.kind == .PAIR {
           var first = value.firstValue
           var second = value.secondValue
+          symbol.flags &= ~Symbol.IS_CONST
+          symbol.value = first.remove
           var setup = Node.createVariables.appendChild(Node.createVariable(symbol))
           var symbolName = Node.createSymbolReference(symbol)
           var update = Node.createUnary(.INCREMENT, symbolName)
@@ -682,8 +684,6 @@ namespace Skew.Resolving {
           }
 
           # Use a C-style for loop to implement this foreach loop
-          symbol.flags &= ~Symbol.IS_CONST
-          symbol.value = first.remove
           node.become(Node.createFor(setup, test, update, block.remove).withComments(node.comments).withRange(node.range))
 
           # Make sure the new expressions are resolved

@@ -1725,5 +1725,22 @@ def main {
 })();
 ").js.foldAllConstants.inlineAllFunctions
 
+# Check for a bug with bounded for loops
+test("
+@export
+def main {
+  var foo = 0
+  var bar = 5
+  for i in foo..bar {}
+}
+", "
+(function() {
+  main = function() {
+    for (var i = 0; i < 5; ++i) {
+    }
+  };
+})();
+").js.foldAllConstants
+
   }
 }
