@@ -2581,9 +2581,28 @@ namespace Skew.Resolving {
         count++
       }
 
-      # Check for type parameters
       var type = value.resolvedType
       var parameters = type.parameters
+
+      # If this is an overloaded symbol, try to pick an overload just using the parameter count
+      if parameters == null && type.kind == .SYMBOL && type.symbol.kind.isOverloadedFunction {
+        for candidate in type.symbol.asOverloadedFunctionSymbol.symbols {
+          var match FunctionSymbol = null
+          if candidate.parameters != null && candidate.parameters.count == count {
+            if match != null {
+              match = null
+              break
+            }
+            match = candidate
+          }
+          if match != null {
+            type = match.resolvedType
+            parameters = type.parameters
+          }
+        }
+      }
+
+      # Check for type parameters
       if parameters == null || type.isParameterized {
         if type != .DYNAMIC {
           _log.semanticErrorCannotParameterize(node.range, type)
@@ -2888,6 +2907,11 @@ namespace Skew.Resolving {
       }
       var kind = symbol.kind
       var parent = node.parent
+
+      # Never call a getter if type parameters are present
+      if parent != null && parent.kind == .PARAMETERIZE && _isCallValue(parent) {
+        return false
+      }
 
       # The check for getters is complicated by overloaded functions
       if !symbol.isGetter && kind.isOverloadedFunction && (!_isCallValue(node) || parent.hasOneChild) {

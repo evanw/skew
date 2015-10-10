@@ -17875,10 +17875,32 @@
       ++count;
     }
 
-    // Check for type parameters
     var type = value.resolvedType;
     var parameters = type.parameters();
 
+    // If this is an overloaded symbol, try to pick an overload just using the parameter count
+    if (parameters == null && type.kind == Skew.TypeKind.SYMBOL && Skew.in_SymbolKind.isOverloadedFunction(type.symbol.kind)) {
+      for (var i = 0, list = type.symbol.asOverloadedFunctionSymbol().symbols, count1 = list.length; i < count1; ++i) {
+        var candidate = list[i];
+        var match = null;
+
+        if (candidate.parameters != null && candidate.parameters.length == count) {
+          if (match != null) {
+            match = null;
+            break;
+          }
+
+          match = candidate;
+        }
+
+        if (match != null) {
+          type = match.resolvedType;
+          parameters = type.parameters();
+        }
+      }
+    }
+
+    // Check for type parameters
     if (parameters == null || type.isParameterized()) {
       if (type != Skew.Type.DYNAMIC) {
         this._log.semanticErrorCannotParameterize(node.range, type);
@@ -17898,8 +17920,8 @@
     }
 
     // Make sure all parameters have types
-    for (var i = 0, list = parameters, count1 = list.length; i < count1; ++i) {
-      var parameter = list[i];
+    for (var i1 = 0, list1 = parameters, count2 = list1.length; i1 < count2; ++i1) {
+      var parameter = list1[i1];
       this._initializeSymbol(parameter);
     }
 
@@ -18215,6 +18237,11 @@
 
     var kind = symbol.kind;
     var parent = node.parent();
+
+    // Never call a getter if type parameters are present
+    if (parent != null && parent.kind == Skew.NodeKind.PARAMETERIZE && Skew.Resolving.Resolver._isCallValue(parent)) {
+      return false;
+    }
 
     // The check for getters is complicated by overloaded functions
     if (!symbol.isGetter() && Skew.in_SymbolKind.isOverloadedFunction(kind) && (!Skew.Resolving.Resolver._isCallValue(node) || parent.hasOneChild())) {

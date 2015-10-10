@@ -5402,5 +5402,35 @@ namespace Foo {
                   ~~~~
 ")
 
+test("
+def foo<T>(x T) { foo }
+def foo { foo<bool>(0) }
+
+def bar<T>(x T) { bar(0, 1) }
+def bar(x bool, y bool) { bar<bool>(0) }
+", "
+<stdin>:2:21: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+def foo { foo<bool>(0) }
+                    ^
+<stdin>:4:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+def bar<T>(x T) { bar(0, 1) }
+                      ^
+<stdin>:4:26: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+def bar<T>(x T) { bar(0, 1) }
+                         ^
+<stdin>:5:37: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+def bar(x bool, y bool) { bar<bool>(0) }
+                                    ^
+")
+
+test("
+def foo<T>(x T) {}
+def main { foo<int> }
+", "
+<stdin>:2:12: error: The function \"foo\" must be called
+def main { foo<int> }
+           ~~~
+")
+
   }
 }
