@@ -10721,6 +10721,10 @@
     this.error(range, '"' + name + '" is not declared');
   };
 
+  Skew.Log.prototype.semanticErrorUndeclaredSelfSymbol = function(range, name) {
+    this.error(range, '"' + name + '" is not declared (use "self" to refer to the object instance)');
+  };
+
   Skew.Log.prototype.semanticErrorUnknownMemberSymbol = function(range, name, type) {
     this.error(range, '"' + name + '" is not declared on type "' + type.toString() + '"');
   };
@@ -17777,7 +17781,15 @@
 
       if (symbol == null) {
         this._reportGuardMergingFailure(node);
-        this._log.semanticErrorUndeclaredSymbol(node.range, name);
+
+        if (name == 'this' && enclosingFunction != null && enclosingFunction.symbol.$this != null) {
+          this._log.semanticErrorUndeclaredSelfSymbol(node.range, name);
+        }
+
+        else {
+          this._log.semanticErrorUndeclaredSymbol(node.range, name);
+        }
+
         return;
       }
     }

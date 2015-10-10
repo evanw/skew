@@ -2497,7 +2497,11 @@ namespace Skew.Resolving {
         symbol = scope.find(name)
         if symbol == null {
           _reportGuardMergingFailure(node)
-          _log.semanticErrorUndeclaredSymbol(node.range, name)
+          if name == "this" && enclosingFunction != null && enclosingFunction.symbol.this != null {
+            _log.semanticErrorUndeclaredSelfSymbol(node.range, name)
+          } else {
+            _log.semanticErrorUndeclaredSymbol(node.range, name)
+          }
           return
         }
       }

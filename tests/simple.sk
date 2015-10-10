@@ -5375,5 +5375,32 @@ class Baz {
   ~~~~~~~
 ")
 
+test("
+class Foo {
+  def foo int {
+    return this + that
+  }
+}
+
+namespace Foo {
+  def bar int {
+    return this + that
+  }
+}
+", "
+<stdin>:3:12: error: \"this\" is not declared (use \"self\" to refer to the object instance)
+    return this + that
+           ~~~~
+<stdin>:3:19: error: \"that\" is not declared
+    return this + that
+                  ~~~~
+<stdin>:9:12: error: \"this\" is not declared
+    return this + that
+           ~~~~
+<stdin>:9:19: error: \"that\" is not declared
+    return this + that
+                  ~~~~
+")
+
   }
 }

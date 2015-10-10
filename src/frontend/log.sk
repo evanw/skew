@@ -180,6 +180,10 @@ namespace Skew {
       error(range, "\"" + name + "\" is not declared")
     }
 
+    def semanticErrorUndeclaredSelfSymbol(range Range, name string) {
+      error(range, "\"" + name + "\" is not declared (use \"self\" to refer to the object instance)")
+    }
+
     def semanticErrorUnknownMemberSymbol(range Range, name string, type Type) {
       error(range, "\"" + name + "\" is not declared on type \"" + type.toString + "\"")
     }
