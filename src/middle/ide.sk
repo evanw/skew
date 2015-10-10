@@ -19,7 +19,7 @@ namespace Skew.IDE {
       }
 
       switch symbol.kind {
-        case .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
+        case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
           var arguments = symbol.asFunctionSymbol.arguments
           text += "def " + symbol.name
           if !arguments.isEmpty {
@@ -92,15 +92,27 @@ namespace Skew.IDE {
     }
 
     def run(global ObjectSymbol) {
+      var findSymbolInSymbol fn(Symbol) bool
       var findSymbolInObject fn(ObjectSymbol) bool
       var findSymbolInParameter fn(ParameterSymbol) bool
       var findSymbolInFunction fn(FunctionSymbol) bool
       var findSymbolInVariable fn(VariableSymbol) bool
       var findSymbolInNode fn(Node) bool
 
+      findSymbolInSymbol = symbol => {
+        if symbol.annotations != null {
+          for node in symbol.annotations {
+            if findSymbolInNode(node) {
+              return true
+            }
+          }
+        }
+        return _findSymbolInRange(symbol.range, symbol)
+      }
+
       findSymbolInObject = symbol => {
         return
-          _findSymbolInSymbol(symbol) ||
+          findSymbolInSymbol(symbol) ||
           symbol.objects.any(findSymbolInObject) ||
           symbol.parameters != null && symbol.parameters.any(findSymbolInParameter) ||
           symbol.functions.any(findSymbolInFunction) ||
@@ -110,12 +122,12 @@ namespace Skew.IDE {
       }
 
       findSymbolInParameter = symbol => {
-        return _findSymbolInSymbol(symbol)
+        return findSymbolInSymbol(symbol)
       }
 
       findSymbolInFunction = symbol => {
         return
-          _findSymbolInSymbol(symbol) ||
+          findSymbolInSymbol(symbol) ||
           symbol.parameters != null && symbol.parameters.any(findSymbolInParameter) ||
           symbol.arguments.any(findSymbolInVariable) ||
           findSymbolInNode(symbol.returnType) ||
@@ -124,7 +136,7 @@ namespace Skew.IDE {
 
       findSymbolInVariable = symbol => {
         return
-          _findSymbolInSymbol(symbol) ||
+          findSymbolInSymbol(symbol) ||
           findSymbolInNode(symbol.value) ||
           findSymbolInNode(symbol.type)
       }
@@ -164,10 +176,6 @@ namespace Skew.IDE {
       }
 
       return false
-    }
-
-    def _findSymbolInSymbol(check Symbol) bool {
-      return _findSymbolInRange(check.range, check)
     }
   }
 }
