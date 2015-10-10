@@ -12,7 +12,7 @@ var foo Foo<dynamic> = null
 test("
 var x = 0b2
 ", "
-<stdin>:1:10: error: Expected NEWLINE but found IDENTIFIER
+<stdin>:1:10: error: Expected \"\\n\" but found identifier
 var x = 0b2
          ~~
 ")
@@ -20,7 +20,7 @@ var x = 0b2
 test("
 var x = 0b02
 ", "
-<stdin>:1:12: error: Expected NEWLINE but found INT
+<stdin>:1:12: error: Expected \"\\n\" but found integer
 var x = 0b02
            ^
 ")
@@ -28,7 +28,7 @@ var x = 0b02
 test("
 var x = 0o8
 ", "
-<stdin>:1:10: error: Expected NEWLINE but found IDENTIFIER
+<stdin>:1:10: error: Expected \"\\n\" but found identifier
 var x = 0o8
          ~~
 ")
@@ -36,7 +36,7 @@ var x = 0o8
 test("
 var x = 0o08
 ", "
-<stdin>:1:12: error: Expected NEWLINE but found INT
+<stdin>:1:12: error: Expected \"\\n\" but found integer
 var x = 0o08
            ^
 ")
@@ -44,7 +44,7 @@ var x = 0o08
 test("
 var x = 0xG
 ", "
-<stdin>:1:10: error: Expected NEWLINE but found IDENTIFIER
+<stdin>:1:10: error: Expected \"\\n\" but found identifier
 var x = 0xG
          ~~
 ")
@@ -52,7 +52,7 @@ var x = 0xG
 test("
 var x = 0x0G
 ", "
-<stdin>:1:12: error: Expected NEWLINE but found IDENTIFIER
+<stdin>:1:12: error: Expected \"\\n\" but found identifier
 var x = 0x0G
            ^
 ")
@@ -599,7 +599,7 @@ class ns2.Foo {}
 test("
 var ns.foo int
 ", "
-<stdin>:1:7: error: Expected NEWLINE but found DOT
+<stdin>:1:7: error: Expected \"\\n\" but found \".\"
 var ns.foo int
       ^
 ")
@@ -607,7 +607,7 @@ var ns.foo int
 test("
 def ns.foo int
 ", "
-<stdin>:1:7: error: Expected NEWLINE but found DOT
+<stdin>:1:7: error: Expected \"\\n\" but found \".\"
 def ns.foo int
       ^
 ")
@@ -2490,7 +2490,7 @@ def main {
   while true {} else {}
 }
 ", "
-<stdin>:2:17: error: Unexpected ELSE
+<stdin>:2:17: error: Unexpected \"else\"
   while true {} else {}
                 ~~~~
 ")
@@ -3360,7 +3360,7 @@ def main {
   var foo = dynamic
 }
 ", "
-<stdin>:2:20: error: Expected DOT but found NEWLINE
+<stdin>:2:20: error: Expected \".\" but found \"\\n\"
   var foo = dynamic
                    ^
 ")
