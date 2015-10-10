@@ -587,6 +587,14 @@
   Skew._verifyHierarchy2 = function(node, parent) {
     assert(node.parent() == parent);
 
+    if (node.kind == Skew.NodeKind.VARIABLE) {
+      assert(node.symbol != null && node.symbol.kind == Skew.SymbolKind.VARIABLE_LOCAL && node.symbol.asVariableSymbol().value == node.variableValue());
+    }
+
+    else if (node.kind == Skew.NodeKind.LAMBDA) {
+      assert(node.symbol != null && node.symbol.kind == Skew.SymbolKind.FUNCTION_LOCAL && node.symbol.asFunctionSymbol().block == node.lambdaBlock());
+    }
+
     for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
       Skew._verifyHierarchy2(child, node);
     }
@@ -5186,9 +5194,10 @@
         this._unionVariableWithFunction($this, $function);
 
         if (block != null) {
+          $this.kind = Skew.SymbolKind.VARIABLE_LOCAL;
+          $this.value = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('this'));
           var variable = Skew.Node.createVariable($this);
           var merged = false;
-          $this.value = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('this'));
 
           // When mangling, add the "self" variable to an existing variable statement if present
           if (this._mangle && block.hasChildren()) {
@@ -7008,8 +7017,20 @@
   Skew.Node.prototype.clone = function() {
     var clone = this._cloneWithoutChildren();
 
-    for (var child = this._firstChild; child != null; child = child._nextSibling) {
-      clone.appendChild(child.clone());
+    if (this.kind == Skew.NodeKind.LAMBDA) {
+      clone.symbol = this.symbol.asFunctionSymbol().clone();
+      clone.appendChild(clone.symbol.asFunctionSymbol().block);
+    }
+
+    else if (this.kind == Skew.NodeKind.VARIABLE) {
+      clone.symbol = this.symbol.asVariableSymbol().clone();
+      clone.appendChild(clone.symbol.asVariableSymbol().value);
+    }
+
+    else {
+      for (var child = this._firstChild; child != null; child = child._nextSibling) {
+        clone.appendChild(child.clone());
+      }
     }
 
     return clone;
@@ -8048,6 +8069,13 @@
     assert(this.childCount() >= 1);
     var finallyBlock = this._lastChild;
     return finallyBlock != this.tryBlock() && finallyBlock.kind == Skew.NodeKind.BLOCK ? finallyBlock : null;
+  };
+
+  Skew.Node.prototype.variableValue = function() {
+    assert(this.kind == Skew.NodeKind.VARIABLE);
+    assert(this.childCount() <= 1);
+    assert(this._firstChild == null || Skew.in_NodeKind.isExpression(this._firstChild.kind));
+    return this._firstChild;
   };
 
   Skew.Node.prototype.whileTest = function() {
@@ -10091,6 +10119,14 @@
     this.flags = 0;
   };
 
+  Skew.Symbol.prototype._cloneFrom = function(symbol) {
+    this.rename = symbol.rename;
+    this.range = symbol.range;
+    this.scope = symbol.scope;
+    this.state = symbol.state;
+    this.flags = symbol.flags;
+  };
+
   // Flags
   Skew.Symbol.prototype.isAutomaticallyGenerated = function() {
     return (this.flags & Skew.Symbol.IS_AUTOMATICALLY_GENERATED) != 0;
@@ -10269,11 +10305,28 @@
     return Skew.Symbol._nextID;
   };
 
+  Skew.Symbol._substituteSymbols = function(node, symbols) {
+    if (node.symbol != null) {
+      node.symbol = in_IntMap.get(symbols, node.symbol.id, node.symbol);
+    }
+
+    for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+      Skew.Symbol._substituteSymbols(child, symbols);
+    }
+  };
+
   Skew.ParameterSymbol = function(kind, name) {
     Skew.Symbol.call(this, kind, name);
   };
 
   __extends(Skew.ParameterSymbol, Skew.Symbol);
+
+  Skew.ParameterSymbol.prototype.clone = function() {
+    var clone = new Skew.ParameterSymbol(this.kind, this.name);
+    clone._cloneFrom(this);
+    clone.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, clone);
+    return clone;
+  };
 
   Skew.Guard = function(parent, test, contents, elseGuard) {
     this.parent = parent;
@@ -10330,6 +10383,43 @@
 
   __extends(Skew.FunctionSymbol, Skew.Symbol);
 
+  Skew.FunctionSymbol.prototype.clone = function() {
+    var clone = new Skew.FunctionSymbol(this.kind, this.name);
+    var symbols = {};
+    clone._cloneFrom(this);
+    clone.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, clone);
+    clone.argumentOnlyType = this.argumentOnlyType;
+
+    if (this.parameters != null) {
+      clone.parameters = [];
+
+      for (var i = 0, list = this.parameters, count = list.length; i < count; ++i) {
+        var parameter = list[i];
+        var cloned = parameter.clone();
+        symbols[parameter.id] = cloned;
+        clone.parameters.push(cloned);
+      }
+    }
+
+    for (var i1 = 0, list1 = this.$arguments, count1 = list1.length; i1 < count1; ++i1) {
+      var argument = list1[i1];
+      var cloned1 = argument.clone();
+      symbols[argument.id] = cloned1;
+      clone.$arguments.push(cloned1);
+    }
+
+    if (this.returnType != null) {
+      clone.returnType = this.returnType.clone();
+    }
+
+    if (this.block != null) {
+      clone.block = this.block.clone();
+      Skew.Symbol._substituteSymbols(clone.block, symbols);
+    }
+
+    return clone;
+  };
+
   Skew.VariableSymbol = function(kind, name) {
     Skew.Symbol.call(this, kind, name);
     this.type = null;
@@ -10341,6 +10431,23 @@
   Skew.VariableSymbol.prototype.enumValue = function() {
     assert(this.kind == Skew.SymbolKind.VARIABLE_ENUM);
     return this.value.asInt();
+  };
+
+  Skew.VariableSymbol.prototype.clone = function() {
+    var clone = new Skew.VariableSymbol(this.kind, this.name);
+    clone._cloneFrom(this);
+    clone.resolvedType = this.resolvedType;
+
+    if (this.type != null) {
+      clone.type = this.type.clone();
+    }
+
+    if (this.value != null) {
+      clone.value = this.value.clone();
+      Skew.Symbol._substituteSymbols(clone.value, in_IntMap.insert({}, this.id, clone));
+    }
+
+    return clone;
   };
 
   Skew.OverloadedFunctionSymbol = function(kind, name, symbols) {
@@ -16882,6 +16989,11 @@
     scope.asLocalScope().define(symbol, this._log);
     this._localVariableStatistics[symbol.id] = new Skew.Resolving.LocalVariableStatistics(symbol);
     this._resolveVariable1(symbol);
+
+    // Make sure to parent any created values under the variable node
+    if (!node.hasChildren() && symbol.value != null) {
+      node.appendChild(symbol.value);
+    }
   };
 
   Skew.Resolving.Resolver.prototype._resolveVariables = function(node, scope) {

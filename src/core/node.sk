@@ -208,8 +208,16 @@ namespace Skew {
 
     def clone Node {
       var clone = _cloneWithoutChildren
-      for child = _firstChild; child != null; child = child._nextSibling {
-        clone.appendChild(child.clone)
+      if kind == .LAMBDA {
+        clone.symbol = symbol.asFunctionSymbol.clone
+        clone.appendChild(clone.symbol.asFunctionSymbol.block)
+      } else if kind == .VARIABLE {
+        clone.symbol = symbol.asVariableSymbol.clone
+        clone.appendChild(clone.symbol.asVariableSymbol.value)
+      } else {
+        for child = _firstChild; child != null; child = child._nextSibling {
+          clone.appendChild(child.clone)
+        }
       }
       return clone
     }
@@ -1243,6 +1251,13 @@ namespace Skew {
       assert(childCount >= 1)
       var finallyBlock = _lastChild
       return finallyBlock != tryBlock && finallyBlock.kind == .BLOCK ? finallyBlock : null
+    }
+
+    def variableValue Node {
+      assert(kind == .VARIABLE)
+      assert(childCount <= 1)
+      assert(_firstChild == null || _firstChild.kind.isExpression)
+      return _firstChild
     }
 
     def whileTest Node {

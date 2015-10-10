@@ -135,7 +135,6 @@ namespace Skew {
     def _cloneFrom(symbol Symbol) {
       rename = symbol.rename
       range = symbol.range
-      resolvedType = symbol.resolvedType
       scope = symbol.scope
       state = symbol.state
       flags = symbol.flags
@@ -241,15 +240,31 @@ namespace Skew {
   }
 
   namespace Symbol {
+    var _nextID = 0
+
     def _createID int {
       _nextID++
       return _nextID
     }
 
-    var _nextID = 0
+    def _substituteSymbols(node Node, symbols IntMap<Symbol>) {
+      if node.symbol != null {
+        node.symbol = symbols.get(node.symbol.id, node.symbol)
+      }
+
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _substituteSymbols(child, symbols)
+      }
+    }
   }
 
   class ParameterSymbol : Symbol {
+    def clone ParameterSymbol {
+      var clone = new(kind, name)
+      clone._cloneFrom(self)
+      clone.resolvedType = Type.new(.SYMBOL, clone)
+      return clone
+    }
   }
 
   class Guard {
@@ -299,6 +314,40 @@ namespace Skew {
     var returnType Node = null
     var block Node = null
     var namingGroup = -1 # Automatically filled out by the renaming step
+
+    def clone FunctionSymbol {
+      var clone = new(kind, name)
+      var symbols IntMap<Symbol> = {}
+      clone._cloneFrom(self)
+      clone.resolvedType = Type.new(.SYMBOL, clone)
+      clone.argumentOnlyType = argumentOnlyType
+
+      if parameters != null {
+        clone.parameters = []
+        for parameter in parameters {
+          var cloned = parameter.clone
+          symbols[parameter.id] = cloned
+          clone.parameters.append(cloned)
+        }
+      }
+
+      for argument in arguments {
+        var cloned = argument.clone
+        symbols[argument.id] = cloned
+        clone.arguments.append(cloned)
+      }
+
+      if returnType != null {
+        clone.returnType = returnType.clone
+      }
+
+      if block != null {
+        clone.block = block.clone
+        Symbol._substituteSymbols(clone.block, symbols)
+      }
+
+      return clone
+    }
   }
 
   class VariableSymbol : Symbol {
@@ -308,6 +357,23 @@ namespace Skew {
     def enumValue int {
       assert(kind == .VARIABLE_ENUM)
       return value.asInt
+    }
+
+    def clone VariableSymbol {
+      var clone = new(kind, name)
+      clone._cloneFrom(self)
+      clone.resolvedType = resolvedType
+
+      if type != null {
+        clone.type = type.clone
+      }
+
+      if value != null {
+        clone.value = value.clone
+        Symbol._substituteSymbols(clone.value, {id: clone})
+      }
+
+      return clone
     }
   }
 

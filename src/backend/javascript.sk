@@ -1493,9 +1493,10 @@ namespace Skew {
         if _needsSelf {
           _unionVariableWithFunction(this, function)
           if block != null {
+            this.kind = .VARIABLE_LOCAL
+            this.value = Node.createName("this")
             var variable = Node.createVariable(this)
             var merged = false
-            this.value = Node.createName("this")
 
             # When mangling, add the "self" variable to an existing variable statement if present
             if _mangle && block.hasChildren {

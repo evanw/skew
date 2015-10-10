@@ -23,7 +23,7 @@ def main {
 ", "
 (function() {
   main = function() {
-    var b = 0, a = null, c = 0, d = false, e = null;
+    var b = 0, a = null, c = 0, d = !1, e = null;
     b && foo(), a != '' && foo(), a != null && foo(), c != 0 && foo(), d != !1 && foo(), e && foo();
   };
 })();
@@ -2082,22 +2082,22 @@ def main {
 ", "
 (function() {
   main = function() {
-    new d, new d.c(0);
+    new e, new e.c(0);
   };
 
-  function d() {
+  function e() {
     this.a = function(a) {
       return a;
     };
   }
 
-  d.c = function(e) {
-    this.a = function(a) {
-      return a;
+  e.c = function(a) {
+    this.a = function(d) {
+      return d;
     };
   };
 
-  d.c.prototype = d.prototype;
+  e.c.prototype = e.prototype;
 })();
 ").jsMangle
 

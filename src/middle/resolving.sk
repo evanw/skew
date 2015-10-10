@@ -1806,6 +1806,11 @@ namespace Skew.Resolving {
       scope.asLocalScope.define(symbol, _log)
       _localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
       _resolveVariable(symbol)
+
+      # Make sure to parent any created values under the variable node
+      if !node.hasChildren && symbol.value != null {
+        node.appendChild(symbol.value)
+      }
     }
 
     def _resolveVariables(node Node, scope Scope) {
