@@ -3583,22 +3583,41 @@
     }
 
     // Emit variables
+    var statement = new Skew.Node(Skew.NodeKind.VARIABLES);
+
     for (var i4 = 0, list4 = objects, count4 = list4.length; i4 < count4; ++i4) {
       var object1 = list4[i4];
-      var o = object1;
       this._namespacePrefix = '';
 
-      while (o.kind != Skew.SymbolKind.OBJECT_GLOBAL) {
+      for (var o = object1; o.kind != Skew.SymbolKind.OBJECT_GLOBAL; o = o.parent.asObjectSymbol()) {
         this._namespacePrefix = Skew.JavaScriptEmitter._mangleName(o) + '.' + this._namespacePrefix;
-        o = o.parent.asObjectSymbol();
       }
 
       for (var i3 = 0, list3 = object1.variables, count3 = list3.length; i3 < count3; ++i3) {
         var variable2 = list3[i3];
 
         if (!(specialVariables.indexOf(variable2) != -1)) {
-          this._emitVariable(variable2);
+          if (this._mangle && this._namespacePrefix == '' && !variable2.isImportedOrExported()) {
+            statement.appendChild(Skew.Node.createVariable(variable2));
+          }
+
+          else {
+            this._emitVariable(variable2);
+          }
         }
+      }
+    }
+
+    this._namespacePrefix = '';
+
+    // Group adjacent variables into a single statement during mangling
+    if (statement.hasChildren()) {
+      this._emitNewlineBeforeSymbol(statement.firstChild().symbol);
+      this._emitStatement(statement);
+      this._emitNewlineAfterSymbol(statement.firstChild().symbol);
+
+      for (var child = statement.firstChild(); child != null; child = child.nextSibling()) {
+        child.removeChildren();
       }
     }
 

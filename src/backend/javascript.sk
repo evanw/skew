@@ -149,17 +149,31 @@ namespace Skew {
       }
 
       # Emit variables
+      var statement = Node.createVariables
       for object in objects {
-        var o = object
         _namespacePrefix = ""
-        while o.kind != .OBJECT_GLOBAL {
+        for o = object; o.kind != .OBJECT_GLOBAL; o = o.parent.asObjectSymbol {
           _namespacePrefix = _mangleName(o) + "." + _namespacePrefix
-          o = o.parent.asObjectSymbol
         }
         for variable in object.variables {
           if !(variable in specialVariables) {
-            _emitVariable(variable)
+            if _mangle && _namespacePrefix == "" && !variable.isImportedOrExported {
+              statement.appendChild(Node.createVariable(variable))
+            } else {
+              _emitVariable(variable)
+            }
           }
+        }
+      }
+      _namespacePrefix = ""
+
+      # Group adjacent variables into a single statement during mangling
+      if statement.hasChildren {
+        _emitNewlineBeforeSymbol(statement.firstChild.symbol)
+        _emitStatement(statement)
+        _emitNewlineAfterSymbol(statement.firstChild.symbol)
+        for child = statement.firstChild; child != null; child = child.nextSibling {
+          child.removeChildren
         }
       }
 

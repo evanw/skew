@@ -2198,5 +2198,40 @@ def main(x int) {
 })();
 ").jsMangle
 
+# Check mangling of global variables
+test("
+@export
+def main double {
+  return a + ns1.b + c + x + ns2.y + z
+}
+
+var a = 0.0
+namespace ns1 {
+  var b = 0.0
+}
+var c = 0.0
+
+@export
+var x = 0.0
+@export
+namespace ns2 {
+  var y = 0.0
+}
+var z = 0.0
+
+", "
+(function() {
+  main = function() {
+    return a + b + c + x + ns2.y + d;
+  };
+
+  ns2 = {};
+
+  x = 0;
+  ns2.y = 0;
+  var a = 0, c = 0, d = 0, b = 0;
+})();
+").jsMangle
+
   }
 }
