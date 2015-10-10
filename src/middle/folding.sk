@@ -479,7 +479,8 @@ namespace Skew.Folding {
         }
 
         # "0.0625 ** 0.25" => "0.5"
-        else if _isKnownCall(symbol, _cache.doublePowerSymbol) && node.lastChild.isDouble && value.nextSibling.isDouble {
+        # "Math.pow(0.0625, 0.25)" => "0.5"
+        else if (_isKnownCall(symbol, _cache.doublePowerSymbol) || _isKnownCall(symbol, _cache.mathPowSymbol)) && node.lastChild.isDouble && value.nextSibling.isDouble {
           _flattenDouble(node, value.nextSibling.asDouble ** node.lastChild.asDouble)
         }
 

@@ -12710,7 +12710,8 @@
       }
 
       // "0.0625 ** 0.25" => "0.5"
-      else if (Skew.Folding.ConstantFolder._isKnownCall(symbol, this._cache.doublePowerSymbol) && node.lastChild().isDouble() && value.nextSibling().isDouble()) {
+      // "Math.pow(0.0625, 0.25)" => "0.5"
+      else if ((Skew.Folding.ConstantFolder._isKnownCall(symbol, this._cache.doublePowerSymbol) || Skew.Folding.ConstantFolder._isKnownCall(symbol, this._cache.mathPowSymbol)) && node.lastChild().isDouble() && value.nextSibling().isDouble()) {
         this._flattenDouble(node, Math.pow(value.nextSibling().asDouble(), node.lastChild().asDouble()));
       }
 
@@ -18973,6 +18974,7 @@
     this.intMapType = null;
     this.intType = null;
     this.listType = null;
+    this.mathType = null;
     this.stringMapType = null;
     this.stringType = null;
     this.boolToStringSymbol = null;
@@ -18980,6 +18982,7 @@
     this.doubleToStringSymbol = null;
     this.intPowerSymbol = null;
     this.intToStringSymbol = null;
+    this.mathPowSymbol = null;
     this.stringCountSymbol = null;
     this.stringFromCodePointsSymbol = null;
     this.stringFromCodePointSymbol = null;
@@ -18992,19 +18995,21 @@
 
   Skew.TypeCache.prototype.loadGlobals = function(log, global) {
     Skew.Type.initialize();
-    this.boolType = Skew.TypeCache._loadGlobalClass(global, 'bool', Skew.Symbol.IS_VALUE_TYPE);
-    this.boxType = Skew.TypeCache._loadGlobalClass(global, 'Box', 0);
-    this.doubleType = Skew.TypeCache._loadGlobalClass(global, 'double', Skew.Symbol.IS_VALUE_TYPE);
-    this.intMapType = Skew.TypeCache._loadGlobalClass(global, 'IntMap', 0);
-    this.intType = Skew.TypeCache._loadGlobalClass(global, 'int', Skew.Symbol.IS_VALUE_TYPE);
-    this.listType = Skew.TypeCache._loadGlobalClass(global, 'List', 0);
-    this.stringMapType = Skew.TypeCache._loadGlobalClass(global, 'StringMap', 0);
-    this.stringType = Skew.TypeCache._loadGlobalClass(global, 'string', 0);
+    this.boolType = Skew.TypeCache._loadGlobalObject(global, 'bool', Skew.SymbolKind.OBJECT_CLASS, Skew.Symbol.IS_VALUE_TYPE);
+    this.boxType = Skew.TypeCache._loadGlobalObject(global, 'Box', Skew.SymbolKind.OBJECT_CLASS, 0);
+    this.doubleType = Skew.TypeCache._loadGlobalObject(global, 'double', Skew.SymbolKind.OBJECT_CLASS, Skew.Symbol.IS_VALUE_TYPE);
+    this.intMapType = Skew.TypeCache._loadGlobalObject(global, 'IntMap', Skew.SymbolKind.OBJECT_CLASS, 0);
+    this.intType = Skew.TypeCache._loadGlobalObject(global, 'int', Skew.SymbolKind.OBJECT_CLASS, Skew.Symbol.IS_VALUE_TYPE);
+    this.listType = Skew.TypeCache._loadGlobalObject(global, 'List', Skew.SymbolKind.OBJECT_CLASS, 0);
+    this.mathType = Skew.TypeCache._loadGlobalObject(global, 'Math', Skew.SymbolKind.OBJECT_NAMESPACE, 0);
+    this.stringMapType = Skew.TypeCache._loadGlobalObject(global, 'StringMap', Skew.SymbolKind.OBJECT_CLASS, 0);
+    this.stringType = Skew.TypeCache._loadGlobalObject(global, 'string', Skew.SymbolKind.OBJECT_CLASS, 0);
     this.boolToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.boolType, 'toString');
     this.doublePowerSymbol = Skew.TypeCache._loadInstanceFunction(this.doubleType, '**');
     this.doubleToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.doubleType, 'toString');
     this.intPowerSymbol = Skew.TypeCache._loadInstanceFunction(this.intType, '**');
     this.intToStringSymbol = Skew.TypeCache._loadInstanceFunction(this.intType, 'toString');
+    this.mathPowSymbol = Skew.TypeCache._loadGlobalFunction(this.mathType, 'pow');
     this.stringCountSymbol = Skew.TypeCache._loadInstanceFunction(this.stringType, 'count');
     this.stringFromCodePointsSymbol = Skew.TypeCache._loadGlobalFunction(this.stringType, 'fromCodePoints');
     this.stringFromCodePointSymbol = Skew.TypeCache._loadGlobalFunction(this.stringType, 'fromCodePoint');
@@ -19442,10 +19447,11 @@
     return type == this.intType || type == this.doubleType || type == this.boolType;
   };
 
-  Skew.TypeCache._loadGlobalClass = function(global, name, flags) {
+  Skew.TypeCache._loadGlobalObject = function(global, name, kind, flags) {
+    assert(Skew.in_SymbolKind.isObject(kind));
     var symbol = in_StringMap.get(global.members, name, null);
     assert(symbol != null);
-    assert(symbol.kind == Skew.SymbolKind.OBJECT_CLASS);
+    assert(symbol.kind == kind);
     var type = new Skew.Type(Skew.TypeKind.SYMBOL, symbol.asObjectSymbol());
     symbol.resolvedType = type;
     symbol.flags |= flags;

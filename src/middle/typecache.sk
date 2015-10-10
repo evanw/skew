@@ -6,6 +6,7 @@ namespace Skew {
     var intMapType Type = null
     var intType Type = null
     var listType Type = null
+    var mathType Type = null
     var stringMapType Type = null
     var stringType Type = null
 
@@ -14,6 +15,7 @@ namespace Skew {
     var doubleToStringSymbol Symbol = null
     var intPowerSymbol Symbol = null
     var intToStringSymbol Symbol = null
+    var mathPowSymbol Symbol = null
     var stringCountSymbol Symbol = null
     var stringFromCodePointsSymbol Symbol = null
     var stringFromCodePointSymbol Symbol = null
@@ -27,20 +29,22 @@ namespace Skew {
     def loadGlobals(log Log, global ObjectSymbol) {
       Type.initialize
 
-      boolType = _loadGlobalClass(global, "bool", Symbol.IS_VALUE_TYPE)
-      boxType = _loadGlobalClass(global, "Box", 0)
-      doubleType = _loadGlobalClass(global, "double", Symbol.IS_VALUE_TYPE)
-      intMapType = _loadGlobalClass(global, "IntMap", 0)
-      intType = _loadGlobalClass(global, "int", Symbol.IS_VALUE_TYPE)
-      listType = _loadGlobalClass(global, "List", 0)
-      stringMapType = _loadGlobalClass(global, "StringMap", 0)
-      stringType = _loadGlobalClass(global, "string", 0)
+      boolType = _loadGlobalObject(global, "bool", .OBJECT_CLASS, Symbol.IS_VALUE_TYPE)
+      boxType = _loadGlobalObject(global, "Box", .OBJECT_CLASS, 0)
+      doubleType = _loadGlobalObject(global, "double", .OBJECT_CLASS, Symbol.IS_VALUE_TYPE)
+      intMapType = _loadGlobalObject(global, "IntMap", .OBJECT_CLASS, 0)
+      intType = _loadGlobalObject(global, "int", .OBJECT_CLASS, Symbol.IS_VALUE_TYPE)
+      listType = _loadGlobalObject(global, "List", .OBJECT_CLASS, 0)
+      mathType = _loadGlobalObject(global, "Math", .OBJECT_NAMESPACE, 0)
+      stringMapType = _loadGlobalObject(global, "StringMap", .OBJECT_CLASS, 0)
+      stringType = _loadGlobalObject(global, "string", .OBJECT_CLASS, 0)
 
       boolToStringSymbol = _loadInstanceFunction(boolType, "toString")
       doublePowerSymbol = _loadInstanceFunction(doubleType, "**")
       doubleToStringSymbol = _loadInstanceFunction(doubleType, "toString")
       intPowerSymbol = _loadInstanceFunction(intType, "**")
       intToStringSymbol = _loadInstanceFunction(intType, "toString")
+      mathPowSymbol = _loadGlobalFunction(mathType, "pow")
       stringCountSymbol = _loadInstanceFunction(stringType, "count")
       stringFromCodePointsSymbol = _loadGlobalFunction(stringType, "fromCodePoints")
       stringFromCodePointSymbol = _loadGlobalFunction(stringType, "fromCodePoint")
@@ -390,10 +394,11 @@ namespace Skew {
   }
 
   namespace TypeCache {
-    def _loadGlobalClass(global ObjectSymbol, name string, flags int) Type {
+    def _loadGlobalObject(global ObjectSymbol, name string, kind SymbolKind, flags int) Type {
+      assert(kind.isObject)
       var symbol = global.members.get(name, null)
       assert(symbol != null)
-      assert(symbol.kind == .OBJECT_CLASS)
+      assert(symbol.kind == kind)
       var type = Type.new(.SYMBOL, symbol.asObjectSymbol)
       symbol.resolvedType = type
       symbol.flags |= flags
