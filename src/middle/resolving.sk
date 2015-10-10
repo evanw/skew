@@ -744,12 +744,12 @@ namespace Skew.Resolving {
         var symbol = info.symbol
 
         # Variables that are never re-assigned can safely be considered constants for constant folding
-        if symbol.value != null && info.writeCount == 0 && _options.foldAllConstants {
+        if info.writeCount == 0 && _options.foldAllConstants {
           symbol.flags |= Symbol.IS_CONST
         }
 
         # Unused local variables can safely be removed, but don't warn about "for i in 0..10 {}"
-        if info.readCount == 0 && !symbol.isLoopVariable {
+        if info.readCount == 0 && !symbol.isLoopVariable && symbol.kind == .VARIABLE_LOCAL {
           _log.semanticWarningUnreadLocalVariable(symbol.range, symbol.name)
         }
 
@@ -993,6 +993,7 @@ namespace Skew.Resolving {
       # function body, and shouldn't have access to other arguments
       for argument in symbol.arguments {
         scope.define(argument, _log)
+        _localVariableStatistics[argument.id] = LocalVariableStatistics.new(argument)
       }
 
       # The function is considered abstract if the body is missing
@@ -1058,7 +1059,7 @@ namespace Skew.Resolving {
     }
 
     def _recordStatistic(symbol Symbol, statistic SymbolStatistic) {
-      if symbol != null && symbol.kind == .VARIABLE_LOCAL {
+      if symbol != null && (symbol.kind == .VARIABLE_LOCAL || symbol.kind == .VARIABLE_ARGUMENT) {
         var info = _localVariableStatistics.get(symbol.id, null)
         if info != null {
           switch statistic {

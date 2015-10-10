@@ -15673,12 +15673,12 @@
       var symbol = info.symbol;
 
       // Variables that are never re-assigned can safely be considered constants for constant folding
-      if (symbol.value != null && info.writeCount == 0 && this._options.foldAllConstants) {
+      if (info.writeCount == 0 && this._options.foldAllConstants) {
         symbol.flags |= Skew.Symbol.IS_CONST;
       }
 
       // Unused local variables can safely be removed, but don't warn about "for i in 0..10 {}"
-      if (info.readCount == 0 && !symbol.isLoopVariable()) {
+      if (info.readCount == 0 && !symbol.isLoopVariable() && symbol.kind == Skew.SymbolKind.VARIABLE_LOCAL) {
         this._log.semanticWarningUnreadLocalVariable(symbol.range, symbol.name);
       }
 
@@ -15952,6 +15952,7 @@
     for (var i = 0, list = symbol.$arguments, count = list.length; i < count; ++i) {
       var argument = list[i];
       scope.define(argument, this._log);
+      this._localVariableStatistics[argument.id] = new Skew.Resolving.LocalVariableStatistics(argument);
     }
 
     // The function is considered abstract if the body is missing
@@ -16021,7 +16022,7 @@
   };
 
   Skew.Resolving.Resolver.prototype._recordStatistic = function(symbol, statistic) {
-    if (symbol != null && symbol.kind == Skew.SymbolKind.VARIABLE_LOCAL) {
+    if (symbol != null && (symbol.kind == Skew.SymbolKind.VARIABLE_LOCAL || symbol.kind == Skew.SymbolKind.VARIABLE_ARGUMENT)) {
       var info = in_IntMap.get(this._localVariableStatistics, symbol.id, null);
 
       if (info != null) {

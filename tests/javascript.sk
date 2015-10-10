@@ -1671,8 +1671,8 @@ def main(x int) string {
   in_string.fromCodePoints = function(codePoints) {
     var builder = new StringBuilder();
 
-    for (var i = 0, list = codePoints, count1 = list.length; i < count1; ++i) {
-      var codePoint = list[i];
+    for (var i = 0, count1 = codePoints.length; i < count1; ++i) {
+      var codePoint = codePoints[i];
       builder.append(in_string.fromCodePoint(codePoint));
     }
 
@@ -1682,8 +1682,8 @@ def main(x int) string {
   in_string.fromCodeUnits = function(codeUnits) {
     var result = '';
 
-    for (var i = 0, list = codeUnits, count1 = list.length; i < count1; ++i) {
-      var codeUnit = list[i];
+    for (var i = 0, count1 = codeUnits.length; i < count1; ++i) {
+      var codeUnit = codeUnits[i];
       result += String.fromCharCode(codeUnit);
     }
 

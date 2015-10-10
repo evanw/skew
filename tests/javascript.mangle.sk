@@ -1375,6 +1375,20 @@ def main(x int) {
 })();
 ").jsMangle
 
+# Check that empty switch statements are removed
+test("
+@export
+def main(x fn() int) {
+  switch x() { default { dynamic.y() } }
+}
+", "
+(function() {
+  main = function(a) {
+    a(), y();
+  };
+})();
+").jsMangle
+
 # Check that switch statements have a single element turn into if statements, which are then further optimized
 test("
 @export
