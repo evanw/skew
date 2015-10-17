@@ -1,5 +1,5 @@
 namespace Skew.IDE {
-  class TooltipQuery {
+  class SymbolQuery {
     const source Source
     const index int
 

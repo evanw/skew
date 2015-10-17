@@ -456,7 +456,6 @@ namespace Skew {
           if !setup.isEmptySequence {
             if setup.kind == .VARIABLES {
               _emitType(setup.firstChild.symbol.asVariableSymbol.resolvedType, .DECLARATION)
-              _emit(" ")
               for child = setup.firstChild; child != null; child = child.nextSibling {
                 var symbol = child.symbol.asVariableSymbol
                 assert(child.kind == .VARIABLE)

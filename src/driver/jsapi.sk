@@ -9,6 +9,10 @@ namespace Skew {
       (=> dynamic.this)().Skew = api
     }
 
+    var result CompilerResult = null
+    var inputs List<Source> = null
+    var log Log = null
+
     var parseOptions = (args dynamic, inputs List<Source>) CompilerOptions => {
       if !(args.inputs is List<dynamic>) {
         throw dynamic.Error.new("Missing the required 'inputs' array")
@@ -94,18 +98,15 @@ namespace Skew {
       })
     }
 
-    # JavaScript API
-    api.compile = (args dynamic) dynamic => {
-      if dynamic.arguments.length != 1 {
-        throw dynamic.Error.new("Expected a single argument")
-      }
-
-      var log = Log.new
-      var inputs List<Source> = []
-      var options = parseOptions(args, inputs)
-      var result = compile(log, options, inputs)
+    var handleCompile = (message dynamic) dynamic => {
+      inputs = []
+      log = Log.new
+      var options = parseOptions(message, inputs)
+      result = compile(log, options, inputs)
 
       return {
+        "type": "compile",
+        "id": message.id,
         "outputs": sourcesToJSON(result.outputs),
         "log": {
           "text": log.toString,
@@ -114,69 +115,73 @@ namespace Skew {
       }
     }
 
-    # Web Worker API
-    if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && dynamic.self is dynamic.WorkerGlobalScope {
-      var result CompilerResult = null
-      var inputs List<Source> = null
+    var handleTooltipQuery = (message dynamic) dynamic => {
+      var name string = message.source + ""
+      var line int = message.line | 0
+      var column int = message.column | 0
+      var range Range = null
+      var tooltip string = null
+      var symbol string = null
 
-      dynamic.onmessage = (event dynamic) => {
-        var data = event.data
-
-        switch data.type {
-          case "compile" {
-            inputs = []
-            var log = Log.new
-            var options = parseOptions(data, inputs)
-            result = compile(log, options, inputs)
-
-            dynamic.postMessage({
-              "type": "compile",
-              "id": data.id | 0,
-              "outputs": sourcesToJSON(result.outputs),
-              "log": {
-                "text": log.toString,
-                "diagnostics": diagnosticsToJSON(log.diagnostics),
-              },
-            })
-          }
-
-          case "tooltip-query" {
-            var name string = data.source + ""
-            var line int = data.line | 0
-            var column int = data.column | 0
-            var info dynamic = null
-
-            if result != null && result.global != null && inputs != null {
-              for source in inputs {
-                if source.name == name {
-                  var index = source.lineColumnToIndex(line, column)
-                  if index != -1 {
-                    var query = IDE.TooltipQuery.new(source, index)
-                    query.run(result.global)
-                    if query.symbol != null {
-                      info = {
-                        "name": query.symbol.fullName,
-                        "range": rangeToJSON(query.range),
-                        "tooltip": query.generateTooltip,
-                      }
-                    }
+      if inputs != null {
+        for source in inputs {
+          if source.name == name {
+            var index = source.lineColumnToIndex(line, column)
+            if index != -1 {
+              # Search diagnostics first
+              if log != null {
+                for diagnostic in log.diagnostics {
+                  if diagnostic.range.source == source && diagnostic.range.touches(index) {
+                    tooltip = diagnostic.text
+                    range = diagnostic.range
+                    break
                   }
-                  break
+                }
+              }
+
+              # Search the syntax tree next
+              if tooltip == null && result != null && result.global != null {
+                var query = IDE.SymbolQuery.new(source, index)
+                query.run(result.global)
+                if query.symbol != null {
+                  tooltip = query.generateTooltip
+                  range = query.range
+                  symbol = query.symbol.fullName
                 }
               }
             }
-
-            dynamic.postMessage({
-              "type": "tooltip-query",
-              "id": data.id | 0,
-              "symbol": info,
-            })
-          }
-
-          default {
-            throw dynamic.Error.new("Unexpected message type '" + data.type + "'")
+            break
           }
         }
+      }
+
+      return {
+        "type": "tooltip-query",
+        "id": message.id,
+        "source": name,
+        "tooltip": tooltip,
+        "range": rangeToJSON(range),
+        "symbol": symbol,
+      }
+    }
+
+    var handleMessage = (message dynamic) dynamic => {
+      switch message.type {
+        case "compile" { return handleCompile(message) }
+        case "tooltip-query" { return handleTooltipQuery(message) }
+        default { throw dynamic.Error.new("Unexpected message type '" + message.type + "'") }
+      }
+    }
+
+    # JavaScript API
+    api.compile = handleCompile
+    api.tooltipQuery = handleTooltipQuery
+    api.message = handleMessage
+
+    # Web Worker API
+    if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && dynamic.self is dynamic.WorkerGlobalScope {
+      dynamic.onmessage = (event dynamic) => {
+        dynamic.postMessage(handleMessage(event.data))
       }
     }
   }
