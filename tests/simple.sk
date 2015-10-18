@@ -205,9 +205,6 @@ def main {
 <stdin>:18:3: error: Cannot use unparameterized type \"Foo.map\" here
   x.map(x => x + 100)
   ~~~~~
-<stdin>:18:9: error: Unable to determine the type of \"x\"
-  x.map(x => x + 100)
-        ^
 <stdin>:19:29: error: Cannot convert from type \"double\" to type \"fn(int) string\"
   var y int = x.map<string>(1.0)
                             ~~~
@@ -325,6 +322,50 @@ def bar(x fn(int)) {
 <stdin>:4:12: warning: Unused expression
   bar(x => x)
            ^
+")
+
+test("
+def main {
+  x => x
+  => {}
+  => { return }
+  => { return 0 }
+  var a dynamic = x => x
+  var b dynamic = => {}
+  var c dynamic = => { return }
+  var d dynamic = => { return 0 }
+}
+", "
+<stdin>:2:3: error: Unable to determine the type of \"x\"
+  x => x
+  ^
+<stdin>:2:3: warning: Unused expression
+  x => x
+  ~~~~~~
+<stdin>:3:3: warning: Unused expression
+  => {}
+  ~~~~~
+<stdin>:4:3: warning: Unused expression
+  => { return }
+  ~~~~~~~~~~~~~
+<stdin>:5:15: error: Cannot return a value inside a function without a return type
+  => { return 0 }
+              ^
+<stdin>:5:3: warning: Unused expression
+  => { return 0 }
+  ~~~~~~~~~~~~~~~
+<stdin>:6:7: warning: Local variable \"a\" is never read
+  var a dynamic = x => x
+      ^
+<stdin>:7:7: warning: Local variable \"b\" is never read
+  var b dynamic = => {}
+      ^
+<stdin>:8:7: warning: Local variable \"c\" is never read
+  var c dynamic = => { return }
+      ^
+<stdin>:9:7: warning: Local variable \"d\" is never read
+  var d dynamic = => { return 0 }
+      ^
 ")
 
 test("

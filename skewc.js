@@ -16893,7 +16893,7 @@
 
     // Check for a returned value
     if (value == null) {
-      if (returnType != null) {
+      if (returnType != null && returnType != Skew.Type.DYNAMIC) {
         this._log.semanticErrorExpectedReturnValue(node.range, returnType);
       }
 
@@ -17751,6 +17751,21 @@
           child = child.nextSibling();
         }
       }
+
+      // Otherwise if there's dynamic type context, treat all arguments as dynamic
+      else if (context == Skew.Type.DYNAMIC) {
+        for (var i2 = 0, list = symbol.$arguments, count2 = list.length; i2 < count2; ++i2) {
+          var argument2 = list[i2];
+
+          if (argument2.type == null) {
+            argument2.type = new Skew.Node(Skew.NodeKind.TYPE).withType(Skew.Type.DYNAMIC);
+          }
+        }
+
+        if (symbol.returnType == null) {
+          symbol.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(Skew.Type.DYNAMIC);
+        }
+      }
     }
 
     this._resolveFunction(symbol);
@@ -17759,9 +17774,9 @@
     var argumentTypes = [];
     var returnType = symbol.returnType;
 
-    for (var i2 = 0, list = symbol.$arguments, count2 = list.length; i2 < count2; ++i2) {
-      var argument2 = list[i2];
-      argumentTypes.push(argument2.resolvedType);
+    for (var i3 = 0, list1 = symbol.$arguments, count3 = list1.length; i3 < count3; ++i3) {
+      var argument3 = list1[i3];
+      argumentTypes.push(argument3.resolvedType);
     }
 
     node.resolvedType = this._cache.createLambdaType(argumentTypes, returnType != null ? returnType.resolvedType : null);

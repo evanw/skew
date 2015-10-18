@@ -1694,7 +1694,7 @@ namespace Skew.Resolving {
 
       # Check for a returned value
       if value == null {
-        if returnType != null {
+        if returnType != null && returnType != .DYNAMIC {
           _log.semanticErrorExpectedReturnValue(node.range, returnType)
         }
         return
@@ -2449,6 +2449,18 @@ namespace Skew.Resolving {
               argument.type = Node.createType(child.resolvedType)
             }
             child = child.nextSibling
+          }
+        }
+
+        # Otherwise if there's dynamic type context, treat all arguments as dynamic
+        else if context == .DYNAMIC {
+          for argument in symbol.arguments {
+            if argument.type == null {
+              argument.type = Node.createType(.DYNAMIC)
+            }
+          }
+          if symbol.returnType == null {
+            symbol.returnType = Node.createType(.DYNAMIC)
           }
         }
       }
