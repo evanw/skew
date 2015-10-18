@@ -143,22 +143,30 @@ namespace Skew.IDE {
 
       findSymbolInNode = node => {
         if node != null {
+          var kind = node.kind
+
           for child = node.firstChild; child != null; child = child.nextSibling {
             if findSymbolInNode(child) {
               return true
             }
           }
 
-          if node.kind == .NAME && _findSymbolInRange(node.range, node.symbol) {
+          if kind == .NAME && _findSymbolInRange(node.range, node.symbol) {
             return true
           }
 
-          if node.kind == .DOT && _findSymbolInRange(node.internalRangeOrRange, node.symbol) {
+          if (kind == .DOT || kind.isUnary || kind.isBinary) && _findSymbolInRange(node.internalRangeOrRange, node.symbol) {
             return true
           }
 
-          if node.kind == .VARIABLE && _findSymbolInRange(node.symbol.range, node.symbol) {
+          if kind == .VARIABLE && _findSymbolInRange(node.symbol.range, node.symbol) {
             return true
+          }
+
+          if kind == .LAMBDA {
+            return
+              node.symbol.asFunctionSymbol.arguments.any(findSymbolInVariable) ||
+              findSymbolInNode(node.symbol.asFunctionSymbol.returnType)
           }
         }
 
