@@ -658,7 +658,7 @@ namespace Skew {
     def hasNoSideEffects bool {
       assert(kind.isExpression)
       switch kind {
-        case .NAME, .CONSTANT, .NULL { return true }
+        case .CONSTANT, .NAME, .NULL, .TYPE { return true }
         case .CAST { return castValue.hasNoSideEffects }
         case .HOOK { return hookTest.hasNoSideEffects && hookTrue.hasNoSideEffects && hookFalse.hasNoSideEffects }
         case .DOT { return dotTarget.hasNoSideEffects }

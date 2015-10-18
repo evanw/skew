@@ -26,6 +26,7 @@
   var MULTIPLE_OUTPUTS = 'MULTIPLE_OUTPUTS';
   var SHOW_SYNTAX_TREE = 'SHOW_SYNTAX_TREE';
   var SOURCE_MAP = 'SOURCE_MAP';
+  var STOP_AFTER_RESOLVE = 'STOP_AFTER_RESOLVE';
   var USE_WEB_WORKER = 'USE_WEB_WORKER';
 
   var start = null;
@@ -68,6 +69,7 @@
     if (configGetBool(MANGLE)) options.jsMangle = true;
     if (configGetBool(MINIFY)) options.jsMinify = true;
     if (configGetBool(SOURCE_MAP)) options.jsSourceMap = true;
+    if (configGetBool(STOP_AFTER_RESOLVE)) options.stopAfterResolve = true;
     if (configGetBool(MULTIPLE_OUTPUTS)) options.outputDirectory = 'output';
     if (configGetBool(USE_WEB_WORKER)) {
       if (!worker) {
@@ -135,6 +137,7 @@
     optionArea.appendChild(createCheckbox('Globalize', GLOBALIZE));
     optionArea.appendChild(createCheckbox('Syntax tree', SHOW_SYNTAX_TREE));
     optionArea.appendChild(createCheckbox('Source map', SOURCE_MAP));
+    optionArea.appendChild(createCheckbox('IDE mode (no output)', STOP_AFTER_RESOLVE));
     optionArea.appendChild(createCheckbox('Multiple outputs', MULTIPLE_OUTPUTS));
     optionArea.appendChild(createCheckbox('Use a web worker', USE_WEB_WORKER));
     input.oninput = update;

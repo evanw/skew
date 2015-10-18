@@ -7549,9 +7549,10 @@
     assert(Skew.in_NodeKind.isExpression(this.kind));
 
     switch (this.kind) {
-      case Skew.NodeKind.NAME:
       case Skew.NodeKind.CONSTANT:
-      case Skew.NodeKind.NULL: {
+      case Skew.NodeKind.NAME:
+      case Skew.NodeKind.NULL:
+      case Skew.NodeKind.TYPE: {
         return true;
       }
 
