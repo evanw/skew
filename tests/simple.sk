@@ -5502,5 +5502,25 @@ def main(foo Foo) {
           ~~~~~~~
 ")
 
+test("
+class Foo<T> {
+  def foo(arg T)
+}
+
+class Bar : Foo<int> {
+  def bar {
+    foo(false)
+    self.foo(false)
+  }
+}
+", "
+<stdin>:7:9: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    foo(false)
+        ~~~~~
+<stdin>:8:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    self.foo(false)
+             ~~~~~
+")
+
   }
 }

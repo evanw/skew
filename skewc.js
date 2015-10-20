@@ -17842,11 +17842,14 @@
     }
 
     // Automatically insert "self." before instance symbols
+    var resolvedType = symbol.resolvedType;
+
     if (Skew.in_SymbolKind.isOnInstances(symbol.kind)) {
       var variable = enclosingFunction != null ? enclosingFunction.symbol.$this : null;
 
       if (variable != null && enclosingFunction.symbol.parent.asObjectSymbol().isSameOrHasBaseClass(symbol.parent)) {
         node.become(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name)).appendChild(Skew.Node.createSymbolReference(variable)).withRange(node.range));
+        resolvedType = this._cache.substitute(resolvedType, variable.resolvedType.environment);
       }
 
       else {
@@ -17892,7 +17895,7 @@
     }
 
     node.symbol = symbol;
-    node.resolvedType = symbol.resolvedType;
+    node.resolvedType = resolvedType;
     this._automaticallyCallGetter(node, scope);
   };
 

@@ -2532,10 +2532,12 @@ namespace Skew.Resolving {
       }
 
       # Automatically insert "self." before instance symbols
+      var resolvedType = symbol.resolvedType
       if symbol.kind.isOnInstances {
         var variable = enclosingFunction != null ? enclosingFunction.symbol.this : null
         if variable != null && enclosingFunction.symbol.parent.asObjectSymbol.isSameOrHasBaseClass(symbol.parent) {
           node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range))
+          resolvedType = _cache.substitute(resolvedType, variable.resolvedType.environment)
         } else {
           _log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
         }
@@ -2577,7 +2579,7 @@ namespace Skew.Resolving {
       }
 
       node.symbol = symbol
-      node.resolvedType = symbol.resolvedType
+      node.resolvedType = resolvedType
       _automaticallyCallGetter(node, scope)
     }
 
