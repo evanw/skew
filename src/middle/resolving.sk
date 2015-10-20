@@ -2011,7 +2011,8 @@ namespace Skew.Resolving {
           var kind = child.kind
           if kind == .NULL && !type.isReference ||
               kind == .INITIALIZER_LIST && _findMember(type, "[new]") == null && _findMember(type, "[...]") == null ||
-              kind == .INITIALIZER_MAP && _findMember(type, "{new}") == null && _findMember(type, "{...}") == null {
+              kind == .INITIALIZER_MAP && _findMember(type, "{new}") == null && _findMember(type, "{...}") == null ||
+              kind == .LAMBDA && (type.kind != .LAMBDA || type.argumentTypes.count != child.symbol.asFunctionSymbol.arguments.count) {
             candidates.removeAt(index)
             index--
             break

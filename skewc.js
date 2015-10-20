@@ -17232,7 +17232,7 @@
         var type = list1[i2];
         var kind = child.kind;
 
-        if (kind == Skew.NodeKind.NULL && !type.isReference() || kind == Skew.NodeKind.INITIALIZER_LIST && this._findMember(type, '[new]') == null && this._findMember(type, '[...]') == null || kind == Skew.NodeKind.INITIALIZER_MAP && this._findMember(type, '{new}') == null && this._findMember(type, '{...}') == null) {
+        if (kind == Skew.NodeKind.NULL && !type.isReference() || kind == Skew.NodeKind.INITIALIZER_LIST && this._findMember(type, '[new]') == null && this._findMember(type, '[...]') == null || kind == Skew.NodeKind.INITIALIZER_MAP && this._findMember(type, '{new}') == null && this._findMember(type, '{...}') == null || kind == Skew.NodeKind.LAMBDA && (type.kind != Skew.TypeKind.LAMBDA || type.argumentTypes.length != child.symbol.asFunctionSymbol().$arguments.length)) {
           candidates.splice(index, 1);
           --index;
           break;

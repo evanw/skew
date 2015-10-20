@@ -5473,5 +5473,34 @@ def main { foo<int> }
            ~~~
 ")
 
+# Make sure overload filtering takes into account lambda arity
+test("
+class Foo {
+  def foo(arg fn(int))
+  def foo(arg fn())
+  def bar(arg fn(int))
+  def baz(arg fn())
+}
+
+def main(foo Foo) {
+  foo.foo(x => {})
+  foo.foo(=> {})
+  foo.bar(x => {})
+  foo.bar(=> {})
+  foo.baz(x => {})
+  foo.baz(=> {})
+}
+", "
+<stdin>:12:11: error: Cannot convert from type \"fn()\" to type \"fn(int)\"
+  foo.bar(=> {})
+          ~~~~~
+<stdin>:13:11: error: Unable to determine the type of \"x\"
+  foo.baz(x => {})
+          ^
+<stdin>:13:11: error: Cannot convert from type \"fn(dynamic)\" to type \"fn()\"
+  foo.baz(x => {})
+          ~~~~~~~
+")
+
   }
 }
