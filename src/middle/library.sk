@@ -11,12 +11,13 @@ enum Target {
 
 const TARGET Target = .NONE
 
+def @alwaysinline
 def @deprecated
 def @deprecated(message string)
 def @entry
 def @export
 def @import
-def @noinline
+def @neverinline
 def @prefer
 def @rename(name string)
 def @skip

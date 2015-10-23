@@ -157,7 +157,7 @@ namespace Skew.Resolving {
         return
       }
 
-      # Remove the define so we can tell what _defines weren't used later on
+      # Remove the define so we can tell what defines weren't used later on
       _defines.remove(key)
 
       var type = symbol.resolvedType
@@ -1500,11 +1500,13 @@ namespace Skew.Resolving {
           case Symbol.IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
           case Symbol.IS_EXPORTED { isValid = !symbol.isImported }
           case Symbol.IS_IMPORTED { isValid = !symbol.isExported && (!symbol.kind.isFunction || symbol.asFunctionSymbol.block == null) }
-          case Symbol.IS_INLINING_DISABLED { isValid = symbol.kind.isFunction }
-          case Symbol.IS_PREFERRED { isValid = symbol.kind.isFunction }
+          case Symbol.IS_INLINING_FORCED, Symbol.IS_INLINING_PREVENTED, Symbol.IS_PREFERRED { isValid = symbol.kind.isFunction }
           case Symbol.IS_RENAMED {}
           case Symbol.IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
           case Symbol.SHOULD_SPREAD { isValid = symbol.kind == .FUNCTION_ANNOTATION }
+        }
+        if flag == Symbol.IS_INLINING_FORCED {
+          _options.isAlwaysInlinePresent = true
         }
         if !isValid {
           _log.semanticErrorInvalidAnnotation(value.range, value.symbol.name, symbol.name)
@@ -2185,7 +2187,7 @@ namespace Skew.Resolving {
         }
       }
 
-      # Forbid referencing a base class _global or constructor function from a derived class
+      # Forbid referencing a base class global or constructor function from a derived class
       if _isBaseGlobalReference(target.resolvedType.symbol, symbol) {
         _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
         return
@@ -2194,7 +2196,7 @@ namespace Skew.Resolving {
       var isType = target.isType
       var needsType = !symbol.kind.isOnInstances
 
-      # Make sure the _global/instance context matches the intended usage
+      # Make sure the global/instance context matches the intended usage
       if isType {
         if !needsType {
           _log.semanticErrorMemberUnexpectedInstance(node.internalRangeOrRange, symbol.name)
@@ -2525,7 +2527,7 @@ namespace Skew.Resolving {
       # Track reads and writes of local variables for later use
       _recordStatistic(symbol, node.isAssignTarget ? .WRITE : .READ)
 
-      # Forbid referencing a base class _global or constructor function from a derived class
+      # Forbid referencing a base class global or constructor function from a derived class
       if enclosingFunction != null && _isBaseGlobalReference(enclosingFunction.symbol.parent, symbol) {
         _log.semanticErrorUndeclaredSymbol(node.range, name)
         return
@@ -3000,11 +3002,12 @@ namespace Skew.Resolving {
 
   namespace Resolver {
     const _annotationSymbolFlags = {
+      "@alwaysinline": Symbol.IS_INLINING_FORCED,
       "@deprecated": Symbol.IS_DEPRECATED,
       "@entry": Symbol.IS_ENTRY_POINT,
       "@export": Symbol.IS_EXPORTED,
       "@import": Symbol.IS_IMPORTED,
-      "@noinline": Symbol.IS_INLINING_DISABLED,
+      "@neverinline": Symbol.IS_INLINING_PREVENTED,
       "@prefer": Symbol.IS_PREFERRED,
       "@rename": Symbol.IS_RENAMED,
       "@skip": Symbol.IS_SKIPPED,

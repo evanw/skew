@@ -1231,35 +1231,6 @@ def main {
 })();
 ").jsMangle
 
-test("
-def foo {
-  dynamic.Foo()
-}
-
-@noinline
-def bar {
-  dynamic.Bar()
-}
-
-@entry
-def main {
-  foo
-  bar
-}
-", "
-(function() {
-  function a() {
-    Bar();
-  }
-
-  function b() {
-    Foo(), a();
-  }
-
-  b();
-})();
-").jsMangle.inlineAllFunctions
-
 # Make sure inlined helper functions are also constant folded
 test("
 def bar(a int, b int) int {

@@ -9,7 +9,7 @@ namespace Skew {
     }
 
     over run(context PassContext) {
-      var graph = Inlining.InliningGraph.new(context.callGraph)
+      var graph = Inlining.InliningGraph.new(context.callGraph, context.log, context.options.inlineAllFunctions)
       for info in graph.inliningInfo {
         Inlining.inlineSymbol(graph, info)
       }
@@ -180,16 +180,21 @@ namespace Skew.Inlining {
     var inliningInfo List<InliningInfo> = []
     var symbolToInfoIndex IntMap<int> = {}
 
-    def new(graph CallGraph) {
+    def new(graph CallGraph, log Log, inlineAllFunctions bool) {
       # Create the nodes in the graph
       for callInfo in graph.callInfo {
-        if callInfo.symbol.isInliningDisabled {
+        var symbol = callInfo.symbol
+        if symbol.isInliningPrevented {
           continue
         }
         var info = _createInliningInfo(callInfo)
         if info != null {
-          symbolToInfoIndex[info.symbol.id] = inliningInfo.count
-          inliningInfo.append(info)
+          if inlineAllFunctions || symbol.isInliningForced {
+            symbolToInfoIndex[symbol.id] = inliningInfo.count
+            inliningInfo.append(info)
+          }
+        } else if symbol.isInliningForced {
+          log.semanticWarningInliningFailed(symbol.range, symbol.name)
         }
       }
 

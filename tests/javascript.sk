@@ -1743,5 +1743,67 @@ def main {
 })();
 ").js.foldAllConstants
 
+# Test @neverinline
+test("
+def foo {
+  dynamic.Foo()
+}
+
+@neverinline
+def bar {
+  dynamic.Bar()
+}
+
+@entry
+def main {
+  foo
+  bar
+}
+", "
+(function() {
+  function bar() {
+    Bar();
+  }
+
+  function main() {
+    Foo();
+    bar();
+  }
+
+  main();
+})();
+").js.inlineAllFunctions
+
+# Test @alwaysinline
+test("
+def foo {
+  dynamic.Foo()
+}
+
+@alwaysinline
+def bar {
+  dynamic.Bar()
+}
+
+@entry
+def main {
+  foo
+  bar
+}
+", "
+(function() {
+  function foo() {
+    Foo();
+  }
+
+  function main() {
+    foo();
+    Bar();
+  }
+
+  main();
+})();
+").js
+
   }
 }

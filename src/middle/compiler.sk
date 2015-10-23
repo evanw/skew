@@ -24,11 +24,12 @@ namespace Skew {
     var foldAllConstants = false
     var globalizeAllFunctions = false
     var inlineAllFunctions = false
+    var isAlwaysInlinePresent = false # This is set by the resolver
     var jsMangle = false
     var jsMinify = false
     var jsSourceMap = false
-    var verbose = false
     var stopAfterResolve = false
+    var verbose = false
     var outputDirectory string = null
     var outputFile string = null
     var target = CompilerTarget.new
@@ -50,8 +51,8 @@ namespace Skew {
         MotionPass.new.onlyRunWhen(=> _continueAfterResolve),
         RenamingPass.new.onlyRunWhen(=> _continueAfterResolve),
         FoldingPass.new.onlyRunWhen(=> _continueAfterResolve && foldAllConstants),
-        InliningPass.new.onlyRunWhen(=> _continueAfterResolve && inlineAllFunctions),
-        FoldingPass.new.onlyRunWhen(=> _continueAfterResolve && inlineAllFunctions && foldAllConstants),
+        InliningPass.new.onlyRunWhen(=> _continueAfterResolve && (inlineAllFunctions || isAlwaysInlinePresent)),
+        FoldingPass.new.onlyRunWhen(=> _continueAfterResolve && (inlineAllFunctions || isAlwaysInlinePresent) && foldAllConstants),
         EmittingPass.new.onlyRunWhen(=> !stopAfterResolve),
       ]
     }
