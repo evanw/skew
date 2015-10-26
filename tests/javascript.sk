@@ -1805,5 +1805,131 @@ def main {
 })();
 ").js
 
+# Test obscure bug with super class calls
+test("
+class Baz : Bar {
+}
+
+@entry
+def main {
+  Baz2.new.foo(0)
+}
+
+class Bar : Foo {
+  over foo(bar int) {}
+}
+
+class Foo {
+  def foo(bar int) {}
+}
+
+class Baz2 : Bar {
+  over foo(bar int) {
+    super(bar)
+  }
+}
+", "
+(function() {
+  function __extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+
+  function main() {
+    new Baz2().foo(0);
+  }
+
+  function Foo() {
+  }
+
+  Foo.prototype.foo = function(bar) {
+  };
+
+  function Bar() {
+    Foo.call(this);
+  }
+
+  __extends(Bar, Foo);
+
+  Bar.prototype.foo = function(bar) {
+  };
+
+  function Baz2() {
+    Bar.call(this);
+  }
+
+  __extends(Baz2, Bar);
+
+  Baz2.prototype.foo = function(bar) {
+    Bar.prototype.foo.call(this, bar);
+  };
+
+  main();
+})();
+").js
+
+# Test obscure bug with super class calls
+test("
+@entry
+def main {
+  Baz2.new.foo(0)
+}
+
+class Foo {
+  def foo(bar int) {}
+}
+
+class Bar : Foo {
+  over foo(bar int) {}
+}
+
+class Baz : Bar {
+}
+
+class Baz2 : Bar {
+  over foo(bar int) {
+    super(bar)
+  }
+}
+", "
+(function() {
+  function __extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+
+  function main() {
+    new Baz2().foo(0);
+  }
+
+  function Foo() {
+  }
+
+  Foo.prototype.foo = function(bar) {
+  };
+
+  function Bar() {
+    Foo.call(this);
+  }
+
+  __extends(Bar, Foo);
+
+  Bar.prototype.foo = function(bar) {
+  };
+
+  function Baz2() {
+    Bar.call(this);
+  }
+
+  __extends(Baz2, Bar);
+
+  Baz2.prototype.foo = function(bar) {
+    Bar.prototype.foo.call(this, bar);
+  };
+
+  main();
+})();
+").js
+
   }
 }

@@ -6535,6 +6535,8 @@
         return enclosingName;
       }
 
+      assert(symbol.kind != Skew.SymbolKind.OVERLOADED_INSTANCE);
+
       if (symbol.kind == Skew.SymbolKind.FUNCTION_INSTANCE) {
         enclosingName += '.prototype';
       }
@@ -17204,7 +17206,7 @@
     }
 
     // Replace overloaded symbols with the chosen overload
-    if ($function != null && $function.overloaded != null && value.symbol == $function.overloaded) {
+    if ($function != null && value.symbol != null && Skew.in_SymbolKind.isOverloadedFunction(value.symbol.kind) && value.symbol.asOverloadedFunctionSymbol().symbols.indexOf($function) != -1) {
       value.symbol = $function;
     }
 
