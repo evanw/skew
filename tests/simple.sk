@@ -5502,6 +5502,7 @@ def main(foo Foo) {
           ~~~~~~~
 ")
 
+# Make sure type context is propagated from implicit "self" references
 test("
 class Foo<T> {
   def foo(arg T)
@@ -5520,6 +5521,46 @@ class Bar : Foo<int> {
 <stdin>:8:14: error: Cannot convert from type \"bool\" to type \"int\" without a cast
     self.foo(false)
              ~~~~~
+")
+
+# Check for a crash when initializing an overloaded function
+test("
+class Baz : Bar {
+}
+
+class Foo {
+  def foo bool
+}
+
+class Bar : Foo {
+  over foo bool {
+    return 0
+  }
+}
+", "
+<stdin>:10:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    return 0
+           ^
+")
+
+# Check for a crash when initializing an overloaded function
+test("
+class Baz : Bar {
+}
+
+class Bar : Foo {
+  over foo bool {
+    return 0
+  }
+}
+
+class Foo {
+  def foo bool
+}
+", "
+<stdin>:6:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    return 0
+           ^
 ")
 
   }

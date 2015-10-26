@@ -16191,18 +16191,19 @@
 
       if (index != -1) {
         var other = symbols[index];
-        var parent = symbol.parent;
+        var parent = symbol.parent.asObjectSymbol();
         var isFromSameObject = $function.parent == other.parent;
         var areReturnTypesDifferent = (isFromSameObject || symbol.kind == Skew.SymbolKind.OVERLOADED_INSTANCE) && $function.resolvedType.returnType != other.resolvedType.returnType;
 
-        // Symbols should be either from the same object or from this class and a base class
-        assert(isFromSameObject || $function.parent == parent || other.parent == parent);
+        // Symbols should be in the base type chain
+        assert(parent.isSameOrHasBaseClass($function.parent));
+        assert(parent.isSameOrHasBaseClass(other.parent));
 
         // Forbid overloading by return type
         if (!isFromSameObject && areReturnTypesDifferent) {
           var derived = $function.parent == parent ? $function : other;
           var base = derived == $function ? other : $function;
-          this._log.semanticErrorBadOverrideReturnType(derived.range, derived.name, parent.asObjectSymbol().baseType, base.range);
+          this._log.semanticErrorBadOverrideReturnType(derived.range, derived.name, parent.baseType, base.range);
 
           if (isFromSameObject) {
             $function.flags |= Skew.Symbol.IS_OBSOLETE;
@@ -16222,7 +16223,7 @@
         }
 
         // Keep "function"
-        else if (isFromSameObject ? $function.block != null : $function.parent == parent) {
+        else if (isFromSameObject ? $function.block != null : $function.parent.asObjectSymbol().hasBaseClass(other.parent)) {
           if ($function.parent == parent && other.parent == parent) {
             $function.mergeAnnotationsAndCommentsFrom(other);
             $function.flags |= other.flags & ~Skew.Symbol.IS_IMPORTED;
