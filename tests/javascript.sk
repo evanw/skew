@@ -1931,5 +1931,33 @@ class Baz2 : Bar {
 })();
 ").js
 
+# Test math constants
+test("
+@export
+def main {
+  dynamic.foo(Math.INFINITY, Math.NAN)
+}
+", "
+(function() {
+  main = function() {
+    foo(1 / 0, 0 / 0);
+  };
+})();
+").js.inlineAllFunctions
+
+# Test math constants
+test("
+@export
+def main {
+  dynamic.foo(Math.INFINITY, Math.NAN)
+}
+", "
+(function() {
+  main = function() {
+    foo(Infinity, NaN);
+  };
+})();
+").js.inlineAllFunctions.foldAllConstants
+
   }
 }

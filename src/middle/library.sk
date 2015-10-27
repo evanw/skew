@@ -82,11 +82,11 @@ namespace Math {
   @rename(\"Min\") if TARGET == .CSHARP
   def min(x int, y int) int
 
-  const E = 2.718281828459045
-  const INFINITY = 1 / 0.0
-  const NAN = 0 / 0.0
-  const PI = 3.141592653589793
-  const SQRT_2 = 2 ** 0.5
+  def E double { return 2.718281828459045 }
+  def INFINITY double { return 1 / 0.0 }
+  def NAN double { return 0 / 0.0 }
+  def PI double { return 3.141592653589793 }
+  def SQRT_2 double { return 2 ** 0.5 }
 }
 
 @import
