@@ -84,6 +84,7 @@ namespace Skew {
     var _needsSemicolon = false
     var _newline = "\n"
     var _space = " "
+    var _previousCodeUnit = '\0'
 
     # For tracking "this" vs "self"
     var _currentSelf VariableSymbol = null
@@ -212,14 +213,17 @@ namespace Skew {
 
     over _emit(text string) {
       if _minify || _sourceMap {
-        for i in 0..text.count {
-          var c = text[i]
-          if c == '\n' {
+        var n = text.count
+        for i in 0..n {
+          if text[i] == '\n' {
             _currentColumn = 0
             _currentLine++
           } else {
             _currentColumn++
           }
+        }
+        if n != 0 {
+          _previousCodeUnit = text[n - 1]
         }
       }
       _code.append(text)
@@ -1228,7 +1232,14 @@ namespace Skew {
           if wrap {
             _emit("(")
           }
+
+          # Prevent "x - -1" from becoming "x--1"
+          if _minify && node.isNumberLessThanZero && _previousCodeUnit == '-' {
+            _emit(" ")
+          }
+
           _emitContent(node.content)
+
           if wrap {
             _emit(")")
           }
@@ -1409,6 +1420,12 @@ namespace Skew {
           if info.precedence < precedence {
             _emit("(")
           }
+
+          # Prevent "x - -1" from becoming "x--1"
+          if _minify && (kind == .POSITIVE || kind == .NEGATIVE || kind == .INCREMENT || kind == .DECREMENT) && info.text[0] == _previousCodeUnit {
+            _emit(" ")
+          }
+
           _emit(info.text)
           _emitExpression(value, info.precedence)
           if info.precedence < precedence {
@@ -1455,13 +1472,6 @@ namespace Skew {
 
             # Always emit spaces around keyword operators, even when minifying
             _emit(kind == .IN ? " in " : _space + (kind == .EQUAL ? "==" + extraEquals : kind == .NOT_EQUAL ? "!=" + extraEquals : info.text) + _space)
-
-            # Prevent "x - -1" from becoming "x--1"
-            if _minify && (
-                kind == .ADD && (right.kind == .POSITIVE || right.kind == .INCREMENT) ||
-                kind == .SUBTRACT && (right.kind == .NEGATIVE || right.kind == .DECREMENT || right.isNumberLessThanZero)) {
-              _emit(" ")
-            }
 
             _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
             if info.precedence < precedence {

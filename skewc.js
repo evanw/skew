@@ -3503,6 +3503,7 @@
     this._needsSemicolon = false;
     this._newline = '\n';
     this._space = ' ';
+    this._previousCodeUnit = 0;
     this._currentSelf = null;
     this._needsSelf = false;
   };
@@ -3655,10 +3656,10 @@
 
   Skew.JavaScriptEmitter.prototype._emit = function(text) {
     if (this._minify || this._sourceMap) {
-      for (var i = 0, count = text.length; i < count; ++i) {
-        var c = text.charCodeAt(i);
+      var n = text.length;
 
-        if (c == 10) {
+      for (var i = 0, count = n; i < count; ++i) {
+        if (text.charCodeAt(i) == 10) {
           this._currentColumn = 0;
           ++this._currentLine;
         }
@@ -3666,6 +3667,10 @@
         else {
           ++this._currentColumn;
         }
+      }
+
+      if (n != 0) {
+        this._previousCodeUnit = text.charCodeAt(n - 1 | 0);
       }
     }
 
@@ -4879,6 +4884,11 @@
           this._emit('(');
         }
 
+        // Prevent "x - -1" from becoming "x--1"
+        if (this._minify && node.isNumberLessThanZero() && this._previousCodeUnit == 45) {
+          this._emit(' ');
+        }
+
         this._emitContent(node.content);
 
         if (wrap) {
@@ -5097,6 +5107,11 @@
           this._emit('(');
         }
 
+        // Prevent "x - -1" from becoming "x--1"
+        if (this._minify && (kind == Skew.NodeKind.POSITIVE || kind == Skew.NodeKind.NEGATIVE || kind == Skew.NodeKind.INCREMENT || kind == Skew.NodeKind.DECREMENT) && info.text.charCodeAt(0) == this._previousCodeUnit) {
+          this._emit(' ');
+        }
+
         this._emit(info.text);
         this._emitExpression(value1, info.precedence);
 
@@ -5156,12 +5171,6 @@
 
           // Always emit spaces around keyword operators, even when minifying
           this._emit(kind == Skew.NodeKind.IN ? ' in ' : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text) + this._space);
-
-          // Prevent "x - -1" from becoming "x--1"
-          if (this._minify && (kind == Skew.NodeKind.ADD && (right.kind == Skew.NodeKind.POSITIVE || right.kind == Skew.NodeKind.INCREMENT) || kind == Skew.NodeKind.SUBTRACT && (right.kind == Skew.NodeKind.NEGATIVE || right.kind == Skew.NodeKind.DECREMENT || right.isNumberLessThanZero()))) {
-            this._emit(' ');
-          }
-
           this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
 
           if (info1.precedence < precedence) {

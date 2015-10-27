@@ -204,5 +204,25 @@ def main(x int) int {
 (function(){main=function(a){return~a?bar():foo(),0}})();
 ").jsMinify.jsMangle
 
+# Check nested negation minification
+test("
+@export
+def main(x double) double {
+  return x - (-x) * 2 + x + (-x) * 2
+}
+", "
+(function(){main=function(x){return x- -x*2+x+-x*2}})();
+").jsMinify
+
+# Check nested negation minification
+test("
+@export
+def main(x double) double {
+  return x - (-2) * 2 + x + (-2) * 2
+}
+", "
+(function(){main=function(x){return x- -4+x+-4}})();
+").jsMinify.foldAllConstants
+
   }
 }
