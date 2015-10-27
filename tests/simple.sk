@@ -5563,5 +5563,29 @@ class Foo {
            ^
 ")
 
+# Check for suspicious assignment warnings
+test("
+class Foo {
+  var z int
+}
+
+def foo Foo {
+  return null
+}
+
+def main(x int, y Foo) {
+  x = x
+  y.z = y.z
+  foo.z = foo.z
+}
+", "
+<stdin>:10:3: warning: Both sides of \"=\" are identical, is this a bug?
+  x = x
+  ~~~~~
+<stdin>:11:3: warning: Both sides of \"=\" are identical, is this a bug?
+  y.z = y.z
+  ~~~~~~~~~
+")
+
   }
 }

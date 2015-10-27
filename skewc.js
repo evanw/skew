@@ -18090,6 +18090,11 @@
         this._resolveAsParameterizedExpressionWithConversion(right, scope, left.resolvedType);
         node.resolvedType = left.resolvedType;
         this._checkStorage(left, scope);
+
+        // Check for likely bugs "x = x"
+        if (left.looksTheSameAs(right) && left.hasNoSideEffects() && right.hasNoSideEffects()) {
+          this._log.semanticWarningIdenticalOperands(node.range, '=');
+        }
       }
 
       return;
