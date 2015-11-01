@@ -35,10 +35,12 @@ def assert(truth bool)
 
 @import
 namespace Math {
+  @prefer
   @rename(\"Abs\") if TARGET == .CSHARP
   def abs(x double) double
   @rename(\"Abs\") if TARGET == .CSHARP
   def abs(x int) int
+
   @rename(\"Acos\") if TARGET == .CSHARP
   def acos(x double) double
   @rename(\"Asin\") if TARGET == .CSHARP
@@ -47,28 +49,31 @@ namespace Math {
   def atan(x double) double
   @rename(\"Atan2\") if TARGET == .CSHARP
   def atan2(x double, y double) double
-  @rename(\"Ceil\") if TARGET == .CSHARP
-  def ceil(x double) double
+
+  @rename(\"Sin\") if TARGET == .CSHARP
+  def sin(x double) double
   @rename(\"Cos\") if TARGET == .CSHARP
   def cos(x double) double
-  @rename(\"Exp\") if TARGET == .CSHARP
-  def exp(x double) double
+  @rename(\"Tan\") if TARGET == .CSHARP
+  def tan(x double) double
+
   @rename(\"Floor\") if TARGET == .CSHARP
   def floor(x double) double
+  @rename(\"Ceil\") if TARGET == .CSHARP
+  def ceil(x double) double
+  @rename(\"Round\") if TARGET == .CSHARP
+  def round(x double) double
+
+  @rename(\"Exp\") if TARGET == .CSHARP
+  def exp(x double) double
   @rename(\"Log\") if TARGET == .CSHARP
   def log(x double) double
   @rename(\"Pow\") if TARGET == .CSHARP
   def pow(x double, y double) double
   @rename(\"Random\") if TARGET == .CSHARP
   def random double
-  @rename(\"Round\") if TARGET == .CSHARP
-  def round(x double) double
-  @rename(\"Sin\") if TARGET == .CSHARP
-  def sin(x double) double
   @rename(\"Sqrt\") if TARGET == .CSHARP
   def sqrt(x double) double
-  @rename(\"Tan\") if TARGET == .CSHARP
-  def tan(x double) double
 
   @prefer
   @rename(\"Max\") if TARGET == .CSHARP
