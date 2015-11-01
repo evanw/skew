@@ -5611,5 +5611,31 @@ def main(x dynamic, y dynamic) {
 ", "
 ")
 
+# Check storage with dynamic variables
+test("
+def main(x dynamic, y string, z int) {
+  x = x
+  x += x
+  x[0] += z
+  x++
+  ++x
+  y = y
+  y += y
+  y[0] += z
+  z++
+  ++z
+}
+", "
+<stdin>:2:3: warning: Both sides of \"=\" are identical, is this a bug?
+  x = x
+  ~~~~~
+<stdin>:7:3: warning: Both sides of \"=\" are identical, is this a bug?
+  y = y
+  ~~~~~
+<stdin>:9:3: error: Cannot store to this location
+  y[0] += z
+  ~~~~
+")
+
   }
 }

@@ -16549,7 +16549,7 @@
     var symbol = node.symbol;
 
     // Only allow storage to variables
-    if (node.kind != Skew.NodeKind.NAME && node.kind != Skew.NodeKind.DOT || symbol != null && !Skew.in_SymbolKind.isVariable(symbol.kind)) {
+    if (node.kind != Skew.NodeKind.NAME && node.kind != Skew.NodeKind.DOT && (node.kind != Skew.NodeKind.INDEX || node.resolvedType != Skew.Type.DYNAMIC) || symbol != null && !Skew.in_SymbolKind.isVariable(symbol.kind)) {
       this._log.semanticErrorBadStorage(node.range);
     }
 

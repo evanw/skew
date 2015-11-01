@@ -1379,7 +1379,7 @@ namespace Skew.Resolving {
       var symbol = node.symbol
 
       # Only allow storage to variables
-      if node.kind != .NAME && node.kind != .DOT || symbol != null && !symbol.kind.isVariable {
+      if node.kind != .NAME && node.kind != .DOT && (node.kind != .INDEX || node.resolvedType != .DYNAMIC) || symbol != null && !symbol.kind.isVariable {
         _log.semanticErrorBadStorage(node.range)
       }
 
