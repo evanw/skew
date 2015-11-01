@@ -693,6 +693,12 @@ namespace Skew.Folding {
       if variableIsInt {
         var shift = _logBase2(value)
         if shift != -1 {
+          # "x * 2 * 4" => "x << 3"
+          if variable.kind == .SHIFT_LEFT && variable.binaryRight.isInt {
+            shift += variable.binaryRight.asInt
+            variable.replaceWith(variable.binaryLeft.remove)
+          }
+
           constant.content = IntContent.new(shift)
           node.kind = .SHIFT_LEFT
         }
@@ -795,6 +801,14 @@ namespace Skew.Folding {
           # Handle special cases of "&" nested inside "<<"
           else if node.kind == .SHIFT_LEFT && left.kind == .BITWISE_AND && right.isInt {
             _foldConstantBitwiseAndInsideShift(node, left.binaryLeft, left.binaryRight)
+          }
+
+          # "x << 1 << 2" => "x << 3"
+          # "x >> 1 >> 2" => "x >> 3"
+          # "x >>> 1 >>> 2" => "x >>> 3"
+          else if node.kind == left.kind && left.binaryRight.isInt && right.isInt {
+            _flattenInt(right, left.binaryRight.asInt + right.asInt)
+            left.replaceWith(left.binaryLeft.remove)
           }
         }
         case .BITWISE_AND {

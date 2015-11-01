@@ -13000,6 +13000,12 @@
       var shift = Skew.Folding.ConstantFolder._logBase2(value);
 
       if (shift != -1) {
+        // "x * 2 * 4" => "x << 3"
+        if (variable.kind == Skew.NodeKind.SHIFT_LEFT && variable.binaryRight().isInt()) {
+          shift += variable.binaryRight().asInt();
+          variable.replaceWith(variable.binaryLeft().remove());
+        }
+
         constant.content = new Skew.IntContent(shift);
         node.kind = Skew.NodeKind.SHIFT_LEFT;
       }
@@ -13121,6 +13127,14 @@
         // Handle special cases of "&" nested inside "<<"
         else if (node.kind == Skew.NodeKind.SHIFT_LEFT && left.kind == Skew.NodeKind.BITWISE_AND && right.isInt()) {
           this._foldConstantBitwiseAndInsideShift(node, left.binaryLeft(), left.binaryRight());
+        }
+
+        // "x << 1 << 2" => "x << 3"
+        // "x >> 1 >> 2" => "x >> 3"
+        // "x >>> 1 >>> 2" => "x >>> 3"
+        else if (node.kind == left.kind && left.binaryRight().isInt() && right.isInt()) {
+          this._flattenInt(right, left.binaryRight().asInt() + right.asInt() | 0);
+          left.replaceWith(left.binaryLeft().remove());
         }
         break;
       }

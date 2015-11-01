@@ -1959,5 +1959,37 @@ def main {
 })();
 ").js.inlineAllFunctions.foldAllConstants
 
+# Test folding of nested shifts
+test("
+@export
+def main(x int) {
+  dynamic.foo(x * 32 * 64)
+  dynamic.foo(x * 32.0 * 64)
+  dynamic.foo(x * 32 * 64.0)
+  dynamic.foo(x << 5 << 6)
+  dynamic.foo(x >> 5 >> 6)
+  dynamic.foo(x >>> 5 >>> 6)
+  dynamic.foo(x << 5 >> 6)
+  dynamic.foo(x << 5 >>> 6)
+  dynamic.foo(x >> 5 >>> 6)
+  dynamic.foo(x >>> 5 >> 6)
+}
+", "
+(function() {
+  main = function(x) {
+    foo(x << 11);
+    foo(x * 32 * 64);
+    foo((x << 5) * 64);
+    foo(x << 11);
+    foo(x >> 11);
+    foo(x >>> 11);
+    foo(x << 5 >> 6);
+    foo(x << 5 >>> 6);
+    foo(x >> 5 >>> 6);
+    foo(x >>> 5 >> 6);
+  };
+})();
+").js.foldAllConstants
+
   }
 }
