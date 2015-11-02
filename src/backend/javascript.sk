@@ -753,13 +753,20 @@ namespace Skew {
                 function.comments = symbol.comments
               }
               _emitFunction(function)
-              if symbol.baseClass != null {
+              if symbol.baseClass != null || symbol.kind == .OBJECT_CLASS && symbol.extends != null {
                 if !_minify {
                   _emit("\n" + _indent)
                 }
                 _emitSemicolonIfNeeded
                 _addMapping(variable.range)
-                _emit(_mangleName(variable) + "(" + _fullName(symbol) + "," + _space + _fullName(symbol.baseClass) + ")")
+                _emit(_mangleName(variable) + "(" + _fullName(symbol) + "," + _space)
+                if symbol.baseClass != null {
+                  _emit(_fullName(symbol.baseClass))
+                } else {
+                  assert(symbol.kind == .OBJECT_CLASS && symbol.extends != null)
+                  _emitExpression(symbol.extends, .LOWEST)
+                }
+                _emit(")")
                 _emitSemicolonAfterStatement
               }
               foundPrimaryConstructor = true
@@ -1498,7 +1505,7 @@ namespace Skew {
       _allocateNamingGroupIndex(symbol)
 
       # Subclasses need the extension stub
-      if !symbol.isImported && symbol.baseClass != null {
+      if !symbol.isImported && (symbol.baseClass != null || symbol.kind == .OBJECT_CLASS && symbol.extends != null) {
         _specialVariable(.EXTENDS)
       }
 

@@ -23,6 +23,24 @@ def main {
 })();
 ").js
 
+# Dynamic base classes should still work
+test("
+@export
+class DerivedClass : dynamic.BaseClass {}
+", "
+(function() {
+  function __extends(derived, base) {
+    derived.prototype = Object.create(base.prototype);
+    derived.prototype.constructor = derived;
+  }
+
+  DerivedClass = function() {
+  };
+
+  __extends(DerivedClass, BaseClass);
+})();
+").js
+
 # Make sure classes with unused constructors are still emitted
 test("
 class A.B.C {}

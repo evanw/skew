@@ -4357,14 +4357,25 @@
 
             this._emitFunction($function);
 
-            if (symbol.baseClass != null) {
+            if (symbol.baseClass != null || symbol.kind == Skew.SymbolKind.OBJECT_CLASS && symbol.$extends != null) {
               if (!this._minify) {
                 this._emit('\n' + this._indent);
               }
 
               this._emitSemicolonIfNeeded();
               this._addMapping(variable1.range);
-              this._emit(Skew.JavaScriptEmitter._mangleName(variable1) + '(' + Skew.JavaScriptEmitter._fullName(symbol) + ',' + this._space + Skew.JavaScriptEmitter._fullName(symbol.baseClass) + ')');
+              this._emit(Skew.JavaScriptEmitter._mangleName(variable1) + '(' + Skew.JavaScriptEmitter._fullName(symbol) + ',' + this._space);
+
+              if (symbol.baseClass != null) {
+                this._emit(Skew.JavaScriptEmitter._fullName(symbol.baseClass));
+              }
+
+              else {
+                assert(symbol.kind == Skew.SymbolKind.OBJECT_CLASS && symbol.$extends != null);
+                this._emitExpression(symbol.$extends, Skew.Precedence.LOWEST);
+              }
+
+              this._emit(')');
               this._emitSemicolonAfterStatement();
             }
 
@@ -5246,7 +5257,7 @@
     this._allocateNamingGroupIndex(symbol);
 
     // Subclasses need the extension stub
-    if (!symbol.isImported() && symbol.baseClass != null) {
+    if (!symbol.isImported() && (symbol.baseClass != null || symbol.kind == Skew.SymbolKind.OBJECT_CLASS && symbol.$extends != null)) {
       this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.EXTENDS);
     }
 
