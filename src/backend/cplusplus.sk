@@ -577,7 +577,7 @@ namespace Skew {
       switch content.kind {
         case .BOOL { _emit(content.asBool.toString) }
         case .INT { _emit(content.asInt.toString) }
-        case .DOUBLE { _emit(content.asDouble.toString) }
+        case .DOUBLE { _emit(doubleToStringWithDot(content.asDouble)) }
         case .STRING { _emit(quoteString(content.asString, .DOUBLE) + "_s") }
       }
     }

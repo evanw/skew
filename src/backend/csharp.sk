@@ -752,7 +752,17 @@ namespace Skew {
       switch content.kind {
         case .BOOL { _emit(content.asBool.toString) }
         case .INT { _emit(content.asInt.toString) }
-        case .DOUBLE { _emit(content.asDouble.toString) }
+        case .DOUBLE {
+          var value = content.asDouble
+          if !value.isFinite {
+            _usingNames["System"] = 0
+          }
+          _emit(
+            value.isNaN ? "Double.NaN" :
+            value == Math.INFINITY ? "Double.PositiveInfinity" :
+            value == -Math.INFINITY ? "Double.NegativeInfinity" :
+            doubleToStringWithDot(value))
+        }
         case .STRING { _emit(quoteString(content.asString, .DOUBLE)) }
       }
     }
@@ -794,7 +804,16 @@ namespace Skew {
         }
 
         case .CONSTANT {
+          var wrap = precedence == .MEMBER && node.isNumberLessThanZero && (!node.isDouble || node.asDouble.isFinite)
+          if wrap {
+            _emit("(")
+          }
+
           _emitContent(node.content)
+
+          if wrap {
+            _emit(")")
+          }
         }
 
         case .CALL {
@@ -834,6 +853,11 @@ namespace Skew {
 
           if type.kind == .TYPE && type.resolvedType == .DYNAMIC {
             _emitExpression(value, precedence)
+          }
+
+          # Automatically promote integer literals to doubles instead of using a cast
+          else if _cache.isEquivalentToDouble(resolvedType) && value.isInt {
+            _emitExpression(Node.createDouble(value.asInt), precedence)
           }
 
           # C# doesn't have a cast from bool to int

@@ -1935,12 +1935,14 @@ class Baz2 : Bar {
 test("
 @export
 def main {
-  dynamic.foo(Math.INFINITY, Math.NAN)
+  dynamic.foo(Math.NAN, Math.INFINITY, -Math.INFINITY)
+  dynamic.foo(Math.NAN.toString, Math.INFINITY.toString, (-Math.INFINITY).toString)
 }
 ", "
 (function() {
   main = function() {
-    foo(1 / 0, 0 / 0);
+    foo(0 / 0, 1 / 0, -(1 / 0));
+    foo((0 / 0).toString(), (1 / 0).toString(), (-(1 / 0)).toString());
   };
 })();
 ").js.inlineAllFunctions
@@ -1949,15 +1951,69 @@ def main {
 test("
 @export
 def main {
-  dynamic.foo(Math.INFINITY, Math.NAN)
+  dynamic.foo(Math.NAN, Math.INFINITY, -Math.INFINITY)
+  dynamic.foo(Math.NAN.toString, Math.INFINITY.toString, (-Math.INFINITY).toString)
 }
 ", "
 (function() {
   main = function() {
-    foo(Infinity, NaN);
+    foo(NaN, Infinity, -Infinity);
+    foo(NaN.toString(), Infinity.toString(), (-Infinity).toString());
   };
 })();
 ").js.inlineAllFunctions.foldAllConstants
+
+# Test math toString
+test("
+@export
+def main {
+  dynamic.foo(0.toString, 1.0.toString, (-1.0).toString, 0.5.toString, (-0.5).toString)
+}
+", "
+(function() {
+  main = function() {
+    foo((0).toString(), (1).toString(), (-1).toString(), (0.5).toString(), (-0.5).toString());
+  };
+})();
+").js
+
+# Test math toString
+test("
+@export
+def main {
+  dynamic.foo(0.toString, 1.0.toString, (-1.0).toString, 0.5.toString, (-0.5).toString)
+}
+", "
+(function() {
+  main = function() {
+    foo('0', (1).toString(), (-1).toString(), (0.5).toString(), (-0.5).toString());
+  };
+})();
+").js.foldAllConstants
+
+# Double literals must be emitted with the right format
+test("
+@export
+def main(x double) {
+  x = 1.0 / 2.0
+  x = 1e100 / 2e100
+  x = 1e-100 / 2e-100
+  x = 1.5 / 2.5
+  x = 1.5e100 / 2.5e100
+  x = 1.5e-100 / 2.5e-100
+}
+", "
+(function() {
+  main = function(x) {
+    x = 1 / 2;
+    x = 1e+100 / 2e+100;
+    x = 1e-100 / 2e-100;
+    x = 1.5 / 2.5;
+    x = 1.5e+100 / 2.5e+100;
+    x = 1.5e-100 / 2.5e-100;
+  };
+})();
+").js
 
 # Test folding of nested shifts
 test("

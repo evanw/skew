@@ -295,5 +295,101 @@ public class Error : System.Exception
 }
 ").csharp
 
+# Test math constants
+test("
+@export
+def main {
+  dynamic.foo(Math.NAN, Math.INFINITY, -Math.INFINITY)
+  dynamic.foo(Math.NAN.toString, Math.INFINITY.toString, (-Math.INFINITY).toString)
+}
+", "
+public class Globals
+{
+    public static void main()
+    {
+        foo(0.0 / 0.0, 1.0 / 0.0, -(1.0 / 0.0));
+        foo((0.0 / 0.0).ToString(), (1.0 / 0.0).ToString(), (-(1.0 / 0.0)).ToString());
+    }
+}
+").csharp.inlineAllFunctions
+
+# Test math constants
+test("
+@export
+def main {
+  dynamic.foo(Math.NAN, Math.INFINITY, -Math.INFINITY)
+  dynamic.foo(Math.NAN.toString, Math.INFINITY.toString, (-Math.INFINITY).toString)
+}
+", "
+using System;
+
+public class Globals
+{
+    public static void main()
+    {
+        foo(Double.NaN, Double.PositiveInfinity, Double.NegativeInfinity);
+        foo(Double.NaN.ToString(), Double.PositiveInfinity.ToString(), Double.NegativeInfinity.ToString());
+    }
+}
+").csharp.inlineAllFunctions.foldAllConstants
+
+# Test math toString
+test("
+@export
+def main {
+  dynamic.foo(0.toString, 1.0.toString, (-1.0).toString, 0.5.toString, (-0.5).toString)
+}
+", "
+public class Globals
+{
+    public static void main()
+    {
+        foo(0.ToString(), 1.0.ToString(), (-1.0).ToString(), 0.5.ToString(), (-0.5).ToString());
+    }
+}
+").csharp
+
+# Test math toString
+test("
+@export
+def main {
+  dynamic.foo(0.toString, 1.0.toString, (-1.0).toString, 0.5.toString, (-0.5).toString)
+}
+", "
+public class Globals
+{
+    public static void main()
+    {
+        foo(\"0\", 1.0.ToString(), (-1.0).ToString(), 0.5.ToString(), (-0.5).ToString());
+    }
+}
+").csharp.foldAllConstants
+
+# Double literals must be emitted with a decimal point
+test("
+@export
+def main(x double) {
+  x = 1.0 / 2.0
+  x = 1e100 / 2e100
+  x = 1e-100 / 2e-100
+  x = 1.5 / 2.5
+  x = 1.5e100 / 2.5e100
+  x = 1.5e-100 / 2.5e-100
+}
+", "
+public class Globals
+{
+    public static void main(double x)
+    {
+        x = 1.0 / 2.0;
+        x = 1.0e+100 / 2.0e+100;
+        x = 1.0e-100 / 2.0e-100;
+        x = 1.5 / 2.5;
+        x = 1.5e+100 / 2.5e+100;
+        x = 1.5e-100 / 2.5e-100;
+    }
+}
+").csharp
+
   }
 }

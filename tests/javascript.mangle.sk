@@ -48,7 +48,7 @@ class Foo {
 (function() {
   main = function() {
     var a = null, b = null;
-    return '00false' + a + b.c();
+    return '0' + 0 + 'false' + a + b.c();
   };
   var d = {};
 })();

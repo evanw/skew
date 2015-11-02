@@ -456,12 +456,17 @@ namespace Skew.Folding {
       if value.kind == .DOT {
         var target = value.dotTarget
 
-        # "boolValue.toString"
-        # "doubleValue.toString"
-        # "intValue.toString"
+        # Folding of double.toString can't be done in a platform-independent
+        # manner. The obvious cases are NaN and infinity, but even fractions
+        # are emitted differently on different platforms. Instead of having
+        # constant folding change how the code behaves, just don't fold double
+        # toString calls.
+        #
+        # "bool.toString"
+        # "int.toString"
+        #
         if target != null && target.kind == .CONSTANT {
           if _isKnownCall(symbol, _cache.boolToStringSymbol) { _flattenString(node, target.asBool.toString) }
-          else if _isKnownCall(symbol, _cache.doubleToStringSymbol) { _flattenString(node, target.asDouble.toString) }
           else if _isKnownCall(symbol, _cache.intToStringSymbol) { _flattenString(node, target.asInt.toString) }
         }
       }

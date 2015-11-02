@@ -60,6 +60,31 @@ namespace Skew {
     if bytes < GB { return formatNumber(bytes / (MB as double)) + "mb" }
     return formatNumber(bytes / (GB as double)) + "gb"
   }
+
+  def doubleToStringWithDot(value double) string {
+    assert(value.isFinite) # These cases are different for each language target and must be handled before this
+    var text = value.toString
+
+    # The C# implementation of double.ToString() uses an uppercase "E"
+    if TARGET == .CSHARP {
+      text = text.toLowerCase
+    }
+
+    # "1" => "1.0"
+    # "1.5" => "1.5"
+    # "1e+100" => "1.0e+100"
+    # "1.5e+100" => "1.5e+100"
+    if !("." in text) {
+      var e = text.indexOf("e")
+      if e != -1 {
+        text = text.slice(0, e) + ".0" + text.slice(e)
+      } else {
+        text += ".0"
+      }
+    }
+
+    return text
+  }
 }
 
 namespace Skew.PrettyPrint {

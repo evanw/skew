@@ -1156,19 +1156,27 @@ namespace Skew {
         case .BOOL { _emit(content.asBool.toString) }
         case .INT { _emit(content.asInt.toString) }
         case .DOUBLE {
-          var value = content.asDouble.toString
+          var value = content.asDouble
+          var text =
+            value.isNaN ? "NaN" :
+            value == Math.INFINITY ? "Infinity" :
+            value == -Math.INFINITY ? "-Infinity" :
+
+            # The C# implementation of double.ToString() uses an uppercase "E"
+            TARGET == .CSHARP ? value.toString.toLowerCase :
+            value.toString
 
           # "0.123" => ".123"
           # "-0.123" => "-.123"
           if _minify {
-            if value.startsWith("0.") && value != "0." {
-              value = value.slice(1)
-            } else if value.startsWith("-0.") && value != "-0." {
-              value = "-" + value.slice(2)
+            if text.startsWith("0.") && text != "0." {
+              text = text.slice(1)
+            } else if text.startsWith("-0.") && text != "-0." {
+              text = "-" + text.slice(2)
             }
           }
 
-          _emit(value)
+          _emit(text)
         }
         case .STRING { _emit(quoteString(content.asString, .SHORTEST)) }
       }
@@ -1228,7 +1236,7 @@ namespace Skew {
         }
 
         case .CONSTANT {
-          var wrap = precedence == .MEMBER && (node.content.kind == .INT || node.content.kind == .DOUBLE)
+          var wrap = precedence == .MEMBER && (node.isInt || node.isDouble && (node.asDouble.isFinite || node.asDouble < 0))
           if wrap {
             _emit("(")
           }

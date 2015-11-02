@@ -38,7 +38,7 @@
     </dict>
     <dict>
       <key>match</key>
-      <string>\b(?:bool|double|dynamic|float|int|string|void|[A-Z][A-Za-z0-9_]*(?:\.[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*)*)\b(?:&lt;.*?&gt;(?!&gt;))?</string>
+      <string>\b(?:bool|double|dynamic|fn|int|string|[A-Z][A-Za-z0-9_]*(?:\.[A-Z][A-Za-z0-9_]*[a-z][A-Za-z0-9_]*)*)\b(?:&lt;.*?&gt;(?!&gt;))?</string>
       <key>name</key>
       <string>storage.type.skew</string>
     </dict>

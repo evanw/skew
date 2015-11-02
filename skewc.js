@@ -18,6 +18,11 @@
     }
   }
 
+  var Target = {
+    CSHARP: 2,
+    JAVASCRIPT: 3
+  };
+
   function StringBuilder() {
     this.buffer = '';
   }
@@ -289,6 +294,35 @@
     }
 
     return (Math.round(bytes / GB * 10) / 10).toString() + 'gb';
+  };
+
+  Skew.doubleToStringWithDot = function(value) {
+    // These cases are different for each language target and must be handled before this
+    assert(isFinite(value));
+    var text = value.toString();
+
+    // The C# implementation of double.ToString() uses an uppercase "E"
+    if (TARGET == Target.CSHARP) {
+      text = text.toLowerCase();
+    }
+
+    // "1" => "1.0"
+    // "1.5" => "1.5"
+    // "1e+100" => "1.0e+100"
+    // "1.5e+100" => "1.5e+100"
+    if (!(text.indexOf('.') != -1)) {
+      var e = text.indexOf('e');
+
+      if (e != -1) {
+        text = text.slice(0, e) + '.0' + text.slice(e);
+      }
+
+      else {
+        text += '.0';
+      }
+    }
+
+    return text;
   };
 
   // This is the inner loop from "flex", an ancient lexer generator. The output
@@ -1969,7 +2003,13 @@
       }
 
       case Skew.ContentKind.DOUBLE: {
-        this._emit(Skew.in_Content.asDouble(content).toString());
+        var value = Skew.in_Content.asDouble(content);
+
+        if (!isFinite(value)) {
+          this._usingNames['System'] = 0;
+        }
+
+        this._emit(isNaN(value) ? 'Double.NaN' : value == 1 / 0 ? 'Double.PositiveInfinity' : value == -(1 / 0) ? 'Double.NegativeInfinity' : Skew.doubleToStringWithDot(value));
         break;
       }
 
@@ -2023,7 +2063,17 @@
       }
 
       case Skew.NodeKind.CONSTANT: {
+        var wrap = precedence == Skew.Precedence.MEMBER && node.isNumberLessThanZero() && (!node.isDouble() || isFinite(node.asDouble()));
+
+        if (wrap) {
+          this._emit('(');
+        }
+
         this._emitContent(node.content);
+
+        if (wrap) {
+          this._emit(')');
+        }
         break;
       }
 
@@ -2066,6 +2116,11 @@
 
         if (type.kind == Skew.NodeKind.TYPE && type.resolvedType == Skew.Type.DYNAMIC) {
           this._emitExpression(value1, precedence);
+        }
+
+        // Automatically promote integer literals to doubles instead of using a cast
+        else if (this._cache.isEquivalentToDouble(resolvedType) && value1.isInt()) {
+          this._emitExpression(new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.DoubleContent(value1.asInt())), precedence);
         }
 
         // C# doesn't have a cast from bool to int
@@ -3007,7 +3062,7 @@
       }
 
       case Skew.ContentKind.DOUBLE: {
-        this._emit(Skew.in_Content.asDouble(content).toString());
+        this._emit(Skew.doubleToStringWithDot(Skew.in_Content.asDouble(content)));
         break;
       }
 
@@ -4775,21 +4830,22 @@
       }
 
       case Skew.ContentKind.DOUBLE: {
-        var value = Skew.in_Content.asDouble(content).toString();
+        var value = Skew.in_Content.asDouble(content);
+        var text = isNaN(value) ? 'NaN' : value == 1 / 0 ? 'Infinity' : value == -(1 / 0) ? '-Infinity' : TARGET == Target.CSHARP ? value.toString().toLowerCase() : value.toString();
 
         // "0.123" => ".123"
         // "-0.123" => "-.123"
         if (this._minify) {
-          if (in_string.startsWith(value, '0.') && value != '0.') {
-            value = value.slice(1);
+          if (in_string.startsWith(text, '0.') && text != '0.') {
+            text = text.slice(1);
           }
 
-          else if (in_string.startsWith(value, '-0.') && value != '-0.') {
-            value = '-' + value.slice(2);
+          else if (in_string.startsWith(text, '-0.') && text != '-0.') {
+            text = '-' + text.slice(2);
           }
         }
 
-        this._emit(value);
+        this._emit(text);
         break;
       }
 
@@ -4878,7 +4934,7 @@
       }
 
       case Skew.NodeKind.CONSTANT: {
-        var wrap = precedence == Skew.Precedence.MEMBER && (node.content.kind() == Skew.ContentKind.INT || node.content.kind() == Skew.ContentKind.DOUBLE);
+        var wrap = precedence == Skew.Precedence.MEMBER && (node.isInt() || node.isDouble() && (isFinite(node.asDouble()) || node.asDouble() < 0));
 
         if (wrap) {
           this._emit('(');
@@ -12699,16 +12755,18 @@
     if (value.kind == Skew.NodeKind.DOT) {
       var target = value.dotTarget();
 
-      // "boolValue.toString"
-      // "doubleValue.toString"
-      // "intValue.toString"
+      // Folding of double.toString can't be done in a platform-independent
+      // manner. The obvious cases are NaN and infinity, but even fractions
+      // are emitted differently on different platforms. Instead of having
+      // constant folding change how the code behaves, just don't fold double
+      // toString calls.
+      //
+      // "bool.toString"
+      // "int.toString"
+      //
       if (target != null && target.kind == Skew.NodeKind.CONSTANT) {
         if (Skew.Folding.ConstantFolder._isKnownCall(symbol, this._cache.boolToStringSymbol)) {
           this._flattenString(node, target.asBool().toString());
-        }
-
-        else if (Skew.Folding.ConstantFolder._isKnownCall(symbol, this._cache.doubleToStringSymbol)) {
-          this._flattenString(node, target.asDouble().toString());
         }
 
         else if (Skew.Folding.ConstantFolder._isKnownCall(symbol, this._cache.intToStringSymbol)) {
@@ -20266,6 +20324,7 @@
   };
 
   var RELEASE = false;
+  var TARGET = Target.JAVASCRIPT;
   Unicode.StringIterator.INSTANCE = new Unicode.StringIterator();
   Skew.HEX = '0123456789ABCDEF';
   Skew.BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
