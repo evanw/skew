@@ -5637,5 +5637,69 @@ def main(x dynamic, y string, z int) {
   ~~~~
 ")
 
+# Check setter scope lookup
+test("
+class Foo {
+  var foo = 0
+  var bar = 0
+  def test {
+    foo = false
+    bar = false
+  }
+}
+
+def foo=(x string) {}
+def bar double { return 0 }
+def bar=(x string) {}
+
+var _foo = 0
+var _bar = 0
+
+class Bar {
+  def test {
+    foo = false
+    bar = false
+    _foo = false
+    _bar = false
+  }
+
+  def _foo=(x string) {}
+  def _bar double { return 0 }
+  def _bar=(x string) {}
+}
+
+class Baz : Bar {
+  over test {
+    _foo = false
+    _bar = false
+  }
+}
+", "
+<stdin>:5:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    foo = false
+          ~~~~~
+<stdin>:6:11: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+    bar = false
+          ~~~~~
+<stdin>:19:11: error: Cannot convert from type \"bool\" to type \"string\"
+    foo = false
+          ~~~~~
+<stdin>:20:11: error: Cannot convert from type \"bool\" to type \"string\"
+    bar = false
+          ~~~~~
+<stdin>:21:12: error: Cannot convert from type \"bool\" to type \"string\"
+    _foo = false
+           ~~~~~
+<stdin>:22:12: error: Cannot convert from type \"bool\" to type \"string\"
+    _bar = false
+           ~~~~~
+<stdin>:32:12: error: Cannot convert from type \"bool\" to type \"string\"
+    _foo = false
+           ~~~~~
+<stdin>:33:12: error: Cannot convert from type \"bool\" to type \"string\"
+    _bar = false
+           ~~~~~
+")
+
   }
 }

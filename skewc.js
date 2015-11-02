@@ -17916,30 +17916,20 @@
   Skew.Resolving.Resolver.prototype._resolveName = function(node, scope) {
     var enclosingFunction = scope.findEnclosingFunction();
     var name = node.asString();
-    var symbol = null;
+    var symbol = scope.find(name, Skew.Resolving.Resolver._shouldCheckForSetter(node) ? Skew.ScopeSearch.ALSO_CHECK_FOR_SETTER : Skew.ScopeSearch.NORMAL);
 
-    // Search for a setter first, then search for a normal symbol
-    if (Skew.Resolving.Resolver._shouldCheckForSetter(node)) {
-      symbol = scope.find(name + '=');
-    }
-
-    // If a setter wasn't found, search for a normal symbol
     if (symbol == null) {
-      symbol = scope.find(name);
+      this._reportGuardMergingFailure(node);
 
-      if (symbol == null) {
-        this._reportGuardMergingFailure(node);
-
-        if (name == 'this' && enclosingFunction != null && enclosingFunction.symbol.$this != null) {
-          this._log.semanticErrorUndeclaredSelfSymbol(node.range, name);
-        }
-
-        else {
-          this._log.semanticErrorUndeclaredSymbol(node.range, name);
-        }
-
-        return;
+      if (name == 'this' && enclosingFunction != null && enclosingFunction.symbol.$this != null) {
+        this._log.semanticErrorUndeclaredSelfSymbol(node.range, name);
       }
+
+      else {
+        this._log.semanticErrorUndeclaredSymbol(node.range, name);
+      }
+
+      return;
     }
 
     this._initializeSymbol(symbol);
@@ -18507,9 +18497,33 @@
     VARIABLE: 3
   };
 
+  Skew.ScopeSearch = {
+    NORMAL: 0,
+    ALSO_CHECK_FOR_SETTER: 1
+  };
+
   Skew.Scope = function(parent) {
     this.parent = parent;
     this.used = null;
+  };
+
+  // Need to check for a setter at the same time as for a normal symbol
+  // because the one in the closer scope must be picked. If both are in
+  // the same scope, pick the setter.
+  Skew.Scope.prototype.find = function(name, search) {
+    var symbol = null;
+
+    for (var scope = this; scope != null && symbol == null; scope = scope.parent) {
+      if (search == Skew.ScopeSearch.ALSO_CHECK_FOR_SETTER) {
+        symbol = scope._find(name + '=');
+      }
+
+      if (symbol == null) {
+        symbol = scope._find(name);
+      }
+    }
+
+    return symbol;
   };
 
   Skew.Scope.prototype.asObjectScope = function() {
@@ -18598,7 +18612,7 @@
   };
 
   Skew.Scope.prototype.isNameUsed = function(name) {
-    return this.find(name) != null || this.used != null && name in this.used;
+    return this.find(name, Skew.ScopeSearch.NORMAL) != null || this.used != null && name in this.used;
   };
 
   Skew.ObjectScope = function(parent, symbol) {
@@ -18612,9 +18626,8 @@
     return Skew.ScopeKind.OBJECT;
   };
 
-  Skew.ObjectScope.prototype.find = function(name) {
-    var result = in_StringMap.get(this.symbol.members, name, null);
-    return result != null ? result : this.parent != null ? this.parent.find(name) : null;
+  Skew.ObjectScope.prototype._find = function(name) {
+    return in_StringMap.get(this.symbol.members, name, null);
   };
 
   Skew.FunctionScope = function(parent, symbol) {
@@ -18629,9 +18642,8 @@
     return Skew.ScopeKind.FUNCTION;
   };
 
-  Skew.FunctionScope.prototype.find = function(name) {
-    var result = in_StringMap.get(this.parameters, name, null);
-    return result != null ? result : this.parent != null ? this.parent.find(name) : null;
+  Skew.FunctionScope.prototype._find = function(name) {
+    return in_StringMap.get(this.parameters, name, null);
   };
 
   Skew.VariableScope = function(parent, symbol) {
@@ -18645,8 +18657,8 @@
     return Skew.ScopeKind.VARIABLE;
   };
 
-  Skew.VariableScope.prototype.find = function(name) {
-    return this.parent != null ? this.parent.find(name) : null;
+  Skew.VariableScope.prototype._find = function(name) {
+    return null;
   };
 
   Skew.LocalType = {
@@ -18666,9 +18678,8 @@
     return Skew.ScopeKind.LOCAL;
   };
 
-  Skew.LocalScope.prototype.find = function(name) {
-    var result = in_StringMap.get(this.locals, name, null);
-    return result != null ? result : this.parent != null ? this.parent.find(name) : null;
+  Skew.LocalScope.prototype._find = function(name) {
+    return in_StringMap.get(this.locals, name, null);
   };
 
   Skew.LocalScope.prototype.define = function(symbol, log) {

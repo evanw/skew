@@ -2502,25 +2502,16 @@ namespace Skew.Resolving {
     def _resolveName(node Node, scope Scope) {
       var enclosingFunction = scope.findEnclosingFunction
       var name = node.asString
-      var symbol Symbol = null
+      var symbol = scope.find(name, _shouldCheckForSetter(node) ? .ALSO_CHECK_FOR_SETTER : .NORMAL)
 
-      # Search for a setter first, then search for a normal symbol
-      if _shouldCheckForSetter(node) {
-        symbol = scope.find(name + "=")
-      }
-
-      # If a setter wasn't found, search for a normal symbol
       if symbol == null {
-        symbol = scope.find(name)
-        if symbol == null {
-          _reportGuardMergingFailure(node)
-          if name == "this" && enclosingFunction != null && enclosingFunction.symbol.this != null {
-            _log.semanticErrorUndeclaredSelfSymbol(node.range, name)
-          } else {
-            _log.semanticErrorUndeclaredSymbol(node.range, name)
-          }
-          return
+        _reportGuardMergingFailure(node)
+        if name == "this" && enclosingFunction != null && enclosingFunction.symbol.this != null {
+          _log.semanticErrorUndeclaredSelfSymbol(node.range, name)
+        } else {
+          _log.semanticErrorUndeclaredSymbol(node.range, name)
         }
+        return
       }
 
       _initializeSymbol(symbol)

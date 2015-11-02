@@ -6,12 +6,29 @@ namespace Skew {
     VARIABLE
   }
 
+  enum ScopeSearch {
+    NORMAL
+    ALSO_CHECK_FOR_SETTER
+  }
+
   class Scope {
     var parent Scope
     var used StringMap<VariableSymbol> = null
 
     def kind ScopeKind
-    def find(name string) Symbol
+    def _find(name string) Symbol
+
+    # Need to check for a setter at the same time as for a normal symbol
+    # because the one in the closer scope must be picked. If both are in
+    # the same scope, pick the setter.
+    def find(name string, search ScopeSearch) Symbol {
+      var symbol Symbol = null
+      for scope = self; scope != null && symbol == null; scope = scope.parent {
+        if search == .ALSO_CHECK_FOR_SETTER { symbol = scope._find(name + "=") }
+        if symbol == null { symbol = scope._find(name) }
+      }
+      return symbol
+    }
 
     def asObjectScope ObjectScope {
       assert(kind == .OBJECT)
@@ -87,7 +104,7 @@ namespace Skew {
     }
 
     def isNameUsed(name string) bool {
-      return find(name) != null || used != null && name in used
+      return find(name, .NORMAL) != null || used != null && name in used
     }
   }
 
@@ -98,9 +115,8 @@ namespace Skew {
       return .OBJECT
     }
 
-    over find(name string) Symbol {
-      var result = symbol.members.get(name, null)
-      return result != null ? result : parent != null ? parent.find(name) : null
+    over _find(name string) Symbol {
+      return symbol.members.get(name, null)
     }
   }
 
@@ -112,9 +128,8 @@ namespace Skew {
       return .FUNCTION
     }
 
-    over find(name string) Symbol {
-      var result = parameters.get(name, null)
-      return result != null ? result : parent != null ? parent.find(name) : null
+    over _find(name string) Symbol {
+      return parameters.get(name, null)
     }
   }
 
@@ -125,8 +140,8 @@ namespace Skew {
       return .VARIABLE
     }
 
-    over find(name string) Symbol {
-      return parent != null ? parent.find(name) : null
+    over _find(name string) Symbol {
+      return null
     }
   }
 
@@ -143,9 +158,8 @@ namespace Skew {
       return .LOCAL
     }
 
-    over find(name string) Symbol {
-      var result = locals.get(name, null)
-      return result != null ? result : parent != null ? parent.find(name) : null
+    over _find(name string) Symbol {
+      return locals.get(name, null)
     }
 
     def define(symbol VariableSymbol, log Log) {
