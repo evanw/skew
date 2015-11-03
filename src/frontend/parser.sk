@@ -670,14 +670,6 @@ namespace Skew.Parsing {
         usingTypes = true
       }
 
-      # Parse default value
-      if context.eat(.ASSIGN) {
-        arg.value = expressionParser.parse(context, .LOWEST)
-        if arg.value == null {
-          return false
-        }
-      }
-
       symbol.arguments.append(arg)
     }
     return true

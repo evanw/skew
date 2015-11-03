@@ -9238,15 +9238,6 @@
         usingTypes = true;
       }
 
-      // Parse default value
-      if (context.eat(Skew.TokenKind.ASSIGN)) {
-        arg.value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (arg.value == null) {
-          return false;
-        }
-      }
-
       symbol.$arguments.push(arg);
     }
 

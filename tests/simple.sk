@@ -5701,5 +5701,23 @@ class Baz : Bar {
            ~~~~~
 ")
 
+# Forbid default values in function arguments
+test("
+def foo(x bool = true) {}
+", "
+<stdin>:1:16: error: Expected \",\" but found \"=\"
+def foo(x bool = true) {}
+               ^
+")
+
+# Forbid default values in function arguments
+test("
+var foo = (x bool = true) => {}
+", "
+<stdin>:1:19: error: Expected \",\" but found \"=\"
+var foo = (x bool = true) => {}
+                  ^
+")
+
   }
 }
