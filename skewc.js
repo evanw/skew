@@ -16296,10 +16296,10 @@
         }
 
         // Allow duplicate function declarations with the same type to merge
-        // as long as there is one declaration that provides an implementation.
+        // as long as there are not two declarations that provide implementations.
         // Mark the obsolete function as obsolete instead of removing it so it
         // doesn't potentially mess up iteration in a parent call stack.
-        else if (areReturnTypesDifferent || isFromSameObject && $function.block != null == (other.block != null)) {
+        else if (areReturnTypesDifferent || isFromSameObject && $function.block != null && other.block != null) {
           this._log.semanticErrorDuplicateOverload($function.range, symbol.name, other.range);
 
           if (isFromSameObject) {
@@ -16311,7 +16311,7 @@
         else if (isFromSameObject ? $function.block != null : $function.parent.asObjectSymbol().hasBaseClass(other.parent)) {
           if ($function.parent == parent && other.parent == parent) {
             $function.mergeAnnotationsAndCommentsFrom(other);
-            $function.flags |= other.flags & ~Skew.Symbol.IS_IMPORTED;
+            $function.flags |= $function.block != null ? other.flags & ~Skew.Symbol.IS_IMPORTED : other.flags;
             other.flags |= Skew.Symbol.IS_OBSOLETE;
           }
 
@@ -16324,7 +16324,7 @@
 
         // Keep "other"
         else if ($function.parent == parent && other.parent == parent) {
-          other.flags |= $function.flags & ~Skew.Symbol.IS_IMPORTED;
+          other.flags |= other.block != null ? $function.flags & ~Skew.Symbol.IS_IMPORTED : $function.flags;
           other.mergeAnnotationsAndCommentsFrom($function);
           $function.flags |= Skew.Symbol.IS_OBSOLETE;
         }
