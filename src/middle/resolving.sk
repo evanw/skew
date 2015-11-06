@@ -1215,7 +1215,7 @@ namespace Skew.Resolving {
           # Keep "function"
           else if isFromSameObject ? function.block != null : function.parent.asObjectSymbol.hasBaseClass(other.parent) {
             if function.parent == parent && other.parent == parent {
-              function.mergeAnnotationsAndCommentsFrom(other)
+              function.mergeInformationFrom(other)
               function.flags |= function.block != null ? other.flags & ~Symbol.IS_IMPORTED : other.flags
               other.flags |= Symbol.IS_OBSOLETE
             } else if !isFromSameObject {
@@ -1228,7 +1228,7 @@ namespace Skew.Resolving {
           else {
             if function.parent == parent && other.parent == parent {
               other.flags |= other.block != null ? function.flags & ~Symbol.IS_IMPORTED : function.flags
-              other.mergeAnnotationsAndCommentsFrom(function)
+              other.mergeInformationFrom(function)
               function.flags |= Symbol.IS_OBSOLETE
             } else if !isFromSameObject {
               other.overridden = function

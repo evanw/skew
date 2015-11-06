@@ -2065,5 +2065,55 @@ def main(x int) {
 })();
 ").js.foldAllConstants
 
+# Test renaming with symbol merging
+test("
+@import
+class Foo {
+  def new
+  def foo(x int)
+}
+
+class Foo {
+  @rename(\"bar\")
+  def foo(x int)
+}
+
+@export
+def main {
+  Foo.new.foo(0)
+}
+", "
+(function() {
+  main = function() {
+    new Foo().bar(0);
+  };
+})();
+").js
+
+# Test renaming with symbol merging
+test("
+@import
+class Foo {
+  def new
+  @rename(\"bar\")
+  def foo(x int)
+}
+
+class Foo {
+  def foo(x int)
+}
+
+@export
+def main {
+  Foo.new.foo(0)
+}
+", "
+(function() {
+  main = function() {
+    new Foo().bar(0);
+  };
+})();
+").js
+
   }
 }

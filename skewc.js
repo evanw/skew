@@ -10374,7 +10374,7 @@
     return result;
   };
 
-  Skew.Symbol.prototype.mergeAnnotationsAndCommentsFrom = function(symbol) {
+  Skew.Symbol.prototype.mergeInformationFrom = function(symbol) {
     if (this.annotations == null) {
       this.annotations = symbol.annotations;
     }
@@ -10389,6 +10389,10 @@
 
     else if (symbol.comments != null) {
       in_List.append1(this.comments, symbol.comments);
+    }
+
+    if (this.rename == null) {
+      this.rename = symbol.rename;
     }
   };
 
@@ -14467,7 +14471,7 @@
 
       // Merge "child" into "other"
       Skew.Merging.mergeObject(log, parent, object, child);
-      object.mergeAnnotationsAndCommentsFrom(child);
+      object.mergeInformationFrom(child);
       in_List.append1(object.objects, child.objects);
       in_List.append1(object.functions, child.functions);
       in_List.append1(object.variables, child.variables);
@@ -16310,7 +16314,7 @@
         // Keep "function"
         else if (isFromSameObject ? $function.block != null : $function.parent.asObjectSymbol().hasBaseClass(other.parent)) {
           if ($function.parent == parent && other.parent == parent) {
-            $function.mergeAnnotationsAndCommentsFrom(other);
+            $function.mergeInformationFrom(other);
             $function.flags |= $function.block != null ? other.flags & ~Skew.Symbol.IS_IMPORTED : other.flags;
             other.flags |= Skew.Symbol.IS_OBSOLETE;
           }
@@ -16325,7 +16329,7 @@
         // Keep "other"
         else if ($function.parent == parent && other.parent == parent) {
           other.flags |= other.block != null ? $function.flags & ~Skew.Symbol.IS_IMPORTED : $function.flags;
-          other.mergeAnnotationsAndCommentsFrom($function);
+          other.mergeInformationFrom($function);
           $function.flags |= Skew.Symbol.IS_OBSOLETE;
         }
 

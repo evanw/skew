@@ -88,7 +88,7 @@ namespace Skew.Merging {
 
       # Merge "child" into "other"
       mergeObject(log, parent, object, child)
-      object.mergeAnnotationsAndCommentsFrom(child)
+      object.mergeInformationFrom(child)
       object.objects.append(child.objects)
       object.functions.append(child.functions)
       object.variables.append(child.variables)

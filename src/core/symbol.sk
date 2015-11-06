@@ -227,16 +227,21 @@ namespace Skew {
       return result
     }
 
-    def mergeAnnotationsAndCommentsFrom(symbol Symbol) {
+    def mergeInformationFrom(symbol Symbol) {
       if annotations == null {
         annotations = symbol.annotations
       } else if symbol.annotations != null {
         annotations.append(symbol.annotations)
       }
+
       if comments == null {
         comments = symbol.comments
       } else if symbol.comments != null {
         comments.append(symbol.comments)
+      }
+
+      if rename == null {
+        rename = symbol.rename
       }
     }
   }
