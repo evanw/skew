@@ -199,6 +199,7 @@ namespace Skew.Renaming {
     "<<": "leftShift",
     "<=>": "compare",
     ">>": "rightShift",
+    ">>>": "unsignedRightShift",
     "^": "xor",
     "|": "or",
     "in": "contains",
