@@ -110,7 +110,7 @@ namespace Skew.Tests {
     FormatTest.new(trimNewlines(input), expected, start, end, maxLength)
   }
 
-  def testSimple(name string, callback fn(fn(string, string))) {
+  def test(name string, callback fn(fn(string, string))) {
     SimpleTest.new(callback).rename(name)
   }
 
@@ -125,6 +125,7 @@ namespace Skew.Tests {
 
     # Unit tests
     testFormatting
+    testLibrary
     testUnicode
 
     var report = Unit.TerminalReport.new

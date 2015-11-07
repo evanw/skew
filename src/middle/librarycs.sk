@@ -6,6 +6,9 @@ def assert(truth bool) {
 }
 
 @using(\"System\")
+var __random dynamic.Random = null
+
+@using(\"System\")
 @import
 namespace Math {
   @rename(\"Abs\") if TARGET == .CSHARP
@@ -31,7 +34,7 @@ namespace Math {
 
   @rename(\"Floor\") if TARGET == .CSHARP
   def floor(x double) double
-  @rename(\"Ceil\") if TARGET == .CSHARP
+  @rename(\"Ceiling\") if TARGET == .CSHARP
   def ceil(x double) double
   @rename(\"Round\") if TARGET == .CSHARP
   def round(x double) double
@@ -42,8 +45,6 @@ namespace Math {
   def log(x double) double
   @rename(\"Pow\") if TARGET == .CSHARP
   def pow(x double, y double) double
-  @rename(\"Random\") if TARGET == .CSHARP
-  def random double
   @rename(\"Sqrt\") if TARGET == .CSHARP
   def sqrt(x double) double
 
@@ -56,6 +57,11 @@ namespace Math {
   def min(x double, y double) double
   @rename(\"Min\") if TARGET == .CSHARP
   def min(x int, y int) int
+
+  def random double {
+    if __random == null { __random = dynamic.Random.new() }
+    return __random.NextDouble()
+  }
 }
 
 class double {
