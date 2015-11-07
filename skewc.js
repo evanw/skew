@@ -16440,7 +16440,7 @@
       }
 
       case Skew.NodeKind.CALL: {
-        this._resolveCall(node, scope);
+        this._resolveCall(node, scope, context);
         break;
       }
 
@@ -17180,8 +17180,39 @@
     this._resolveBlock(node.whileBlock(), new Skew.LocalScope(scope, Skew.LocalType.LOOP));
   };
 
-  Skew.Resolving.Resolver.prototype._resolveCall = function(node, scope) {
+  Skew.Resolving.Resolver.prototype._resolveCall = function(node, scope, context) {
     var value = node.callValue();
+
+    // Take argument types from call argument values for immediately-invoked
+    // function expressions:
+    //
+    //   var foo = ((a, b) => a + b)(1, 2)
+    //   var bar int = ((a, b) => { return a + b })(1, 2)
+    //
+    if (value.kind == Skew.NodeKind.LAMBDA) {
+      var symbol = value.symbol.asFunctionSymbol();
+      var $arguments = symbol.$arguments;
+
+      if (node.childCount() == ($arguments.length + 1 | 0)) {
+        var child = value.nextSibling();
+
+        for (var i = 0, count = $arguments.length; i < count; ++i) {
+          var argument = $arguments[i];
+
+          if (argument.type == null) {
+            this._resolveAsParameterizedExpression(child, scope);
+            argument.type = new Skew.Node(Skew.NodeKind.TYPE).withType(child.resolvedType);
+          }
+
+          child = child.nextSibling();
+        }
+
+        if (context != null && symbol.returnType == null) {
+          symbol.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(context);
+        }
+      }
+    }
+
     this._resolveAsParameterizedExpression(value, scope);
     var type = value.resolvedType;
 
@@ -17210,8 +17241,8 @@
 
     // If there was an error, resolve the arguments to check for further
     // errors but use a dynamic type context to avoid introducing errors
-    for (var child = value.nextSibling(); child != null; child = child.nextSibling()) {
-      this._resolveAsParameterizedExpressionWithConversion(child, scope, Skew.Type.DYNAMIC);
+    for (var child1 = value.nextSibling(); child1 != null; child1 = child1.nextSibling()) {
+      this._resolveAsParameterizedExpressionWithConversion(child1, scope, Skew.Type.DYNAMIC);
     }
   };
 
@@ -17855,33 +17886,13 @@
         symbol.flags |= Skew.Symbol.SHOULD_INFER_RETURN_TYPE;
       }
 
-      // Take argument types from call argument values for immediately-invoked
-      // function expressions:
-      //
-      //   var sum = ((a, b) => a + b)(1, 2)
-      //
-      if (Skew.Resolving.Resolver._isCallValue(node) && node.parent().childCount() == (symbol.$arguments.length + 1 | 0)) {
-        var child = node.nextSibling();
-
-        for (var i1 = 0, count1 = symbol.$arguments.length; i1 < count1; ++i1) {
-          var argument1 = symbol.$arguments[i1];
+      // If there's dynamic type context, treat all arguments as dynamic
+      if (context == Skew.Type.DYNAMIC) {
+        for (var i1 = 0, list = symbol.$arguments, count1 = list.length; i1 < count1; ++i1) {
+          var argument1 = list[i1];
 
           if (argument1.type == null) {
-            this._resolveAsParameterizedExpression(child, scope);
-            argument1.type = new Skew.Node(Skew.NodeKind.TYPE).withType(child.resolvedType);
-          }
-
-          child = child.nextSibling();
-        }
-      }
-
-      // Otherwise if there's dynamic type context, treat all arguments as dynamic
-      else if (context == Skew.Type.DYNAMIC) {
-        for (var i2 = 0, list = symbol.$arguments, count2 = list.length; i2 < count2; ++i2) {
-          var argument2 = list[i2];
-
-          if (argument2.type == null) {
-            argument2.type = new Skew.Node(Skew.NodeKind.TYPE).withType(Skew.Type.DYNAMIC);
+            argument1.type = new Skew.Node(Skew.NodeKind.TYPE).withType(Skew.Type.DYNAMIC);
           }
         }
 
@@ -17897,9 +17908,9 @@
     var argumentTypes = [];
     var returnType = symbol.returnType;
 
-    for (var i3 = 0, list1 = symbol.$arguments, count3 = list1.length; i3 < count3; ++i3) {
-      var argument3 = list1[i3];
-      argumentTypes.push(argument3.resolvedType);
+    for (var i2 = 0, list1 = symbol.$arguments, count2 = list1.length; i2 < count2; ++i2) {
+      var argument2 = list1[i2];
+      argumentTypes.push(argument2.resolvedType);
     }
 
     node.resolvedType = this._cache.createLambdaType(argumentTypes, returnType != null ? returnType.resolvedType : null);

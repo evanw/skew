@@ -1275,7 +1275,7 @@ namespace Skew.Resolving {
 
         # Expressions
         case .ASSIGN_INDEX { _resolveOperatorOverload(node, scope) }
-        case .CALL { _resolveCall(node, scope) }
+        case .CALL { _resolveCall(node, scope, context) }
         case .CAST { _resolveCast(node, scope, context) }
         case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { _resolveOperatorOverload(node, scope) }
         case .CONSTANT { _resolveConstant(node, scope) }
@@ -1862,8 +1862,34 @@ namespace Skew.Resolving {
       _resolveBlock(node.whileBlock, LocalScope.new(scope, .LOOP))
     }
 
-    def _resolveCall(node Node, scope Scope) {
+    def _resolveCall(node Node, scope Scope, context Type) {
       var value = node.callValue
+
+      # Take argument types from call argument values for immediately-invoked
+      # function expressions:
+      #
+      #   var foo = ((a, b) => a + b)(1, 2)
+      #   var bar int = ((a, b) => { return a + b })(1, 2)
+      #
+      if value.kind == .LAMBDA {
+        var symbol = value.symbol.asFunctionSymbol
+        var arguments = symbol.arguments
+        if node.childCount == arguments.count + 1 {
+          var child = value.nextSibling
+          for i in 0..arguments.count {
+            var argument = arguments[i]
+            if argument.type == null {
+              _resolveAsParameterizedExpression(child, scope)
+              argument.type = Node.createType(child.resolvedType)
+            }
+            child = child.nextSibling
+          }
+          if context != null && symbol.returnType == null {
+            symbol.returnType = Node.createType(context)
+          }
+        }
+      }
+
       _resolveAsParameterizedExpression(value, scope)
       var type = value.resolvedType
 
@@ -2449,25 +2475,8 @@ namespace Skew.Resolving {
           symbol.flags |= Symbol.SHOULD_INFER_RETURN_TYPE
         }
 
-        # Take argument types from call argument values for immediately-invoked
-        # function expressions:
-        #
-        #   var sum = ((a, b) => a + b)(1, 2)
-        #
-        if _isCallValue(node) && node.parent.childCount == symbol.arguments.count + 1 {
-          var child = node.nextSibling
-          for i in 0..symbol.arguments.count {
-            var argument = symbol.arguments[i]
-            if argument.type == null {
-              _resolveAsParameterizedExpression(child, scope)
-              argument.type = Node.createType(child.resolvedType)
-            }
-            child = child.nextSibling
-          }
-        }
-
-        # Otherwise if there's dynamic type context, treat all arguments as dynamic
-        else if context == .DYNAMIC {
+        # If there's dynamic type context, treat all arguments as dynamic
+        if context == .DYNAMIC {
           for argument in symbol.arguments {
             if argument.type == null {
               argument.type = Node.createType(.DYNAMIC)

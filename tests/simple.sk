@@ -4190,11 +4190,25 @@ def bar {}
 test("
 def main {
   ((a, b) => a + b)(1, false)
+  var foo bool = ((a, b) => a + b)(1, 2)
+  var bar bool = ((a, b) => { return a + b })(1, 2)
 }
 ", "
 <stdin>:2:18: error: Cannot convert from type \"bool\" to type \"int\" without a cast
   ((a, b) => a + b)(1, false)
                  ^
+<stdin>:3:29: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var foo bool = ((a, b) => a + b)(1, 2)
+                            ~~~~~
+<stdin>:4:38: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  var bar bool = ((a, b) => { return a + b })(1, 2)
+                                     ~~~~~
+<stdin>:3:7: warning: Local variable \"foo\" is never read
+  var foo bool = ((a, b) => a + b)(1, 2)
+      ~~~
+<stdin>:4:7: warning: Local variable \"bar\" is never read
+  var bar bool = ((a, b) => { return a + b })(1, 2)
+      ~~~
 ")
 
 test("
