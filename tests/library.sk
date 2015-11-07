@@ -159,15 +159,15 @@ namespace Skew.Tests {
     testExpect("5 /= 3", ((x int) int => {
       x /= 3
       return x
-    })(5), 1).skip
+    })(5), 1)
     testExpect("5 %= 3", ((x int) int => {
       x %= 3
       return x
     })(5), 2)
-    # testExpect("2 **= 3", ((x int) int => {
-    #   x **= 3
-    #   return x
-    # })(2), 8)
+    testExpect("2 **= 3", ((x int) int => {
+      x **= 3
+      return x
+    })(2), 8)
     testExpect("44 |= 33", ((x int) int => {
       x |= 33
       return x
@@ -192,14 +192,14 @@ namespace Skew.Tests {
       x >>= 1
       return x
     })(-5), -3)
-    # testExpect("5 >>>= 1", ((x int) int => {
-    #   x >>>= 1
-    #   return x
-    # })(5), 2)
-    # testExpect("-5 >>>= 1", ((x int) int => {
-    #   x >>>= 1
-    #   return x
-    # })(-5), 0x7FFFFFFD)
+    testExpect("5 >>>= 1", ((x int) int => {
+      x >>>= 1
+      return x
+    })(5), 2)
+    testExpect("-5 >>>= 1", ((x int) int => {
+      x >>>= 1
+      return x
+    })(-5), 0x7FFFFFFD)
 
     ################################################################################
     # double
@@ -252,10 +252,10 @@ namespace Skew.Tests {
       x /= 3.0
       return x
     })(5.0), 1.6666666666666667)
-    # testExpect("2.0 **= 3.0", ((x double) double => {
-    #   x **= 3
-    #   return x
-    # })(2), 8)
+    testExpect("2.0 **= 3.0", ((x double) double => {
+      x **= 3
+      return x
+    })(2), 8)
 
     # isFinite
     testExpect("0.0.isFinite", 0.0.isFinite, true)

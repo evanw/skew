@@ -98,17 +98,23 @@ class int {
   def ^(x int) int
   def |(x int) int
 
-  def %=(x int)
   def &=(x int)
-  def *=(x int)
-  def +=(x int)
-  def -=(x int)
-  def /=(x int)
   def <<=(x int)
   def >>=(x int)
-  def >>>=(x int)
   def ^=(x int)
   def |=(x int)
+
+  if TARGET != .CSHARP {
+    def >>>=(x int)
+  }
+
+  if TARGET != .JAVASCRIPT {
+    def %=(x int)
+    def +=(x int)
+    def -=(x int)
+    def *=(x int)
+    def /=(x int)
+  }
 
   def toString string
 
