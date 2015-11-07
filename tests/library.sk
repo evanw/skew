@@ -1,14 +1,14 @@
 namespace Skew.Tests {
-  def testExpect(text string, answer bool, expected bool) {
-    test(text, expectString => expectString(answer.toString, expected.toString))
+  def testExpect(text string, answer bool, expected bool) Unit.Test {
+    return test(text, expectString => expectString(answer.toString, expected.toString))
   }
 
-  def testExpect(text string, answer double, expected double) {
-    test(text, expectString => expectString(answer.toString, expected.toString))
+  def testExpect(text string, answer double, expected double) Unit.Test {
+    return test(text, expectString => expectString(answer.toString, expected.toString))
   }
 
-  def testExpect(text string, answer string, expected string) {
-    test(text, expectString => expectString(answer, expected))
+  def testExpect(text string, answer string, expected string) Unit.Test {
+    return test(text, expectString => expectString(answer, expected))
   }
 
   def testLibrary {
@@ -70,8 +70,25 @@ namespace Skew.Tests {
     ################################################################################
     # bool
 
+    # Unary
     testExpect("!false", !false, true)
     testExpect("!true", !true, false)
+
+    # Binary
+    testExpect("false && false", false && false, false)
+    testExpect("false && true", false && true, false)
+    testExpect("true && false", true && false, false)
+    testExpect("true && true", true && true, true)
+    testExpect("false || false", false || false, false)
+    testExpect("false || true", false || true, true)
+    testExpect("true || false", true || false, true)
+    testExpect("true || true", true || true, true)
+
+    # Short-circuit
+    test("true || (=> { throw null })()", expectString => expectString((true || (=> { throw null })()).toString, "true"))
+    test("false && (=> { throw null })()", expectString => expectString((false && (=> { throw null })()).toString, "false"))
+
+    # toString
     testExpect("false.toString", false.toString, "false")
     testExpect("true.toString", true.toString, "true")
 
@@ -80,20 +97,20 @@ namespace Skew.Tests {
 
     # Unary
     testExpect("+2", +2, 2)
-    testExpect("x++", ((x int) int => {
+    testExpect("3++", ((x int) int => {
       x++
       return x
     })(3), 4)
-    testExpect("++x", ((x int) int => {
+    testExpect("++3", ((x int) int => {
       ++x
       return x
     })(3), 4)
     testExpect("-2", -2, -2)
-    testExpect("x--", ((x int) int => {
+    testExpect("3--", ((x int) int => {
       x--
       return x
     })(3), 2)
-    testExpect("--x", ((x int) int => {
+    testExpect("--3", ((x int) int => {
       --x
       return x
     })(3), 2)
@@ -126,6 +143,64 @@ namespace Skew.Tests {
     testExpect("5 <=> 2", 5 <=> 2, 1)
     testExpect("-0x7FFFFFFF <=> 0x7FFFFFFF", -0x7FFFFFFF <=> 0x7FFFFFFF, -1)
 
+    # Binary assignment
+    testExpect("5 += 3", ((x int) int => {
+      x += 3
+      return x
+    })(5), 8)
+    testExpect("5 -= 3", ((x int) int => {
+      x -= 3
+      return x
+    })(5), 2)
+    testExpect("5 *= 3", ((x int) int => {
+      x *= 3
+      return x
+    })(5), 15)
+    testExpect("5 /= 3", ((x int) int => {
+      x /= 3
+      return x
+    })(5), 1).skip
+    testExpect("5 %= 3", ((x int) int => {
+      x %= 3
+      return x
+    })(5), 2)
+    # testExpect("2 **= 3", ((x int) int => {
+    #   x **= 3
+    #   return x
+    # })(2), 8)
+    testExpect("44 |= 33", ((x int) int => {
+      x |= 33
+      return x
+    })(44), 45)
+    testExpect("44 &= 33", ((x int) int => {
+      x &= 33
+      return x
+    })(44), 32)
+    testExpect("44 ^= 33", ((x int) int => {
+      x ^= 33
+      return x
+    })(44), 13)
+    testExpect("5 <<= 3", ((x int) int => {
+      x <<= 3
+      return x
+    })(5), 40)
+    testExpect("5 >>= 1", ((x int) int => {
+      x >>= 1
+      return x
+    })(5), 2)
+    testExpect("-5 >>= 1", ((x int) int => {
+      x >>= 1
+      return x
+    })(-5), -3)
+    # testExpect("5 >>>= 1", ((x int) int => {
+    #   x >>>= 1
+    #   return x
+    # })(5), 2)
+    # testExpect("-5 >>>= 1", ((x int) int => {
+    #   x >>>= 1
+    #   return x
+    # })(-5), 0x7FFFFFFD)
+
     ################################################################################
     # double
 
@@ -134,31 +209,53 @@ namespace Skew.Tests {
     testExpect("x++", ((x double) double => {
       x++
       return x
-    })(3), 4)
+    })(3.5), 4.5)
     testExpect("++x", ((x double) double => {
       ++x
       return x
-    })(3), 4)
+    })(3.5), 4.5)
     testExpect("-2.0", -2.0, -2.0)
     testExpect("x--", ((x double) double => {
       x--
       return x
-    })(3), 2)
+    })(3.5), 2.5)
     testExpect("--x", ((x double) double => {
       --x
       return x
-    })(3), 2)
+    })(3.5), 2.5)
 
     # Binary
-    testExpect("5.0 + 3.0", 5.0 + 3.0, 8)
-    testExpect("5.0 - 3.0", 5.0 - 3.0, 2)
-    testExpect("5.0 * 3.0", 5.0 * 3.0, 15)
+    testExpect("5.5 + 3.0", 5.5 + 3.0, 8.5)
+    testExpect("5.5 - 3.0", 5.5 - 3.0, 2.5)
+    testExpect("5.5 * 3.0", 5.5 * 3.0, 16.5)
     testExpect("5.0 / 3.0", 5.0 / 3.0, 1.6666666666666667)
     testExpect("2.0 ** 3.0", 2.0 ** 3.0, 8)
     testExpect("2.0 ** 0.5", 2.0 ** 0.5, 1.4142135623730951)
     testExpect("2.0 <=> 5.5", 2.0 <=> 5.5, -1)
     testExpect("2.0 <=> 2.0", 2.0 <=> 2.0, 0)
     testExpect("5.5 <=> 2.0", 5.5 <=> 2.0, 1)
+
+    # Binary assignment
+    testExpect("5.5 += 3.0", ((x double) double => {
+      x += 3.0
+      return x
+    })(5.5), 8.5)
+    testExpect("5.5 -= 3.0", ((x double) double => {
+      x -= 3.0
+      return x
+    })(5.5), 2.5)
+    testExpect("5.5 *= 3.0", ((x double) double => {
+      x *= 3.0
+      return x
+    })(5.5), 16.5)
+    testExpect("5.0 /= 3.0", ((x double) double => {
+      x /= 3.0
+      return x
+    })(5.0), 1.6666666666666667)
+    # testExpect("2.0 **= 3.0", ((x double) double => {
+    #   x **= 3
+    #   return x
+    # })(2), 8)
 
     # isFinite
     testExpect("0.0.isFinite", 0.0.isFinite, true)

@@ -2,6 +2,7 @@ namespace Unit {
   enum Status {
     FAILURE
     SUCCESS
+    SKIPPED
   }
 
   class Report {
@@ -19,6 +20,7 @@ namespace Unit {
 
   class Test {
     var _name = ""
+    var _shouldSkip = false
     var _failure Failure = null
 
     def new {
@@ -27,7 +29,10 @@ namespace Unit {
 
     def name string { return _name }
     def failure Failure { return _failure }
+    def shouldSkip bool { return _shouldSkip }
+
     def rename(name string) { _name = name }
+    def skip { _shouldSkip = true }
 
     def before {}
     def after {}
@@ -85,10 +90,14 @@ namespace Unit {
       report.begin(tests.count)
 
       for test in tests {
-        test.before
-        test._tryRun
-        test.after
-        report.completed(test, test._failure == null ? .SUCCESS : .FAILURE)
+        if test.shouldSkip {
+          report.completed(test, .SKIPPED)
+        } else {
+          test.before
+          test._tryRun
+          test.after
+          report.completed(test, test._failure == null ? .SUCCESS : .FAILURE)
+        }
       }
 
       report.end
@@ -105,6 +114,11 @@ namespace Unit {
     var _startTime = 0.0
     var _completed = 0
     var _count = 0
+    var _skippedCount = 0
+
+    def skippedCount int {
+      return _skippedCount
+    }
 
     def failedCount int {
       return _failed.count
@@ -120,17 +134,29 @@ namespace Unit {
 
     over completed(test Test, status Status) {
       _completed++
-      if status == .FAILURE {
-        _failed.append(test)
-        Terminal.setColor(.RED)
-        Terminal.write("x")
-      } else {
-        Terminal.setColor(.GREEN)
-        Terminal.write(".")
+      switch status {
+        case .FAILURE {
+          _failed.append(test)
+          Terminal.setColor(.RED)
+          Terminal.write("x")
+        }
+
+        case .SUCCESS {
+          Terminal.setColor(.GREEN)
+          Terminal.write(".")
+        }
+
+        case .SKIPPED {
+          _skippedCount++
+          Terminal.setColor(.YELLOW)
+          Terminal.write("s")
+        }
       }
+
       if _completed < _count && _wrapWidth != 0 && _completed % _wrapWidth == 0 {
         Terminal.write("\n  ")
       }
+
       Terminal.setColor(.DEFAULT)
       Terminal.flush
     }
@@ -147,6 +173,10 @@ namespace Unit {
       if _failed.count != 0 {
         Terminal.setColor(.RED)
         Terminal.print("  " + _failed.count.toString + " failing")
+      }
+      if _skippedCount != 0 {
+        Terminal.setColor(.YELLOW)
+        Terminal.print("  " + _skippedCount.toString + " skipped")
       }
       Terminal.setColor(.DEFAULT)
       Terminal.print("")

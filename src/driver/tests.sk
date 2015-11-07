@@ -106,12 +106,14 @@ namespace Skew.Tests {
     return CompilerTest.new(trimNewlines(input), expected)
   }
 
-  def testFormat(input string, expected string, start int, end int, maxLength int) {
-    FormatTest.new(trimNewlines(input), expected, start, end, maxLength)
+  def testFormat(input string, expected string, start int, end int, maxLength int) FormatTest {
+    return FormatTest.new(trimNewlines(input), expected, start, end, maxLength)
   }
 
-  def test(name string, callback fn(fn(string, string))) {
-    SimpleTest.new(callback).rename(name)
+  def test(name string, callback fn(fn(string, string))) SimpleTest {
+    var test = SimpleTest.new(callback)
+    test.rename(name)
+    return test
   }
 
   @entry
