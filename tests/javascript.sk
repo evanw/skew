@@ -2115,5 +2115,34 @@ def main {
 })();
 ").js
 
+# Test renaming with symbol merging and generics
+test("
+@import
+class Foo<X> {
+  def new
+
+  @rename(\"baz\")
+  def foo<Y>(x Y)
+  def foo<Z>(x Z)
+
+  def bar<Y>(x Y)
+  @rename(\"baz\")
+  def bar<Z>(x Z)
+}
+
+@export
+def main {
+  Foo<int>.new.foo<int>(0)
+  Foo<int>.new.bar<int>(0)
+}
+", "
+(function() {
+  main = function() {
+    new Foo().baz(0);
+    new Foo().baz(0);
+  };
+})();
+").js
+
   }
 }

@@ -920,6 +920,7 @@ namespace Skew {
     }
 
     def _mangleName(symbol Symbol) string {
+      symbol = symbol.forwarded
       if symbol.kind == .FUNCTION_CONSTRUCTOR {
         return _mangleName(symbol.parent)
       }

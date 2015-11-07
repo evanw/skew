@@ -1979,6 +1979,9 @@ namespace Skew.Resolving {
       }
 
       # Replace overloaded symbols with the chosen overload
+      if value.kind == .PARAMETERIZE {
+        value = value.parameterizeValue
+      }
       if function != null && value.symbol != null && value.symbol.kind.isOverloadedFunction && function in value.symbol.asOverloadedFunctionSymbol.symbols {
         value.symbol = function
       }

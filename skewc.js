@@ -2351,6 +2351,8 @@
   };
 
   Skew.CSharpEmitter._mangleName = function(symbol) {
+    symbol = symbol.forwarded();
+
     if (symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
       symbol = symbol.parent;
     }
@@ -3474,6 +3476,8 @@
   };
 
   Skew.CPlusPlusEmitter._mangleName = function(symbol) {
+    symbol = symbol.forwarded();
+
     if (symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
       return Skew.CPlusPlusEmitter._mangleName(symbol.parent);
     }
@@ -17301,6 +17305,10 @@
     }
 
     // Replace overloaded symbols with the chosen overload
+    if (value.kind == Skew.NodeKind.PARAMETERIZE) {
+      value = value.parameterizeValue();
+    }
+
     if ($function != null && value.symbol != null && Skew.in_SymbolKind.isOverloadedFunction(value.symbol.kind) && value.symbol.asOverloadedFunctionSymbol().symbols.indexOf($function) != -1) {
       value.symbol = $function;
     }

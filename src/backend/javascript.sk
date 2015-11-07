@@ -2701,6 +2701,7 @@ namespace Skew {
 
     def _mangleName(symbol Symbol) string {
       symbol = symbol.forwarded
+
       if symbol.isPrimaryConstructor {
         symbol = symbol.parent
       }
