@@ -136,6 +136,7 @@ class double {
   def +(x double) double
   def -(x double) double
   def /(x double) double
+  def <=>(x double) int
 
   def *=(x double)
   def +=(x double)
@@ -149,10 +150,6 @@ class double {
 
   def **(x double) double {
     return Math.pow(self, x)
-  }
-
-  def <=>(x double) int {
-    return ((x as dynamic < self) as bool as int) - ((x as dynamic > self) as bool as int)
   }
 }
 

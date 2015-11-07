@@ -27,6 +27,12 @@ def assert(truth bool) {
 @import
 namespace Math {}
 
+class int {
+  def <=>(x int) int {
+    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)
+  }
+}
+
 class double {
   def isFinite bool {
     return dynamic.isFinite(self)
@@ -34,6 +40,10 @@ class double {
 
   def isNaN bool {
     return dynamic.isNaN(self)
+  }
+
+  def <=>(x double) int {
+    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)
   }
 }
 

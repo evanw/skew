@@ -121,9 +121,10 @@ namespace Skew.Tests {
     testExpect("-44 | -33", -44 | -33, -33)
     testExpect("-44 & -33", -44 & -33, -44)
     testExpect("-44 ^ -33", -44 ^ -33, 11)
-    testExpect("2 <=> 3", 2 <=> 3, -1)
+    testExpect("2 <=> 5", 2 <=> 5, -1)
     testExpect("2 <=> 2", 2 <=> 2, 0)
-    testExpect("3 <=> 2", 3 <=> 2, 1)
+    testExpect("5 <=> 2", 5 <=> 2, 1)
+    testExpect("-0x7FFFFFFF <=> 0x7FFFFFFF", -0x7FFFFFFF <=> 0x7FFFFFFF, -1)
 
     ################################################################################
     # double

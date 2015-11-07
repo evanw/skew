@@ -2881,7 +2881,7 @@ namespace Skew.Resolving {
       }
 
       # "<", ">", "<=", or ">="
-      if isComparison && (isRawImport || type == _cache.doubleType) {
+      if isComparison && (isRawImport || type == _cache.intType || type == _cache.doubleType) {
         _resolveChildrenAsParameterizedExpressions(node, scope)
         node.resolvedType = _cache.boolType
         node.symbol = null
