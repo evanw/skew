@@ -1690,7 +1690,7 @@ def main(x int) string {
   in_string.fromCodePoints = function(codePoints) {
     var builder = new StringBuilder();
 
-    for (var i = 0, count1 = codePoints.length; i < count1; ++i) {
+    for (var i = 0, count1 = codePoints.length; i < count1; i = i + 1 | 0) {
       var codePoint = codePoints[i];
       builder.append(in_string.fromCodePoint(codePoint));
     }
@@ -1701,7 +1701,7 @@ def main(x int) string {
   in_string.fromCodeUnits = function(codeUnits) {
     var result = '';
 
-    for (var i = 0, count1 = codeUnits.length; i < count1; ++i) {
+    for (var i = 0, count1 = codeUnits.length; i < count1; i = i + 1 | 0) {
       var codeUnit = codeUnits[i];
       result += String.fromCharCode(codeUnit);
     }
@@ -1733,11 +1733,11 @@ def main {
     var bar = [0, 1, 2];
     bar = [];
 
-    for (var i2 = 0, count = foo.length; i2 < count; ++i2) {
+    for (var i2 = 0, count = foo.length; i2 < count; i2 = i2 + 1 | 0) {
       var i = foo[i2];
     }
 
-    for (var i3 = 0, list = bar, count1 = list.length; i3 < count1; ++i3) {
+    for (var i3 = 0, list = bar, count1 = list.length; i3 < count1; i3 = i3 + 1 | 0) {
       var i1 = list[i3];
     }
   };
@@ -1755,7 +1755,7 @@ def main {
 ", "
 (function() {
   main = function() {
-    for (var i = 0; i < 5; ++i) {
+    for (var i = 0; i < 5; i = i + 1 | 0) {
     }
   };
 })();

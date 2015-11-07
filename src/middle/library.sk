@@ -81,9 +81,7 @@ class bool {
 @import
 class int {
   def + int
-  def ++
   def - int
-  def --
   def ~ int
 
   def %(x int) int
@@ -109,6 +107,9 @@ class int {
   }
 
   if TARGET != .JAVASCRIPT {
+    def ++
+    def --
+
     def %=(x int)
     def +=(x int)
     def -=(x int)
