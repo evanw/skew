@@ -18214,7 +18214,7 @@
       node.resolvedType = this._cache.boolType;
 
       // Check for likely bugs "x && x" or "x || x"
-      if (left.looksTheSameAs(right) && left.hasNoSideEffects() && right.hasNoSideEffects()) {
+      if (left.looksTheSameAs(right) && left.hasNoSideEffects() && right.hasNoSideEffects() && (!left.isBool() || !right.isBool())) {
         this._log.semanticWarningIdenticalOperands(node.range, kind == Skew.NodeKind.LOGICAL_AND ? '&&' : '||');
       }
 

@@ -2771,7 +2771,7 @@ namespace Skew.Resolving {
         node.resolvedType = _cache.boolType
 
         # Check for likely bugs "x && x" or "x || x"
-        if left.looksTheSameAs(right) && left.hasNoSideEffects && right.hasNoSideEffects {
+        if left.looksTheSameAs(right) && left.hasNoSideEffects && right.hasNoSideEffects && (!left.isBool || !right.isBool) {
           _log.semanticWarningIdenticalOperands(node.range, kind == .LOGICAL_AND ? "&&" : "||")
         }
         return
