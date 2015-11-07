@@ -98,19 +98,11 @@ class int {
   def >>>(x int) int {
     return dynamic.unchecked(self as dynamic.uint >> x) as int
   }
-
-  def <=>(x int) int {
-    return ((x as dynamic < self) as bool as int) - ((x as dynamic > self) as bool as int)
-  }
 }
 
 class double {
   @rename(\"ToString\")
   def toString string
-
-  def <=>(x double) int {
-    return ((x as dynamic < self) as bool as int) - ((x as dynamic > self) as bool as int)
-  }
 }
 
 class string {

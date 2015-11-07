@@ -93,7 +93,6 @@ class int {
   def -(x int) int
   def /(x int) int
   def <<(x int) int
-  def <=>(x int) int
   def >>(x int) int
   def >>>(x int) int
   def ^(x int) int
@@ -123,6 +122,10 @@ class int {
     }
     return z
   }
+
+  def <=>(x int) int {
+    return ((x < self) as int) - ((x > self) as int)
+  }
 }
 
 @import
@@ -136,7 +139,6 @@ class double {
   def +(x double) double
   def -(x double) double
   def /(x double) double
-  def <=>(x double) int
 
   def *=(x double)
   def +=(x double)
@@ -150,6 +152,10 @@ class double {
 
   def **(x double) double {
     return Math.pow(self, x)
+  }
+
+  def <=>(x double) int {
+    return ((x < self) as int) - ((x > self) as int)
   }
 }
 
