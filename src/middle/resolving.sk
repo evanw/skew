@@ -2914,6 +2914,9 @@ namespace Skew.Resolving {
         symbol = _findMember(type, operatorInfo[info.assignKind].text)
         if symbol != null {
           extracted = _extractExpressionForAssignment(target, scope)
+          if kind == .INCREMENT || kind == .DECREMENT {
+            node.appendChild(Node.createInt(1).withType(_cache.intType))
+          }
           kind = info.assignKind
           node.kind = kind
         }

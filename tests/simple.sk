@@ -5739,12 +5739,11 @@ class Foo<X> {
   def foo<Z>(cb fn(X, Z) Z) Foo<Z>
 }
 
-@export
 def main(x Foo<int>) {
   x.foo<bool>((x, y) => x)
 }
 ", "
-<stdin>:8:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+<stdin>:7:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   x.foo<bool>((x, y) => x)
                         ^
 ")
@@ -5833,12 +5832,11 @@ class Foo {
   def [](x int) int
 }
 
-@export
 def main(foo Foo) {
   foo[0] *= 2
 }
 ", "
-<stdin>:8:3: error: Cannot store to this location
+<stdin>:7:3: error: Cannot store to this location
   foo[0] *= 2
   ~~~~~~
 ")
@@ -5852,12 +5850,11 @@ class Foo {
   def []=(x int, y bool)
 }
 
-@export
 def main(foo Foo) {
   foo[0] *= 2
 }
 ", "
-<stdin>:10:3: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+<stdin>:9:3: error: Cannot convert from type \"int\" to type \"bool\" without a cast
   foo[0] *= 2
   ~~~~~~~~~~~
 ")
@@ -5871,17 +5868,37 @@ class Foo {
   def []=(x int, y bool)
 }
 
-@export
 def main(foo Foo) {
   foo[0] *= 2
 }
 ", "
-<stdin>:10:3: error: The function \"*\" does not return a value
+<stdin>:9:3: error: The function \"*\" does not return a value
   foo[0] *= 2
   ~~~~~~~~~~~
 <stdin>:3:7: note: The function declaration is here
   def *(x int)
       ^
+")
+
+# Test auto-implemented unary assignment operators
+test("
+@import
+class Foo {
+  def +(x int) bool
+  def -(x int) string
+}
+
+def main(foo Foo) {
+  foo++
+  foo--
+}
+", "
+<stdin>:8:3: error: Cannot convert from type \"bool\" to type \"Foo\"
+  foo++
+  ~~~~~
+<stdin>:9:3: error: Cannot convert from type \"string\" to type \"Foo\"
+  foo--
+  ~~~~~
 ")
 
   }
