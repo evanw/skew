@@ -16269,81 +16269,89 @@
     }
 
     // Ensure no two overloads have the same argument types
-    var types = [];
     var i = 0;
 
     while (i < symbols.length) {
       var $function = symbols[i];
       this._initializeSymbol($function);
       symbol.flags |= $function.flags & Skew.Symbol.IS_SETTER;
-      var index = types.indexOf($function.argumentOnlyType);
+      var equivalence = Skew.TypeCache.Equivalence.NOT_EQUIVALENT;
+      var index = -1;
 
-      if (index != -1) {
-        var other = symbols[index];
-        var parent = symbol.parent.asObjectSymbol();
-        var isFromSameObject = $function.parent == other.parent;
-        var areReturnTypesDifferent = (isFromSameObject || symbol.kind == Skew.SymbolKind.OVERLOADED_INSTANCE) && $function.resolvedType.returnType != other.resolvedType.returnType;
+      for (var j = 0, count = i; j < count; ++j) {
+        equivalence = this._cache.areFunctionSymbolsEquivalent($function, symbols[j]);
 
-        // Symbols should be in the base type chain
-        assert(parent.isSameOrHasBaseClass($function.parent));
-        assert(parent.isSameOrHasBaseClass(other.parent));
-
-        // Forbid overloading by return type
-        if (!isFromSameObject && areReturnTypesDifferent) {
-          var derived = $function.parent == parent ? $function : other;
-          var base = derived == $function ? other : $function;
-          this._log.semanticErrorBadOverrideReturnType(derived.range, derived.name, parent.baseType, base.range);
-
-          if (isFromSameObject) {
-            $function.flags |= Skew.Symbol.IS_OBSOLETE;
-          }
+        if (equivalence != Skew.TypeCache.Equivalence.NOT_EQUIVALENT) {
+          index = j;
+          break;
         }
+      }
 
-        // Allow duplicate function declarations with the same type to merge
-        // as long as there are not two declarations that provide implementations.
-        // Mark the obsolete function as obsolete instead of removing it so it
-        // doesn't potentially mess up iteration in a parent call stack.
-        else if (areReturnTypesDifferent || isFromSameObject && $function.block != null && other.block != null) {
-          this._log.semanticErrorDuplicateOverload($function.range, symbol.name, other.range);
-
-          if (isFromSameObject) {
-            $function.flags |= Skew.Symbol.IS_OBSOLETE;
-          }
-        }
-
-        // Keep "function"
-        else if (isFromSameObject ? $function.block != null : $function.parent.asObjectSymbol().hasBaseClass(other.parent)) {
-          if ($function.parent == parent && other.parent == parent) {
-            $function.mergeInformationFrom(other);
-            $function.flags |= $function.block != null ? other.flags & ~Skew.Symbol.IS_IMPORTED : other.flags;
-            other.flags |= Skew.Symbol.IS_OBSOLETE;
-          }
-
-          else if (!isFromSameObject) {
-            $function.overridden = other;
-          }
-
-          symbols[index] = $function;
-        }
-
-        // Keep "other"
-        else if ($function.parent == parent && other.parent == parent) {
-          other.flags |= other.block != null ? $function.flags & ~Skew.Symbol.IS_IMPORTED : $function.flags;
-          other.mergeInformationFrom($function);
-          $function.flags |= Skew.Symbol.IS_OBSOLETE;
-        }
-
-        else if (!isFromSameObject) {
-          other.overridden = $function;
-        }
-
-        // Remove the symbol after the merge so "types" still matches "symbols"
-        symbols.splice(i, 1);
+      if (index == -1) {
+        ++i;
         continue;
       }
 
-      types.push($function.argumentOnlyType);
-      ++i;
+      var other = symbols[index];
+      var parent = symbol.parent.asObjectSymbol();
+      var isFromSameObject = $function.parent == other.parent;
+      var areReturnTypesDifferent = equivalence == Skew.TypeCache.Equivalence.EQUIVALENT_EXCEPT_RETURN_TYPE && (isFromSameObject || symbol.kind == Skew.SymbolKind.OVERLOADED_INSTANCE);
+
+      // Symbols should be in the base type chain
+      assert(parent.isSameOrHasBaseClass($function.parent));
+      assert(parent.isSameOrHasBaseClass(other.parent));
+
+      // Forbid overloading by return type
+      if (!isFromSameObject && areReturnTypesDifferent) {
+        var derived = $function.parent == parent ? $function : other;
+        var base = derived == $function ? other : $function;
+        this._log.semanticErrorBadOverrideReturnType(derived.range, derived.name, parent.baseType, base.range);
+
+        if (isFromSameObject) {
+          $function.flags |= Skew.Symbol.IS_OBSOLETE;
+        }
+      }
+
+      // Allow duplicate function declarations with the same type to merge
+      // as long as there are not two declarations that provide implementations.
+      // Mark the obsolete function as obsolete instead of removing it so it
+      // doesn't potentially mess up iteration in a parent call stack.
+      else if (areReturnTypesDifferent || isFromSameObject && $function.block != null && other.block != null) {
+        this._log.semanticErrorDuplicateOverload($function.range, symbol.name, other.range);
+
+        if (isFromSameObject) {
+          $function.flags |= Skew.Symbol.IS_OBSOLETE;
+        }
+      }
+
+      // Keep "function"
+      else if (isFromSameObject ? $function.block != null : $function.parent.asObjectSymbol().hasBaseClass(other.parent)) {
+        if ($function.parent == parent && other.parent == parent) {
+          $function.mergeInformationFrom(other);
+          $function.flags |= $function.block != null ? other.flags & ~Skew.Symbol.IS_IMPORTED : other.flags;
+          other.flags |= Skew.Symbol.IS_OBSOLETE;
+        }
+
+        else if (!isFromSameObject) {
+          $function.overridden = other;
+        }
+
+        symbols[index] = $function;
+      }
+
+      // Keep "other"
+      else if ($function.parent == parent && other.parent == parent) {
+        other.flags |= other.block != null ? $function.flags & ~Skew.Symbol.IS_IMPORTED : $function.flags;
+        other.mergeInformationFrom($function);
+        $function.flags |= Skew.Symbol.IS_OBSOLETE;
+      }
+
+      else if (!isFromSameObject) {
+        other.overridden = $function;
+      }
+
+      // Remove the symbol after the merge
+      symbols.splice(i, 1);
     }
   };
 
@@ -18015,9 +18023,10 @@
 
     // If this is an overloaded symbol, try to pick an overload just using the parameter count
     if (parameters == null && type.kind == Skew.TypeKind.SYMBOL && Skew.in_SymbolKind.isOverloadedFunction(type.symbol.kind)) {
+      var match = null;
+
       for (var i = 0, list = type.symbol.asOverloadedFunctionSymbol().symbols, count1 = list.length; i < count1; ++i) {
         var candidate = list[i];
-        var match = null;
 
         if (candidate.parameters != null && candidate.parameters.length == count) {
           if (match != null) {
@@ -18027,11 +18036,11 @@
 
           match = candidate;
         }
+      }
 
-        if (match != null) {
-          type = match.resolvedType;
-          parameters = type.parameters();
-        }
+      if (match != null) {
+        type = this._cache.substitute(match.resolvedType, type.environment);
+        parameters = type.parameters();
       }
     }
 
@@ -19132,6 +19141,7 @@
     this.entryPointSymbol = null;
     this._environments = {};
     this._lambdaTypes = {};
+    this._parameters = [];
   };
 
   Skew.TypeCache.prototype.loadGlobals = function(log, global) {
@@ -19584,6 +19594,57 @@
     return substituted;
   };
 
+  Skew.TypeCache.prototype.areFunctionSymbolsEquivalent = function(left, right) {
+    var leftType = left.resolvedType;
+    var rightType = right.resolvedType;
+    var leftReturn = leftType.returnType;
+    var rightReturn = rightType.returnType;
+
+    // Overloading by return type is not allowed, so only compare argument types
+    if (left.argumentOnlyType == right.argumentOnlyType) {
+      return leftReturn == rightReturn ? Skew.TypeCache.Equivalence.EQUIVALENT : Skew.TypeCache.Equivalence.EQUIVALENT_EXCEPT_RETURN_TYPE;
+    }
+
+    // For generic functions, substitute dummy type parameters into both
+    // functions and then compare. For example, these are equivalent:
+    //
+    //   def foo<X>(bar X)
+    //   def foo<Y>(baz Y)
+    //
+    if (left.parameters != null && right.parameters != null) {
+      var leftArguments = leftType.argumentTypes;
+      var rightArguments = rightType.argumentTypes;
+      var argumentCount = leftArguments.length;
+      var parameterCount = left.parameters.length;
+
+      if (argumentCount == rightArguments.length && parameterCount == right.parameters.length) {
+        // Generate enough dummy type parameters
+        for (var i = this._parameters.length, count = parameterCount; i < count; ++i) {
+          var symbol = new Skew.ParameterSymbol(Skew.SymbolKind.PARAMETER_FUNCTION, 'T' + i.toString());
+          symbol.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, symbol);
+          symbol.state = Skew.SymbolState.INITIALIZED;
+          this._parameters.push(symbol.resolvedType);
+        }
+
+        // Substitute the same type parameters into both functions
+        var parameters = this._parameters.length == parameterCount ? this._parameters : this._parameters.slice(0, parameterCount);
+        var leftEnvironment = this.createEnvironment(left.parameters, parameters);
+        var rightEnvironment = this.createEnvironment(right.parameters, parameters);
+
+        // Compare each argument
+        for (var i1 = 0, count1 = argumentCount; i1 < count1; ++i1) {
+          if (this.substitute(leftArguments[i1], leftEnvironment) != this.substitute(rightArguments[i1], rightEnvironment)) {
+            return Skew.TypeCache.Equivalence.NOT_EQUIVALENT;
+          }
+        }
+
+        return leftReturn == null && rightReturn == null || leftReturn != null && rightReturn != null && this.substitute(leftReturn, leftEnvironment) == this.substitute(rightReturn, rightEnvironment) ? Skew.TypeCache.Equivalence.EQUIVALENT : Skew.TypeCache.Equivalence.EQUIVALENT_EXCEPT_RETURN_TYPE;
+      }
+    }
+
+    return Skew.TypeCache.Equivalence.NOT_EQUIVALENT;
+  };
+
   Skew.TypeCache.prototype._canCastToNumeric = function(type) {
     return type == this.intType || type == this.doubleType || type == this.boolType;
   };
@@ -19651,6 +19712,12 @@
     }
 
     return null;
+  };
+
+  Skew.TypeCache.Equivalence = {
+    EQUIVALENT: 0,
+    EQUIVALENT_EXCEPT_RETURN_TYPE: 1,
+    NOT_EQUIVALENT: 2
   };
 
   Skew.Option = {

@@ -25,6 +25,7 @@ namespace Skew {
     var entryPointSymbol FunctionSymbol = null
     const _environments = IntMap<List<Environment>>.new
     const _lambdaTypes = IntMap<List<Type>>.new
+    const _parameters List<Type> = []
 
     def loadGlobals(log Log, global ObjectSymbol) {
       Type.initialize
@@ -386,6 +387,67 @@ namespace Skew {
 
       rootType.substitutionCache[environment.id] = substituted
       return substituted
+    }
+
+    enum Equivalence {
+      EQUIVALENT
+      EQUIVALENT_EXCEPT_RETURN_TYPE
+      NOT_EQUIVALENT
+    }
+
+    def areFunctionSymbolsEquivalent(left FunctionSymbol, right FunctionSymbol) Equivalence {
+      var leftType = left.resolvedType
+      var rightType = right.resolvedType
+      var leftReturn = leftType.returnType
+      var rightReturn = rightType.returnType
+
+      # Overloading by return type is not allowed, so only compare argument types
+      if left.argumentOnlyType == right.argumentOnlyType {
+        return leftReturn == rightReturn ? .EQUIVALENT : .EQUIVALENT_EXCEPT_RETURN_TYPE
+      }
+
+      # For generic functions, substitute dummy type parameters into both
+      # functions and then compare. For example, these are equivalent:
+      #
+      #   def foo<X>(bar X)
+      #   def foo<Y>(baz Y)
+      #
+      if left.parameters != null && right.parameters != null {
+        var leftArguments = leftType.argumentTypes
+        var rightArguments = rightType.argumentTypes
+        var argumentCount = leftArguments.count
+        var parameterCount = left.parameters.count
+
+        if argumentCount == rightArguments.count && parameterCount == right.parameters.count {
+          # Generate enough dummy type parameters
+          for i in _parameters.count..parameterCount {
+            var symbol = ParameterSymbol.new(.PARAMETER_FUNCTION, "T" + i.toString)
+            symbol.resolvedType = Type.new(.SYMBOL, symbol)
+            symbol.state = .INITIALIZED
+            _parameters.append(symbol.resolvedType)
+          }
+
+          # Substitute the same type parameters into both functions
+          var parameters = _parameters.count == parameterCount ? _parameters : _parameters.slice(0, parameterCount)
+          var leftEnvironment = createEnvironment(left.parameters, parameters)
+          var rightEnvironment = createEnvironment(right.parameters, parameters)
+
+          # Compare each argument
+          for i in 0..argumentCount {
+            if substitute(leftArguments[i], leftEnvironment) != substitute(rightArguments[i], rightEnvironment) {
+              return .NOT_EQUIVALENT
+            }
+          }
+
+          return
+            leftReturn == null && rightReturn == null ||
+            leftReturn != null && rightReturn != null && substitute(leftReturn, leftEnvironment) == substitute(rightReturn, rightEnvironment)
+            ? .EQUIVALENT
+            : .EQUIVALENT_EXCEPT_RETURN_TYPE
+        }
+      }
+
+      return .NOT_EQUIVALENT
     }
 
     def _canCastToNumeric(type Type) bool {

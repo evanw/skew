@@ -5718,5 +5718,46 @@ var foo = (x bool = true) => {}
                   ^
 ")
 
+# Check for bugs with symbol merging and generics
+test("
+class Foo<X> {
+  def foo<Y>(cb fn(X, Y) Y) Foo<Y>
+  def foo<Z>(cb fn(X, Z) Z) Foo<Z>
+}
+
+@export
+def main(x Foo<int>) {
+  x.foo<bool>((x, y) => x)
+}
+", "
+<stdin>:8:25: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  x.foo<bool>((x, y) => x)
+                        ^
+")
+
+# Check for bugs with symbol merging and generics
+test("
+class Foo<X> {
+  def foo<Y>(x Y)
+  def foo<Z>(x Z) Foo<Z>
+
+  def bar<Y>(x Y) Foo<Y>
+  def bar<Z>(x Z)
+}
+", "
+<stdin>:3:7: error: Duplicate overloaded function \"foo\"
+  def foo<Z>(x Z) Foo<Z>
+      ~~~
+<stdin>:2:7: note: The previous declaration is here
+  def foo<Y>(x Y)
+      ~~~
+<stdin>:6:7: error: Duplicate overloaded function \"bar\"
+  def bar<Z>(x Z)
+      ~~~
+<stdin>:5:7: note: The previous declaration is here
+  def bar<Y>(x Y) Foo<Y>
+      ~~~
+")
+
   }
 }
