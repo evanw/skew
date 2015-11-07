@@ -28,70 +28,48 @@ def @spreads
   def @include(name string) # For use with C++
 }
 
-@import if TARGET == .NONE || TARGET == .CPLUSPLUS
-@include(\"<assert.h>\")
+@import if TARGET == .NONE
 @skip if RELEASE
 def assert(truth bool)
 
-@import
+@import if TARGET == .NONE
 namespace Math {
   @prefer
-  @rename(\"Abs\") if TARGET == .CSHARP
   def abs(x double) double
-  @rename(\"Abs\") if TARGET == .CSHARP
   def abs(x int) int
 
-  @rename(\"Acos\") if TARGET == .CSHARP
   def acos(x double) double
-  @rename(\"Asin\") if TARGET == .CSHARP
   def asin(x double) double
-  @rename(\"Atan\") if TARGET == .CSHARP
   def atan(x double) double
-  @rename(\"Atan2\") if TARGET == .CSHARP
   def atan2(x double, y double) double
 
-  @rename(\"Sin\") if TARGET == .CSHARP
   def sin(x double) double
-  @rename(\"Cos\") if TARGET == .CSHARP
   def cos(x double) double
-  @rename(\"Tan\") if TARGET == .CSHARP
   def tan(x double) double
 
-  @rename(\"Floor\") if TARGET == .CSHARP
   def floor(x double) double
-  @rename(\"Ceil\") if TARGET == .CSHARP
   def ceil(x double) double
-  @rename(\"Round\") if TARGET == .CSHARP
   def round(x double) double
 
-  @rename(\"Exp\") if TARGET == .CSHARP
   def exp(x double) double
-  @rename(\"Log\") if TARGET == .CSHARP
   def log(x double) double
-  @rename(\"Pow\") if TARGET == .CSHARP
   def pow(x double, y double) double
-  @rename(\"Random\") if TARGET == .CSHARP
   def random double
-  @rename(\"Sqrt\") if TARGET == .CSHARP
   def sqrt(x double) double
 
   @prefer
-  @rename(\"Max\") if TARGET == .CSHARP
   def max(x double, y double) double
-  @rename(\"Max\") if TARGET == .CSHARP
   def max(x int, y int) int
 
   @prefer
-  @rename(\"Min\") if TARGET == .CSHARP
   def min(x double, y double) double
-  @rename(\"Min\") if TARGET == .CSHARP
   def min(x int, y int) int
 
-  def E double { return 2.718281828459045 }
+  def E double        { return 2.718281828459045 }
   def INFINITY double { return 1 / 0.0 }
-  def NAN double { return 0 / 0.0 }
-  def PI double { return 3.141592653589793 }
-  def SQRT_2 double { return 2 ** 0.5 }
+  def NAN double      { return 0 / 0.0 }
+  def PI double       { return 3.141592653589793 }
+  def SQRT_2 double   { return 2 ** 0.5 }
 }
 
 @import
@@ -133,7 +111,6 @@ class int {
   def ^=(x int)
   def |=(x int)
 
-  @rename(\"ToString\") if TARGET == .CSHARP
   def toString string
 
   def **(x int) int {
@@ -168,7 +145,6 @@ class double {
   def isFinite bool
   def isNaN bool
 
-  @rename(\"ToString\") if TARGET == .CSHARP
   def toString string
 
   def **(x double) double {
@@ -184,36 +160,28 @@ class double {
 class string {
   def +(x string) string
   def +=(x string)
-  @rename(\"CompareTo\") if TARGET == .CSHARP
-  @rename(\"compare\") if TARGET == .CPLUSPLUS
   def <=>(x string) int
-  def [](x int) int
-  def codePoints List<int>
-  def codeUnits List<int>
+
   def count int
-  @rename(\"EndsWith\") if TARGET == .CSHARP
-  def endsWith(x string) bool
-  def get(x int) string
-  @rename(\"Contains\") if TARGET == .CSHARP
-  @rename(\"contains\") if TARGET == .CPLUSPLUS
   def in(x string) bool
-  @rename(\"IndexOf\") if TARGET == .CSHARP
   def indexOf(x string) int
-  def join(x List<string>) string
-  @rename(\"LastIndexOf\") if TARGET == .CSHARP
   def lastIndexOf(x string) int
-  def repeat(x int) string
-  @rename(\"Replace\") if TARGET == .CSHARP
-  def replaceAll(before string, after string) string
-  @rename(\"Substring\") if TARGET == .CSHARP
+  def startsWith(x string) bool
+  def endsWith(x string) bool
+
+  def [](x int) int
+  def get(x int) string
   def slice(start int) string
   def slice(start int, end int) string
+  def codePoints List<int>
+  def codeUnits List<int>
+
   def split(x string) List<string>
-  @rename(\"StartsWith\") if TARGET == .CSHARP
-  def startsWith(x string) bool
-  @rename(\"ToLower\") if TARGET == .CSHARP
+  def join(x List<string>) string
+  def repeat(x int) string
+  def replaceAll(before string, after string) string
+
   def toLowerCase string
-  @rename(\"ToUpper\") if TARGET == .CSHARP
   def toUpperCase string
 }
 
@@ -224,146 +192,114 @@ namespace string {
   def fromCodeUnits(x List<int>) string
 }
 
-@import if TARGET != .JAVASCRIPT
+@import if TARGET == .NONE
 class StringBuilder {
-  @rename(\"Append\") if TARGET == .CSHARP
-  def append(x string)
   def new
-  @rename(\"ToString\") if TARGET == .CSHARP
+  def append(x string)
   def toString string
 }
 
 @import
 class List<T> {
+  def new
   def [...](x T) List<T>
-  @rename(\"get\") if TARGET == .CPLUSPLUS
+
   def [](x int) T
-  @rename(\"set\") if TARGET == .CPLUSPLUS
   def []=(x int, y T)
-  @rename(\"TrueForAll\") if TARGET == .CSHARP
-  @rename(\"every\") if TARGET == .JAVASCRIPT
-  def all(x fn(T) bool) bool
-  @rename(\"some\") if TARGET == .JAVASCRIPT
-  def any(x fn(T) bool) bool
-  def appendOne(x T)
-  @rename(\"slice\") if TARGET == .JAVASCRIPT
-  def clone List<T>
+
   def count int
-  @rename(\"ForEach\") if TARGET == .CSHARP
-  @rename(\"forEach\") if TARGET == .JAVASCRIPT
-  def each(x fn(T))
-  @using(\"System.Linq\") if TARGET == .CSHARP {
-    @rename(\"SequenceEqual\") if TARGET == .CSHARP
-    def equals(x List<T>) bool
-    @rename(\"First\") if TARGET == .CSHARP
-    def first T
-    @rename(\"Last\") if TARGET == .CSHARP
-    def last T
-  }
-  @rename(\"FindAll\") if TARGET == .CSHARP
-  def filter(x fn(T) bool) List<T>
-  @rename(\"Contains\") if TARGET == .CSHARP
-  @rename(\"contains\") if TARGET == .CPLUSPLUS
-  def in(x T) bool
-  @rename(\"IndexOf\") if TARGET == .CSHARP
-  def indexOf(x T) int
-  @rename(\"Insert\") if TARGET == .CSHARP
+  def isEmpty bool
+  def resize(size int, defaultValue T)
+
+  @prefer
+  def append(x T)
+  def append(x List<T>)
+  def appendOne(x T)
+
+  @prefer
+  def prepend(x T)
+  def prepend(x List<T>)
+
+  @prefer
   def insert(x int, value T)
   def insert(x int, values List<T>)
-  def isEmpty bool
-  @rename(\"LastIndexOf\") if TARGET == .CSHARP
-  def lastIndexOf(x T) int
-  @rename(\"ConvertAll\") if TARGET == .CSHARP
-  def map<R>(x fn(T) R) List<R>
-  def new
+
   def removeAll(x T)
-  @rename(\"RemoveAt\") if TARGET == .CSHARP
   def removeAt(x int)
   def removeDuplicates
-  @rename(\"shift\") if TARGET == .JAVASCRIPT
   def removeFirst
-  @rename(\"RemoveAll\") if TARGET == .CSHARP
   def removeIf(x fn(T) bool)
-  @rename(\"pop\") if TARGET == .JAVASCRIPT
   def removeLast
-  @rename(\"Remove\") if TARGET == .CSHARP
   def removeOne(x T)
   def removeRange(start int, end int)
-  def resize(size int, defaultValue T)
-  @rename(\"Reverse\") if TARGET == .CSHARP
+
+  def takeFirst T
+  def takeLast T
+  def takeAt(x int) T
+  def takeRange(start int, end int) List<T>
+
+  def first T
+  def first=(x T) { self[0] = x }
+  def last T
+  def last=(x T) { self[count - 1] = x }
+
+  def in(x T) bool
+  def indexOf(x T) int
+  def lastIndexOf(x T) int
+
+  def all(x fn(T) bool) bool
+  def any(x fn(T) bool) bool
+  def clone List<T>
+  def each(x fn(T))
+  def equals(x List<T>) bool
+  def filter(x fn(T) bool) List<T>
+  def map<R>(x fn(T) R) List<R>
   def reverse
   def shuffle
   def slice(start int) List<T>
   def slice(start int, end int) List<T>
-  @rename(\"Sort\") if TARGET == .CSHARP
   def sort(x fn(T, T) int)
   def swap(x int, y int)
-  @rename(\"shift\") if TARGET == .JAVASCRIPT
-  def takeFirst T
-  @rename(\"pop\") if TARGET == .JAVASCRIPT
-  def takeLast T
-  def takeRange(start int, end int) List<T>
-
-  @prefer
-  @rename(\"Add\") if TARGET == .CSHARP
-  @rename(\"push\") if TARGET == .JAVASCRIPT
-  def append(x T)
-  @rename(\"AddRange\") if TARGET == .CSHARP
-  def append(x List<T>)
-
-  @prefer
-  @rename(\"unshift\") if TARGET == .JAVASCRIPT
-  def prepend(x T)
-  def prepend(x List<T>)
-
-  def first=(x T) { self[0] = x }
-  def last=(x T) { self[count - 1] = x }
 }
 
 @import
 class StringMap<T> {
-  @rename(\"get\") if TARGET == .CPLUSPLUS
+  def new
+  def {...}(key string, value T) StringMap<T>
+
   def [](key string) T
-  @rename(\"set\") if TARGET == .CPLUSPLUS
   def []=(key string, value T)
-  def clone StringMap<T>
-  @rename(\"Count\") if TARGET == .CSHARP
+
   def count int
-  def each(x fn(string, T))
-  def get(key string, defaultValue T) T
-  @rename(\"ContainsKey\") if TARGET == .CSHARP
-  @rename(\"contains\") if TARGET == .CPLUSPLUS
-  def in(key string) bool
   def isEmpty bool
   def keys List<string>
-  def new
-  @rename(\"Remove\") if TARGET == .CSHARP
-  def remove(key string)
   def values List<T>
-  def {...}(key string, value T) StringMap<T>
+
+  def clone StringMap<T>
+  def each(x fn(string, T))
+  def get(key string, defaultValue T) T
+  def in(key string) bool
+  def remove(key string)
 }
 
 @import
 class IntMap<T> {
-  @rename(\"get\") if TARGET == .CPLUSPLUS
+  def new
+  def {...}(key int, value T) IntMap<T>
+
   def [](key int) T
-  @rename(\"set\") if TARGET == .CPLUSPLUS
   def []=(key int, value T)
-  def clone IntMap<T>
-  @rename(\"Count\") if TARGET == .CSHARP
+
   def count int
-  def each(x fn(int, T))
-  def get(key int, defaultValue T) T
-  @rename(\"ContainsKey\") if TARGET == .CSHARP
-  @rename(\"contains\") if TARGET == .CPLUSPLUS
-  def in(key int) bool
   def isEmpty bool
   def keys List<int>
-  def new
-  @rename(\"Remove\") if TARGET == .CSHARP
-  def remove(key int)
   def values List<T>
-  def {...}(key int, value T) IntMap<T>
+
+  def clone IntMap<T>
+  def each(x fn(int, T))
+  def get(key int, defaultValue T) T
+  def in(key int) bool
+  def remove(key int)
 }
 
 class Box<T> {

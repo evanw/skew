@@ -24,6 +24,9 @@ def assert(truth bool) {
   }
 }
 
+@import
+namespace Math {}
+
 class double {
   def isFinite bool {
     return dynamic.isFinite(self)
@@ -119,6 +122,34 @@ class StringBuilder {
 
 @rename(\"Array\")
 class List {
+  @rename(\"shift\") {
+    def removeFirst
+    def takeFirst T
+  }
+
+  @rename(\"pop\") {
+    def removeLast
+    def takeLast T
+  }
+
+  @rename(\"unshift\")
+  def prepend(x T)
+
+  @rename(\"push\")
+  def append(x T)
+
+  @rename(\"every\") if TARGET == .JAVASCRIPT
+  def all(x fn(T) bool) bool
+
+  @rename(\"some\") if TARGET == .JAVASCRIPT
+  def any(x fn(T) bool) bool
+
+  @rename(\"slice\") if TARGET == .JAVASCRIPT
+  def clone List<T>
+
+  @rename(\"forEach\") if TARGET == .JAVASCRIPT
+  def each(x fn(T))
+
   def in(value T) bool {
     return indexOf(value) != -1
   }
