@@ -2157,7 +2157,7 @@ namespace Skew.Resolving {
       node.resolvedType = type.resolvedType
 
       # Warn about unnecessary casts
-      if type.resolvedType != .DYNAMIC && !neededTypeContext && (value.resolvedType == type.resolvedType ||
+      if type.resolvedType != .DYNAMIC && value.resolvedType != .DYNAMIC && !neededTypeContext && (value.resolvedType == type.resolvedType ||
           context == type.resolvedType && _cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
         _log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }

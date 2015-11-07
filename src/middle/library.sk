@@ -152,7 +152,7 @@ class double {
   }
 
   def <=>(x double) int {
-    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)
+    return ((x as dynamic < self) as bool as int) - ((x as dynamic > self) as bool as int)
   }
 }
 

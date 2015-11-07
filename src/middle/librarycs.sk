@@ -94,6 +94,10 @@ class bool {
 class int {
   @rename(\"ToString\")
   def toString string
+
+  def >>>(x int) int {
+    return dynamic.unchecked(self as dynamic.uint >> x) as int
+  }
 }
 
 class double {

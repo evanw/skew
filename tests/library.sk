@@ -66,5 +66,109 @@ namespace Skew.Tests {
     testExpect("Math.NAN", Math.NAN, 0 / 0.0)
     testExpect("Math.PI", Math.PI, 3.141592653589793)
     testExpect("Math.SQRT_2", Math.SQRT_2, 1.4142135623730951)
+
+    ################################################################################
+    # bool
+
+    testExpect("!false", !false, true)
+    testExpect("!true", !true, false)
+    testExpect("false.toString", false.toString, "false")
+    testExpect("true.toString", true.toString, "true")
+
+    ################################################################################
+    # int
+
+    # Unary
+    testExpect("+2", +2, 2)
+    testExpect("x++", ((x int) int => {
+      x++
+      return x
+    })(3), 4)
+    testExpect("++x", ((x int) int => {
+      ++x
+      return x
+    })(3), 4)
+    testExpect("-2", -2, -2)
+    testExpect("x--", ((x int) int => {
+      x--
+      return x
+    })(3), 2)
+    testExpect("--x", ((x int) int => {
+      --x
+      return x
+    })(3), 2)
+    testExpect("~2", ~2, -3)
+
+    # Binary
+    testExpect("5 + 3", 5 + 3, 8)
+    testExpect("5 - 3", 5 - 3, 2)
+    testExpect("5 * 3", 5 * 3, 15)
+    testExpect("5 / 3", 5 / 3, 1)
+    testExpect("5 % 3", 5 % 3, 2)
+    testExpect("-5 % 3", -5 % 3, -2)
+    testExpect("5 << 3", 5 << 3, 40)
+    testExpect("5 >> 1", 5 >> 1, 2)
+    testExpect("-5 >> 1", -5 >> 1, -3)
+    testExpect("5 >>> 1", 5 >>> 1, 2)
+    testExpect("-5 >>> 1", -5 >>> 1, 0x7FFFFFFD)
+    testExpect("2 ** 3", 2 ** 3, 8)
+    testExpect("44 | 33", 44 | 33, 45)
+    testExpect("44 & 33", 44 & 33, 32)
+    testExpect("44 ^ 33", 44 ^ 33, 13)
+    testExpect("-44 | 33", -44 | 33, -11)
+    testExpect("-44 & 33", -44 & 33, 0)
+    testExpect("-44 ^ 33", -44 ^ 33, -11)
+    testExpect("-44 | -33", -44 | -33, -33)
+    testExpect("-44 & -33", -44 & -33, -44)
+    testExpect("-44 ^ -33", -44 ^ -33, 11)
+    testExpect("2 <=> 3", 2 <=> 3, -1)
+    testExpect("2 <=> 2", 2 <=> 2, 0)
+    testExpect("3 <=> 2", 3 <=> 2, 1)
+
+    ################################################################################
+    # double
+
+    # Unary
+    testExpect("+2.0", +2.0, 2.0)
+    testExpect("x++", ((x double) double => {
+      x++
+      return x
+    })(3), 4)
+    testExpect("++x", ((x double) double => {
+      ++x
+      return x
+    })(3), 4)
+    testExpect("-2.0", -2.0, -2.0)
+    testExpect("x--", ((x double) double => {
+      x--
+      return x
+    })(3), 2)
+    testExpect("--x", ((x double) double => {
+      --x
+      return x
+    })(3), 2)
+
+    # Binary
+    testExpect("5.0 + 3.0", 5.0 + 3.0, 8)
+    testExpect("5.0 - 3.0", 5.0 - 3.0, 2)
+    testExpect("5.0 * 3.0", 5.0 * 3.0, 15)
+    testExpect("5.0 / 3.0", 5.0 / 3.0, 1.6666666666666667)
+    testExpect("2.0 ** 3.0", 2.0 ** 3.0, 8)
+    testExpect("2.0 ** 0.5", 2.0 ** 0.5, 1.4142135623730951)
+    testExpect("2.0 <=> 5.5", 2.0 <=> 5.5, -1)
+    testExpect("2.0 <=> 2.0", 2.0 <=> 2.0, 0)
+    testExpect("5.5 <=> 2.0", 5.5 <=> 2.0, 1)
+
+    # isFinite
+    testExpect("0.0.isFinite", 0.0.isFinite, true)
+    testExpect("Math.NAN.isFinite", Math.NAN.isFinite, false)
+    testExpect("Math.INFINITY.isFinite", Math.INFINITY.isFinite, false)
+    testExpect("(-Math.INFINITY).isFinite", (-Math.INFINITY).isFinite, false)
+
+    # isNaN
+    testExpect("0.0.isNaN", 0.0.isNaN, false)
+    testExpect("Math.NAN.isNaN", Math.NAN.isNaN, true)
+    testExpect("Math.INFINITY.isNaN", Math.INFINITY.isNaN, false)
+    testExpect("(-Math.INFINITY).isNaN", (-Math.INFINITY).isNaN, false)
   }
 }
