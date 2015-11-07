@@ -2144,5 +2144,74 @@ def main {
 })();
 ").js
 
+# Test imported auto-implemented operators
+test("
+@import
+class Foo {
+  def *(x int) Foo
+}
+
+@export
+def main(foo Foo) {
+  foo *= 2
+}
+", "
+(function() {
+  main = function(foo) {
+    foo = foo * 2;
+  };
+})();
+").js.inlineAllFunctions
+
+# Test side-effect preservation for auto-implemented operators
+test("
+class Foo {
+  var x = 0.0
+  var y = 0
+  var z = [0.0]
+}
+
+def bar Foo {
+  return Foo.new
+}
+
+@export
+def main {
+  var foo = Foo.new
+  foo.x **= 2
+  foo.z[0] **= 2
+  foo.z[foo.y] **= 2
+
+  bar.x **= 2
+  bar.z[0] **= 2
+  bar.z[bar.y] **= 2
+}
+", "
+(function() {
+  main = function() {
+    var ref6;
+    var ref5;
+    var ref4;
+    var ref3;
+    var ref2;
+    var ref1;
+    var ref;
+    var foo = new Foo();
+    foo.x = Math.pow(foo.x, 2);
+    (ref = foo.z)[0] = Math.pow(ref[0], 2);
+    (ref1 = foo.z)[ref2 = foo.y] = Math.pow(ref1[ref2], 2);
+    (ref3 = new Foo()).x = Math.pow(ref3.x, 2);
+    (ref4 = new Foo().z)[0] = Math.pow(ref4[0], 2);
+    (ref5 = new Foo().z)[ref6 = new Foo().y] = Math.pow(ref5[ref6], 2);
+  };
+
+  function Foo() {
+    this.x = 0;
+    this.y = 0;
+    this.z = [0];
+  }
+})();
+").js.inlineAllFunctions
+
   }
 }

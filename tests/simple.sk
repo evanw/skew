@@ -5773,5 +5773,116 @@ class Foo<X> {
       ~~~
 ")
 
+# Test storage check for auto-implemented operators
+test("
+@import
+class Foo {
+  def *(x int) Foo
+  def foo Foo
+}
+
+def main(foo Foo) {
+  foo.foo *= 2
+}
+", "
+<stdin>:8:3: error: Cannot store to this location
+  foo.foo *= 2
+  ~~~~~~~
+")
+
+# Test storage check for auto-implemented operators
+test("
+@import
+class Foo {
+  def new
+  def *(x int) Foo
+}
+
+def main {
+  const foo = Foo.new
+  foo *= 2
+}
+", "
+<stdin>:9:3: error: Cannot store to constant symbol \"foo\"
+  foo *= 2
+  ~~~
+<stdin>:8:9: warning: Local variable \"foo\" is never read
+  const foo = Foo.new
+        ~~~
+")
+
+# Test auto-implemented index operator
+test("
+@import
+class Foo {
+}
+
+def main(foo Foo) {
+  foo[0] *= 2
+}
+", "
+<stdin>:6:6: error: \"[]\" is not declared on type \"Foo\"
+  foo[0] *= 2
+     ~~~
+")
+
+# Test auto-implemented index operator
+test("
+@import
+class Foo {
+  def [](x int) int
+}
+
+@export
+def main(foo Foo) {
+  foo[0] *= 2
+}
+", "
+<stdin>:8:3: error: Cannot store to this location
+  foo[0] *= 2
+  ~~~~~~
+")
+
+# Test auto-implemented index operator
+test("
+@import
+class Foo {
+  def *(x int) int
+  def [](x int) Foo
+  def []=(x int, y bool)
+}
+
+@export
+def main(foo Foo) {
+  foo[0] *= 2
+}
+", "
+<stdin>:10:3: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  foo[0] *= 2
+  ~~~~~~~~~~~
+")
+
+# Test auto-implemented index operator
+test("
+@import
+class Foo {
+  def *(x int)
+  def [](x int) Foo
+  def []=(x int, y bool)
+}
+
+@export
+def main(foo Foo) {
+  foo[0] *= 2
+}
+", "
+<stdin>:10:3: error: The function \"*\" does not return a value
+  foo[0] *= 2
+  ~~~~~~~~~~~
+<stdin>:3:7: note: The function declaration is here
+  def *(x int)
+      ^
+")
+
   }
 }
