@@ -1803,10 +1803,20 @@ def bar {
   dynamic.Bar()
 }
 
+class Foo {
+  def foo { dynamic.Foo(self) }
+
+  @alwaysinline
+  def bar { dynamic.Bar(self) }
+}
+
 @entry
 def main {
   foo
   bar
+
+  Foo.new.foo
+  Foo.new.bar
 }
 ", "
 (function() {
@@ -1817,7 +1827,16 @@ def main {
   function main() {
     foo();
     Bar();
+    new Foo().foo();
+    Bar(new Foo());
   }
+
+  function Foo() {
+  }
+
+  Foo.prototype.foo = function() {
+    Foo(this);
+  };
 
   main();
 })();

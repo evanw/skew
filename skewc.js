@@ -13633,14 +13633,15 @@
   };
 
   Skew.GlobalizingPass.prototype.run = function(context) {
-    var virtualLookup = context.options.globalizeAllFunctions ? new Skew.VirtualLookup(context.global) : null;
+    var globalizeAllFunctions = context.options.globalizeAllFunctions;
+    var virtualLookup = globalizeAllFunctions || context.options.isAlwaysInlinePresent ? new Skew.VirtualLookup(context.global) : null;
 
     for (var i1 = 0, list1 = context.callGraph.callInfo, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
       var info = list1[i1];
       var symbol = info.symbol;
 
       // Turn certain instance functions into global functions
-      if (symbol.kind == Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind == Skew.SymbolKind.OBJECT_ENUM || symbol.parent.kind == Skew.SymbolKind.OBJECT_WRAPPED || symbol.parent.kind == Skew.SymbolKind.OBJECT_INTERFACE && symbol.block != null || symbol.parent.isImported() && !symbol.isImported() || !symbol.isImportedOrExported() && virtualLookup != null && !virtualLookup.isVirtual(symbol))) {
+      if (symbol.kind == Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind == Skew.SymbolKind.OBJECT_ENUM || symbol.parent.kind == Skew.SymbolKind.OBJECT_WRAPPED || symbol.parent.kind == Skew.SymbolKind.OBJECT_INTERFACE && symbol.block != null || symbol.parent.isImported() && !symbol.isImported() || (globalizeAllFunctions || symbol.isInliningForced()) && !symbol.isImportedOrExported() && !virtualLookup.isVirtual(symbol))) {
         var $function = symbol.asFunctionSymbol();
         $function.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
         $function.$arguments.unshift($function.$this);

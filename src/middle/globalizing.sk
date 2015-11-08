@@ -9,7 +9,8 @@ namespace Skew {
     }
 
     over run(context PassContext) {
-      var virtualLookup = context.options.globalizeAllFunctions ? VirtualLookup.new(context.global) : null
+      var globalizeAllFunctions = context.options.globalizeAllFunctions
+      var virtualLookup = globalizeAllFunctions || context.options.isAlwaysInlinePresent ? VirtualLookup.new(context.global) : null
 
       for info in context.callGraph.callInfo {
         var symbol = info.symbol
@@ -20,7 +21,7 @@ namespace Skew {
             symbol.parent.kind == .OBJECT_WRAPPED ||
             symbol.parent.kind == .OBJECT_INTERFACE && symbol.block != null ||
             symbol.parent.isImported && !symbol.isImported ||
-            !symbol.isImportedOrExported && virtualLookup != null && !virtualLookup.isVirtual(symbol)) {
+            (globalizeAllFunctions || symbol.isInliningForced) && !symbol.isImportedOrExported && !virtualLookup.isVirtual(symbol)) {
 
           var function = symbol.asFunctionSymbol
           function.kind = .FUNCTION_GLOBAL
