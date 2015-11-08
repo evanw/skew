@@ -18126,9 +18126,9 @@
   Skew.Resolving.Resolver.prototype._hookForNullDot = function(node, scope) {
     var target = node.dotTarget().remove();
     this._resolveAsParameterizedExpression(target, scope);
-    var check = Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, this._extractExpression(target, scope), new Skew.Node(Skew.NodeKind.NULL)).withRange(target.range);
+    var check = Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, this._extractExpression(target, scope), new Skew.Node(Skew.NodeKind.NULL).withRange(node.internalRange)).withRange(target.range);
     var dot = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(node.asString())).appendChild(target).withRange(node.range).withInternalRange(node.internalRange);
-    return Skew.Node.createHook(check, dot, new Skew.Node(Skew.NodeKind.NULL)).withRange(node.range);
+    return Skew.Node.createHook(check, dot, new Skew.Node(Skew.NodeKind.NULL).withRange(node.internalRangeOrRange())).withRange(node.range);
   };
 
   Skew.Resolving.Resolver.prototype._resolveNullDot = function(node, scope) {
@@ -18372,10 +18372,10 @@
     block.insertChildBefore(after, new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(symbol)));
 
     // Replace the original expression with a reference
-    var reference = Skew.Node.createSymbolReference(symbol);
+    var reference = Skew.Node.createSymbolReference(symbol).withRange(node.range);
     var setup = node.cloneAndStealChildren();
     node.become(reference);
-    return Skew.Node.createBinary(Skew.NodeKind.ASSIGN, reference, setup).withType(type);
+    return Skew.Node.createBinary(Skew.NodeKind.ASSIGN, reference, setup).withType(type).withRange(node.range);
   };
 
   // Expressions with side effects must be stored to temporary variables
@@ -18396,12 +18396,12 @@
 
     // Handle dot expressions
     if (node.kind == Skew.NodeKind.DOT) {
-      return Skew.Node.createMemberReference(this._extractExpression(node.dotTarget(), scope), node.symbol);
+      return Skew.Node.createMemberReference(this._extractExpression(node.dotTarget(), scope), node.symbol).withRange(node.range);
     }
 
     // Handle index expressions
     if (node.kind == Skew.NodeKind.INDEX) {
-      return Skew.Node.createIndex(this._extractExpression(node.indexLeft(), scope), this._extractExpression(node.indexRight(), scope));
+      return Skew.Node.createIndex(this._extractExpression(node.indexLeft(), scope), this._extractExpression(node.indexRight(), scope)).withRange(node.range);
     }
 
     // Handle name expressions
@@ -18496,7 +18496,7 @@
         extracted = this._extractExpressionForAssignment(target, scope);
 
         if (kind == Skew.NodeKind.INCREMENT || kind == Skew.NodeKind.DECREMENT) {
-          node.appendChild(new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(1)).withType(this._cache.intType));
+          node.appendChild(new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(1)).withType(this._cache.intType).withRange(node.internalRangeOrRange()));
         }
 
         kind = info.assignKind;

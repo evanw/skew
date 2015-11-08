@@ -2638,9 +2638,9 @@ namespace Skew.Resolving {
     def _hookForNullDot(node Node, scope Scope) Node {
       var target = node.dotTarget.remove
       _resolveAsParameterizedExpression(target, scope)
-      var check = Node.createBinary(.NOT_EQUAL, _extractExpression(target, scope), Node.createNull).withRange(target.range)
+      var check = Node.createBinary(.NOT_EQUAL, _extractExpression(target, scope), Node.createNull.withRange(node.internalRange)).withRange(target.range)
       var dot = Node.createDot(target, node.asString).withRange(node.range).withInternalRange(node.internalRange)
-      return Node.createHook(check, dot, Node.createNull).withRange(node.range)
+      return Node.createHook(check, dot, Node.createNull.withRange(node.internalRangeOrRange)).withRange(node.range)
     }
 
     def _resolveNullDot(node Node, scope Scope) {
@@ -2869,10 +2869,10 @@ namespace Skew.Resolving {
       block.insertChildBefore(after, Node.createVariables.appendChild(Node.createVariable(symbol)))
 
       # Replace the original expression with a reference
-      var reference = Node.createSymbolReference(symbol)
+      var reference = Node.createSymbolReference(symbol).withRange(node.range)
       var setup = node.cloneAndStealChildren
       node.become(reference)
-      return Node.createBinary(.ASSIGN, reference, setup).withType(type)
+      return Node.createBinary(.ASSIGN, reference, setup).withType(type).withRange(node.range)
     }
 
     # Expressions with side effects must be stored to temporary variables
@@ -2893,12 +2893,12 @@ namespace Skew.Resolving {
 
       # Handle dot expressions
       if node.kind == .DOT {
-        return Node.createMemberReference(_extractExpression(node.dotTarget, scope), node.symbol)
+        return Node.createMemberReference(_extractExpression(node.dotTarget, scope), node.symbol).withRange(node.range)
       }
 
       # Handle index expressions
       if node.kind == .INDEX {
-        return Node.createIndex(_extractExpression(node.indexLeft, scope), _extractExpression(node.indexRight, scope))
+        return Node.createIndex(_extractExpression(node.indexLeft, scope), _extractExpression(node.indexRight, scope)).withRange(node.range)
       }
 
       # Handle name expressions
