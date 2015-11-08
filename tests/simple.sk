@@ -5882,23 +5882,51 @@ def main(foo Foo) {
 
 # Test auto-implemented unary assignment operators
 test("
-@import
 class Foo {
   def +(x int) bool
   def -(x int) string
 }
 
-def main(foo Foo) {
+class Bar {
+  def +(x bool) Bar
+  def -(x string) Bar
+}
+
+def main(foo Foo, bar Bar) {
   foo++
   foo--
+  bar++
+  bar--
 }
 ", "
-<stdin>:8:3: error: Cannot convert from type \"bool\" to type \"Foo\"
+<stdin>:12:3: error: Cannot convert from type \"bool\" to type \"Foo\"
   foo++
   ~~~~~
-<stdin>:9:3: error: Cannot convert from type \"string\" to type \"Foo\"
+<stdin>:13:3: error: Cannot convert from type \"string\" to type \"Foo\"
   foo--
   ~~~~~
+<stdin>:14:6: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+  bar++
+     ~~
+<stdin>:15:6: error: Cannot convert from type \"int\" to type \"string\"
+  bar--
+     ~~
+")
+
+# Test that auto-implemented assignment operators trigger "local variable is never read" warnings
+test("
+class Foo {
+  def +(x int) Foo
+}
+
+def test {
+  var a Foo
+  a += 1
+}
+", "
+<stdin>:6:7: warning: Local variable \"a\" is never read
+  var a Foo
+      ^
 ")
 
 # Test the null join operator on primitive types
