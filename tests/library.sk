@@ -1,16 +1,4 @@
 namespace Skew.Tests {
-  def testExpect(text string, answer bool, expected bool) Unit.Test {
-    return test(text, expectString => expectString(answer.toString, expected.toString))
-  }
-
-  def testExpect(text string, answer double, expected double) Unit.Test {
-    return test(text, expectString => expectString(answer.toString, expected.toString))
-  }
-
-  def testExpect(text string, answer string, expected string) Unit.Test {
-    return test(text, expectString => expectString(answer, expected))
-  }
-
   def testLibrary {
     ################################################################################
     # Math
@@ -94,6 +82,15 @@ namespace Skew.Tests {
 
     ################################################################################
     # int
+
+    # Literals
+    testExpect("'a'", 'a', 97)
+    testExpect("0b101", 0b101, 5)
+    testExpect("-0b101", -0b101, -5)
+    testExpect("0o123", 0o123, 83)
+    testExpect("-0o123", -0o123, -83)
+    testExpect("0x123", 0x123, 291)
+    testExpect("-0x123", -0x123, -291)
 
     # Unary
     testExpect("+2", +2, 2)
@@ -268,5 +265,86 @@ namespace Skew.Tests {
     testExpect("Math.NAN.isNaN", Math.NAN.isNaN, true)
     testExpect("Math.INFINITY.isNaN", Math.INFINITY.isNaN, false)
     testExpect("(-Math.INFINITY).isNaN", (-Math.INFINITY).isNaN, false)
+
+    ################################################################################
+    # string
+
+    # Binary
+    testExpect("\"a\\0b\" + \"x\\0y\"", "a\0b" + "x\0y", "a\0bx\0y")
+    testExpect("\"a\\0b\" += \"x\\0y\"", ((x string) string => {
+      x += "x\0y"
+      return x
+    })("a\0b"), "a\0bx\0y")
+    testExpect("\"\\0a\" <=> \"\\0x\"", "\0a" <=> "\0x", -1)
+    testExpect("\"\\0a\" <=> \"\\0a\"", "\0a" <=> "\0a", 0)
+    testExpect("\"\\0x\" <=> \"\\0a\"", "\0x" <=> "\0a", 1)
+
+    # count
+    testExpect("\"a\\0b\".count", "a\0b".count, 3)
+
+    # in
+    testExpect("\"a\\0b\" in \"a\\0\"", "a\0b" in "a\0", false)
+    testExpect("\"a\\0b\" in \"a\\0b\"", "a\0b" in "a\0b", true)
+    testExpect("\"a\\0b\" in \"a\\0bc\"", "a\0b" in "a\0bc", true)
+    testExpect("\"a\\0b\" in \" a\\0b\"", "a\0b" in " a\0b", true)
+    testExpect("\"a\\0b\" in \" a\\0bc\"", "a\0b" in " a\0bc", true)
+
+    # indexOf
+    testExpect("\"a\\0\".indexOf(\"a\\0b\")", "a\0".indexOf("a\0b"), -1)
+    testExpect("\"a\\0b\".indexOf(\"a\\0b\")", "a\0b".indexOf("a\0b"), 0)
+    testExpect("\" a\\0b \".indexOf(\"a\\0b\")", " a\0b ".indexOf("a\0b"), 1)
+    testExpect("\" a\\0b a\\0b \".indexOf(\"a\\0b\")", " a\0b a\0b ".indexOf("a\0b"), 1)
+
+    # lastIndexOf
+    testExpect("\"a\\0\".lastIndexOf(\"a\\0b\")", "a\0".lastIndexOf("a\0b"), -1)
+    testExpect("\"a\\0b\".lastIndexOf(\"a\\0b\")", "a\0b".lastIndexOf("a\0b"), 0)
+    testExpect("\" a\\0b \".lastIndexOf(\"a\\0b\")", " a\0b ".lastIndexOf("a\0b"), 1)
+    testExpect("\" a\\0b a\\0b \".lastIndexOf(\"a\\0b\")", " a\0b a\0b ".lastIndexOf("a\0b"), 5)
+
+    # startsWith
+    testExpect("\"a\\0\".startsWith(\"a\\0b\")", "a\0".startsWith("a\0b"), false)
+    testExpect("\"a\\0b\".startsWith(\"a\\0b\")", "a\0b".startsWith("a\0b"), true)
+    testExpect("\"a\\0bc\".startsWith(\"a\\0b\")", "a\0bc".startsWith("a\0b"), true)
+    testExpect("\" a\\0b\".startsWith(\"a\\0b\")", " a\0b".startsWith("a\0b"), false)
+
+    # endsWith
+    testExpect("\"a\\0\".endsWith(\"a\\0b\")", "a\0".endsWith("a\0b"), false)
+    testExpect("\"a\\0b\".endsWith(\"a\\0b\")", "a\0b".endsWith("a\0b"), true)
+    testExpect("\"a\\0bc\".endsWith(\"a\\0b\")", "a\0bc".endsWith("a\0b"), false)
+    testExpect("\" a\\0b\".endsWith(\"a\\0b\")", " a\0b".endsWith("a\0b"), true)
+
+    # []
+    testExpect("\"a\\0b\"[0]", "a\0b"[0], 'a')
+    testExpect("\"a\\0b\"[1]", "a\0b"[1], '\0')
+    testExpect("\"a\\0b\"[2]", "a\0b"[2], 'b')
+
+    # get
+    testExpect("\"a\\0b\".get(0)", "a\0b".get(0), "a")
+    testExpect("\"a\\0b\".get(1)", "a\0b".get(1), "\0")
+    testExpect("\"a\\0b\".get(2)", "a\0b".get(2), "b")
+
+    # slice
+    testExpect("\"a\\0b\".slice(1)", "a\0b".slice(1), "\0b")
+    testExpect("\"a\\0b\".slice(1, 2)", "a\0b".slice(1, 2), "\0")
+
+    # Unicode
+    testExpect("\"a\\0b\".codePoints", "a\0b".codePoints, ['a', '\0', 'b'])
+    testExpect("\"a\\0b\".codeUnits", "a\0b".codeUnits, ['a', '\0', 'b'])
+    testExpect("string.fromCodePoint('\\0')", string.fromCodePoint('\0'), "\0")
+    testExpect("string.fromCodePoint('a')", string.fromCodePoint('a'), "a")
+    testExpect("string.fromCodeUnit('\\0')", string.fromCodeUnit('\0'), "\0")
+    testExpect("string.fromCodeUnit('a')", string.fromCodeUnit('a'), "a")
+    testExpect("string.fromCodePoints(['a', '\\0', 'b'])", string.fromCodePoints(['a', '\0', 'b']), "a\0b")
+    testExpect("string.fromCodeUnits(['a', '\\0', 'b'])", string.fromCodeUnits(['a', '\0', 'b']), "a\0b")
+
+    # Other
+    testExpect("\"a \\0 b\".split(\" \")", "a \0 b".split(" "), ["a", "\0", "b"])
+    testExpect("\" a \\0 b \".split(\" \")", " a \0 b ".split(" "), ["", "a", "\0", "b", ""])
+    testExpect("\" \".join([\"a\", \"\\0\", \"b\"])", " ".join(["a", "\0", "b"]), "a \0 b")
+    testExpect("\" \".join([\"\", \"a\", \"\\0\", \"b\", \"\"])", " ".join(["", "a", "\0", "b", ""]), " a \0 b ")
+    testExpect("\"a\\0b\".repeat(3)", "a\0b".repeat(3), "a\0ba\0ba\0b")
+    testExpect("\"a\\0b\\0c\".replaceAll(\"\\0\", \"\\0\\0\")", "a\0b\0c".replaceAll("\0", "\0\0"), "a\0\0b\0\0c")
+    testExpect("\"a\\0B\\0c\\0D\".toUpperCase", "a\0B\0c\0D".toUpperCase, "A\0B\0C\0D")
+    testExpect("\"a\\0B\\0c\\0D\".toLowerCase", "a\0B\0c\0D".toLowerCase, "a\0b\0c\0d")
   }
 }

@@ -1,4 +1,32 @@
 namespace Skew.Tests {
+  def testExpect(text string, answer bool, expected bool) Unit.Test {
+    return test(text, expectString => expectString(answer.toString, expected.toString))
+  }
+
+  def testExpect(text string, answer double, expected double) Unit.Test {
+    return test(text, expectString => expectString(answer.toString, expected.toString))
+  }
+
+  def testExpect(text string, answer string, expected string) Unit.Test {
+    return test(text, expectString => expectString(answer, expected))
+  }
+
+  def testExpect(text string, answer List<int>, expected List<int>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  }
+
+  def testExpect(text string, answer List<string>, expected List<string>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  }
+
+  def toString(values List<int>) string {
+    return toString(values.map<string>(x => x.toString))
+  }
+
+  def toString(values List<string>) string {
+    return "[" + ", ".join(values) + "]"
+  }
+
   class CompilerTest : Unit.Test {
     var _input string
     var _expected string

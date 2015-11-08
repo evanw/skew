@@ -1,8 +1,4 @@
 namespace Skew.Tests {
-  def toString(list List<int>) string {
-    return "[" + ", ".join(list.map<string>(x => x.toString)) + "]"
-  }
-
   def testUnicodeText(text string, codePoints List<int>) {
     test("codePoints " + text, expectString => expectString(toString(codePoints), toString(text.codePoints)))
     test("fromCodePoints " + text, expectString => expectString(text, string.fromCodePoints(codePoints)))

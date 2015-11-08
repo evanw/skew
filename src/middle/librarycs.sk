@@ -158,7 +158,7 @@ class string {
   @using(\"System\")
   def split(separator string) List<string> {
     var separators = [separator]
-    return dynamic.Enumerable.ToList((self as dynamic).Split(dynamic.Enumerable.ToArray(separators as dynamic), dynamic.StringSplitOptions.RemoveEmptyEntries))
+    return dynamic.Enumerable.ToList((self as dynamic).Split(dynamic.Enumerable.ToArray(separators as dynamic), dynamic.StringSplitOptions.None))
   }
 
   def join(parts List<string>) string {
