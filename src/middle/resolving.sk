@@ -1610,8 +1610,22 @@ namespace Skew.Resolving {
 
     def _resolveExpression(node Node, scope Scope) {
       var value = node.expressionValue
-      _resolveAsParameterizedExpression(value, scope)
-      _checkUnusedExpression(value)
+      var hook = _sinkNullDotIntoHook(value, scope, null)
+
+      # Turn top-level "?." expressions into if statements
+      if hook != null {
+        var test = hook.hookTest
+        var yes = hook.hookTrue
+        var block = Node.createBlock.appendChild(Node.createExpression(yes.remove).withRange(yes.range)).withRange(yes.range)
+        node.become(Node.createIf(test.remove, block, null).withRange(node.range))
+        _resolveNode(node, scope, null)
+      }
+
+      # Normal expression statement
+      else {
+        _resolveAsParameterizedExpression(value, scope)
+        _checkUnusedExpression(value)
+      }
     }
 
     def _resolveFor(node Node, scope Scope) {
@@ -1865,7 +1879,10 @@ namespace Skew.Resolving {
     }
 
     def _resolveCall(node Node, scope Scope, context Type) {
-      if _sinkNullDot(node, scope, context) {
+      var hook = _sinkNullDotIntoHook(node, scope, context)
+      if hook != null {
+        node.become(hook)
+        _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
         return
       }
 
@@ -2193,37 +2210,42 @@ namespace Skew.Resolving {
       return null
     }
 
-    def _sinkNullDot(node Node, scope Scope, context Type) bool {
-      var target = node
+    def _sinkNullDotIntoHook(node Node, scope Scope, context Type) Node {
+      var nullDot = node
 
-      # Build up a chain of dot accesses and calls
+      # Search down the chain of dot accesses and calls for "?." expression
       while true {
-        if target.kind == .DOT && target.dotTarget != null {
-          target = target.dotTarget
-        } else if target.kind == .CALL {
-          target = target.callValue
+        if nullDot.kind == .DOT && nullDot.dotTarget != null {
+          nullDot = nullDot.dotTarget
+        } else if nullDot.kind == .CALL {
+          nullDot = nullDot.callValue
         } else {
           break
         }
       }
 
       # Stop if this isn't a "?." expression after all
-      if target.kind != .NULL_DOT {
-        return false
+      if nullDot.kind != .NULL_DOT {
+        return null
       }
 
       # Wrap everything in a null check
-      var hook = _hookForNullDot(target, scope)
-      target.become(hook.hookTrue.clone)
+      var target = nullDot.dotTarget.remove
+      _resolveAsParameterizedExpression(target, scope)
+      var check = Node.createBinary(.NOT_EQUAL, _extractExpression(target, scope), Node.createNull.withRange(nullDot.internalRange)).withRange(target.range)
+      var dot = Node.createDot(target, nullDot.asString).withRange(nullDot.range).withInternalRange(nullDot.internalRange)
+      var hook = Node.createHook(check, dot, Node.createNull.withRange(nullDot.internalRangeOrRange)).withRange(nullDot.range)
+      nullDot.become(hook.hookTrue.clone)
       node.resolvedType = null # This is necessary to trigger the resolve below
       hook.hookTrue.become(node.cloneAndStealChildren)
-      node.become(hook)
-      _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
-      return true
+      return hook
     }
 
     def _resolveDot(node Node, scope Scope, context Type) {
-      if _sinkNullDot(node, scope, context) {
+      var hook = _sinkNullDotIntoHook(node, scope, context)
+      if hook != null {
+        node.become(hook)
+        _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
         return
       }
 
@@ -2635,16 +2657,8 @@ namespace Skew.Resolving {
       _automaticallyCallGetter(node, scope)
     }
 
-    def _hookForNullDot(node Node, scope Scope) Node {
-      var target = node.dotTarget.remove
-      _resolveAsParameterizedExpression(target, scope)
-      var check = Node.createBinary(.NOT_EQUAL, _extractExpression(target, scope), Node.createNull.withRange(node.internalRange)).withRange(target.range)
-      var dot = Node.createDot(target, node.asString).withRange(node.range).withInternalRange(node.internalRange)
-      return Node.createHook(check, dot, Node.createNull.withRange(node.internalRangeOrRange)).withRange(node.range)
-    }
-
     def _resolveNullDot(node Node, scope Scope) {
-      node.become(_hookForNullDot(node, scope))
+      node.become(_sinkNullDotIntoHook(node, scope, null))
       _resolveAsParameterizedExpression(node, scope)
     }
 

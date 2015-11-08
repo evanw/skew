@@ -16965,8 +16965,22 @@
 
   Skew.Resolving.Resolver.prototype._resolveExpression = function(node, scope) {
     var value = node.expressionValue();
-    this._resolveAsParameterizedExpression(value, scope);
-    this._checkUnusedExpression(value);
+    var hook = this._sinkNullDotIntoHook(value, scope, null);
+
+    // Turn top-level "?." expressions into if statements
+    if (hook != null) {
+      var test = hook.hookTest();
+      var yes = hook.hookTrue();
+      var block = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createExpression(yes.remove()).withRange(yes.range)).withRange(yes.range);
+      node.become(Skew.Node.createIf(test.remove(), block, null).withRange(node.range));
+      this._resolveNode(node, scope, null);
+    }
+
+    // Normal expression statement
+    else {
+      this._resolveAsParameterizedExpression(value, scope);
+      this._checkUnusedExpression(value);
+    }
   };
 
   Skew.Resolving.Resolver.prototype._resolveFor = function(node, scope) {
@@ -17237,7 +17251,11 @@
   };
 
   Skew.Resolving.Resolver.prototype._resolveCall = function(node, scope, context) {
-    if (this._sinkNullDot(node, scope, context)) {
+    var hook = this._sinkNullDotIntoHook(node, scope, context);
+
+    if (hook != null) {
+      node.become(hook);
+      this._resolveAsParameterizedExpressionWithTypeContext(node, scope, context);
       return;
     }
 
@@ -17620,17 +17638,17 @@
     return null;
   };
 
-  Skew.Resolving.Resolver.prototype._sinkNullDot = function(node, scope, context) {
-    var target = node;
+  Skew.Resolving.Resolver.prototype._sinkNullDotIntoHook = function(node, scope, context) {
+    var nullDot = node;
 
-    // Build up a chain of dot accesses and calls
+    // Search down the chain of dot accesses and calls for "?." expression
     while (true) {
-      if (target.kind == Skew.NodeKind.DOT && target.dotTarget() != null) {
-        target = target.dotTarget();
+      if (nullDot.kind == Skew.NodeKind.DOT && nullDot.dotTarget() != null) {
+        nullDot = nullDot.dotTarget();
       }
 
-      else if (target.kind == Skew.NodeKind.CALL) {
-        target = target.callValue();
+      else if (nullDot.kind == Skew.NodeKind.CALL) {
+        nullDot = nullDot.callValue();
       }
 
       else {
@@ -17639,24 +17657,30 @@
     }
 
     // Stop if this isn't a "?." expression after all
-    if (target.kind != Skew.NodeKind.NULL_DOT) {
-      return false;
+    if (nullDot.kind != Skew.NodeKind.NULL_DOT) {
+      return null;
     }
 
     // Wrap everything in a null check
-    var hook = this._hookForNullDot(target, scope);
-    target.become(hook.hookTrue().clone());
+    var target = nullDot.dotTarget().remove();
+    this._resolveAsParameterizedExpression(target, scope);
+    var check = Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, this._extractExpression(target, scope), new Skew.Node(Skew.NodeKind.NULL).withRange(nullDot.internalRange)).withRange(target.range);
+    var dot = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(nullDot.asString())).appendChild(target).withRange(nullDot.range).withInternalRange(nullDot.internalRange);
+    var hook = Skew.Node.createHook(check, dot, new Skew.Node(Skew.NodeKind.NULL).withRange(nullDot.internalRangeOrRange())).withRange(nullDot.range);
+    nullDot.become(hook.hookTrue().clone());
 
     // This is necessary to trigger the resolve below
     node.resolvedType = null;
     hook.hookTrue().become(node.cloneAndStealChildren());
-    node.become(hook);
-    this._resolveAsParameterizedExpressionWithTypeContext(node, scope, context);
-    return true;
+    return hook;
   };
 
   Skew.Resolving.Resolver.prototype._resolveDot = function(node, scope, context) {
-    if (this._sinkNullDot(node, scope, context)) {
+    var hook = this._sinkNullDotIntoHook(node, scope, context);
+
+    if (hook != null) {
+      node.become(hook);
+      this._resolveAsParameterizedExpressionWithTypeContext(node, scope, context);
       return;
     }
 
@@ -18123,16 +18147,8 @@
     this._automaticallyCallGetter(node, scope);
   };
 
-  Skew.Resolving.Resolver.prototype._hookForNullDot = function(node, scope) {
-    var target = node.dotTarget().remove();
-    this._resolveAsParameterizedExpression(target, scope);
-    var check = Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, this._extractExpression(target, scope), new Skew.Node(Skew.NodeKind.NULL).withRange(node.internalRange)).withRange(target.range);
-    var dot = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(node.asString())).appendChild(target).withRange(node.range).withInternalRange(node.internalRange);
-    return Skew.Node.createHook(check, dot, new Skew.Node(Skew.NodeKind.NULL).withRange(node.internalRangeOrRange())).withRange(node.range);
-  };
-
   Skew.Resolving.Resolver.prototype._resolveNullDot = function(node, scope) {
-    node.become(this._hookForNullDot(node, scope));
+    node.become(this._sinkNullDotIntoHook(node, scope, null));
     this._resolveAsParameterizedExpression(node, scope);
   };
 

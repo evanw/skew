@@ -5996,9 +5996,15 @@ def main(foo Foo) {
 <stdin>:7:10: warning: Unused expression
   foo ?? foo.x
          ~~~~~
+<stdin>:8:3: warning: Unused expression
+  foo.x ?? foo
+  ~~~~~
 <stdin>:8:12: warning: Unused expression
   foo.x ?? foo
            ~~~
+<stdin>:9:3: warning: Unused expression
+  foo.x ?? foo.x
+  ~~~~~
 <stdin>:9:12: warning: Unused expression
   foo.x ?? foo.x
            ~~~~~
@@ -6023,6 +6029,22 @@ def main(foo Foo) {
 <stdin>:9:3: warning: Unused expression
   foo?.a?.a
   ~~~~~~~~~
+")
+
+# Test top-level use of the null dot operator
+test("
+class Foo {
+  def foo {}
+  def bar int { return 0 }
+  def baz string { return null }
+}
+
+def main(foo Foo) {
+  foo?.foo
+  foo?.bar
+  foo?.baz
+}
+", "
 ")
 
   }
