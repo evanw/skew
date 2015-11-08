@@ -145,6 +145,10 @@ namespace Skew.IDE {
         if node != null {
           var kind = node.kind
 
+          if kind == .VARIABLE {
+            return findSymbolInVariable(node.symbol.asVariableSymbol)
+          }
+
           for child = node.firstChild; child != null; child = child.nextSibling {
             if findSymbolInNode(child) {
               return true
@@ -156,10 +160,6 @@ namespace Skew.IDE {
           }
 
           if (kind == .DOT || kind.isUnary || kind.isBinary) && _findSymbolInRange(node.internalRangeOrRange, node.symbol) {
-            return true
-          }
-
-          if kind == .VARIABLE && _findSymbolInRange(node.symbol.range, node.symbol) {
             return true
           }
 
