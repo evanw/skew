@@ -301,6 +301,13 @@ namespace Skew.Tests {
     ################################################################################
     # string
 
+    # Literals
+    testExpect("", "", "")
+    testExpect("\\0", "\0", "\0")
+    testExpect("\\x00", "\x00", "\0")
+    testExpect("\\01", "\01", "\0" + "1")
+    testExpect("\\x001", "\x001", "\0" + "1")
+
     # Binary
     testExpect("\"a\\0b\" + \"x\\0y\"", "a\0b" + "x\0y", "a\0bx\0y")
     testExpect("\"a\\0b\" += \"x\\0y\"", (() string => {
@@ -793,5 +800,22 @@ namespace Skew.Tests {
       x.remove("x")
       return x
     })(), {"": 0.5, "\0": -0.5})
+
+    ################################################################################
+    # StringBuilder
+
+    var builder = StringBuilder.new
+
+    builder.append("abc")
+    builder.append("\0")
+    builder.append("def")
+    builder.append("")
+    builder.append("xyz")
+    testExpect("StringBuilder 1", builder.toString, "abc\0defxyz")
+
+    builder.append("123")
+    builder.append("\0")
+    builder.append("ABC")
+    testExpect("StringBuilder 2", builder.toString, "abc\0defxyz123\0ABC")
   }
 }

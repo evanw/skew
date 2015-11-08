@@ -1185,7 +1185,7 @@ namespace Skew {
 
           _emit(text)
         }
-        case .STRING { _emit(quoteString(content.asString, .SHORTEST)) }
+        case .STRING { _emit(quoteString(content.asString, .SHORTEST, .OCTAL_WORKAROUND)) }
       }
     }
 

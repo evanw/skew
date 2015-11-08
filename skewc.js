@@ -134,13 +134,15 @@
 
   var Skew = {};
 
-  Skew.quoteString = function(text, style) {
+  Skew.quoteString = function(text, style, octal) {
+    var count = text.length;
+
     // Use whichever quote character is less frequent
     if (style == Skew.QuoteStyle.SHORTEST) {
       var singleQuotes = 0;
       var doubleQuotes = 0;
 
-      for (var i = 0, count = text.length; i < count; i = i + 1 | 0) {
+      for (var i = 0, count1 = count; i < count1; i = i + 1 | 0) {
         var c = text.charCodeAt(i);
 
         if (c == 34) {
@@ -164,7 +166,7 @@
     var start = 0;
     builder.append(quoteString);
 
-    for (var i1 = 0, count1 = text.length; i1 < count1; i1 = i1 + 1 | 0) {
+    for (var i1 = 0, count2 = count; i1 < count2; i1 = i1 + 1 | 0) {
       var c1 = text.charCodeAt(i1);
 
       if (c1 == quote) {
@@ -184,7 +186,9 @@
       }
 
       else if (c1 == 0) {
-        escaped = '\\0';
+        // Avoid issues around accidental octal encoding
+        var next = (i1 + 1 | 0) < count ? text.charCodeAt(i1 + 1 | 0) : 0;
+        escaped = octal == Skew.QuoteOctal.OCTAL_WORKAROUND && next >= 48 && next <= 57 ? '\\000' : '\\0';
       }
 
       else if (c1 == 92) {
@@ -204,7 +208,7 @@
       start = i1 + 1 | 0;
     }
 
-    builder.append(text.slice(start, text.length));
+    builder.append(text.slice(start, count));
     builder.append(quoteString);
     return builder.toString();
   };
@@ -2014,7 +2018,7 @@
       }
 
       case Skew.ContentKind.STRING: {
-        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE));
+        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.NORMAL));
         break;
       }
     }
@@ -3071,7 +3075,7 @@
       }
 
       case Skew.ContentKind.STRING: {
-        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE) + '_s');
+        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND) + '_s');
         break;
       }
     }
@@ -3507,6 +3511,11 @@
     DOUBLE: 0,
     SINGLE: 1,
     SHORTEST: 2
+  };
+
+  Skew.QuoteOctal = {
+    NORMAL: 0,
+    OCTAL_WORKAROUND: 1
   };
 
   Skew.Associativity = {
@@ -4868,7 +4877,7 @@
       }
 
       case Skew.ContentKind.STRING: {
-        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.SHORTEST));
+        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.SHORTEST, Skew.QuoteOctal.OCTAL_WORKAROUND));
         break;
       }
     }
@@ -6727,7 +6736,7 @@
   };
 
   Skew.LispTreeEmitter.prototype._visitObject = function(symbol) {
-    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE));
+    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
     this._increaseIndent();
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
@@ -6753,7 +6762,7 @@
   };
 
   Skew.LispTreeEmitter.prototype._visitFunction = function(symbol) {
-    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE));
+    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
     this._increaseIndent();
 
     for (var i = 0, list = symbol.$arguments, count = list.length; i < count; i = i + 1 | 0) {
@@ -6771,7 +6780,7 @@
   };
 
   Skew.LispTreeEmitter.prototype._visitVariable = function(symbol) {
-    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE) + ' ');
+    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND) + ' ');
     this._visitNode(symbol.type);
     this._emit(' ');
     this._visitNode(symbol.value);
@@ -6805,7 +6814,7 @@
         }
 
         case Skew.ContentKind.STRING: {
-          this._emit(' ' + Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE));
+          this._emit(' ' + Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
           break;
         }
       }
@@ -6870,8 +6879,8 @@
 
     for (var i = 0, list = this._sources, count = list.length; i < count; i = i + 1 | 0) {
       var source = list[i];
-      sourceNames.push(Skew.quoteString(source.name, Skew.QuoteStyle.DOUBLE));
-      sourceContents.push(Skew.quoteString(source.contents, Skew.QuoteStyle.DOUBLE));
+      sourceNames.push(Skew.quoteString(source.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
+      sourceContents.push(Skew.quoteString(source.contents, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
     }
 
     var builder = new StringBuilder();
@@ -12074,25 +12083,6 @@
     context.callGraph = new Skew.CallGraph(context.global);
   };
 
-  Skew.EmittingPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.EmittingPass, Skew.Pass);
-
-  Skew.EmittingPass.prototype.kind = function() {
-    return Skew.PassKind.EMITTING;
-  };
-
-  Skew.EmittingPass.prototype.run = function(context) {
-    var emitter = context.options.target.createEmitter(context);
-
-    if (emitter != null) {
-      emitter.visit(context.global);
-      context.outputs = emitter.sources();
-    }
-  };
-
   Skew.TokenProcessingPass = function() {
     Skew.Pass.call(this);
   };
@@ -12124,6 +12114,25 @@
     for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
       var source = list[i];
       context.tokens.push(Skew.tokenize(context.log, source));
+    }
+  };
+
+  Skew.EmittingPass = function() {
+    Skew.Pass.call(this);
+  };
+
+  __extends(Skew.EmittingPass, Skew.Pass);
+
+  Skew.EmittingPass.prototype.kind = function() {
+    return Skew.PassKind.EMITTING;
+  };
+
+  Skew.EmittingPass.prototype.run = function(context) {
+    var emitter = context.options.target.createEmitter(context);
+
+    if (emitter != null) {
+      emitter.visit(context.global);
+      context.outputs = emitter.sources();
     }
   };
 

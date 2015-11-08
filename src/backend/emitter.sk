@@ -157,12 +157,19 @@ namespace Skew {
     SHORTEST
   }
 
-  def quoteString(text string, style QuoteStyle) string {
+  enum QuoteOctal {
+    NORMAL
+    OCTAL_WORKAROUND
+  }
+
+  def quoteString(text string, style QuoteStyle, octal QuoteOctal) string {
+    var count = text.count
+
     # Use whichever quote character is less frequent
     if style == .SHORTEST {
       var singleQuotes = 0
       var doubleQuotes = 0
-      for i in 0..text.count {
+      for i in 0..count {
         var c = text[i]
         if c == '"' { doubleQuotes++ }
         else if c == '\'' { singleQuotes++ }
@@ -176,13 +183,17 @@ namespace Skew {
     var escaped = ""
     var start = 0 # Append long runs of unescaped characters using a single slice for speed
     builder.append(quoteString)
-    for i in 0..text.count {
+    for i in 0..count {
       var c = text[i]
       if c == quote { escaped = "\\" + quoteString }
       else if c == '\n' { escaped = "\\n" }
       else if c == '\r' { escaped = "\\r" }
       else if c == '\t' { escaped = "\\t" }
-      else if c == '\0' { escaped = "\\0" }
+      else if c == '\0' {
+        # Avoid issues around accidental octal encoding
+        var next = i + 1 < count ? text[i + 1] : '\0'
+        escaped = octal == .OCTAL_WORKAROUND && next >= '0' && next <= '9' ? "\\000" : "\\0"
+      }
       else if c == '\\' { escaped = "\\\\" }
       else if c < ' ' { escaped = "\\x" + HEX.get(c >> 4) + HEX.get(c & 15) }
       else { continue }
@@ -190,7 +201,7 @@ namespace Skew {
       builder.append(escaped)
       start = i + 1
     }
-    builder.append(text.slice(start, text.count))
+    builder.append(text.slice(start, count))
     builder.append(quoteString)
     return builder.toString
   }

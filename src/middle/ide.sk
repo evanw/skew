@@ -46,7 +46,7 @@ namespace Skew.IDE {
               case .BOOL { text += value.asBool.toString }
               case .DOUBLE { text += value.asDouble.toString }
               case .INT { text += value.asInt.toString }
-              case .STRING { text += quoteString(value.asString, .DOUBLE) }
+              case .STRING { text += quoteString(value.asString, .DOUBLE, .NORMAL) }
             }
           }
         }

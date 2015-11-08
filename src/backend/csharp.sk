@@ -763,7 +763,7 @@ namespace Skew {
             value == -Math.INFINITY ? "Double.NegativeInfinity" :
             doubleToStringWithDot(value))
         }
-        case .STRING { _emit(quoteString(content.asString, .DOUBLE)) }
+        case .STRING { _emit(quoteString(content.asString, .DOUBLE, .NORMAL)) }
       }
     }
 

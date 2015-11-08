@@ -15,7 +15,7 @@ namespace Skew {
     }
 
     def _visitObject(symbol ObjectSymbol) {
-      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, .DOUBLE))
+      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, .DOUBLE, .OCTAL_WORKAROUND))
       _increaseIndent
 
       for object in symbol.objects {
@@ -38,7 +38,7 @@ namespace Skew {
     }
 
     def _visitFunction(symbol FunctionSymbol) {
-      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, .DOUBLE))
+      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, .DOUBLE, .OCTAL_WORKAROUND))
       _increaseIndent
 
       for argument in symbol.arguments {
@@ -55,7 +55,7 @@ namespace Skew {
     }
 
     def _visitVariable(symbol VariableSymbol) {
-      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, .DOUBLE) + " ")
+      _emit("(" + _mangleKind(symbol.kind.toString) + " " + quoteString(symbol.name, .DOUBLE, .OCTAL_WORKAROUND) + " ")
       _visitNode(symbol.type)
       _emit(" ")
       _visitNode(symbol.value)
@@ -76,7 +76,7 @@ namespace Skew {
           case .INT { _emit(" " + content.asInt.toString) }
           case .BOOL { _emit(" " + content.asBool.toString) }
           case .DOUBLE { _emit(" " + content.asDouble.toString) }
-          case .STRING { _emit(" " + quoteString(content.asString, .DOUBLE)) }
+          case .STRING { _emit(" " + quoteString(content.asString, .DOUBLE, .OCTAL_WORKAROUND)) }
         }
       }
 
