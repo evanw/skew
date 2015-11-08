@@ -273,6 +273,17 @@ class StringMap {
     return self
   }
 
+  def count int {
+    return keys.count
+  }
+
+  def isEmpty bool {
+    for key in self as dynamic {
+      return false
+    }
+    return true
+  }
+
   def get(key string, defaultValue T) T {
     var value = self[key]
     return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
@@ -301,6 +312,12 @@ class StringMap {
   def remove(key string) {
     dynamic.delete(self[key])
   }
+
+  def each(x fn(string, T)) {
+    for key in self as dynamic {
+      x(key, self[key])
+    }
+  }
 }
 
 namespace IntMap {
@@ -315,6 +332,17 @@ class IntMap {
     return self
   }
 
+  def count int {
+    return values.count
+  }
+
+  def isEmpty bool {
+    for key in self as dynamic {
+      return false
+    }
+    return true
+  }
+
   def get(key int, defaultValue T) T {
     var value = self[key]
     return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
@@ -322,8 +350,8 @@ class IntMap {
 
   def keys List<int> {
     var keys List<int> = []
-    for key in dynamic.Object.keys(self) as List<string> {
-      keys.append(key as dynamic as int)
+    for key in self as dynamic {
+      keys.append(key as int)
     }
     return keys
   }
@@ -346,6 +374,12 @@ class IntMap {
 
   def remove(key int) {
     dynamic.delete(self[key])
+  }
+
+  def each(x fn(int, T)) {
+    for key in self as dynamic {
+      x(key as int, self[key])
+    }
   }
 }
 "

@@ -1,32 +1,4 @@
 namespace Skew.Tests {
-  def testExpect(text string, answer bool, expected bool) Unit.Test {
-    return test(text, expectString => expectString(answer.toString, expected.toString))
-  }
-
-  def testExpect(text string, answer double, expected double) Unit.Test {
-    return test(text, expectString => expectString(answer.toString, expected.toString))
-  }
-
-  def testExpect(text string, answer string, expected string) Unit.Test {
-    return test(text, expectString => expectString(answer, expected))
-  }
-
-  def testExpect(text string, answer List<int>, expected List<int>) Unit.Test {
-    return test(text, expectString => expectString(toString(answer), toString(expected)))
-  }
-
-  def testExpect(text string, answer List<string>, expected List<string>) Unit.Test {
-    return test(text, expectString => expectString(toString(answer), toString(expected)))
-  }
-
-  def toString(values List<int>) string {
-    return toString(values.map<string>(x => x.toString))
-  }
-
-  def toString(values List<string>) string {
-    return "[" + ", ".join(values) + "]"
-  }
-
   class CompilerTest : Unit.Test {
     var _input string
     var _expected string
@@ -142,6 +114,71 @@ namespace Skew.Tests {
     var test = SimpleTest.new(callback)
     test.rename(name)
     return test
+  }
+
+  def testExpect(text string, answer bool, expected bool) Unit.Test {
+    return test(text, expectString => expectString(answer.toString, expected.toString))
+  }
+
+  def testExpect(text string, answer double, expected double) Unit.Test {
+    return test(text, expectString => expectString(answer.toString, expected.toString))
+  }
+
+  def testExpect(text string, answer string, expected string) Unit.Test {
+    return test(text, expectString => expectString(answer, expected))
+  }
+
+  def testExpect(text string, answer List<int>, expected List<int>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  }
+
+  def testExpect(text string, answer List<double>, expected List<double>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  }
+
+  def testExpect(text string, answer List<string>, expected List<string>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  }
+
+  def testExpect(text string, answer IntMap<double>, expected IntMap<double>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  }
+
+  def testExpect(text string, answer StringMap<double>, expected StringMap<double>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  }
+
+  def toString(values List<int>) string {
+    return toString(values.map<string>(x => x.toString))
+  }
+
+  def toString(values List<double>) string {
+    return toString(values.map<string>(x => x.toString))
+  }
+
+  def toString(values List<string>) string {
+    return "[" + ", ".join(values) + "]"
+  }
+
+  def toString(value IntMap<double>) string {
+    var keys = value.keys
+    keys.sort((a, b) => a <=> b)
+    return toString(keys.map<string>(k => k.toString), keys.map<string>(k => value[k].toString))
+  }
+
+  def toString(value StringMap<double>) string {
+    var keys = value.keys
+    keys.sort((a, b) => a <=> b)
+    return toString(keys, keys.map<string>(k => value[k].toString))
+  }
+
+  def toString(keys List<string>, values List<string>) string {
+    assert(keys.count == values.count)
+    var parts List<string> = []
+    for i in 0..keys.count {
+      parts.append(keys[i] + ": " + values[i])
+    }
+    return "{" + ", ".join(parts) + "}"
   }
 
   @entry

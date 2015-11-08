@@ -2,6 +2,8 @@ namespace Skew.Tests {
   def testLibrary {
     testExpect("sanity check", toString([1, 2, 3]), "[1, 2, 3]")
     testExpect("sanity check", toString(["1", "2", "3"]), "[1, 2, 3]")
+    testExpect("sanity check", toString({1: 0.5, 2: -0.5}), "{1: 0.5, 2: -0.5}")
+    testExpect("sanity check", toString({"a": 0.5, "b": -0.5}), "{a: 0.5, b: -0.5}")
 
     ################################################################################
     # Math
@@ -458,6 +460,16 @@ namespace Skew.Tests {
       x.insert(1, [4, 5])
       return x
     })(), [1, 4, 5, 2, 3])
+    testExpect("[1, 2, 3].insert(3, 4)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.insert(3, 4)
+      return x
+    })(), [1, 2, 3, 4])
+    testExpect("[1, 2, 3].insert(3, [4, 5])", (() List<int> => {
+      var x = [1, 2, 3]
+      x.insert(3, [4, 5])
+      return x
+    })(), [1, 2, 3, 4, 5])
 
     # remove
     testExpect("[1, 2, 1, 3, 1].removeAll(1)", (() List<int> => {
@@ -465,6 +477,11 @@ namespace Skew.Tests {
       x.removeAll(1)
       return x
     })(), [2, 3])
+    testExpect("[1, 2, 1, 3, 1].removeAll(0)", (() List<int> => {
+      var x = [1, 2, 1, 3, 1]
+      x.removeAll(0)
+      return x
+    })(), [1, 2, 1, 3, 1])
     testExpect("[1, 2, 3].removeAt(1)", (() List<int> => {
       var x = [1, 2, 3]
       x.removeAt(1)
@@ -495,6 +512,11 @@ namespace Skew.Tests {
       x.removeOne(1)
       return x
     })(), [2, 1, 3, 1])
+    testExpect("[1, 2, 1, 3, 1].removeOne(0)", (() List<int> => {
+      var x = [1, 2, 1, 3, 1]
+      x.removeOne(0)
+      return x
+    })(), [1, 2, 1, 3, 1])
     testExpect("[1, 2, 1, 3, 1].removeRange(1, 4)", (() List<int> => {
       var x = [1, 2, 1, 3, 1]
       x.removeRange(1, 4)
@@ -623,5 +645,153 @@ namespace Skew.Tests {
       x.swap(0, 2)
       return x
     })(), [3, 2, 1])
+
+    ################################################################################
+    # IntMap<T>
+
+    # new
+    testExpect("{} as IntMap<double>", {} as IntMap<double>, {} as IntMap<double>)
+    testExpect("IntMap<double>.new", IntMap<double>.new, {} as IntMap<double>)
+    testExpect("{1: 0.5, 2: -0.5}", {1: 0.5, 2: -0.5}, {1: 0.5, 2: -0.5})
+
+    # [] and []=
+    testExpect("{1: 0.5}[1]", {1: 0.5}[1], 0.5)
+    testExpect("{1: 0.5}[1] = -0.5", (() IntMap<double> => {
+      var x = {1: 0.5}
+      x[1] = -0.5
+      return x
+    })(), {1: -0.5})
+
+    # count
+    testExpect("{1: 0.5, 2: -0.5}.count", {1: 0.5, 2: -0.5}.count, 2)
+
+    # isEmpty
+    testExpect("IntMap<double>.new.isEmpty", IntMap<double>.new.isEmpty, true)
+    testExpect("{1: 0.5, 2: -0.5}.isEmpty", {1: 0.5, 2: -0.5}.isEmpty, false)
+
+    # keys
+    testExpect("{1: 0.5, 2: -0.5}.keys", (() List<int> => {
+      var x = {1: 0.5, 2: -0.5}.keys
+      x.sort((a, b) => a <=> b)
+      return x
+    })(), [1, 2])
+
+    # values
+    testExpect("{1: 0.5, 2: -0.5}.values", (() List<double> => {
+      var x = {1: 0.5, 2: -0.5}.values
+      x.sort((a, b) => a <=> b)
+      return x
+    })(), [-0.5, 0.5])
+
+    # clone
+    testExpect("{1: 0.5, 2: -0.5}.clone", {1: 0.5, 2: -0.5}.clone, {1: 0.5, 2: -0.5})
+    testExpect("(x => x != x.clone)({1: 0.5, 2: -0.5})", (x => x != x.clone)({1: 0.5, 2: -0.5}), true)
+
+    # each
+    testExpect("{1: 0.5, 2: -0.5}.each((k, v) => x += k)", (() int => {
+      var x = 0
+      {1: 0.5, 2: -0.5}.each((k, v) => x += k)
+      return x
+    })(), 3)
+    testExpect("{1: 0.5, 2: -1.0}.each((k, v) => x += v)", (() double => {
+      var x = 0.0
+      {1: 0.5, 2: -1.0}.each((k, v) => x += v)
+      return x
+    })(), -0.5)
+
+    # get
+    testExpect("{1: 0.5, 2: -0.5}.get(1, -1)", {1: 0.5, 2: -0.5}.get(1, -1), 0.5)
+    testExpect("{1: 0.5, 2: -0.5}.get(0, -1)", {1: 0.5, 2: -0.5}.get(0, -1), -1)
+
+    # in
+    testExpect("0 in {1: 0.5, 2: -0.5}", 0 in {1: 0.5, 2: -0.5}, false)
+    testExpect("1 in {1: 0.5, 2: -0.5}", 1 in {1: 0.5, 2: -0.5}, true)
+
+    # remove
+    testExpect("{1: 0.5, 2: -0.5}.remove(1)", (() IntMap<double> => {
+      var x = {1: 0.5, 2: -0.5}
+      x.remove(1)
+      return x
+    })(), {2: -0.5})
+    testExpect("{1: 0.5, 2: -0.5}.remove(0)", (() IntMap<double> => {
+      var x = {1: 0.5, 2: -0.5}
+      x.remove(0)
+      return x
+    })(), {1: 0.5, 2: -0.5})
+
+    ################################################################################
+    # StringMap<T>
+
+    # new
+    testExpect("{} as StringMap<double>", {} as StringMap<double>, {} as StringMap<double>)
+    testExpect("StringMap<double>.new", StringMap<double>.new, {} as StringMap<double>)
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}", {"": 0.5, "\0": -0.5}, {"": 0.5, "\0": -0.5})
+
+    # [] and []=
+    testExpect("{\"\": 0.5}[\"\"]", {"": 0.5}[""], 0.5)
+    testExpect("{\"\": 0.5}[\"\"] = -0.5", (() StringMap<double> => {
+      var x = {"": 0.5}
+      x[""] = -0.5
+      return x
+    })(), {"": -0.5})
+
+    # count
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.count", {"": 0.5, "\0": -0.5}.count, 2)
+
+    # isEmpty
+    testExpect("StringMap<double>.new.isEmpty", StringMap<double>.new.isEmpty, true)
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.isEmpty", {"": 0.5, "\0": -0.5}.isEmpty, false)
+
+    # keys
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.keys", (() List<string> => {
+      var x = {"": 0.5, "\0": -0.5}.keys
+      x.sort((a, b) => a <=> b)
+      return x
+    })(), ["", "\0"])
+
+    # values
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.values", (() List<double> => {
+      var x = {"": 0.5, "\0": -0.5}.values
+      x.sort((a, b) => a <=> b)
+      return x
+    })(), [-0.5, 0.5])
+
+    # clone
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.clone", {"": 0.5, "\0": -0.5}.clone, {"": 0.5, "\0": -0.5})
+    testExpect("(x => x != x.clone)({\"\": 0.5, \"\\0\": -0.5})", (x => x != x.clone)({"": 0.5, "\0": -0.5}), true)
+
+    # each
+    testExpect("{\"\": 0.5, \"\\0\": -0.5, \"a\": 0}.each((k, v) => x += k)", (() bool => {
+      var x = ""
+      {"": 0.5, "\0": -0.5, "a": 0}.each((k, v) => x += k)
+      return x == "a\0" || x == "\0a"
+    })(), true)
+    testExpect("{\"\": 0.5, \"\\0\": -1.0}.each((k, v) => x += v)", (() double => {
+      var x = 0.0
+      {"": 0.5, "\0": -1.0}.each((k, v) => x += v)
+      return x
+    })(), -0.5)
+
+    # get
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.get(\"\\0\", -1)", {"": 0.5, "\0": -0.5}.get("\0", -1), -0.5)
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.get(\"\", -1)", {"": 0.5, "\0": -0.5}.get("", -1), 0.5)
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.get(\"x\", -1)", {"": 0.5, "\0": -0.5}.get("x", -1), -1)
+
+    # in
+    testExpect("\"x\" in {\"\": 0.5, \"\\0\": -0.5}", "x" in {"": 0.5, "\0": -0.5}, false)
+    testExpect("\"\" in {\"\": 0.5, \"\\0\": -0.5}", "" in {"": 0.5, "\0": -0.5}, true)
+    testExpect("\"\\0\" in {\"\": 0.5, \"\\0\": -0.5}", "\0" in {"": 0.5, "\0": -0.5}, true)
+
+    # remove
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.remove(\"\")", (() StringMap<double> => {
+      var x = {"": 0.5, "\0": -0.5}
+      x.remove("")
+      return x
+    })(), {"\0": -0.5})
+    testExpect("{\"\": 0.5, \"\\0\": -0.5}.remove(\"x\")", (() StringMap<double> => {
+      var x = {"": 0.5, "\0": -0.5}
+      x.remove("x")
+      return x
+    })(), {"": 0.5, "\0": -0.5})
   }
 }

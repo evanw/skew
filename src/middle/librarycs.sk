@@ -336,11 +336,18 @@ class List {
 @using(\"System.Collections.Generic\")
 @rename(\"Dictionary\")
 class StringMap {
+  @rename(\"Count\")
+  def count int
+
   @rename(\"ContainsKey\")
   def in(key string) bool
 
   @rename(\"Remove\")
   def remove(key string)
+
+  def isEmpty bool {
+    return count == 0
+  }
 
   def {...}(key string, value T) StringMap<T> {
     (self as dynamic).Add(key, value)
@@ -366,16 +373,29 @@ class StringMap {
     }
     return clone
   }
+
+  def each(x fn(string, T)) {
+    for pair in self as dynamic {
+      x(pair.Key, pair.Value)
+    }
+  }
 }
 
 @using(\"System.Collections.Generic\")
 @rename(\"Dictionary\")
 class IntMap {
+  @rename(\"Count\")
+  def count int
+
   @rename(\"ContainsKey\")
   def in(key int) bool
 
   @rename(\"Remove\")
   def remove(key int)
+
+  def isEmpty bool {
+    return count == 0
+  }
 
   def {...}(key int, value T) IntMap<T> {
     (self as dynamic).Add(key, value)
@@ -400,6 +420,12 @@ class IntMap {
       clone[key] = self[key]
     }
     return clone
+  }
+
+  def each(x fn(int, T)) {
+    for pair in self as dynamic {
+      x(pair.Key, pair.Value)
+    }
   }
 }
 "

@@ -2628,7 +2628,7 @@ namespace Skew {
             return false
           }
         }
-        return value != null && !(value in _isKeyword)
+        return value != "" && !(value in _isKeyword)
       }
       return false
     }
