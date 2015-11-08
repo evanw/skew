@@ -71,7 +71,7 @@ namespace Skew.Motion {
   def moveSymbolIntoNewNamespace(symbol Symbol, namespaces IntMap<Namespace>) ObjectSymbol {
     var parent = symbol.parent
     var target = namespaces.get(parent.id, null)
-    var object = target != null ? target.child.asObjectSymbol : null
+    var object = target?.child.asObjectSymbol
 
     # Create a parallel namespace next to the parent
     if target == null {

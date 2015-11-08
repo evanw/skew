@@ -37,7 +37,7 @@ namespace Skew {
           if output.name != null && !IO.writeFile(output.name, output.contents) {
             var outputFile = parser.rangeForOption(.OUTPUT_FILE)
             var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
-            log.commandLineErrorUnwritableFile(outputFile != null ? outputFile : outputDirectory, output.name)
+            log.commandLineErrorUnwritableFile(outputFile ?? outputDirectory, output.name)
             break
           }
         }

@@ -15283,6 +15283,7 @@
   };
 
   Skew.Resolving.Resolver.prototype._initializeObject = function(symbol) {
+    var ref;
     var kind = symbol.kind;
     var $extends = symbol.$extends;
     var implements = symbol.implements;
@@ -15421,7 +15422,7 @@
     var $constructor = in_StringMap.get(symbol.members, 'new', null);
 
     if (kind == Skew.SymbolKind.OBJECT_CLASS && !symbol.isImported() && $constructor == null) {
-      var baseConstructor = symbol.baseClass != null ? in_StringMap.get(symbol.baseClass.members, 'new', null) : null;
+      var baseConstructor = (ref = symbol.baseClass) != null ? in_StringMap.get(ref.members, 'new', null) : null;
 
       // Unwrap the overload group if present
       if (baseConstructor != null && baseConstructor.kind == Skew.SymbolKind.OVERLOADED_GLOBAL) {
@@ -18223,8 +18224,8 @@
 
   Skew.Resolving.Resolver.prototype._resolveSuper = function(node, scope) {
     var $function = scope.findEnclosingFunction();
-    var symbol = $function == null ? null : $function.symbol;
-    var baseType = symbol == null ? null : symbol.parent.asObjectSymbol().baseType;
+    var symbol = $function != null ? $function.symbol : null;
+    var baseType = symbol != null ? symbol.parent.asObjectSymbol().baseType : null;
     var overridden = baseType == null ? null : this._findMember(baseType, symbol.name);
 
     if (overridden == null) {

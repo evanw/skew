@@ -364,7 +364,7 @@ namespace Skew.Resolving {
       # Create a default constructor if one doesn't exist
       var constructor = symbol.members.get("new", null)
       if kind == .OBJECT_CLASS && !symbol.isImported && constructor == null {
-        var baseConstructor = symbol.baseClass != null ? symbol.baseClass.members.get("new", null) : null
+        var baseConstructor = symbol.baseClass?.members.get("new", null)
 
         # Unwrap the overload group if present
         if baseConstructor != null && baseConstructor.kind == .OVERLOADED_GLOBAL {
@@ -2535,7 +2535,7 @@ namespace Skew.Resolving {
       for argument in symbol.arguments {
         argumentTypes.append(argument.resolvedType)
       }
-      node.resolvedType = _cache.createLambdaType(argumentTypes, returnType != null ? returnType.resolvedType : null)
+      node.resolvedType = _cache.createLambdaType(argumentTypes, returnType?.resolvedType)
     }
 
     def _resolveLambdaType(node Node, scope Scope) {
@@ -2586,7 +2586,7 @@ namespace Skew.Resolving {
       # Automatically insert "self." before instance symbols
       var resolvedType = symbol.resolvedType
       if symbol.kind.isOnInstances {
-        var variable = enclosingFunction != null ? enclosingFunction.symbol.this : null
+        var variable = enclosingFunction?.symbol.this
         if variable != null && enclosingFunction.symbol.parent.asObjectSymbol.isSameOrHasBaseClass(symbol.parent) {
           node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range))
           resolvedType = _cache.substitute(resolvedType, variable.resolvedType.environment)
@@ -2727,8 +2727,8 @@ namespace Skew.Resolving {
 
     def _resolveSuper(node Node, scope Scope) {
       var function = scope.findEnclosingFunction
-      var symbol = function == null ? null : function.symbol
-      var baseType = symbol == null ? null : symbol.parent.asObjectSymbol.baseType
+      var symbol = function?.symbol
+      var baseType = symbol?.parent.asObjectSymbol.baseType
       var overridden = baseType == null ? null : _findMember(baseType, symbol.name)
 
       if overridden == null {
