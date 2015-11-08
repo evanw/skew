@@ -109,8 +109,8 @@ class int {
   }
 
   if TARGET != .JAVASCRIPT {
-    def ++
-    def --
+    def ++ int
+    def -- int
 
     def %=(x int)
     def +=(x int)
@@ -125,9 +125,9 @@ class int {
 @import
 class double {
   def + double
-  def ++
+  def ++ double
   def - double
-  def --
+  def -- double
 
   def *(x double) double
   def +(x double) double
@@ -196,7 +196,7 @@ class List<T> {
   def [...](x T) List<T>
 
   def [](x int) T
-  def []=(x int, y T)
+  def []=(x int, y T) T
 
   def count int
   def isEmpty bool
@@ -259,7 +259,7 @@ class StringMap<T> {
   def {...}(key string, value T) StringMap<T>
 
   def [](key string) T
-  def []=(key string, value T)
+  def []=(key string, value T) T
 
   def count int
   def isEmpty bool
@@ -279,7 +279,7 @@ class IntMap<T> {
   def {...}(key int, value T) IntMap<T>
 
   def [](key int) T
-  def []=(key int, value T)
+  def []=(key int, value T) T
 
   def count int
   def isEmpty bool

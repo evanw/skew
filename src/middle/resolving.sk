@@ -665,7 +665,7 @@ namespace Skew.Resolving {
           symbol.value = first.remove
           var setup = Node.createVariables.appendChild(Node.createVariable(symbol))
           var symbolName = Node.createSymbolReference(symbol)
-          var update = Node.createUnary(.INCREMENT, symbolName)
+          var update = Node.createUnary(.PREFIX_INCREMENT, symbolName)
           var test Node
 
           # Special-case constant iteration limits to generate simpler code
@@ -727,7 +727,7 @@ namespace Skew.Resolving {
 
           # Use a C-style for loop to implement this foreach loop
           var test = Node.createBinary(.LESS_THAN, indexName.clone, countName)
-          var update = Node.createUnary(.INCREMENT, indexName.clone)
+          var update = Node.createUnary(.PREFIX_INCREMENT, indexName.clone)
           node.become(Node.createFor(setup, test, update, block.remove).withComments(node.comments).withRange(node.range))
 
           # Make sure the new expressions are resolved
@@ -1277,7 +1277,9 @@ namespace Skew.Resolving {
         case .ASSIGN_INDEX { _resolveOperatorOverload(node, scope) }
         case .CALL { _resolveCall(node, scope, context) }
         case .CAST { _resolveCast(node, scope, context) }
-        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE { _resolveOperatorOverload(node, scope) }
+        case .COMPLEMENT, .NEGATIVE, .NOT, .POSITIVE, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT, .PREFIX_DECREMENT, .PREFIX_INCREMENT {
+          _resolveOperatorOverload(node, scope)
+        }
         case .CONSTANT { _resolveConstant(node, scope) }
         case .DOT { _resolveDot(node, scope, context) }
         case .HOOK { _resolveHook(node, scope, context) }
@@ -1358,7 +1360,7 @@ namespace Skew.Resolving {
       if kind == .HOOK {
         _checkUnusedExpression(node.hookTrue)
         _checkUnusedExpression(node.hookFalse)
-      } else if node.range != null && node.resolvedType != .DYNAMIC && kind != .CALL && !kind.isBinaryAssign {
+      } else if node.range != null && node.resolvedType != .DYNAMIC && kind != .CALL && !kind.isAssign {
         _log.semanticWarningUnusedExpression(node.range)
       }
     }
@@ -2002,7 +2004,7 @@ namespace Skew.Resolving {
       }
 
       # There is no "void" type, so make sure this return value isn't used
-      else if _isVoidExpressionUsed(node) {
+      else if _isExpressionUsed(node) {
         if function != null {
           _log.semanticErrorUseOfVoidFunction(node.range, function.name, function.range)
         } else {
@@ -2862,18 +2864,11 @@ namespace Skew.Resolving {
       _resolveOperatorOverload(node, scope)
     }
 
-    def _extractExpression(node Node, scope Scope) Node {
-      assert(node.resolvedType != null)
-
-      if node.kind == .NAME || node.kind == .CONSTANT {
-        return node.clone
-      }
-
+    def _generateReference(scope Scope, type Type) Node {
       var enclosingFunction = scope.findEnclosingFunctionOrLambda
       var block = enclosingFunction.symbol.block
       var symbol = VariableSymbol.new(.VARIABLE_LOCAL, enclosingFunction.generateName("ref"))
       var after = block.firstChild
-      var type = node.resolvedType
 
       # Force-initialize the symbol
       symbol.type = Node.createType(type)
@@ -2888,11 +2883,21 @@ namespace Skew.Resolving {
       # Add the new variable to the top of the function
       block.insertChildBefore(after, Node.createVariables.appendChild(Node.createVariable(symbol)))
 
+      return Node.createSymbolReference(symbol)
+    }
+
+    def _extractExpression(node Node, scope Scope) Node {
+      assert(node.resolvedType != null)
+
+      if node.kind == .NAME || node.kind == .CONSTANT {
+        return node.clone
+      }
+
       # Replace the original expression with a reference
-      var reference = Node.createSymbolReference(symbol).withRange(node.range)
+      var reference = _generateReference(scope, node.resolvedType).withRange(node.range)
       var setup = node.cloneAndStealChildren
       node.become(reference)
-      return Node.createBinary(.ASSIGN, reference, setup).withType(type).withRange(node.range)
+      return Node.createBinary(.ASSIGN, reference, setup).withType(node.resolvedType).withRange(node.range)
     }
 
     # Expressions with side effects must be stored to temporary variables
@@ -2954,7 +2959,7 @@ namespace Skew.Resolving {
       # Can't do overload resolution on the dynamic type
       var type = target.resolvedType
       if type == .DYNAMIC {
-        if kind.isAssign {
+        if kind.isAssign && kind != .ASSIGN_INDEX {
           _checkStorage(target, scope)
         }
         _resolveChildrenAsParameterizedExpressions(node, scope)
@@ -2994,13 +2999,15 @@ namespace Skew.Resolving {
       var name = isComparison ? "<=>" : info.text
       var symbol = _findMember(type, name)
       var extracted Node = null
+      var wasUnaryPostfix = false
       if symbol == null && info.assignKind != .NULL {
         symbol = _findMember(type, operatorInfo[info.assignKind].text)
         if symbol != null {
           extracted = _extractExpressionForAssignment(target, scope)
-          if kind == .INCREMENT || kind == .DECREMENT {
+          if kind == .PREFIX_INCREMENT || kind == .PREFIX_DECREMENT || kind == .POSTFIX_INCREMENT || kind == .POSTFIX_DECREMENT {
             node.appendChild(Node.createInt(1).withType(_cache.intType).withRange(node.internalRangeOrRange))
           }
+          wasUnaryPostfix = kind.isUnaryPostfix && _isExpressionUsed(node)
           kind = info.assignKind
           node.kind = kind
         }
@@ -3033,7 +3040,7 @@ namespace Skew.Resolving {
       _checkAccess(node, node.internalRangeOrRange, scope)
 
       # Check for a valid storage location for imported operators
-      if kind.isAssign && symbol.isImported && extracted == null {
+      if kind.isAssign && kind != .ASSIGN_INDEX && symbol.isImported && extracted == null {
         _checkStorage(target, scope)
       }
 
@@ -3062,8 +3069,7 @@ namespace Skew.Resolving {
         if reverseBinaryOrder {
           first.swapWith(second)
         }
-        target = Node.createDot(target.remove, name).withSymbol(symbol).withRange(node.internalRangeOrRange)
-        node.prependChild(target)
+        node.prependChild(Node.createMemberReference(target.remove, symbol).withRange(node.internalRangeOrRange))
 
         # Implement the logic for the "<=>" operator
         if isComparison {
@@ -3088,14 +3094,50 @@ namespace Skew.Resolving {
         }
 
         # Wrap everything in an assignment if the assignment target was extracted
-        if extracted.kind == .INDEX {
-          extracted.kind = .ASSIGN_INDEX
-          extracted.appendChild(node.cloneAndStealChildren)
-          node.become(extracted)
-        } else {
-          node.become(Node.createBinary(.ASSIGN, extracted, node.cloneAndStealChildren))
-        }
+        _promoteToAssignment(node, extracted)
         _resolveAsParameterizedExpression(node, scope)
+
+        # Handle custom unary postfix operators
+        if wasUnaryPostfix {
+          node.become(Node.createBinary(kind, node.cloneAndStealChildren,
+            Node.createInt(-1).withType(_cache.intType).withRange(node.internalRangeOrRange)))
+          _resolveAsParameterizedExpression(node, scope)
+        }
+      }
+
+      # Handle custom unary assignment operators
+      else if kind.isUnaryAssign && !isRawImport {
+        # "foo(x++)" => "foo((ref = x, x = ref.increment(), ref))"
+        if kind.isUnaryPostfix && _isExpressionUsed(node) {
+          var reference = _generateReference(scope, target.resolvedType).withRange(target.range)
+          var original = _extractExpressionForAssignment(target, scope)
+          target.replaceWith(reference)
+          _promoteToAssignment(node, target)
+          node.become(Node.createSequence
+            .appendChild(Node.createBinary(.ASSIGN, reference.clone, original).withRange(node.range))
+            .appendChild(node.cloneAndStealChildren).withRange(node.range)
+            .appendChild(reference.clone))
+          _resolveAsParameterizedExpression(node, scope)
+        }
+
+        # "foo(++x)" => "foo(x = x.increment())"
+        else {
+          _promoteToAssignment(node, _extractExpressionForAssignment(target, scope))
+          _resolveAsParameterizedExpression(node, scope)
+        }
+      }
+    }
+
+    def _promoteToAssignment(node Node, extracted Node) {
+      assert(node.parent != null)
+      assert(extracted.parent == null)
+
+      if extracted.kind == .INDEX {
+        extracted.kind = .ASSIGN_INDEX
+        extracted.appendChild(node.cloneAndStealChildren)
+        node.become(extracted)
+      } else {
+        node.become(Node.createBinary(.ASSIGN, extracted, node.cloneAndStealChildren))
       }
     }
 
@@ -3200,7 +3242,7 @@ namespace Skew.Resolving {
       return node.parent != null && node.parent.kind == .ASSIGN && node == node.parent.binaryLeft
     }
 
-    def _isVoidExpressionUsed(node Node) bool {
+    def _isExpressionUsed(node Node) bool {
       # Check for a null parent to handle variable initializers
       var parent = node.parent
       return parent == null || parent.kind != .EXPRESSION && !parent.isImplicitReturn &&

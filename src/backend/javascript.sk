@@ -921,7 +921,7 @@ namespace Skew {
     def _canRemoveSpaceBeforeKeyword(node Node) bool {
       var kind = node.kind
       return
-        kind.isUnary ||
+        kind.isUnary && !kind.isUnaryPostfix ||
         node.isString ||
         node.isNumberLessThanZero ||
         kind.isInitializer ||
@@ -1429,20 +1429,28 @@ namespace Skew {
           _emitBlock(symbol.block, .AFTER_PARENTHESIS, .MUST_KEEP_BRACES)
         }
 
-        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
+        case .COMPLEMENT, .NEGATIVE, .NOT, .POSITIVE, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT, .PREFIX_DECREMENT, .PREFIX_INCREMENT {
           var value = node.unaryValue
           var info = operatorInfo[kind]
           if info.precedence < precedence {
             _emit("(")
           }
 
-          # Prevent "x - -1" from becoming "x--1"
-          if _minify && (kind == .POSITIVE || kind == .NEGATIVE || kind == .INCREMENT || kind == .DECREMENT) && info.text[0] == _previousCodeUnit {
-            _emit(" ")
+          if kind.isUnaryPostfix {
+            _emitExpression(value, info.precedence)
+            _emit(info.text)
           }
 
-          _emit(info.text)
-          _emitExpression(value, info.precedence)
+          else {
+            # Prevent "x - -1" from becoming "x--1"
+            if _minify && (kind == .POSITIVE || kind == .NEGATIVE || kind == .PREFIX_INCREMENT || kind == .PREFIX_DECREMENT) && info.text[0] == _previousCodeUnit {
+              _emit(" ")
+            }
+
+            _emit(info.text)
+            _emitExpression(value, info.precedence)
+          }
+
           if info.precedence < precedence {
             _emit(")")
           }

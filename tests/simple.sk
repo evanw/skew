@@ -6047,5 +6047,29 @@ def main(foo Foo) {
 ", "
 ")
 
+# Test unary increment operators on strings
+test("
+def main {
+  var x = \"x\"
+  x[0]++
+  x[0]--
+  ++x[0]
+  --x[0]
+}
+", "
+<stdin>:3:3: error: Cannot store to this location
+  x[0]++
+  ~~~~
+<stdin>:4:3: error: Cannot store to this location
+  x[0]--
+  ~~~~
+<stdin>:5:5: error: Cannot store to this location
+  ++x[0]
+    ~~~~
+<stdin>:6:5: error: Cannot store to this location
+  --x[0]
+    ~~~~
+")
+
   }
 }

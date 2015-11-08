@@ -979,14 +979,19 @@ namespace Skew {
           _enclosingFunction = oldEnclosingFunction
         }
 
-        case .COMPLEMENT, .DECREMENT, .INCREMENT, .NEGATIVE, .NOT, .POSITIVE {
+        case .COMPLEMENT, .NEGATIVE, .NOT, .POSITIVE, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT, .PREFIX_DECREMENT, .PREFIX_INCREMENT {
           var value = node.unaryValue
           var info = operatorInfo[kind]
           if info.precedence < precedence {
             _emit("(")
           }
-          _emit(info.text)
+          if !kind.isUnaryPostfix {
+            _emit(info.text)
+          }
           _emitExpression(value, info.precedence)
+          if kind.isUnaryPostfix {
+            _emit(info.text)
+          }
           if info.precedence < precedence {
             _emit(")")
           }

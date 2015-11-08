@@ -1303,10 +1303,10 @@ namespace Skew.Parsing {
     pratt.prefix(.NOT, .UNARY_PREFIX, unaryPrefix(.NOT))
     pratt.prefix(.PLUS, .UNARY_PREFIX, unaryPrefix(.POSITIVE))
     pratt.prefix(.TILDE, .UNARY_PREFIX, unaryPrefix(.COMPLEMENT))
-    pratt.prefix(.INCREMENT, .UNARY_PREFIX, unaryPrefix(.INCREMENT))
-    pratt.prefix(.DECREMENT, .UNARY_PREFIX, unaryPrefix(.DECREMENT))
-    pratt.postfix(.INCREMENT, .UNARY_PREFIX, unaryPostfix(.INCREMENT))
-    pratt.postfix(.DECREMENT, .UNARY_PREFIX, unaryPostfix(.DECREMENT))
+    pratt.prefix(.INCREMENT, .UNARY_PREFIX, unaryPrefix(.PREFIX_INCREMENT))
+    pratt.prefix(.DECREMENT, .UNARY_PREFIX, unaryPrefix(.PREFIX_DECREMENT))
+    pratt.postfix(.INCREMENT, .UNARY_PREFIX, unaryPostfix(.POSTFIX_INCREMENT))
+    pratt.postfix(.DECREMENT, .UNARY_PREFIX, unaryPostfix(.POSTFIX_DECREMENT))
 
     ########################################
     # Binary expressions

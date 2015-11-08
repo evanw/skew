@@ -2505,5 +2505,185 @@ def main(foo Foo) {
 })();
 ").js
 
+# Test unary assignment operators
+test("
+class Foo {
+  var x = 0
+}
+
+def foo Foo {
+  return Foo.new
+}
+
+@export
+def main {
+  var x = 0
+  var y = 0.0
+
+  x++
+  ++x
+  x--
+  --x
+
+  y++
+  ++y
+  y--
+  --y
+
+  foo.x++
+  ++foo.x
+  foo.x--
+  --foo.x
+
+  dynamic.use(x++)
+  dynamic.use(++x)
+  dynamic.use(x--)
+  dynamic.use(--x)
+
+  dynamic.use(y++)
+  dynamic.use(++y)
+  dynamic.use(y--)
+  dynamic.use(--y)
+
+  dynamic.use(foo.x++)
+  dynamic.use(++foo.x)
+  dynamic.use(foo.x--)
+  dynamic.use(--foo.x)
+}
+", "
+(function() {
+  function foo() {
+    return new Foo();
+  }
+
+  main = function() {
+    var ref7;
+    var ref6;
+    var ref5;
+    var ref4;
+    var ref3;
+    var ref2;
+    var ref1;
+    var ref;
+    var x = 0;
+    var y = 0;
+    x = x + 1 | 0;
+    x = x + 1 | 0;
+    x = x - 1 | 0;
+    x = x - 1 | 0;
+    y++;
+    ++y;
+    y--;
+    --y;
+    (ref = foo()).x = ref.x + 1 | 0;
+    (ref1 = foo()).x = ref1.x + 1 | 0;
+    (ref2 = foo()).x = ref2.x - 1 | 0;
+    (ref3 = foo()).x = ref3.x - 1 | 0;
+    use((x = x + 1 | 0) - 1 | 0);
+    use(x = x + 1 | 0);
+    use((x = x - 1 | 0) + 1 | 0);
+    use(x = x - 1 | 0);
+    use(y++);
+    use(++y);
+    use(y--);
+    use(--y);
+    use(((ref4 = foo()).x = ref4.x + 1 | 0) - 1 | 0);
+    use((ref5 = foo()).x = ref5.x + 1 | 0);
+    use(((ref6 = foo()).x = ref6.x - 1 | 0) + 1 | 0);
+    use((ref7 = foo()).x = ref7.x - 1 | 0);
+  };
+
+  function Foo() {
+    this.x = 0;
+  }
+})();
+").js.foldAllConstants
+
+# Test custom unary assignment operators
+test("
+class Foo {
+  var foo Foo = null
+  var bar List<Foo> = []
+  def ++ Foo { return self }
+}
+
+def bar Foo {
+  return Foo.new
+}
+
+def baz int {
+  return 0
+}
+
+@export
+def main {
+  var foo = Foo.new
+
+  foo++
+  ++foo
+  bar.foo++
+  ++bar.foo
+  bar.bar[baz]++
+  ++bar.bar[baz]
+
+  dynamic.use(foo++)
+  dynamic.use(++foo)
+  dynamic.use(bar.foo++)
+  dynamic.use(++bar.foo)
+  dynamic.use(bar.bar[baz]++)
+  dynamic.use(++bar.bar[baz])
+}
+", "
+(function() {
+  function bar() {
+    return new Foo();
+  }
+
+  function baz() {
+    return 0;
+  }
+
+  main = function() {
+    var ref14;
+    var ref13;
+    var ref12;
+    var ref11;
+    var ref10;
+    var ref9;
+    var ref8;
+    var ref7;
+    var ref6;
+    var ref5;
+    var ref4;
+    var ref3;
+    var ref2;
+    var ref1;
+    var ref;
+    var foo = new Foo();
+    foo = foo.increment();
+    foo = foo.increment();
+    (ref = bar()).foo = ref.foo.increment();
+    (ref1 = bar()).foo = ref1.foo.increment();
+    (ref2 = bar().bar)[ref3 = baz()] = ref2[ref3].increment();
+    (ref4 = bar().bar)[ref5 = baz()] = ref4[ref5].increment();
+    use((ref6 = foo, foo = ref6.increment(), ref6));
+    use(foo = foo.increment());
+    use((ref7 = (ref8 = bar()).foo, ref8.foo = ref7.increment(), ref7));
+    use((ref9 = bar()).foo = ref9.foo.increment());
+    use((ref10 = (ref11 = bar().bar)[ref12 = baz()], ref11[ref12] = ref10.increment(), ref10));
+    use((ref13 = bar().bar)[ref14 = baz()] = ref13[ref14].increment());
+  };
+
+  function Foo() {
+    this.foo = null;
+    this.bar = [];
+  }
+
+  Foo.prototype.increment = function() {
+    return this;
+  };
+})();
+").js
+
   }
 }
