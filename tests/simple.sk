@@ -5913,19 +5913,38 @@ def main(foo Foo, bar Bar) {
      ~~
 ")
 
-# Test that auto-implemented assignment operators trigger "local variable is never read" warnings
+# Test that assignment operators don't trigger "local variable is never read" warnings
 test("
 class Foo {
-  def +(x int) Foo
 }
 
 def test {
-  var a Foo
+  var a = Foo.new
+  var b = Foo.new
+  a = null
+  a = b = null
+}
+", "
+<stdin>:5:7: warning: Local variable \"a\" is never read
+  var a = Foo.new
+      ^
+")
+
+# Test that auto-implemented assignment operators don't trigger "local variable is never read" warnings
+test("
+class Foo {
+  def +(x int) Foo { return self }
+}
+
+def test {
+  var a = Foo.new
+  var b = Foo.new
   a += 1
+  a = b += 1
 }
 ", "
 <stdin>:6:7: warning: Local variable \"a\" is never read
-  var a Foo
+  var a = Foo.new
       ^
 ")
 

@@ -18112,7 +18112,18 @@
     this._initializeSymbol(symbol);
 
     // Track reads and writes of local variables for later use
-    this._recordStatistic(symbol, node.isAssignTarget() ? Skew.Resolving.SymbolStatistic.WRITE : Skew.Resolving.SymbolStatistic.READ);
+    if (node.isAssignTarget()) {
+      this._recordStatistic(symbol, Skew.Resolving.SymbolStatistic.WRITE);
+
+      // Also track reads for assignments
+      if (Skew.Resolving.Resolver._isExpressionUsed(node.parent())) {
+        this._recordStatistic(symbol, Skew.Resolving.SymbolStatistic.READ);
+      }
+    }
+
+    else {
+      this._recordStatistic(symbol, Skew.Resolving.SymbolStatistic.READ);
+    }
 
     // Forbid referencing a base class global or constructor function from a derived class
     if (enclosingFunction != null && Skew.Resolving.Resolver._isBaseGlobalReference(enclosingFunction.symbol.parent, symbol)) {

@@ -2604,7 +2604,16 @@ namespace Skew.Resolving {
       _initializeSymbol(symbol)
 
       # Track reads and writes of local variables for later use
-      _recordStatistic(symbol, node.isAssignTarget ? .WRITE : .READ)
+      if node.isAssignTarget {
+        _recordStatistic(symbol, .WRITE)
+
+        # Also track reads for assignments
+        if _isExpressionUsed(node.parent) {
+          _recordStatistic(symbol, .READ)
+        }
+      } else {
+        _recordStatistic(symbol, .READ)
+      }
 
       # Forbid referencing a base class global or constructor function from a derived class
       if enclosingFunction != null && _isBaseGlobalReference(enclosingFunction.symbol.parent, symbol) {
