@@ -86,7 +86,7 @@ namespace Skew.Options {
 
     def rangeForOption(option Option) Range {
       var node = nodeForOption(option)
-      return node != null ? node.range : null
+      return node?.range
     }
 
     def rangeListForOption(option Option) List<Range> {

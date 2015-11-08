@@ -194,7 +194,7 @@ namespace Skew {
       clone.symbol = symbol
       clone.content = content
       clone.resolvedType = resolvedType
-      clone.comments = comments != null ? comments.clone : null
+      clone.comments = comments?.clone
       return clone
     }
 
@@ -354,7 +354,7 @@ namespace Skew {
     }
 
     def internalRangeOrRange Range {
-      return internalRange != null ? internalRange : range
+      return internalRange ?? range
     }
 
     def prependChild(node Node) Node {

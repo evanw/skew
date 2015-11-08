@@ -387,7 +387,7 @@ namespace Skew.Resolving {
           generated.flags |= Symbol.IS_AUTOMATICALLY_GENERATED
           generated.parent = symbol
           generated.range = symbol.range
-          generated.overridden = baseConstructor != null ? baseConstructor.asFunctionSymbol : null
+          generated.overridden = baseConstructor?.asFunctionSymbol
           symbol.functions.append(generated)
           symbol.members[generated.name] = generated
         }
@@ -1973,7 +1973,7 @@ namespace Skew.Resolving {
     }
 
     def _resolveFunctionCall(node Node, scope Scope, type Type) bool {
-      var function = type.symbol != null ? type.symbol.asFunctionSymbol : null
+      var function = type.symbol?.asFunctionSymbol
       var expected = type.argumentTypes.count
       var count = node.childCount - 1
       node.symbol = function
@@ -1994,7 +1994,7 @@ namespace Skew.Resolving {
 
       # Check argument count
       if expected != count {
-        _log.semanticErrorArgumentCount(node.internalRangeOrRange, expected, count, function != null ? function.name : null, function != null ? function.range : null)
+        _log.semanticErrorArgumentCount(node.internalRangeOrRange, expected, count, function?.name, function?.range)
         return false
       }
 

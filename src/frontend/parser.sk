@@ -1043,7 +1043,7 @@ namespace Skew.Parsing {
       }
     }
 
-    symbol.annotations = annotations != null ? annotations.clone : null
+    symbol.annotations = annotations?.clone
     symbol.comments = comments
 
     comments = parseTrailingComment(context, comments)

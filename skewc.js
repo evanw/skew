@@ -7093,6 +7093,7 @@
   };
 
   Skew.Node.prototype._cloneWithoutChildren = function() {
+    var ref;
     var clone = new Skew.Node(this.kind);
     clone.flags = this.flags;
     clone.range = this.range;
@@ -7100,7 +7101,7 @@
     clone.symbol = this.symbol;
     clone.content = this.content;
     clone.resolvedType = this.resolvedType;
-    clone.comments = this.comments != null ? this.comments.slice() : null;
+    clone.comments = (ref = this.comments) != null ? ref.slice() : null;
     return clone;
   };
 
@@ -7266,7 +7267,8 @@
   };
 
   Skew.Node.prototype.internalRangeOrRange = function() {
-    return this.internalRange != null ? this.internalRange : this.range;
+    var ref;
+    return (ref = this.internalRange) != null ? ref : this.range;
   };
 
   Skew.Node.prototype.prependChild = function(node) {
@@ -17350,7 +17352,8 @@
   };
 
   Skew.Resolving.Resolver.prototype._resolveFunctionCall = function(node, scope, type) {
-    var $function = type.symbol != null ? type.symbol.asFunctionSymbol() : null;
+    var ref;
+    var $function = (ref = type.symbol) != null ? ref.asFunctionSymbol() : null;
     var expected = type.argumentTypes.length;
     var count = node.childCount() - 1 | 0;
     node.symbol = $function;

@@ -16,7 +16,7 @@ namespace Skew {
 
 namespace Skew.Merging {
   def mergeObject(log Log, parent ObjectSymbol, target ObjectSymbol, symbol ObjectSymbol) {
-    target.scope = ObjectScope.new(parent != null ? parent.scope : null, target)
+    target.scope = ObjectScope.new(parent?.scope, target)
     symbol.scope = target.scope
     symbol.parent = parent
 
