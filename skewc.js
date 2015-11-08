@@ -16938,6 +16938,12 @@
       }
 
       this._resolveNode(child, scope, null);
+
+      // Stop now if the child was removed
+      if (child.parent() == null) {
+        continue;
+      }
+
       this._controlFlow.visitStatementInPostOrder(child);
 
       // The "@skip" annotation removes function calls after type checking

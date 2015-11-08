@@ -391,5 +391,35 @@ public class Globals
 }
 ").csharp
 
+# Check for a crash when converting switch statements to if chains
+test("
+@export
+def main {
+  switch \"a\" {
+    case \"b\" {}
+    case \"c\" {}
+    default {}
+  }
+}
+", "
+public class Globals
+{
+    public static void main()
+    {
+        string value = \"a\";
+
+        if (value == \"b\")
+        {
+        }
+        else if (value == \"c\")
+        {
+        }
+        else
+        {
+        }
+    }
+}
+").csharp
+
   }
 }
