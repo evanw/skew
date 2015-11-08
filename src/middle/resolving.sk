@@ -352,8 +352,7 @@ namespace Skew.Resolving {
         var nextEnumValue = 0
         for variable in symbol.variables {
           if variable.kind == .VARIABLE_ENUM {
-            variable.value = Node.createInt(nextEnumValue).withType(symbol.resolvedType).withRange(variable.range)
-            nextEnumValue++
+            variable.value = Node.createInt(nextEnumValue++).withType(symbol.resolvedType).withRange(variable.range)
           }
         }
         symbol.flags |= Symbol.IS_VALUE_TYPE

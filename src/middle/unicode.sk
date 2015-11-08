@@ -34,20 +34,16 @@ namespace Unicode {
     if STRING_ENCODING == .UTF8 {
       def nextCodePoint int {
         if index >= stop { return -1 }
-        var a = value[index]
-        index++
+        var a = value[index++]
         if a < 0xC0 { return a }
         if index >= stop { return -1 }
-        var b = value[index]
-        index++
+        var b = value[index++]
         if a < 0xE0 { return ((a & 0x1F) << 6) | (b & 0x3F) }
         if index >= stop { return -1 }
-        var c = value[index]
-        index++
+        var c = value[index++]
         if a < 0xF0 { return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F) }
         if index >= stop { return -1 }
-        var d = value[index]
-        index++
+        var d = value[index++]
         return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)
       }
     }
@@ -55,12 +51,10 @@ namespace Unicode {
     else if STRING_ENCODING == .UTF16 {
       def nextCodePoint int {
         if index >= stop { return -1 }
-        var a = value[index]
-        index++
+        var a = value[index++]
         if a < 0xD800 || a >= 0xDC00 { return a }
         if index >= stop { return -1 }
-        var b = value[index]
-        index++
+        var b = value[index++]
         return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)
       }
     }
@@ -68,9 +62,7 @@ namespace Unicode {
     else {
       def nextCodePoint int {
         if index >= stop { return -1 }
-        var c = value[index]
-        index++
-        return c
+        return value[index++]
       }
     }
   }

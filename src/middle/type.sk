@@ -105,8 +105,7 @@ namespace Skew {
     }
 
     def _createID int {
-      _nextID++
-      return _nextID
+      return ++_nextID
     }
 
     var _nextID = 0
@@ -133,8 +132,7 @@ namespace Skew {
 
   namespace Environment {
     def _createID int {
-      _nextID++
-      return _nextID
+      return ++_nextID
     }
 
     var _nextID = 0

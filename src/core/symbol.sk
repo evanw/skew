@@ -250,8 +250,7 @@ namespace Skew {
     var _nextID = 0
 
     def _createID int {
-      _nextID++
-      return _nextID
+      return ++_nextID
     }
 
     def _substituteSymbols(node Node, symbols IntMap<Symbol>) {

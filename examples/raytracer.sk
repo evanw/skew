@@ -27,8 +27,7 @@ def render(width int, height int, pixels Int32Array) {
     var screenY = (y * 2.0 + 1 - height) / width
     for x in 0..width {
       var screenX = (x * 2.0 + 1 - width) / width
-      pixels[i] = scene.trace2D(screenX, -screenY).pack
-      i++
+      pixels[i++] = scene.trace2D(screenX, -screenY).pack
     }
   }
 }

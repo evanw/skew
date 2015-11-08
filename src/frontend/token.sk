@@ -68,8 +68,7 @@ namespace Skew {
       }
 
       # Compress tokens to eliminate unused null gaps
-      tokens[count] = token
-      count++
+      tokens[count++] = token
 
       # Tokens that start with a greater than may need to be split
       var tokenKind = token.kind

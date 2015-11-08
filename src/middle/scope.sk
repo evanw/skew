@@ -102,8 +102,7 @@ namespace Skew {
       var count = 0
       var name = prefix
       while isNameUsed(name) {
-        count++
-        name = prefix + count.toString
+        name = prefix + (++count).toString
       }
       reserveName(name, null)
       return name
