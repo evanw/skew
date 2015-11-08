@@ -5901,5 +5901,101 @@ def main(foo Foo) {
   ~~~~~
 ")
 
+# Test the null join operator on primitive types
+test("
+def main(foo int) {
+  foo = foo ?? 0
+}
+", "
+<stdin>:2:9: error: No common type for \"int\" and \"null\"
+  foo = foo ?? 0
+        ~~~
+")
+
+# Test the null join operator
+test("
+class Foo {
+}
+
+def main(foo Foo) Foo {
+  return foo ?? Foo.new
+}
+", "
+")
+
+# Test type context for the null join operator
+test("
+class Foo {
+}
+
+def main(foo Foo) int {
+  return foo ?? Foo.new
+}
+", "
+<stdin>:5:10: error: Cannot convert from type \"Foo\" to type \"int\"
+  return foo ?? Foo.new
+         ~~~
+<stdin>:5:17: error: Cannot convert from type \"Foo\" to type \"int\"
+  return foo ?? Foo.new
+                ~~~~~~~
+")
+
+# Test warnings for the null join operator
+test("
+class Foo {
+  var x Foo = null
+}
+
+def main(foo Foo) {
+  foo ?? foo
+  foo ?? foo.x
+  foo.x ?? foo
+  foo.x ?? foo.x
+}
+", "
+<stdin>:6:3: warning: Both sides of \"??\" are identical, is this a bug?
+  foo ?? foo
+  ~~~~~~~~~~
+<stdin>:6:3: warning: Unused expression
+  foo ?? foo
+  ~~~
+<stdin>:6:10: warning: Unused expression
+  foo ?? foo
+         ~~~
+<stdin>:7:3: warning: Unused expression
+  foo ?? foo.x
+  ~~~
+<stdin>:7:10: warning: Unused expression
+  foo ?? foo.x
+         ~~~~~
+<stdin>:8:12: warning: Unused expression
+  foo.x ?? foo
+           ~~~
+<stdin>:9:12: warning: Unused expression
+  foo.x ?? foo.x
+           ~~~~~
+")
+
+# Test warnings for the null dot operator
+test("
+class Foo {
+  var a Foo = null
+  def b Foo { return self }
+  def d(x int) Foo { return self }
+  var c fn() Foo = => null
+}
+
+def main(foo Foo) {
+  foo?.a?.a
+  foo?.b?.b
+  foo?.c()?.c()
+  foo?.d(0)?.d(0)
+}
+", "
+<stdin>:9:3: warning: Unused expression
+  foo?.a?.a
+  ~~~~~~~~~
+")
+
   }
 }

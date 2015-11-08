@@ -43,8 +43,8 @@ namespace Skew {
     NodeKind.REMAINDER:                   OperatorInfo.new("%", .MULTIPLY, .LEFT, .OVERRIDABLE, [1], .NULL),
     NodeKind.SHIFT_LEFT:                  OperatorInfo.new("<<", .SHIFT, .LEFT, .OVERRIDABLE, [1], .NULL),
     NodeKind.SHIFT_RIGHT:                 OperatorInfo.new(">>", .SHIFT, .LEFT, .OVERRIDABLE, [1], .NULL),
-    NodeKind.UNSIGNED_SHIFT_RIGHT:        OperatorInfo.new(">>>", .SHIFT, .LEFT, .OVERRIDABLE, [1], .NULL),
     NodeKind.SUBTRACT:                    OperatorInfo.new("-", .ADD, .LEFT, .OVERRIDABLE, [0, 1], .NULL),
+    NodeKind.UNSIGNED_SHIFT_RIGHT:        OperatorInfo.new(">>>", .SHIFT, .LEFT, .OVERRIDABLE, [1], .NULL),
 
     # Binary assignment operators
     NodeKind.ASSIGN:                      OperatorInfo.new("=", .ASSIGN, .RIGHT, .FIXED, [1], .NULL),

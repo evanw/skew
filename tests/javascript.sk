@@ -2176,8 +2176,7 @@ def bar Foo {
 }
 
 @export
-def main {
-  var foo = Foo.new
+def main(foo Foo) {
   foo.x **= 2
   foo.z[0] **= 2
   foo.z[foo.y] **= 2
@@ -2188,7 +2187,7 @@ def main {
 }
 ", "
 (function() {
-  main = function() {
+  main = function(foo) {
     var ref6;
     var ref5;
     var ref4;
@@ -2196,7 +2195,6 @@ def main {
     var ref2;
     var ref1;
     var ref;
-    var foo = new Foo();
     foo.x = Math.pow(foo.x, 2);
     (ref = foo.z)[0] = Math.pow(ref[0], 2);
     (ref1 = foo.z)[ref2 = foo.y] = Math.pow(ref1[ref2], 2);
@@ -2212,6 +2210,116 @@ def main {
   }
 })();
 ").js.inlineAllFunctions
+
+# Test the null join operator
+test("
+class Foo {
+  var x Foo = null
+}
+
+def bar Foo {
+  return Foo.new
+}
+
+@export
+def main(foo Foo) {
+  foo ?? bar
+  foo.x ?? foo.x
+  bar.x ?? bar.x
+  bar.x ?? bar ?? foo.x ?? foo
+}
+", "
+(function() {
+  function bar() {
+    return new Foo();
+  }
+
+  main = function(foo) {
+    var ref4;
+    var ref3;
+    var ref2;
+    var ref1;
+    var ref;
+    foo != null ? foo : bar();
+    (ref = foo.x) != null ? ref : foo.x;
+    (ref1 = bar().x) != null ? ref1 : bar().x;
+    (ref2 = bar().x) != null ? ref2 : (ref3 = bar()) != null ? ref3 : (ref4 = foo.x) != null ? ref4 : foo;
+  };
+
+  function Foo() {
+    this.x = null;
+  }
+})();
+").js
+
+# Test the null dot operator
+test("
+class Foo {
+  var a Foo = null
+  def b Foo { return self }
+  var c fn() Foo = => null
+  def d(x int) Foo { return self }
+}
+
+def bar Foo {
+  return Foo.new
+}
+
+@export
+def main(foo Foo) {
+  foo?.a?.a
+  foo?.b?.b
+  foo?.c()?.c()
+  foo?.d(0)?.d(0)
+  bar?.a?.a
+  bar?.b?.b
+  foo?.c()?.c()
+  bar?.d(0)?.d(0)
+}
+", "
+(function() {
+  function bar() {
+    return new Foo();
+  }
+
+  main = function(foo) {
+    var ref10;
+    var ref9;
+    var ref8;
+    var ref7;
+    var ref6;
+    var ref5;
+    var ref4;
+    var ref3;
+    var ref2;
+    var ref1;
+    var ref;
+    (ref = foo != null ? foo.a : null) != null ? ref.a : null;
+    (ref1 = foo != null ? foo.b() : null) != null ? ref1.b() : null;
+    (ref2 = foo != null ? foo.c() : null) != null ? ref2.c() : null;
+    (ref3 = foo != null ? foo.d(0) : null) != null ? ref3.d(0) : null;
+    (ref5 = (ref4 = bar()) != null ? ref4.a : null) != null ? ref5.a : null;
+    (ref7 = (ref6 = bar()) != null ? ref6.b() : null) != null ? ref7.b() : null;
+    (ref8 = foo != null ? foo.c() : null) != null ? ref8.c() : null;
+    (ref10 = (ref9 = bar()) != null ? ref9.d(0) : null) != null ? ref10.d(0) : null;
+  };
+
+  function Foo() {
+    this.a = null;
+    this.c = function() {
+      return null;
+    };
+  }
+
+  Foo.prototype.b = function() {
+    return this;
+  };
+
+  Foo.prototype.d = function(x) {
+    return this;
+  };
+})();
+").js
 
   }
 }

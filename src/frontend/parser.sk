@@ -1361,6 +1361,21 @@ namespace Skew.Parsing {
     pratt.parselet(.SET_NEW, .LOWEST).prefix = initializerParselet
     pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = parameterizedParselet
 
+    # "x?.y"
+    pratt.parselet(.NULL_DOT, .MEMBER).infix = (context ParserContext, left Node) Node => {
+      context.next
+      var range = context.current.range
+      if !context.expect(.IDENTIFIER) {
+        return null
+      }
+      return Node.createNullDot(left, range.toString).withRange(context.spanSince(left.range)).withInternalRange(range)
+    }
+
+    # "x ?? y"
+    pratt.infixRight(.NULL_JOIN, .NULL_JOIN, (context, left, token, right) => {
+      return Node.createNullJoin(left, right).withRange(Range.span(left.range, right.range)).withInternalRange(token.range)
+    })
+
     # Lambda expressions like "=> x"
     pratt.parselet(.ARROW, .LOWEST).prefix = (context) => {
       var token = context.current

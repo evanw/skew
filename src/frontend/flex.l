@@ -52,6 +52,8 @@
 ".."                              DOT_DOT;
 "."                               DOT;
 ","                               COMMA;
+"??"                              NULL_JOIN;
+"?."                              NULL_DOT;
 "?"                               QUESTION_MARK;
 "::"                              DOUBLE_COLON;
 ":"                               COLON;

@@ -1287,6 +1287,8 @@ namespace Skew.Resolving {
         case .LAMBDA_TYPE { _resolveLambdaType(node, scope) }
         case .NAME { _resolveName(node, scope) }
         case .NULL { node.resolvedType = .NULL }
+        case .NULL_DOT { _resolveNullDot(node, scope) }
+        case .NULL_JOIN { _resolveNullJoin(node, scope, context) }
         case .PARAMETERIZE { _resolveParameterize(node, scope) }
         case .SEQUENCE { _resolveSequence(node, scope, context) }
         case .SUPER { _resolveSuper(node, scope) }
@@ -1865,6 +1867,15 @@ namespace Skew.Resolving {
     def _resolveCall(node Node, scope Scope, context Type) {
       var value = node.callValue
 
+      # Sink the call into the null dot expression
+      if value.kind == .NULL_DOT {
+        var hook = _hookForNullDot(value.remove, scope)
+        hook.hookTrue.become(Node.createCall(hook.hookTrue.cloneAndStealChildren).appendChildrenFrom(node))
+        node.become(hook)
+        _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
+        return
+      }
+
       # Take argument types from call argument values for immediately-invoked
       # function expressions:
       #
@@ -2288,7 +2299,7 @@ namespace Skew.Resolving {
 
       # Check for likely bugs where both branches look the same
       if trueValue.looksTheSameAs(falseValue) {
-        _log.semanticWarningIdenticalOperands(Range.span(trueValue.range, falseValue.range), ":")
+        _log.semanticWarningIdenticalOperands(Range.span(trueValue.range, falseValue.range), node.wasNullJoin ? "??" : ":")
       }
     }
 
@@ -2596,6 +2607,29 @@ namespace Skew.Resolving {
       _automaticallyCallGetter(node, scope)
     }
 
+    def _hookForNullDot(node Node, scope Scope) Node {
+      var target = node.dotTarget.remove
+      _resolveAsParameterizedExpression(target, scope)
+      var check = Node.createBinary(.NOT_EQUAL, _extractExpression(target, scope), Node.createNull).withRange(target.range)
+      var dot = Node.createDot(target, node.asString).withRange(node.range).withInternalRange(node.internalRange)
+      return Node.createHook(check, dot, Node.createNull).withRange(node.range)
+    }
+
+    def _resolveNullDot(node Node, scope Scope) {
+      node.become(_hookForNullDot(node, scope))
+      _resolveAsParameterizedExpression(node, scope)
+    }
+
+    def _resolveNullJoin(node Node, scope Scope, context Type) {
+      var first = node.nullJoinFirst
+      var second = node.nullJoinSecond.remove
+      _resolveAsParameterizedExpressionWithTypeContext(first.remove, scope, context)
+      var check = Node.createBinary(.NOT_EQUAL, _extractExpression(first, scope), Node.createNull).withRange(first.range)
+      node.become(Node.createHook(check, first, second).withRange(node.range))
+      node.flags |= Node.WAS_NULL_JOIN
+      _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
+    }
+
     def _resolveParameterize(node Node, scope Scope) {
       var value = node.parameterizeValue
       _resolveNode(value, scope, null)
@@ -2781,6 +2815,8 @@ namespace Skew.Resolving {
     }
 
     def _extractExpression(node Node, scope Scope) Node {
+      assert(node.resolvedType != null)
+
       if node.kind == .NAME || node.kind == .CONSTANT {
         return node.clone
       }

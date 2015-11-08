@@ -4,6 +4,7 @@ namespace Skew {
     LOWEST
     COMMA
     ASSIGN
+    NULL_JOIN
     LOGICAL_OR
     LOGICAL_AND
     BITWISE_OR

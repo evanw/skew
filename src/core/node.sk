@@ -35,6 +35,8 @@ namespace Skew {
     LAMBDA_TYPE
     NAME
     NULL
+    NULL_DOT
+    NULL_JOIN
     PAIR
     PARAMETERIZE
     SEQUENCE
@@ -162,6 +164,9 @@ namespace Skew {
     # during code resolution and blocks where control flow reaches the end of
     # the block have this flag set.
     const HAS_CONTROL_FLOW_AT_END = 1 << 2
+
+    # This flag marks nodes that were converted from NULL_JOIN to HOOK nodes.
+    const WAS_NULL_JOIN = 1 << 3
   }
 
   # Nodes represent executable code (variable initializers and function bodies)
@@ -273,6 +278,10 @@ namespace Skew {
 
     def hasControlFlowAtEnd bool {
       return (flags & HAS_CONTROL_FLOW_AT_END) != 0
+    }
+
+    def wasNullJoin bool {
+      return (flags & WAS_NULL_JOIN) != 0
     }
 
     # This is cheaper than childCount == 0
@@ -976,6 +985,14 @@ namespace Skew {
       return new(.NULL)
     }
 
+    def createNullDot(target Node, name string) Node {
+      return new(.NULL_DOT).withContent(StringContent.new(name)).appendChild(target)
+    }
+
+    def createNullJoin(left Node, right Node) Node {
+      return new(.NULL_JOIN).appendChild(left).appendChild(right)
+    }
+
     def createPair(first Node, second Node) Node {
       assert(first.kind.isExpression)
       assert(second.kind.isExpression)
@@ -1085,13 +1102,27 @@ namespace Skew {
     }
 
     def asString string {
-      assert(kind == .NAME || kind == .DOT || kind == .CONSTANT)
+      assert(kind == .NAME || kind == .DOT || kind == .CONSTANT || kind == .NULL_DOT)
       return content.asString
     }
 
     def blockStatement Node {
       assert(kind == .BLOCK)
       return hasOneChild ? _firstChild : null
+    }
+
+    def nullJoinFirst Node {
+      assert(kind == .NULL_JOIN)
+      assert(childCount == 2)
+      assert(_firstChild.kind.isExpression)
+      return _firstChild
+    }
+
+    def nullJoinSecond Node {
+      assert(kind == .NULL_JOIN)
+      assert(childCount == 2)
+      assert(_lastChild.kind.isExpression)
+      return _lastChild
     }
 
     def firstValue Node {
@@ -1109,7 +1140,7 @@ namespace Skew {
     }
 
     def dotTarget Node {
-      assert(kind == .DOT)
+      assert(kind == .DOT || kind == .NULL_DOT)
       assert(childCount <= 1)
       assert(_firstChild == null || _firstChild.kind.isExpression)
       return _firstChild

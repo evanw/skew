@@ -254,6 +254,8 @@ namespace Skew {
       MULTIPLY: "\"*\"",
       NOT: "\"!\"",
       NOT_EQUAL: "\"!=\"",
+      NULL_DOT: "\"?.\"",
+      NULL_JOIN: "\"??\"",
       PLUS: "\"+\"",
       POWER: "\"**\"",
       QUESTION_MARK: "\"?\"",
