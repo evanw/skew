@@ -183,18 +183,27 @@ class List {
     }
   }
 
-  def swap(i int, j int) {
-    var temp = self[i]
-    self[i] = self[j]
-    self[j] = temp
+  def insert(index int, values List<T>) {
+    for value in values {
+      insert(index, value)
+      index++
+    }
   }
 
   def insert(index int, value T) {
     (self as dynamic).splice(index, 0, value)
   }
 
-  def removeAt(index int) {
-    (self as dynamic).splice(index, 1)
+  def removeAt(x int) {
+    (self as dynamic).splice(x, 1)
+  }
+
+  def takeAt(x int) T {
+    return (self as dynamic).splice(x, 1)[0]
+  }
+
+  def takeRange(start int, end int) List<T> {
+    return (self as dynamic).splice(start, end - start)
   }
 
   def appendOne(value T) {
@@ -208,6 +217,10 @@ class List {
     if index >= 0 {
       removeAt(index)
     }
+  }
+
+  def removeRange(start int, end int) {
+    (self as dynamic).splice(start, end - start)
   }
 
   def removeIf(callback fn(T) bool) {

@@ -84,23 +84,25 @@ class int {
   def - int
   def ~ int
 
-  def %(x int) int
-  def &(x int) int
-  def *(x int) int
   def +(x int) int
   def -(x int) int
+  def *(x int) int
   def /(x int) int
+  def %(x int) int
+  def **(x int) int
+  def <=>(x int) int
   def <<(x int) int
   def >>(x int) int
   def >>>(x int) int
-  def ^(x int) int
+  def &(x int) int
   def |(x int) int
+  def ^(x int) int
 
-  def &=(x int)
   def <<=(x int)
   def >>=(x int)
-  def ^=(x int)
+  def &=(x int)
   def |=(x int)
+  def ^=(x int)
 
   if TARGET != .CSHARP {
     def >>>=(x int)
@@ -118,21 +120,6 @@ class int {
   }
 
   def toString string
-
-  def **(x int) int {
-    var y = self
-    var z = x < 0 ? 0 : 1
-    while x > 0 {
-      if (x & 1) != 0 { z *= y }
-      x >>= 1
-      y *= y
-    }
-    return z
-  }
-
-  def <=>(x int) int {
-    return ((x < self) as int) - ((x > self) as int)
-  }
 }
 
 @import
@@ -146,6 +133,8 @@ class double {
   def +(x double) double
   def -(x double) double
   def /(x double) double
+  def **(x double) double
+  def <=>(x double) int
 
   def *=(x double)
   def +=(x double)
@@ -156,14 +145,6 @@ class double {
   def isNaN bool
 
   def toString string
-
-  def **(x double) double {
-    return Math.pow(self, x)
-  }
-
-  def <=>(x double) int {
-    return ((x < self) as int) - ((x > self) as int)
-  }
 }
 
 @import
@@ -314,6 +295,102 @@ class IntMap<T> {
 
 class Box<T> {
   var value T
+}
+
+################################################################################
+# Implementations
+
+class int {
+  def **(x int) int {
+    var y = self
+    var z = x < 0 ? 0 : 1
+    while x > 0 {
+      if (x & 1) != 0 { z *= y }
+      x >>= 1
+      y *= y
+    }
+    return z
+  }
+
+  def <=>(x int) int {
+    return ((x < self) as int) - ((x > self) as int)
+  }
+}
+
+class double {
+  def **(x double) double {
+    return Math.pow(self, x)
+  }
+
+  def <=>(x double) int {
+    return ((x < self) as int) - ((x > self) as int)
+  }
+}
+
+class List {
+  def resize(count int, defaultValue T) {
+    while self.count < count { append(defaultValue) }
+    while self.count > count { removeLast }
+  }
+
+  def removeAll(value T) {
+    var index = 0
+
+    # Remove elements in place
+    for i in 0..count {
+      if self[i] != value {
+        if index < i {
+          self[index] = self[i]
+        }
+        index++
+      }
+    }
+
+    # Shrink the array to the correct size
+    while index < count {
+      removeLast
+    }
+  }
+
+  def removeDuplicates {
+    var index = 0
+
+    # Remove elements in place
+    for i in 0..count {
+      var found = false
+      var value = self[i]
+      for j in 0..i {
+        if value == self[j] {
+          found = true
+          break
+        }
+      }
+      if !found {
+        if index < i {
+          self[index] = self[i]
+        }
+        index++
+      }
+    }
+
+    # Shrink the array to the correct size
+    while index < count {
+      removeLast
+    }
+  }
+
+  def shuffle {
+    var n = count
+    for i in 0..n - 1 {
+      swap(i, i + ((Math.random * (n - i)) as int))
+    }
+  }
+
+  def swap(i int, j int) {
+    var temp = self[i]
+    self[i] = self[j]
+    self[j] = temp
+  }
 }
 "
 }

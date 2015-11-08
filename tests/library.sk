@@ -1,5 +1,8 @@
 namespace Skew.Tests {
   def testLibrary {
+    testExpect("sanity check", toString([1, 2, 3]), "[1, 2, 3]")
+    testExpect("sanity check", toString(["1", "2", "3"]), "[1, 2, 3]")
+
     ################################################################################
     # Math
 
@@ -94,23 +97,27 @@ namespace Skew.Tests {
 
     # Unary
     testExpect("+2", +2, 2)
-    testExpect("3++", ((x int) int => {
+    testExpect("3++", (() int => {
+      var x = 3
       x++
       return x
-    })(3), 4)
-    testExpect("++3", ((x int) int => {
+    })(), 4)
+    testExpect("++3", (() int => {
+      var x = 3
       ++x
       return x
-    })(3), 4)
+    })(), 4)
     testExpect("-2", -2, -2)
-    testExpect("3--", ((x int) int => {
+    testExpect("3--", (() int => {
+      var x = 3
       x--
       return x
-    })(3), 2)
-    testExpect("--3", ((x int) int => {
+    })(), 2)
+    testExpect("--3", (() int => {
+      var x = 3
       --x
       return x
-    })(3), 2)
+    })(), 2)
     testExpect("~2", ~2, -3)
 
     # Binary
@@ -141,85 +148,103 @@ namespace Skew.Tests {
     testExpect("-0x7FFFFFFF <=> 0x7FFFFFFF", -0x7FFFFFFF <=> 0x7FFFFFFF, -1)
 
     # Binary assignment
-    testExpect("5 += 3", ((x int) int => {
+    testExpect("5 += 3", (() int => {
+      var x = 5
       x += 3
       return x
-    })(5), 8)
-    testExpect("5 -= 3", ((x int) int => {
+    })(), 8)
+    testExpect("5 -= 3", (() int => {
+      var x = 5
       x -= 3
       return x
-    })(5), 2)
-    testExpect("5 *= 3", ((x int) int => {
+    })(), 2)
+    testExpect("5 *= 3", (() int => {
+      var x = 5
       x *= 3
       return x
-    })(5), 15)
-    testExpect("5 /= 3", ((x int) int => {
+    })(), 15)
+    testExpect("5 /= 3", (() int => {
+      var x = 5
       x /= 3
       return x
-    })(5), 1)
-    testExpect("5 %= 3", ((x int) int => {
+    })(), 1)
+    testExpect("5 %= 3", (() int => {
+      var x = 5
       x %= 3
       return x
-    })(5), 2)
-    testExpect("2 **= 3", ((x int) int => {
+    })(), 2)
+    testExpect("2 **= 3", (() int => {
+      var x = 2
       x **= 3
       return x
-    })(2), 8)
-    testExpect("44 |= 33", ((x int) int => {
+    })(), 8)
+    testExpect("44 |= 33", (() int => {
+      var x = 44
       x |= 33
       return x
-    })(44), 45)
-    testExpect("44 &= 33", ((x int) int => {
+    })(), 45)
+    testExpect("44 &= 33", (() int => {
+      var x = 44
       x &= 33
       return x
-    })(44), 32)
-    testExpect("44 ^= 33", ((x int) int => {
+    })(), 32)
+    testExpect("44 ^= 33", (() int => {
+      var x = 44
       x ^= 33
       return x
-    })(44), 13)
-    testExpect("5 <<= 3", ((x int) int => {
+    })(), 13)
+    testExpect("5 <<= 3", (() int => {
+      var x = 5
       x <<= 3
       return x
-    })(5), 40)
-    testExpect("5 >>= 1", ((x int) int => {
+    })(), 40)
+    testExpect("5 >>= 1", (() int => {
+      var x = 5
       x >>= 1
       return x
-    })(5), 2)
-    testExpect("-5 >>= 1", ((x int) int => {
+    })(), 2)
+    testExpect("-5 >>= 1", (() int => {
+      var x = -5
       x >>= 1
       return x
-    })(-5), -3)
-    testExpect("5 >>>= 1", ((x int) int => {
+    })(), -3)
+    testExpect("5 >>>= 1", (() int => {
+      var x = 5
       x >>>= 1
       return x
-    })(5), 2)
-    testExpect("-5 >>>= 1", ((x int) int => {
+    })(), 2)
+    testExpect("-5 >>>= 1", (() int => {
+      var x = -5
       x >>>= 1
       return x
-    })(-5), 0x7FFFFFFD)
+    })(), 0x7FFFFFFD)
 
     ################################################################################
     # double
 
     # Unary
     testExpect("+2.0", +2.0, 2.0)
-    testExpect("x++", ((x double) double => {
+    testExpect("x++", (() double => {
+      var x = 3.5
       x++
       return x
-    })(3.5), 4.5)
-    testExpect("++x", ((x double) double => {
+    })(), 4.5)
+    testExpect("++x", (() double => {
+      var x = 3.5
       ++x
       return x
-    })(3.5), 4.5)
+    })(), 4.5)
     testExpect("-2.0", -2.0, -2.0)
-    testExpect("x--", ((x double) double => {
+    testExpect("x--", (() double => {
+      var x = 3.5
       x--
       return x
-    })(3.5), 2.5)
-    testExpect("--x", ((x double) double => {
+    })(), 2.5)
+    testExpect("--x", (() double => {
+      var x = 3.5
       --x
       return x
-    })(3.5), 2.5)
+    })(), 2.5)
 
     # Binary
     testExpect("5.5 + 3.0", 5.5 + 3.0, 8.5)
@@ -233,26 +258,31 @@ namespace Skew.Tests {
     testExpect("5.5 <=> 2.0", 5.5 <=> 2.0, 1)
 
     # Binary assignment
-    testExpect("5.5 += 3.0", ((x double) double => {
+    testExpect("5.5 += 3.0", (() double => {
+      var x = 5.5
       x += 3.0
       return x
-    })(5.5), 8.5)
-    testExpect("5.5 -= 3.0", ((x double) double => {
+    })(), 8.5)
+    testExpect("5.5 -= 3.0", (() double => {
+      var x = 5.5
       x -= 3.0
       return x
-    })(5.5), 2.5)
-    testExpect("5.5 *= 3.0", ((x double) double => {
+    })(), 2.5)
+    testExpect("5.5 *= 3.0", (() double => {
+      var x = 5.5
       x *= 3.0
       return x
-    })(5.5), 16.5)
-    testExpect("5.0 /= 3.0", ((x double) double => {
+    })(), 16.5)
+    testExpect("5.0 /= 3.0", (() double => {
+      var x = 5.0
       x /= 3.0
       return x
-    })(5.0), 1.6666666666666667)
-    testExpect("2.0 **= 3.0", ((x double) double => {
+    })(), 1.6666666666666667)
+    testExpect("2.0 **= 3.0", (() double => {
+      var x = 2.0
       x **= 3
       return x
-    })(2), 8)
+    })(), 8)
 
     # isFinite
     testExpect("0.0.isFinite", 0.0.isFinite, true)
@@ -271,10 +301,11 @@ namespace Skew.Tests {
 
     # Binary
     testExpect("\"a\\0b\" + \"x\\0y\"", "a\0b" + "x\0y", "a\0bx\0y")
-    testExpect("\"a\\0b\" += \"x\\0y\"", ((x string) string => {
+    testExpect("\"a\\0b\" += \"x\\0y\"", (() string => {
+      var x = "a\0b"
       x += "x\0y"
       return x
-    })("a\0b"), "a\0bx\0y")
+    })(), "a\0bx\0y")
     testExpect("\"\\0a\" <=> \"\\0x\"", "\0a" <=> "\0x", -1)
     testExpect("\"\\0a\" <=> \"\\0a\"", "\0a" <=> "\0a", 0)
     testExpect("\"\\0x\" <=> \"\\0a\"", "\0x" <=> "\0a", 1)
@@ -346,5 +377,251 @@ namespace Skew.Tests {
     testExpect("\"a\\0b\\0c\".replaceAll(\"\\0\", \"\\0\\0\")", "a\0b\0c".replaceAll("\0", "\0\0"), "a\0\0b\0\0c")
     testExpect("\"a\\0B\\0c\\0D\".toUpperCase", "a\0B\0c\0D".toUpperCase, "A\0B\0C\0D")
     testExpect("\"a\\0B\\0c\\0D\".toLowerCase", "a\0B\0c\0D".toLowerCase, "a\0b\0c\0d")
+
+    ################################################################################
+    # List<T>
+
+    # new
+    testExpect("[] as List<int>", [] as List<int>, [] as List<int>)
+    testExpect("List<int>.new", List<int>.new, [] as List<int>)
+    testExpect("[1, 2, 3]", [1, 2, 3], [1, 2, 3])
+
+    # [] and []=
+    testExpect("[1, 2, 3][1]", [1, 2, 3][1], 2)
+    testExpect("[1, 2, 3][1] = 4", (() List<int> => {
+      var x = [1, 2, 3]
+      x[1] = 4
+      return x
+    })(), [1, 4, 3])
+
+    # count
+    testExpect("[1, 2, 3].count", [1, 2, 3].count, 3)
+
+    # isEmpty
+    testExpect("List<int>.new.isEmpty", List<int>.new.isEmpty, true)
+    testExpect("[1, 2, 3].isEmpty", [1, 2, 3].isEmpty, false)
+
+    # resize
+    testExpect("[1, 2, 3].resize(5, -1)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.resize(5, -1)
+      return x
+    })(), [1, 2, 3, -1, -1])
+    testExpect("[1, 2, 3].resize(1, -1)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.resize(1, -1)
+      return x
+    })(), [1])
+
+    # append
+    testExpect("[1, 2, 3].append(4)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.append(4)
+      return x
+    })(), [1, 2, 3, 4])
+    testExpect("[1, 2, 3].append([4, 5])", (() List<int> => {
+      var x = [1, 2, 3]
+      x.append([4, 5])
+      return x
+    })(), [1, 2, 3, 4, 5])
+    testExpect("[1, 2, 3].appendOne(4)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.appendOne(4)
+      return x
+    })(), [1, 2, 3, 4])
+    testExpect("[1, 2, 3].appendOne(2)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.appendOne(2)
+      return x
+    })(), [1, 2, 3])
+
+    # prepend
+    testExpect("[1, 2, 3].prepend(4)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.prepend(4)
+      return x
+    })(), [4, 1, 2, 3])
+    testExpect("[1, 2, 3].prepend([4, 5])", (() List<int> => {
+      var x = [1, 2, 3]
+      x.prepend([4, 5])
+      return x
+    })(), [4, 5, 1, 2, 3])
+
+    # insert
+    testExpect("[1, 2, 3].insert(1, 4)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.insert(1, 4)
+      return x
+    })(), [1, 4, 2, 3])
+    testExpect("[1, 2, 3].insert(1, [4, 5])", (() List<int> => {
+      var x = [1, 2, 3]
+      x.insert(1, [4, 5])
+      return x
+    })(), [1, 4, 5, 2, 3])
+
+    # remove
+    testExpect("[1, 2, 1, 3, 1].removeAll(1)", (() List<int> => {
+      var x = [1, 2, 1, 3, 1]
+      x.removeAll(1)
+      return x
+    })(), [2, 3])
+    testExpect("[1, 2, 3].removeAt(1)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.removeAt(1)
+      return x
+    })(), [1, 3])
+    testExpect("[1, 2, 1, 3, 1].removeDuplicates", (() List<int> => {
+      var x = [1, 2, 1, 3, 1]
+      x.removeDuplicates
+      return x
+    })(), [1, 2, 3])
+    testExpect("[1, 2, 3].removeFirst", (() List<int> => {
+      var x = [1, 2, 3]
+      x.removeFirst
+      return x
+    })(), [2, 3])
+    testExpect("[1, 2, 1, 3, 1].removeIf(y => y == 1)", (() List<int> => {
+      var x = [1, 2, 1, 3, 1]
+      x.removeIf(y => y == 1)
+      return x
+    })(), [2, 3])
+    testExpect("[1, 2, 3].removeLast", (() List<int> => {
+      var x = [1, 2, 3]
+      x.removeLast
+      return x
+    })(), [1, 2])
+    testExpect("[1, 2, 1, 3, 1].removeOne(1)", (() List<int> => {
+      var x = [1, 2, 1, 3, 1]
+      x.removeOne(1)
+      return x
+    })(), [2, 1, 3, 1])
+    testExpect("[1, 2, 1, 3, 1].removeRange(1, 4)", (() List<int> => {
+      var x = [1, 2, 1, 3, 1]
+      x.removeRange(1, 4)
+      return x
+    })(), [1, 1])
+
+    # take
+    testExpect("[1, 2, 3].takeFirst", [1, 2, 3].takeFirst, 1)
+    testExpect("[1, 2, 3].takeLast", [1, 2, 3].takeLast, 3)
+    testExpect("[1, 2, 3].takeAt(1)", [1, 2, 3].takeAt(1), 2)
+    testExpect("[1, 2, 3, 4, 5].takeRange(1, 4)", [1, 2, 3, 4, 5].takeRange(1, 4), [2, 3, 4])
+    testExpect("[1, 2, 3].takeFirst", (() List<int> => {
+      var x = [1, 2, 3]
+      x.takeFirst
+      return x
+    })(), [2, 3])
+    testExpect("[1, 2, 3].takeLast", (() List<int> => {
+      var x = [1, 2, 3]
+      x.takeLast
+      return x
+    })(), [1, 2])
+    testExpect("[1, 2, 3].takeAt(1)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.takeAt(1)
+      return x
+    })(), [1, 3])
+    testExpect("[1, 2, 3, 4, 5].takeRange(1, 4)", (() List<int> => {
+      var x = [1, 2, 3, 4, 5]
+      x.takeRange(1, 4)
+      return x
+    })(), [1, 5])
+
+    # first
+    testExpect("[1, 2, 3].first", [1, 2, 3].first, 1)
+    testExpect("[1, 2, 3].first = 4", (() List<int> => {
+      var x = [1, 2, 3]
+      x.first = 4
+      return x
+    })(), [4, 2, 3])
+
+    # last
+    testExpect("[1, 2, 3].last", [1, 2, 3].last, 3)
+    testExpect("[1, 2, 3].last = 4", (() List<int> => {
+      var x = [1, 2, 3]
+      x.last = 4
+      return x
+    })(), [1, 2, 4])
+
+    # in
+    testExpect("0 in [1, 2, 3]", 0 in [1, 2, 3], false)
+    testExpect("1 in [1, 2, 3]", 1 in [1, 2, 3], true)
+
+    # indexOf
+    testExpect("[1, 2, 3, 2, 1].indexOf(0)", [1, 2, 3, 2, 1].indexOf(0), -1)
+    testExpect("[1, 2, 3, 2, 1].indexOf(2)", [1, 2, 3, 2, 1].indexOf(2), 1)
+
+    # lastIndexOf
+    testExpect("[1, 2, 3, 2, 1].lastIndexOf(0)", [1, 2, 3, 2, 1].lastIndexOf(0), -1)
+    testExpect("[1, 2, 3, 2, 1].lastIndexOf(2)", [1, 2, 3, 2, 1].lastIndexOf(2), 3)
+
+    # all
+    testExpect("[1, 2, 3].all(x => x < 0)", [1, 2, 3].all(x => x < 0), false)
+    testExpect("[1, 2, 3].all(x => x > 0)", [1, 2, 3].all(x => x > 0), true)
+    testExpect("[1, 2, 3].all(x => x > 1)", [1, 2, 3].all(x => x > 1), false)
+
+    # any
+    testExpect("[1, 2, 3].any(x => x < 0)", [1, 2, 3].any(x => x < 0), false)
+    testExpect("[1, 2, 3].any(x => x > 0)", [1, 2, 3].any(x => x > 0), true)
+    testExpect("[1, 2, 3].any(x => x > 1)", [1, 2, 3].any(x => x > 1), true)
+
+    # clone
+    testExpect("[1, 2, 3].clone", [1, 2, 3].clone, [1, 2, 3])
+    testExpect("(x => x != x.clone)([1, 2, 3])", (x => x != x.clone)([1, 2, 3]), true)
+
+    # each
+    testExpect("[1, 2, 3].each(x => y += x)", (() int => {
+      var y = 0
+      [1, 2, 3].each(x => y += x)
+      return y
+    })(), 6)
+
+    # equals
+    testExpect("[1, 2, 3].equals([1, 2, 3])", [1, 2, 3].equals([1, 2, 3]), true)
+    testExpect("[1, 2, 3].equals([3, 2, 1])", [1, 2, 3].equals([3, 2, 1]), false)
+    testExpect("[1, 2, 3, 4].equals([1, 2, 3])", [1, 2, 3, 4].equals([1, 2, 3]), false)
+    testExpect("[1, 2, 3].equals([1, 2, 3, 4])", [1, 2, 3].equals([1, 2, 3, 4]), false)
+
+    # filter
+    testExpect("[1, 2, 3, 2, 1].filter(x => x != 2)", [1, 2, 3, 2, 1].filter(x => x != 2), [1, 3, 1])
+    testExpect("(x => x != x.filter(y => true))([1, 2, 3])", (x => x != x.filter(y => true))([1, 2, 3]), true)
+
+    # map
+    testExpect("[1, 2, 3, 2, 1].map<int>(x => x + 1)", [1, 2, 3, 2, 1].map<int>(x => x + 1), [2, 3, 4, 3, 2])
+    testExpect("(x => x != x.map<int>(y => y))([1, 2, 3])", (x => x != x.map<int>(y => y))([1, 2, 3]), true)
+
+    # reverse
+    testExpect("[1, 2, 3].reverse", (() List<int> => {
+      var x = [1, 2, 3]
+      x.reverse
+      return x
+    })(), [3, 2, 1])
+
+    # shuffle
+    testExpect("[1, 2, 3, 4, 5].shuffle", (() int => {
+      var x = [1, 2, 3, 4, 5]
+      var y = 0
+      x.shuffle
+      x.each(z => y += z)
+      return y
+    })(), 1 + 2 + 3 + 4 + 5)
+
+    # slice
+    testExpect("[1, 2, 3].slice(1)", [1, 2, 3].slice(1), [2, 3])
+    testExpect("[1, 2, 3].slice(1, 2)", [1, 2, 3].slice(1, 2), [2])
+
+    # sort
+    testExpect("[2, 1, 3].sort((a, b) => a <=> b)", (() List<int> => {
+      var x = [2, 1, 3]
+      x.sort((a, b) => a <=> b)
+      return x
+    })(), [1, 2, 3])
+
+    # swap
+    testExpect("[1, 2, 3].swap(0, 2)", (() List<int> => {
+      var x = [1, 2, 3]
+      x.swap(0, 2)
+      return x
+    })(), [3, 2, 1])
   }
 }

@@ -239,6 +239,19 @@ class List {
   @rename(\"Insert\")
   def insert(x int, value T)
 
+  @rename(\"InsertRange\")
+  def insert(x int, value List<T>)
+
+  def appendOne(x T) {
+    if !(x in self) {
+      append(x)
+    }
+  }
+
+  def removeRange(start int, end int) {
+    (self as dynamic).RemoveRange(start, end - start)
+  }
+
   @using(\"System.Linq\") {
     @rename(\"SequenceEqual\")
     def equals(x List<T>) bool
@@ -293,18 +306,24 @@ class List {
     return value
   }
 
+  def takeAt(x int) T {
+    var value = self[x]
+    removeAt(x)
+    return value
+  }
+
+  def takeRange(start int, end int) List<T> {
+    var value = slice(start, end)
+    removeRange(start, end)
+    return value
+  }
+
   def slice(start int) List<T> {
     return slice(start, count)
   }
 
   def slice(start int, end int) List<T> {
     return (self as dynamic).GetRange(start, end - start)
-  }
-
-  def swap(i int, j int) {
-    var temp = self[i]
-    self[i] = self[j]
-    self[j] = temp
   }
 
   def clone List<T> {
