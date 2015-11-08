@@ -402,6 +402,7 @@ namespace Skew.Tests {
       x[1] = 4
       return x
     })(), [1, 4, 3])
+    testExpect("[1, 2, 3][1] = 4", [1, 2, 3][1] = 4, 4)
 
     # count
     testExpect("[1, 2, 3].count", [1, 2, 3].count, 3)
@@ -563,6 +564,7 @@ namespace Skew.Tests {
       x.first = 4
       return x
     })(), [4, 2, 3])
+    testExpect("[1, 2, 3].first = 4", [1, 2, 3].first = 4, 4)
 
     # last
     testExpect("[1, 2, 3].last", [1, 2, 3].last, 3)
@@ -571,6 +573,7 @@ namespace Skew.Tests {
       x.last = 4
       return x
     })(), [1, 2, 4])
+    testExpect("[1, 2, 3].last = 4", [1, 2, 3].last = 4, 4)
 
     # in
     testExpect("0 in [1, 2, 3]", 0 in [1, 2, 3], false)
@@ -668,6 +671,7 @@ namespace Skew.Tests {
       x[1] = -0.5
       return x
     })(), {1: -0.5})
+    testExpect("{1: 0.5}[1] = -0.5", {1: 0.5}[1] = -0.5, -0.5)
 
     # count
     testExpect("{1: 0.5, 2: -0.5}.count", {1: 0.5, 2: -0.5}.count, 2)
@@ -741,6 +745,7 @@ namespace Skew.Tests {
       x[""] = -0.5
       return x
     })(), {"": -0.5})
+    testExpect("{\"\": 0.5}[\"\"] = -0.5", {"": 0.5}[""] = -0.5, -0.5)
 
     # count
     testExpect("{\"\": 0.5, \"\\0\": -0.5}.count", {"": 0.5, "\0": -0.5}.count, 2)

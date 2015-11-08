@@ -98,11 +98,11 @@ class int {
   def |(x int) int
   def ^(x int) int
 
-  def <<=(x int)
-  def >>=(x int)
-  def &=(x int)
-  def |=(x int)
-  def ^=(x int)
+  def <<=(x int) int
+  def >>=(x int) int
+  def &=(x int) int
+  def |=(x int) int
+  def ^=(x int) int
 
   if TARGET != .CSHARP {
     def >>>=(x int)
@@ -112,11 +112,11 @@ class int {
     def ++ int
     def -- int
 
-    def %=(x int)
-    def +=(x int)
-    def -=(x int)
-    def *=(x int)
-    def /=(x int)
+    def %=(x int) int
+    def +=(x int) int
+    def -=(x int) int
+    def *=(x int) int
+    def /=(x int) int
   }
 
   def toString string
@@ -136,10 +136,10 @@ class double {
   def **(x double) double
   def <=>(x double) int
 
-  def *=(x double)
-  def +=(x double)
-  def -=(x double)
-  def /=(x double)
+  def *=(x double) double
+  def +=(x double) double
+  def -=(x double) double
+  def /=(x double) double
 
   def isFinite bool
   def isNaN bool
@@ -150,7 +150,7 @@ class double {
 @import
 class string {
   def +(x string) string
-  def +=(x string)
+  def +=(x string) string
   def <=>(x string) int
 
   def count int
@@ -230,9 +230,9 @@ class List<T> {
   def takeRange(start int, end int) List<T>
 
   def first T
-  def first=(x T) { self[0] = x }
+  def first=(x T) T { return self[0] = x }
   def last T
-  def last=(x T) { self[count - 1] = x }
+  def last=(x T) T { return self[count - 1] = x }
 
   def in(x T) bool
   def indexOf(x T) int
