@@ -17236,16 +17236,11 @@
   };
 
   Skew.Resolving.Resolver.prototype._resolveCall = function(node, scope, context) {
-    var value = node.callValue();
-
-    // Sink the call into the null dot expression
-    if (value.kind == Skew.NodeKind.NULL_DOT) {
-      var hook = this._hookForNullDot(value.remove(), scope);
-      hook.hookTrue().become(Skew.Node.createCall(hook.hookTrue().cloneAndStealChildren()).appendChildrenFrom(node));
-      node.become(hook);
-      this._resolveAsParameterizedExpressionWithTypeContext(node, scope, context);
+    if (this._sinkNullDot(node, scope, context)) {
       return;
     }
+
+    var value = node.callValue();
 
     // Take argument types from call argument values for immediately-invoked
     // function expressions:
@@ -17624,7 +17619,46 @@
     return null;
   };
 
+  Skew.Resolving.Resolver.prototype._sinkNullDot = function(node, scope, context) {
+    var target = node;
+
+    // Build up a chain of dot accesses and calls
+    while (true) {
+      if (target.kind == Skew.NodeKind.DOT && target.dotTarget() != null) {
+        target = target.dotTarget();
+      }
+
+      else if (target.kind == Skew.NodeKind.CALL) {
+        target = target.callValue();
+      }
+
+      else {
+        break;
+      }
+    }
+
+    // Stop if this isn't a "?." expression after all
+    if (target.kind != Skew.NodeKind.NULL_DOT) {
+      return false;
+    }
+
+    // Wrap everything in a null check
+    var hook = this._hookForNullDot(target, scope);
+    target.become(hook.hookTrue().clone());
+
+    // This is necessary to trigger the resolve below
+    node.resolvedType = null;
+    hook.hookTrue().become(node.cloneAndStealChildren());
+    node.become(hook);
+    this._resolveAsParameterizedExpressionWithTypeContext(node, scope, context);
+    return true;
+  };
+
   Skew.Resolving.Resolver.prototype._resolveDot = function(node, scope, context) {
+    if (this._sinkNullDot(node, scope, context)) {
+      return;
+    }
+
     var target = node.dotTarget();
     var name = node.asString();
 

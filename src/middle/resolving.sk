@@ -1865,16 +1865,11 @@ namespace Skew.Resolving {
     }
 
     def _resolveCall(node Node, scope Scope, context Type) {
-      var value = node.callValue
-
-      # Sink the call into the null dot expression
-      if value.kind == .NULL_DOT {
-        var hook = _hookForNullDot(value.remove, scope)
-        hook.hookTrue.become(Node.createCall(hook.hookTrue.cloneAndStealChildren).appendChildrenFrom(node))
-        node.become(hook)
-        _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
+      if _sinkNullDot(node, scope, context) {
         return
       }
+
+      var value = node.callValue
 
       # Take argument types from call argument values for immediately-invoked
       # function expressions:
@@ -2198,7 +2193,40 @@ namespace Skew.Resolving {
       return null
     }
 
+    def _sinkNullDot(node Node, scope Scope, context Type) bool {
+      var target = node
+
+      # Build up a chain of dot accesses and calls
+      while true {
+        if target.kind == .DOT && target.dotTarget != null {
+          target = target.dotTarget
+        } else if target.kind == .CALL {
+          target = target.callValue
+        } else {
+          break
+        }
+      }
+
+      # Stop if this isn't a "?." expression after all
+      if target.kind != .NULL_DOT {
+        return false
+      }
+
+      # Wrap everything in a null check
+      var hook = _hookForNullDot(target, scope)
+      target.become(hook.hookTrue.clone)
+      node.resolvedType = null # This is necessary to trigger the resolve below
+      hook.hookTrue.become(node.cloneAndStealChildren)
+      node.become(hook)
+      _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
+      return true
+    }
+
     def _resolveDot(node Node, scope Scope, context Type) {
+      if _sinkNullDot(node, scope, context) {
+        return
+      }
+
       var target = node.dotTarget
       var name = node.asString
 

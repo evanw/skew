@@ -2267,13 +2267,24 @@ def bar Foo {
 
 @export
 def main(foo Foo) {
+  foo?.a.a
+  foo?.b.b
+  foo?.c().c()
+  foo?.d(0).d(0)
+
   foo?.a?.a
   foo?.b?.b
   foo?.c()?.c()
   foo?.d(0)?.d(0)
+
+  bar?.a.a
+  bar?.b.b
+  bar?.c().c()
+  bar?.d(0).d(0)
+
   bar?.a?.a
   bar?.b?.b
-  foo?.c()?.c()
+  bar?.c()?.c()
   bar?.d(0)?.d(0)
 }
 ", "
@@ -2283,6 +2294,11 @@ def main(foo Foo) {
   }
 
   main = function(foo) {
+    var ref15;
+    var ref14;
+    var ref13;
+    var ref12;
+    var ref11;
     var ref10;
     var ref9;
     var ref8;
@@ -2294,14 +2310,22 @@ def main(foo Foo) {
     var ref2;
     var ref1;
     var ref;
+    foo != null ? foo.a.a : null;
+    foo != null ? foo.b().b() : null;
+    foo != null ? foo.c().c() : null;
+    foo != null ? foo.d(0).d(0) : null;
     (ref = foo != null ? foo.a : null) != null ? ref.a : null;
     (ref1 = foo != null ? foo.b() : null) != null ? ref1.b() : null;
     (ref2 = foo != null ? foo.c() : null) != null ? ref2.c() : null;
     (ref3 = foo != null ? foo.d(0) : null) != null ? ref3.d(0) : null;
-    (ref5 = (ref4 = bar()) != null ? ref4.a : null) != null ? ref5.a : null;
-    (ref7 = (ref6 = bar()) != null ? ref6.b() : null) != null ? ref7.b() : null;
-    (ref8 = foo != null ? foo.c() : null) != null ? ref8.c() : null;
-    (ref10 = (ref9 = bar()) != null ? ref9.d(0) : null) != null ? ref10.d(0) : null;
+    (ref4 = bar()) != null ? ref4.a.a : null;
+    (ref5 = bar()) != null ? ref5.b().b() : null;
+    (ref6 = bar()) != null ? ref6.c().c() : null;
+    (ref7 = bar()) != null ? ref7.d(0).d(0) : null;
+    (ref9 = (ref8 = bar()) != null ? ref8.a : null) != null ? ref9.a : null;
+    (ref11 = (ref10 = bar()) != null ? ref10.b() : null) != null ? ref11.b() : null;
+    (ref13 = (ref12 = bar()) != null ? ref12.c() : null) != null ? ref13.c() : null;
+    (ref15 = (ref14 = bar()) != null ? ref14.d(0) : null) != null ? ref15.d(0) : null;
   };
 
   function Foo() {
