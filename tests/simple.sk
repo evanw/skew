@@ -6021,6 +6021,9 @@ def main(foo Foo) {
 <stdin>:8:12: warning: Unused expression
   foo.x ?? foo
            ~~~
+<stdin>:9:3: warning: Both sides of \"??\" are identical, is this a bug?
+  foo.x ?? foo.x
+  ~~~~~~~~~~~~~~
 <stdin>:9:3: warning: Unused expression
   foo.x ?? foo.x
   ~~~~~
@@ -6088,6 +6091,24 @@ def main {
 <stdin>:6:5: error: Cannot store to this location
   --x[0]
     ~~~~
+")
+
+# Test null assignment operator
+test("
+class Foo {
+}
+
+def foo Foo {
+  return Foo.new
+}
+
+def main {
+  foo ?= foo
+}
+", "
+<stdin>:9:3: error: Cannot store to this location
+  foo ?= foo
+  ~~~
 ")
 
   }

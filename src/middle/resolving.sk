@@ -1627,6 +1627,18 @@ namespace Skew.Resolving {
         _resolveNode(node, scope, null)
       }
 
+      # Turn top-level "?=" expressions into if statements
+      else if value.kind == .ASSIGN_NULL {
+        var left = value.binaryLeft
+        var right = value.binaryRight
+        _resolveAsParameterizedExpressionWithTypeContext(left, scope, null)
+        var test = Node.createBinary(.EQUAL, _extractExpressionForAssignment(left, scope), Node.createNull).withRange(left.range)
+        var assign = Node.createBinary(.ASSIGN, left.remove, right.remove).withRange(node.range)
+        var block = Node.createBlock.appendChild(Node.createExpression(assign).withRange(node.range)).withRange(node.range)
+        node.become(Node.createIf(test, block, null).withRange(node.range))
+        _resolveNode(node, scope, null)
+      }
+
       # Normal expression statement
       else {
         _resolveAsParameterizedExpression(value, scope)
@@ -2238,9 +2250,9 @@ namespace Skew.Resolving {
       # Wrap everything in a null check
       var target = nullDot.dotTarget.remove
       _resolveAsParameterizedExpression(target, scope)
-      var check = Node.createBinary(.NOT_EQUAL, _extractExpression(target, scope), Node.createNull.withRange(nullDot.internalRange)).withRange(target.range)
+      var test = Node.createBinary(.NOT_EQUAL, _extractExpression(target, scope), Node.createNull.withRange(nullDot.internalRange)).withRange(target.range)
       var dot = Node.createDot(target, nullDot.asString).withRange(nullDot.range).withInternalRange(nullDot.internalRange)
-      var hook = Node.createHook(check, dot, Node.createNull.withRange(nullDot.internalRangeOrRange)).withRange(nullDot.range)
+      var hook = Node.createHook(test, dot, Node.createNull.withRange(nullDot.internalRangeOrRange)).withRange(nullDot.range)
       nullDot.become(hook.hookTrue.clone)
       node.resolvedType = null # This is necessary to trigger the resolve below
       hook.hookTrue.become(node.cloneAndStealChildren)
@@ -2793,9 +2805,18 @@ namespace Skew.Resolving {
       # Special-case the "??" operator
       if kind == .NULL_JOIN {
         _resolveAsParameterizedExpressionWithTypeContext(left, scope, context)
-        var check = Node.createBinary(.NOT_EQUAL, _extractExpression(left, scope), Node.createNull).withRange(left.range)
-        node.become(Node.createHook(check, left.remove, right.remove).withRange(node.range))
+        var test = Node.createBinary(.NOT_EQUAL, _extractExpressionForAssignment(left, scope), Node.createNull).withRange(left.range)
+        node.become(Node.createHook(test, left.remove, right.remove).withRange(node.range))
         node.flags |= Node.WAS_NULL_JOIN
+        _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
+        return
+      }
+
+      # Special-case the "?=" operator
+      if kind == .ASSIGN_NULL {
+        _resolveAsParameterizedExpressionWithTypeContext(left, scope, context)
+        var test = Node.createBinary(.NOT_EQUAL, _extractExpressionForAssignment(left, scope), Node.createNull).withRange(left.range)
+        node.become(Node.createHook(test, left.clone, Node.createBinary(.ASSIGN, left.remove, right.remove)).withRange(node.range))
         _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
         return
       }
@@ -2924,8 +2945,8 @@ namespace Skew.Resolving {
       assert(node.resolvedType != null)
 
       # Handle dot expressions
-      if node.kind == .DOT {
-        return Node.createMemberReference(_extractExpression(node.dotTarget, scope), node.symbol).withRange(node.range)
+      if node.kind == .DOT && node.symbol != null {
+        return Node.createDot(_extractExpression(node.dotTarget, scope), node.asString).withSymbol(node.symbol).withType(node.resolvedType).withRange(node.range)
       }
 
       # Handle index expressions

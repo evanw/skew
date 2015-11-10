@@ -2254,15 +2254,12 @@ def main(foo Foo) {
   }
 
   main = function(foo) {
-    var ref4;
-    var ref3;
-    var ref2;
     var ref1;
     var ref;
     foo != null ? foo : bar();
-    (ref = foo.x) != null ? ref : foo.x;
-    (ref1 = bar().x) != null ? ref1 : bar().x;
-    (ref2 = bar().x) != null ? ref2 : (ref3 = bar()) != null ? ref3 : (ref4 = foo.x) != null ? ref4 : foo;
+    foo.x != null ? foo.x : foo.x;
+    (ref = bar()).x != null ? ref.x : bar().x;
+    (ref1 = bar()).x != null ? ref1.x : bar() != null ? bar() : foo.x != null ? foo.x : foo;
   };
 
   function Foo() {
@@ -2681,6 +2678,105 @@ def main {
 
   Foo.prototype.increment = function() {
     return this;
+  };
+})();
+").js
+
+# Test null assignment operator
+test("
+class Foo {
+  var x Foo = null
+}
+
+def foo Foo {
+  return Foo.new
+}
+
+def bar(foo Foo) {
+}
+
+@export
+def main(baz Foo) {
+  baz ?? foo
+  baz ?= foo
+  baz.x ?? foo
+  baz.x ?= foo
+  foo.x ?? foo
+  foo.x ?= foo
+
+  bar(baz ?? foo)
+  bar(baz ?= foo)
+  bar(baz.x ?? foo)
+  bar(baz.x ?= foo)
+  bar(foo.x ?? foo)
+  bar(foo.x ?= foo)
+}
+", "
+(function() {
+  function foo() {
+    return new Foo();
+  }
+
+  function bar(foo) {
+  }
+
+  main = function(baz) {
+    var ref3;
+    var ref2;
+    var ref1;
+    var ref;
+    baz != null ? baz : foo();
+
+    if (baz == null) {
+      baz = foo();
+    }
+
+    baz.x != null ? baz.x : foo();
+
+    if (baz.x == null) {
+      baz.x = foo();
+    }
+
+    (ref = foo()).x != null ? ref.x : foo();
+
+    if ((ref1 = foo()).x == null) {
+      ref1.x = foo();
+    }
+
+    bar(baz != null ? baz : foo());
+    bar(baz != null ? baz : baz = foo());
+    bar(baz.x != null ? baz.x : foo());
+    bar(baz.x != null ? baz.x : baz.x = foo());
+    bar((ref2 = foo()).x != null ? ref2.x : foo());
+    bar((ref3 = foo()).x != null ? ref3.x : ref3.x = foo());
+  };
+
+  function Foo() {
+    this.x = null;
+  }
+})();
+").js
+
+# Test null assignment operator with dynamic values
+test("
+@export
+def main {
+  dynamic.use(dynamic.foo[dynamic.bar] ?? \"1\")
+  dynamic.use(dynamic.foo[dynamic.bar] ?= \"2\")
+  dynamic.use(dynamic.foo()[dynamic.bar()] ?? \"3\")
+  dynamic.use(dynamic.foo()[dynamic.bar()] ?= \"4\")
+}
+", "
+(function() {
+  main = function() {
+    var ref3;
+    var ref2;
+    var ref1;
+    var ref;
+    use(foo[bar] !== null ? foo[bar] : '1');
+    use(foo[bar] !== null ? foo[bar] : foo[bar] = '2');
+    use((ref = foo())[ref1 = bar()] !== null ? ref[ref1] : '3');
+    use((ref2 = foo())[ref3 = bar()] !== null ? ref2[ref3] : ref2[ref3] = '4');
   };
 })();
 ").js

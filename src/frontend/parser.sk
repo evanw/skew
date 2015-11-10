@@ -1338,6 +1338,7 @@ namespace Skew.Parsing {
     pratt.infixRight(.ASSIGN_DIVIDE, .ASSIGN, binaryInfix(.ASSIGN_DIVIDE))
     pratt.infixRight(.ASSIGN_MINUS, .ASSIGN, binaryInfix(.ASSIGN_SUBTRACT))
     pratt.infixRight(.ASSIGN_MULTIPLY, .ASSIGN, binaryInfix(.ASSIGN_MULTIPLY))
+    pratt.infixRight(.ASSIGN_NULL, .ASSIGN, binaryInfix(.ASSIGN_NULL))
     pratt.infixRight(.ASSIGN_PLUS, .ASSIGN, binaryInfix(.ASSIGN_ADD))
     pratt.infixRight(.ASSIGN_POWER, .ASSIGN, binaryInfix(.ASSIGN_POWER))
     pratt.infixRight(.ASSIGN_REMAINDER, .ASSIGN, binaryInfix(.ASSIGN_REMAINDER))

@@ -52,6 +52,7 @@
 ".."                              DOT_DOT;
 "."                               DOT;
 ","                               COMMA;
+"?="                              ASSIGN_NULL;
 "??"                              NULL_JOIN;
 "?."                              NULL_DOT;
 "?"                               QUESTION_MARK;
