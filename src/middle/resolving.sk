@@ -1610,7 +1610,7 @@ namespace Skew.Resolving {
         var test = hook.hookTest
         var yes = hook.hookTrue
         var block = Node.createBlock.appendChild(Node.createExpression(yes.remove).withRange(yes.range)).withRange(yes.range)
-        node.become(Node.createIf(test.remove, block, null).withRange(node.range))
+        node.become(Node.createIf(test.remove, block, null).withRange(node.range).withComments(node.comments))
         _resolveNode(node, scope, null)
       }
 
@@ -1622,7 +1622,7 @@ namespace Skew.Resolving {
         var test = Node.createBinary(.EQUAL, _extractExpressionForAssignment(left, scope), Node.createNull).withRange(left.range)
         var assign = Node.createBinary(.ASSIGN, left.remove, right.remove).withRange(node.range).withFlags(Node.WAS_ASSIGN_NULL)
         var block = Node.createBlock.appendChild(Node.createExpression(assign).withRange(node.range)).withRange(node.range)
-        node.become(Node.createIf(test, block, null).withRange(node.range))
+        node.become(Node.createIf(test, block, null).withRange(node.range).withComments(node.comments))
         _resolveNode(node, scope, null)
       }
 

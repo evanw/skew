@@ -16986,7 +16986,7 @@
       var test = hook.hookTest();
       var yes = hook.hookTrue();
       var block = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createExpression(yes.remove()).withRange(yes.range)).withRange(yes.range);
-      node.become(Skew.Node.createIf(test.remove(), block, null).withRange(node.range));
+      node.become(Skew.Node.createIf(test.remove(), block, null).withRange(node.range).withComments(node.comments));
       this._resolveNode(node, scope, null);
     }
 
@@ -16998,7 +16998,7 @@
       var test1 = Skew.Node.createBinary(Skew.NodeKind.EQUAL, this._extractExpressionForAssignment(left, scope), new Skew.Node(Skew.NodeKind.NULL)).withRange(left.range);
       var assign = Skew.Node.createBinary(Skew.NodeKind.ASSIGN, left.remove(), right.remove()).withRange(node.range).withFlags(Skew.Node.WAS_ASSIGN_NULL);
       var block1 = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createExpression(assign).withRange(node.range)).withRange(node.range);
-      node.become(Skew.Node.createIf(test1, block1, null).withRange(node.range));
+      node.become(Skew.Node.createIf(test1, block1, null).withRange(node.range).withComments(node.comments));
       this._resolveNode(node, scope, null);
     }
 

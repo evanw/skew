@@ -2781,5 +2781,33 @@ def main {
 })();
 ").js
 
+# Test "?=" and "?." with comments when converted to if statements
+test("
+class Foo {
+  var foo Foo
+}
+
+@export
+def main(foo Foo) {
+  foo ?= foo # This comment should be kept
+  foo?.foo # This comment should be kept too
+}
+", "
+(function() {
+  main = function(foo) {
+    // This comment should be kept
+    if (foo == null) {
+      foo = foo;
+    }
+
+    // This comment should be kept too
+    if (foo != null) {
+      foo.foo;
+    }
+  };
+  var Foo = {};
+})();
+").js
+
   }
 }
