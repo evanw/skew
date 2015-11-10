@@ -1289,7 +1289,6 @@ namespace Skew.Resolving {
         case .NAME { _resolveName(node, scope) }
         case .NULL { node.resolvedType = .NULL }
         case .NULL_DOT { _resolveNullDot(node, scope) }
-        case .NULL_JOIN { _resolveNullJoin(node, scope, context) }
         case .PARAMETERIZE { _resolveParameterize(node, scope) }
         case .SEQUENCE { _resolveSequence(node, scope, context) }
         case .SUPER { _resolveSuper(node, scope) }
@@ -1297,7 +1296,7 @@ namespace Skew.Resolving {
         case .TYPE_CHECK { _resolveTypeCheck(node, scope) }
 
         default {
-          if node.kind.isBinary { _resolveBinary(node, scope) }
+          if node.kind.isBinary { _resolveBinary(node, scope, context) }
           else { assert(false) }
         }
       }
@@ -2678,16 +2677,6 @@ namespace Skew.Resolving {
       _resolveAsParameterizedExpression(node, scope)
     }
 
-    def _resolveNullJoin(node Node, scope Scope, context Type) {
-      var first = node.nullJoinFirst
-      var second = node.nullJoinSecond.remove
-      _resolveAsParameterizedExpressionWithTypeContext(first.remove, scope, context)
-      var check = Node.createBinary(.NOT_EQUAL, _extractExpression(first, scope), Node.createNull).withRange(first.range)
-      node.become(Node.createHook(check, first, second).withRange(node.range))
-      node.flags |= Node.WAS_NULL_JOIN
-      _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
-    }
-
     def _resolveParameterize(node Node, scope Scope) {
       var value = node.parameterizeValue
       _resolveNode(value, scope, null)
@@ -2796,10 +2785,20 @@ namespace Skew.Resolving {
       }
     }
 
-    def _resolveBinary(node Node, scope Scope) {
+    def _resolveBinary(node Node, scope Scope, context Type) {
       var kind = node.kind
       var left = node.binaryLeft
       var right = node.binaryRight
+
+      # Special-case the "??" operator
+      if kind == .NULL_JOIN {
+        _resolveAsParameterizedExpressionWithTypeContext(left, scope, context)
+        var check = Node.createBinary(.NOT_EQUAL, _extractExpression(left, scope), Node.createNull).withRange(left.range)
+        node.become(Node.createHook(check, left.remove, right.remove).withRange(node.range))
+        node.flags |= Node.WAS_NULL_JOIN
+        _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
+        return
+      }
 
       # Special-case the equality operators
       if kind == .EQUAL || kind == .NOT_EQUAL {

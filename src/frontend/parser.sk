@@ -1344,6 +1344,7 @@ namespace Skew.Parsing {
     pratt.infixRight(.ASSIGN_SHIFT_LEFT, .ASSIGN, binaryInfix(.ASSIGN_SHIFT_LEFT))
     pratt.infixRight(.ASSIGN_SHIFT_RIGHT, .ASSIGN, binaryInfix(.ASSIGN_SHIFT_RIGHT))
     pratt.infixRight(.ASSIGN_UNSIGNED_SHIFT_RIGHT, .ASSIGN, binaryInfix(.ASSIGN_UNSIGNED_SHIFT_RIGHT))
+    pratt.infixRight(.NULL_JOIN, .NULL_JOIN, binaryInfix(.NULL_JOIN))
 
     ########################################
     # Other expressions
@@ -1366,11 +1367,6 @@ namespace Skew.Parsing {
       }
       return Node.createNullDot(left, range.toString).withRange(context.spanSince(left.range)).withInternalRange(range)
     }
-
-    # "x ?? y"
-    pratt.infixRight(.NULL_JOIN, .NULL_JOIN, (context, left, token, right) => {
-      return Node.createNullJoin(left, right).withRange(Range.span(left.range, right.range)).withInternalRange(token.range)
-    })
 
     # Lambda expressions like "=> x"
     pratt.parselet(.ARROW, .LOWEST).prefix = (context) => {

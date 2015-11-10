@@ -36,7 +36,6 @@ namespace Skew {
     NAME
     NULL
     NULL_DOT
-    NULL_JOIN
     PAIR
     PARAMETERIZE
     SEQUENCE
@@ -67,6 +66,7 @@ namespace Skew {
     LOGICAL_OR
     MULTIPLY
     NOT_EQUAL
+    NULL_JOIN
     POWER
     REMAINDER
     SHIFT_LEFT
@@ -996,10 +996,6 @@ namespace Skew {
       return new(.NULL_DOT).withContent(StringContent.new(name)).appendChild(target)
     }
 
-    def createNullJoin(left Node, right Node) Node {
-      return new(.NULL_JOIN).appendChild(left).appendChild(right)
-    }
-
     def createPair(first Node, second Node) Node {
       assert(first.kind.isExpression)
       assert(second.kind.isExpression)
@@ -1116,20 +1112,6 @@ namespace Skew {
     def blockStatement Node {
       assert(kind == .BLOCK)
       return hasOneChild ? _firstChild : null
-    }
-
-    def nullJoinFirst Node {
-      assert(kind == .NULL_JOIN)
-      assert(childCount == 2)
-      assert(_firstChild.kind.isExpression)
-      return _firstChild
-    }
-
-    def nullJoinSecond Node {
-      assert(kind == .NULL_JOIN)
-      assert(childCount == 2)
-      assert(_lastChild.kind.isExpression)
-      return _lastChild
     }
 
     def firstValue Node {
