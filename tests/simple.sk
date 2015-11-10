@@ -6053,6 +6053,38 @@ def main(foo Foo) {
   ~~~~~~~~~
 ")
 
+# Test warnings for the null assignment operator
+test("
+class Foo {
+  var x Foo = null
+}
+
+def main(foo Foo) {
+  foo ?= foo
+  foo ?= foo.x
+  foo.x ?= foo
+  foo.x ?= foo.x
+
+  main(foo ?= foo)
+  main(foo ?= foo.x)
+  main(foo.x ?= foo)
+  main(foo.x ?= foo.x)
+}
+", "
+<stdin>:6:3: warning: Both sides of \"?=\" are identical, is this a bug?
+  foo ?= foo
+  ~~~~~~~~~~
+<stdin>:9:3: warning: Both sides of \"?=\" are identical, is this a bug?
+  foo.x ?= foo.x
+  ~~~~~~~~~~~~~~
+<stdin>:11:8: warning: Both sides of \"?=\" are identical, is this a bug?
+  main(foo ?= foo)
+       ~~~~~~~~~~
+<stdin>:14:8: warning: Both sides of \"?=\" are identical, is this a bug?
+  main(foo.x ?= foo.x)
+       ~~~~~~~~~~~~~~
+")
+
 # Test top-level use of the null dot operator
 test("
 class Foo {

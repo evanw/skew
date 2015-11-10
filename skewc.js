@@ -7236,6 +7236,10 @@
     return (this.flags & Skew.Node.WAS_NULL_JOIN) != 0;
   };
 
+  Skew.Node.prototype.wasAssignNull = function() {
+    return (this.flags & Skew.Node.WAS_ASSIGN_NULL) != 0;
+  };
+
   // This is cheaper than childCount == 0
   Skew.Node.prototype.hasChildren = function() {
     return this._firstChild != null;
@@ -16992,7 +16996,7 @@
       var right = value.binaryRight();
       this._resolveAsParameterizedExpressionWithTypeContext(left, scope, null);
       var test1 = Skew.Node.createBinary(Skew.NodeKind.EQUAL, this._extractExpressionForAssignment(left, scope), new Skew.Node(Skew.NodeKind.NULL)).withRange(left.range);
-      var assign = Skew.Node.createBinary(Skew.NodeKind.ASSIGN, left.remove(), right.remove()).withRange(node.range);
+      var assign = Skew.Node.createBinary(Skew.NodeKind.ASSIGN, left.remove(), right.remove()).withRange(node.range).withFlags(Skew.Node.WAS_ASSIGN_NULL);
       var block1 = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createExpression(assign).withRange(node.range)).withRange(node.range);
       node.become(Skew.Node.createIf(test1, block1, null).withRange(node.range));
       this._resolveNode(node, scope, null);
@@ -18309,8 +18313,7 @@
     if (kind == Skew.NodeKind.NULL_JOIN) {
       this._resolveAsParameterizedExpressionWithTypeContext(left, scope, context);
       var test = Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, this._extractExpressionForAssignment(left, scope), new Skew.Node(Skew.NodeKind.NULL)).withRange(left.range);
-      node.become(Skew.Node.createHook(test, left.remove(), right.remove()).withRange(node.range));
-      node.flags |= Skew.Node.WAS_NULL_JOIN;
+      node.become(Skew.Node.createHook(test, left.remove(), right.remove()).withRange(node.range).withFlags(Skew.Node.WAS_NULL_JOIN));
       this._resolveAsParameterizedExpressionWithTypeContext(node, scope, context);
       return;
     }
@@ -18319,7 +18322,8 @@
     if (kind == Skew.NodeKind.ASSIGN_NULL) {
       this._resolveAsParameterizedExpressionWithTypeContext(left, scope, context);
       var test1 = Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, this._extractExpressionForAssignment(left, scope), new Skew.Node(Skew.NodeKind.NULL)).withRange(left.range);
-      node.become(Skew.Node.createHook(test1, left.clone(), Skew.Node.createBinary(Skew.NodeKind.ASSIGN, left.remove(), right.remove())).withRange(node.range));
+      var assign = Skew.Node.createBinary(Skew.NodeKind.ASSIGN, left.remove(), right.remove()).withRange(node.range).withFlags(Skew.Node.WAS_ASSIGN_NULL);
+      node.become(Skew.Node.createHook(test1, left.clone(), assign).withRange(node.range));
       this._resolveAsParameterizedExpressionWithTypeContext(node, scope, context);
       return;
     }
@@ -18378,7 +18382,7 @@
 
         // Check for likely bugs "x = x"
         if (left.looksTheSameAs(right) && left.hasNoSideEffects() && right.hasNoSideEffects()) {
-          this._log.semanticWarningIdenticalOperands(node.range, '=');
+          this._log.semanticWarningIdenticalOperands(node.range, node.wasAssignNull() ? '?=' : '=');
         }
       }
 
@@ -20793,6 +20797,9 @@
 
   // This flag marks nodes that were converted from NULL_JOIN to HOOK nodes.
   Skew.Node.WAS_NULL_JOIN = 1 << 3;
+
+  // This flag marks nodes that were converted from ASSIGN_NULL to ASSIGN nodes.
+  Skew.Node.WAS_ASSIGN_NULL = 1 << 4;
   Skew.Node._nextID = 0;
   Skew.Parsing.expressionParser = null;
   Skew.Parsing.typeParser = null;
