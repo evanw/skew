@@ -45,9 +45,7 @@ namespace Skew {
           if info != null {
             if isCaptured {
               info.isCaptured = true
-              if scope.environment == null {
-                scope.environment = VariableSymbol.new(.VARIABLE_LOCAL, enclosingFunction.scope.generateName("env"))
-              }
+              scope.environment ?= VariableSymbol.new(.VARIABLE_LOCAL, enclosingFunction.scope.generateName("env"))
             }
             info.uses.append(node)
             return

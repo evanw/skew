@@ -96,9 +96,7 @@ namespace Skew.Merging {
         object.parameters = child.parameters
       }
       if child.guards != null {
-        if object.guards == null {
-          object.guards = []
-        }
+        object.guards ?= []
         for guard in child.guards {
           for g = guard; g != null; g = g.elseGuard {
             g.parent = object

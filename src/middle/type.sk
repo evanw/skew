@@ -96,12 +96,8 @@ namespace Skew {
     var NULL Type = null
 
     def initialize {
-      if DYNAMIC == null {
-        DYNAMIC = Type.new(.SPECIAL, null)
-      }
-      if NULL == null {
-        NULL = Type.new(.SPECIAL, null)
-      }
+      DYNAMIC ?= Type.new(.SPECIAL, null)
+      NULL ?= Type.new(.SPECIAL, null)
     }
 
     def _createID int {

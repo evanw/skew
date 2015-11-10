@@ -86,9 +86,7 @@ namespace Skew.Motion {
     # Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)
     if symbol.kind.isFunction && parent.asObjectSymbol.parameters != null {
       var function = symbol.asFunctionSymbol
-      if function.parameters == null {
-        function.parameters = []
-      }
+      function.parameters ?= []
       function.parameters.prepend(parent.asObjectSymbol.parameters)
     }
 

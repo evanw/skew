@@ -28,7 +28,7 @@ namespace Skew {
       var symbol Symbol = null
       for scope = self; scope != null && symbol == null; scope = scope.parent {
         if search == .ALSO_CHECK_FOR_SETTER { symbol = scope._find(name + "=") }
-        if symbol == null { symbol = scope._find(name) }
+        symbol ?= scope._find(name)
       }
       return symbol
     }
@@ -109,9 +109,7 @@ namespace Skew {
     }
 
     def reserveName(name string, symbol VariableSymbol) {
-      if used == null {
-        used = {}
-      }
+      used ?= {}
       if !(name in used) {
         used[name] = symbol
       }

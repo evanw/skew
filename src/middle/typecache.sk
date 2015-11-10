@@ -306,9 +306,7 @@ namespace Skew {
 
       # Check to see if this has been computed before
       var rootType = type.kind == .SYMBOL ? type.symbol.resolvedType : type
-      if rootType.substitutionCache == null {
-        rootType.substitutionCache = {}
-      }
+      rootType.substitutionCache ?= {}
       var substituted = rootType.substitutionCache.get(environment.id, null)
       if substituted != null {
         return substituted

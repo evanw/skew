@@ -239,10 +239,7 @@ namespace Skew.Resolving {
     }
 
     def _initializeParameter(symbol ParameterSymbol) {
-      if symbol.resolvedType == null {
-        symbol.resolvedType = Type.new(.SYMBOL, symbol)
-      }
-
+      symbol.resolvedType ?= Type.new(.SYMBOL, symbol)
       _resolveAnnotations(symbol)
     }
 
@@ -255,10 +252,7 @@ namespace Skew.Resolving {
       var extends = symbol.extends
       var implements = symbol.implements
 
-      if symbol.resolvedType == null {
-        symbol.resolvedType = Type.new(.SYMBOL, symbol)
-      }
-
+      symbol.resolvedType ?= Type.new(.SYMBOL, symbol)
       _resolveParameters(symbol.parameters)
 
       # Resolve the base type (only for classes and wrapped types)
@@ -472,9 +466,7 @@ namespace Skew.Resolving {
             } else if function.resolvedType.returnType != match.resolvedType.returnType {
               _log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function.range)
             } else {
-              if function.implementations == null {
-                function.implementations = []
-              }
+              function.implementations ?= []
               function.implementations.append(match)
             }
           }
@@ -788,9 +780,7 @@ namespace Skew.Resolving {
     }
 
     def _initializeFunction(symbol FunctionSymbol) {
-      if symbol.resolvedType == null {
-        symbol.resolvedType = Type.new(.SYMBOL, symbol)
-      }
+      symbol.resolvedType ?= Type.new(.SYMBOL, symbol)
 
       # Referencing a normal variable instead of a special node kind for "this"
       # makes many things much easier including lambda capture and devirtualization
@@ -1166,10 +1156,7 @@ namespace Skew.Resolving {
 
     def _initializeOverloadedFunction(symbol OverloadedFunctionSymbol) {
       var symbols = symbol.symbols
-
-      if symbol.resolvedType == null {
-        symbol.resolvedType = Type.new(.SYMBOL, symbol)
-      }
+      symbol.resolvedType ?= Type.new(.SYMBOL, symbol)
 
       # Ensure no two overloads have the same argument types
       var i = 0
@@ -2535,10 +2522,7 @@ namespace Skew.Resolving {
         # Copy over the argument types if they line up
         if context.argumentTypes.count == symbol.arguments.count {
           for i in 0..symbol.arguments.count {
-            var argument = symbol.arguments[i]
-            if argument.type == null {
-              argument.type = Node.createType(context.argumentTypes[i])
-            }
+            symbol.arguments[i].type ?= Node.createType(context.argumentTypes[i])
           }
         }
 
@@ -2557,13 +2541,9 @@ namespace Skew.Resolving {
         # If there's dynamic type context, treat all arguments as dynamic
         if context == .DYNAMIC {
           for argument in symbol.arguments {
-            if argument.type == null {
-              argument.type = Node.createType(.DYNAMIC)
-            }
+            argument.type ?= Node.createType(.DYNAMIC)
           }
-          if symbol.returnType == null {
-            symbol.returnType = Node.createType(.DYNAMIC)
-          }
+          symbol.returnType ?= Node.createType(.DYNAMIC)
         }
       }
 

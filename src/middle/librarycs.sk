@@ -59,7 +59,7 @@ namespace Math {
   def min(x int, y int) int
 
   def random double {
-    if __random == null { __random = dynamic.Random.new() }
+    __random ?= dynamic.Random.new()
     return __random.NextDouble()
   }
 }

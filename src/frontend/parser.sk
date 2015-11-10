@@ -91,9 +91,7 @@ namespace Skew.Parsing {
     var comments List<string> = null
     while context.peek(.COMMENT) {
       var range = context.next.range
-      if comments == null {
-        comments = []
-      }
+      comments ?= []
       comments.append(range.source.contents.slice(range.start + 1, range.end))
 
       # Ignore blocks of comments with extra lines afterward
@@ -107,9 +105,7 @@ namespace Skew.Parsing {
   def parseTrailingComment(context ParserContext, comments List<string>) List<string> {
     if context.peek(.COMMENT) {
       var range = context.next.range
-      if comments == null {
-        comments = []
-      }
+      comments ?= []
       var text = range.source.contents.slice(range.start + 1, range.end)
       if text[text.count - 1] != '\n' {
         text += "\n"
@@ -786,9 +782,7 @@ namespace Skew.Parsing {
       if guard == null {
         return false
       }
-      if parent.guards == null {
-        parent.guards = []
-      }
+      parent.guards ?= []
       parent.guards.append(guard)
       return true
     }
@@ -1555,8 +1549,8 @@ namespace Skew.Parsing {
   }
 
   def parseFile(log Log, tokens List<Token>, global ObjectSymbol) {
-    if expressionParser == null { expressionParser = createExpressionParser }
-    if typeParser == null { typeParser = createTypeParser }
+    expressionParser ?= createExpressionParser
+    typeParser ?= createTypeParser
 
     var context = ParserContext.new(log, tokens)
     parseSymbols(context, global, null)

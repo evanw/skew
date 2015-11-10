@@ -217,9 +217,7 @@ namespace Skew {
       if annotations != null {
         for annotation in annotations {
           if annotation.symbol != null && annotation.symbol.shouldSpread {
-            if result == null {
-              result = []
-            }
+            result ?= []
             result.append(annotation)
           }
         }
@@ -240,9 +238,7 @@ namespace Skew {
         comments.append(symbol.comments)
       }
 
-      if rename == null {
-        rename = symbol.rename
-      }
+      rename ?= symbol.rename
     }
   }
 
