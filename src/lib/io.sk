@@ -1,7 +1,4 @@
 namespace IO {
-  def readFile(path string) string
-  def writeFile(path string, contents string) bool
-
   if TARGET == .JAVASCRIPT {
     def readFile(path string) string {
       try {
@@ -35,6 +32,13 @@ namespace IO {
         return true
       }
       return false
+    }
+  }
+
+  else {
+    @import {
+      def readFile(path string) string
+      def writeFile(path string, contents string) bool
     }
   }
 }

@@ -952,7 +952,6 @@
     GLOBALIZING: 6,
     INLINING: 7,
     INTERFACE_REMOVAL: 8,
-    LAMBDA_LIFTING: 9,
     MERGING: 10,
     MOTION: 11,
     RENAMING: 12,
@@ -3012,7 +3011,7 @@
         this._emitType(symbol1.resolvedType, Skew.CPlusPlusEmitter.CppEmitType.DECLARATION);
         this._emit(Skew.CPlusPlusEmitter._mangleName(symbol1) + ' : ');
 
-        if (value2.resolvedType.isReference()) {
+        if (this._isReferenceType(value2.resolvedType)) {
           this._emit('*');
           this._emitExpression(value2, Skew.Precedence.UNARY_PREFIX);
         }
@@ -3127,7 +3126,7 @@
         var target = node.dotTarget();
         var type = target.resolvedType;
         this._emitExpression(target, Skew.Precedence.MEMBER);
-        this._emit((type != null && type.isReference() ? '->' : '.') + (symbol != null ? Skew.CPlusPlusEmitter._mangleName(symbol) : node.asString()));
+        this._emit((type != null && this._isReferenceType(type) ? '->' : '.') + (symbol != null ? Skew.CPlusPlusEmitter._mangleName(symbol) : node.asString()));
         break;
       }
 
@@ -3205,7 +3204,18 @@
       }
 
       case Skew.NodeKind.INDEX: {
-        this._emitExpression(node.indexLeft(), Skew.Precedence.UNARY_POSTFIX);
+        var left = node.indexLeft();
+
+        if (this._isReferenceType(left.resolvedType)) {
+          this._emit('(*');
+          this._emitExpression(left, Skew.Precedence.UNARY_PREFIX);
+          this._emit(')');
+        }
+
+        else {
+          this._emitExpression(left, Skew.Precedence.UNARY_POSTFIX);
+        }
+
         this._emit('[');
         this._emitExpression(node.indexRight(), Skew.Precedence.LOWEST);
         this._emit(']');
@@ -3213,11 +3223,22 @@
       }
 
       case Skew.NodeKind.ASSIGN_INDEX: {
+        var left1 = node.assignIndexLeft();
+
         if (Skew.Precedence.ASSIGN < precedence) {
           this._emit('(');
         }
 
-        this._emitExpression(node.assignIndexLeft(), Skew.Precedence.UNARY_POSTFIX);
+        if (this._isReferenceType(left1.resolvedType)) {
+          this._emit('(*');
+          this._emitExpression(left1, Skew.Precedence.UNARY_PREFIX);
+          this._emit(')');
+        }
+
+        else {
+          this._emitExpression(left1, Skew.Precedence.UNARY_POSTFIX);
+        }
+
         this._emit('[');
         this._emitExpression(node.assignIndexCenter(), Skew.Precedence.LOWEST);
         this._emit('] = ');
@@ -3299,13 +3320,13 @@
         this._emitType(node.resolvedType, Skew.CPlusPlusEmitter.CppEmitType.BARE);
 
         if (node.hasChildren()) {
-          this._emit('()');
+          this._emit('({ ');
+          this._emitCommaSeparatedExpressions(node.firstChild(), null);
+          this._emit('})');
         }
 
         else {
-          this._emit(' { ');
-          this._emitCommaSeparatedExpressions(node.firstChild(), null);
-          this._emit(' }');
+          this._emit('()');
         }
         break;
       }
@@ -3426,7 +3447,7 @@
         this._emit('>');
       }
 
-      if (type.isReference() && mode != Skew.CPlusPlusEmitter.CppEmitType.BARE) {
+      if (this._isReferenceType(type) && mode != Skew.CPlusPlusEmitter.CppEmitType.BARE) {
         this._emit(' *');
       }
 
@@ -3434,6 +3455,10 @@
         this._emit(' ');
       }
     }
+  };
+
+  Skew.CPlusPlusEmitter.prototype._isReferenceType = function(type) {
+    return type.isReference() && type != this._cache.stringType;
   };
 
   Skew.CPlusPlusEmitter.prototype._finalizeEmittedFile = function() {
@@ -7807,40 +7832,6 @@
     this.become(Skew.Node.createUnary(Skew.NodeKind.NOT, this.cloneAndStealChildren()).withType(cache.boolType));
   };
 
-  Skew.Node.prototype.replaceVariableWith = function(node) {
-    assert(this.kind == Skew.NodeKind.VARIABLE);
-    assert(this.parent() != null);
-    assert(this.parent().kind == Skew.NodeKind.VARIABLES);
-
-    // "var x = 0" becomes "node"
-    if (this._previousSibling == null && this._nextSibling == null) {
-      this.parent().replaceWith(node);
-    }
-
-    // "var x = 0, y = 0" becomes "node; var y = 0"
-    else if (this._previousSibling == null) {
-      this.parent()._parent.insertChildBefore(this.parent(), node);
-    }
-
-    // "var x = 0, y = 0" becomes "var x = 0; node"
-    else if (this._nextSibling == null) {
-      this.parent()._parent.insertChildAfter(this.parent(), node);
-    }
-
-    // "var x = 0, y = 0, z = 0" becomes "var x = 0; node; var z = 0"
-    else {
-      var variables = new Skew.Node(Skew.NodeKind.VARIABLES);
-      this.parent()._parent.insertChildAfter(this.parent(), node);
-      this.parent()._parent.insertChildAfter(node, variables);
-
-      while (this._nextSibling != null) {
-        variables.appendChild(this._nextSibling.remove());
-      }
-    }
-
-    return this.remove();
-  };
-
   // "a + (b + c)" => "(a + b) + c"
   Skew.Node.prototype.rotateBinaryRightToLeft = function() {
     assert(this.kind == this.binaryRight().kind);
@@ -11815,10 +11806,6 @@
     return false;
   };
 
-  Skew.CompilerTarget.prototype.needsLambdaLifting = function() {
-    return false;
-  };
-
   Skew.CompilerTarget.prototype.removeSingletonInterfaces = function() {
     return false;
   };
@@ -11937,10 +11924,6 @@
     return true;
   };
 
-  Skew.CPlusPlusTarget.prototype.needsLambdaLifting = function() {
-    return true;
-  };
-
   Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
     return Unicode.Encoding.UTF8;
   };
@@ -11984,9 +11967,7 @@
       new Skew.ParsingPass(),
       new Skew.MergingPass(),
       new Skew.ResolvingPass(),
-      new Skew.LambdaLiftingPass().onlyRunWhen(function() {
-        return self._continueAfterResolve() && self.target.needsLambdaLifting();
-      }),
+      // TODO: LambdaLiftingPass.new.onlyRunWhen(=> _continueAfterResolve && target.needsLambdaLifting),
       new Skew.InterfaceRemovalPass().onlyRunWhen(function() {
         return self._continueAfterResolve() && self.target.removeSingletonInterfaces() && self.globalizeAllFunctions;
       }),
@@ -14160,277 +14141,6 @@
         }
 
         implementations.push(symbol);
-      }
-    }
-  };
-
-  Skew.LambdaLiftingPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.LambdaLiftingPass, Skew.Pass);
-
-  Skew.LambdaLiftingPass.prototype.kind = function() {
-    return Skew.PassKind.LAMBDA_LIFTING;
-  };
-
-  Skew.LambdaLiftingPass.prototype.run = function(context) {
-    new Skew.LambdaLifter(context.global).visitObject(context.global);
-  };
-
-  Skew.LambdaLifter = function(global) {
-    this.global = global;
-    this.stack = [];
-    this.enclosingFunction = null;
-  };
-
-  Skew.LambdaLifter.prototype.visitObject = function(symbol) {
-    for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
-      this.visitObject(object);
-    }
-
-    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
-      this.enclosingFunction = $function;
-      this.visitFunction($function);
-      this.enclosingFunction = null;
-    }
-
-    for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
-      this.visitVariable(variable);
-    }
-  };
-
-  Skew.LambdaLifter.prototype.visitFunction = function(symbol) {
-    if (symbol.block != null) {
-      var scope = new Skew.LambdaLifter.CaptureScope(Skew.LambdaLifter.CaptureKind.FUNCTION, symbol.block, null);
-
-      for (var i = 0, list = symbol.$arguments, count = list.length; i < count; i = i + 1 | 0) {
-        var argument = list[i];
-        scope.define(argument, null);
-      }
-
-      this.stack.push(scope);
-      this.visit(symbol.block);
-      this.processCaptureScope();
-    }
-  };
-
-  Skew.LambdaLifter.prototype.visitVariable = function(symbol) {
-    if (symbol.value != null) {
-      this.visit(symbol.value);
-    }
-  };
-
-  Skew.LambdaLifter.prototype.visit = function(node) {
-    var kind = node.kind;
-    var symbol = node.symbol;
-    var oldEnclosingFunction = this.enclosingFunction;
-
-    if (kind == Skew.NodeKind.LAMBDA) {
-      this.stack.push(new Skew.LambdaLifter.CaptureScope(Skew.LambdaLifter.CaptureKind.LAMBDA, node, this.stack.length == 0 ? null : in_List.last(this.stack)));
-      this.enclosingFunction = node.symbol.asFunctionSymbol();
-    }
-
-    else if (Skew.in_NodeKind.isLoop(kind)) {
-      this.stack.push(new Skew.LambdaLifter.CaptureScope(Skew.LambdaLifter.CaptureKind.LOOP, node, in_List.last(this.stack)));
-    }
-
-    else if (kind == Skew.NodeKind.VARIABLE) {
-      in_List.last(this.stack).define(symbol.asVariableSymbol(), node);
-    }
-
-    else if (symbol != null && (symbol.kind == Skew.SymbolKind.VARIABLE_ARGUMENT || symbol.kind == Skew.SymbolKind.VARIABLE_LOCAL)) {
-      assert(node.kind == Skew.NodeKind.NAME);
-      in_List.last(this.stack).recordUse(symbol.asVariableSymbol(), node, this.enclosingFunction);
-    }
-
-    for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
-      this.visit(child);
-    }
-
-    if (kind == Skew.NodeKind.LAMBDA) {
-      this.processCaptureScope();
-      this.enclosingFunction = oldEnclosingFunction;
-    }
-
-    else if (Skew.in_NodeKind.isLoop(kind)) {
-      this.processCaptureScope();
-    }
-  };
-
-  Skew.LambdaLifter.prototype.createClass = function(name) {
-    var object = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_CLASS, this.global.scope.generateName(name));
-    object.scope = new Skew.ObjectScope(this.global.scope, object);
-    object.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, object);
-    object.parent = this.global;
-    this.global.objects.push(object);
-    return object;
-  };
-
-  Skew.LambdaLifter.prototype.createConstructor = function(object) {
-    var $function = this.createFunction(object, Skew.SymbolKind.FUNCTION_CONSTRUCTOR, 'new');
-    $function.resolvedType.returnType = object.resolvedType;
-    return $function;
-  };
-
-  Skew.LambdaLifter.prototype.createFunction = function(object, kind, name) {
-    var $function = new Skew.FunctionSymbol(kind, name);
-    $function.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, $function);
-    $function.parent = object;
-    $function.block = new Skew.Node(Skew.NodeKind.BLOCK);
-    $function.scope = new Skew.FunctionScope(object.scope, $function);
-    $function.$this = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, 'self');
-    $function.$this.resolvedType = object.resolvedType;
-    object.functions.push($function);
-    return $function;
-  };
-
-  Skew.LambdaLifter.prototype.processCaptureScope = function() {
-    var scope = this.stack.pop();
-
-    // Convert lambdas to function objects
-    if (scope.kind == Skew.LambdaLifter.CaptureKind.LAMBDA) {
-      var lambda = this.createClass('Lambda');
-      var lambdaConstructor = this.createConstructor(lambda);
-      var lambdaRun = this.createFunction(lambda, Skew.SymbolKind.FUNCTION_INSTANCE, 'run');
-      var lambdaCall = Skew.Node.createSymbolCall(lambdaConstructor);
-      lambdaRun.block = scope.node.symbol.asFunctionSymbol().block.remove();
-
-      // TODO: This needs to be called
-      lambdaRun.flags |= Skew.Symbol.IS_EXPORTED;
-      scope.node.become(lambdaCall);
-    }
-
-    // Scopes only need environments when at least one variable is captured
-    if (scope.environment == null) {
-      return;
-    }
-
-    // Create a new object to hold the memory for the environment
-    var environment = this.createClass('Environment');
-    var $constructor = this.createConstructor(environment);
-    scope.environment.resolvedType = environment.resolvedType;
-
-    // All captured arguments will be appended as arguments to the constructor call
-    var constructorCall = Skew.Node.createSymbolCall($constructor);
-    scope.environment.value = constructorCall;
-
-    for (var i1 = 0, list1 = in_IntMap.values(scope.variableInfo), count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var info = list1[i1];
-
-      if (!info.isCaptured) {
-        continue;
-      }
-
-      var symbol = info.symbol;
-      var member = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_INSTANCE, symbol.name);
-      member.parent = environment;
-      member.resolvedType = symbol.resolvedType;
-      environment.variables.push(member);
-
-      // Change the definition into an assignment
-      var assignment = Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(scope.environment), member), symbol.value != null ? symbol.value.remove() : Skew.Node.createSymbolReference(symbol)));
-
-      // Local variables can change into assignments
-      var definition = info.definition;
-
-      if (definition != null) {
-        definition.replaceVariableWith(assignment);
-      }
-
-      // Assignments for argument variables must go inside the environment constructor
-      else {
-        assert(symbol.kind == Skew.SymbolKind.VARIABLE_ARGUMENT);
-
-        // Add an argument to the constructor
-        var argument = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, symbol.name);
-        argument.resolvedType = symbol.resolvedType;
-        $constructor.$arguments.push(argument);
-
-        // Copy the value from the argument to the member
-        $constructor.block.appendChild(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference($constructor.$this), member), Skew.Node.createSymbolReference(argument))));
-
-        // Pass the initial value of the captured variable to the constructor
-        constructorCall.appendChild(Skew.Node.createSymbolReference(symbol));
-      }
-
-      // Rewrite all references to this variable as members of the environment object
-      for (var i = 0, list = info.uses, count = list.length; i < count; i = i + 1 | 0) {
-        var node = list[i];
-        node.replaceWith(Skew.Node.createMemberReference(Skew.Node.createSymbolReference(scope.environment), member));
-      }
-    }
-
-    // Create the environment object
-    var initializer = new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(scope.environment));
-
-    switch (scope.kind) {
-      case Skew.LambdaLifter.CaptureKind.FUNCTION: {
-        scope.node.prependChild(initializer);
-        break;
-      }
-
-      case Skew.LambdaLifter.CaptureKind.LAMBDA: {
-        scope.node.lambdaBlock().appendChild(initializer);
-        break;
-      }
-
-      default: {
-        scope.node.parent().insertChildBefore(scope.node.parent(), initializer);
-        break;
-      }
-    }
-  };
-
-  Skew.LambdaLifter.VariableInfo = function(symbol, definition) {
-    this.symbol = symbol;
-    this.definition = definition;
-    this.uses = [];
-    this.isCaptured = false;
-  };
-
-  Skew.LambdaLifter.CaptureKind = {
-    FUNCTION: 0,
-    LAMBDA: 1,
-    LOOP: 2
-  };
-
-  Skew.LambdaLifter.CaptureScope = function(kind, node, parent) {
-    this.kind = kind;
-    this.node = node;
-    this.parent = parent;
-    this.environment = null;
-    this.variableInfo = {};
-  };
-
-  Skew.LambdaLifter.CaptureScope.prototype.define = function(symbol, node) {
-    this.variableInfo[symbol.id] = new Skew.LambdaLifter.VariableInfo(symbol, node);
-  };
-
-  Skew.LambdaLifter.CaptureScope.prototype.recordUse = function(symbol, node, enclosingFunction) {
-    var isCaptured = false;
-
-    for (var scope = this; scope != null; scope = scope.parent) {
-      var info = in_IntMap.get(scope.variableInfo, symbol.id, null);
-
-      if (info != null) {
-        if (isCaptured) {
-          info.isCaptured = true;
-
-          if (scope.environment == null) {
-            scope.environment = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, enclosingFunction.scope.generateName('env'));
-          }
-        }
-
-        info.uses.push(node);
-        return;
-      }
-
-      if (scope.kind == Skew.LambdaLifter.CaptureKind.LAMBDA) {
-        isCaptured = true;
       }
     }
   };
@@ -20764,8 +20474,8 @@
   Skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 30, 30, 30, 31, 4, 32, 33, 34, 35, 36, 37, 38, 39, 30, 40, 30, 30, 30, 41, 42, 30, 43, 44, 45, 30, 46, 47, 30, 30, 48, 49, 50, 51, 53, 53, 56, 61, 64, 66, 70, 68, 74, 117, 75, 75, 75, 75, 81, 82, 71, 118, 67, 69, 62, 234, 76, 83, 84, 85, 86, 101, 65, 87, 57, 74, 76, 75, 75, 75, 75, 98, 88, 92, 89, 103, 121, 104, 102, 76, 99, 105, 111, 100, 108, 115, 77, 116, 106, 76, 109, 93, 123, 107, 110, 53, 53, 78, 64, 112, 56, 129, 129, 233, 94, 79, 232, 122, 126, 126, 126, 126, 231, 74, 230, 75, 75, 75, 75, 130, 130, 130, 65, 134, 135, 229, 124, 76, 57, 141, 142, 228, 160, 127, 227, 127, 161, 76, 128, 128, 128, 128, 126, 126, 126, 126, 128, 128, 128, 128, 128, 128, 128, 128, 166, 129, 129, 130, 130, 130, 174, 175, 226, 194, 166, 194, 225, 224, 195, 195, 195, 195, 195, 195, 195, 195, 195, 195, 195, 195, 55, 55, 55, 55, 58, 58, 58, 58, 63, 63, 63, 63, 90, 90, 91, 91, 91, 131, 131, 136, 136, 136, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 173, 172, 171, 170, 169, 168, 167, 165, 164, 163, 162, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 143, 140, 139, 138, 137, 133, 132, 125, 235, 59, 235, 52, 120, 119, 114, 113, 97, 96, 95, 80, 73, 72, 60, 59, 54, 52, 235, 3, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235];
   Skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 11, 12, 15, 18, 16, 22, 45, 22, 22, 22, 22, 25, 25, 18, 45, 15, 16, 11, 232, 22, 26, 26, 27, 27, 37, 12, 28, 8, 21, 22, 21, 21, 21, 21, 36, 28, 31, 28, 38, 48, 38, 37, 21, 36, 39, 41, 36, 40, 44, 21, 44, 39, 21, 40, 31, 49, 39, 40, 53, 53, 21, 63, 41, 55, 77, 77, 231, 31, 21, 229, 48, 74, 74, 74, 74, 228, 75, 224, 75, 75, 75, 75, 78, 78, 78, 63, 86, 86, 221, 49, 75, 55, 98, 98, 220, 118, 76, 219, 76, 118, 75, 76, 76, 76, 76, 126, 126, 126, 126, 127, 127, 127, 127, 128, 128, 128, 128, 126, 129, 129, 130, 130, 130, 144, 144, 218, 166, 126, 166, 217, 216, 166, 166, 166, 166, 194, 194, 194, 194, 195, 195, 195, 195, 236, 236, 236, 236, 237, 237, 237, 237, 238, 238, 238, 238, 239, 239, 240, 240, 240, 241, 241, 242, 242, 242, 211, 209, 208, 207, 206, 204, 203, 202, 193, 192, 191, 189, 188, 187, 186, 183, 182, 181, 180, 177, 176, 175, 174, 173, 172, 170, 169, 168, 165, 164, 163, 160, 159, 158, 157, 156, 155, 154, 153, 152, 150, 149, 148, 147, 146, 145, 143, 142, 141, 140, 139, 137, 135, 122, 121, 120, 119, 117, 116, 115, 114, 113, 112, 111, 109, 107, 106, 105, 104, 103, 102, 101, 100, 99, 97, 94, 93, 92, 82, 81, 66, 65, 58, 57, 52, 47, 46, 43, 42, 35, 34, 33, 23, 20, 19, 10, 9, 7, 5, 3, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235, 235];
   Skew.REMOVE_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.DOT, 0), Skew.TokenKind.NEWLINE, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.RIGHT_BRACKET, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0);
-  Skew.NATIVE_LIBRARY = '\nconst RELEASE = false\n\nenum Target {\n  NONE\n  CPLUSPLUS\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @alwaysinline\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @neverinline\ndef @prefer\ndef @rename(name string)\ndef @skip\ndef @spreads\n\n@spreads {\n  def @using(name string) # For use with C#\n  def @include(name string) # For use with C++\n}\n\n@import if TARGET == .NONE\n@skip if RELEASE\ndef assert(truth bool)\n\n@import if TARGET == .NONE\nnamespace Math {\n  @prefer\n  def abs(x double) double\n  def abs(x int) int\n\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n\n  def sin(x double) double\n  def cos(x double) double\n  def tan(x double) double\n\n  def floor(x double) double\n  def ceil(x double) double\n  def round(x double) double\n\n  def exp(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def sqrt(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  def E double        { return 2.718281828459045 }\n  def INFINITY double { return 1 / 0.0 }\n  def NAN double      { return 0 / 0.0 }\n  def PI double       { return 3.141592653589793 }\n  def SQRT_2 double   { return 2 ** 0.5 }\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def - int\n  def ~ int\n\n  def +(x int) int\n  def -(x int) int\n  def *(x int) int\n  def /(x int) int\n  def %(x int) int\n  def **(x int) int\n  def <=>(x int) int\n  def <<(x int) int\n  def >>(x int) int\n  def >>>(x int) int\n  def &(x int) int\n  def |(x int) int\n  def ^(x int) int\n\n  def <<=(x int) int\n  def >>=(x int) int\n  def &=(x int) int\n  def |=(x int) int\n  def ^=(x int) int\n\n  if TARGET != .CSHARP {\n    def >>>=(x int)\n  }\n\n  if TARGET != .JAVASCRIPT {\n    def ++ int\n    def -- int\n\n    def %=(x int) int\n    def +=(x int) int\n    def -=(x int) int\n    def *=(x int) int\n    def /=(x int) int\n  }\n\n  def toString string\n}\n\n@import\nclass double {\n  def + double\n  def ++ double\n  def - double\n  def -- double\n\n  def *(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def **(x double) double\n  def <=>(x double) int\n\n  def *=(x double) double\n  def +=(x double) double\n  def -=(x double) double\n  def /=(x double) double\n\n  def isFinite bool\n  def isNaN bool\n\n  def toString string\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string) string\n  def <=>(x string) int\n\n  def count int\n  def in(x string) bool\n  def indexOf(x string) int\n  def lastIndexOf(x string) int\n  def startsWith(x string) bool\n  def endsWith(x string) bool\n\n  def [](x int) int\n  def get(x int) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n\n  def split(x string) List<string>\n  def join(x List<string>) string\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n\n  def toLowerCase string\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .NONE\nclass StringBuilder {\n  def new\n  def append(x string)\n  def toString string\n}\n\n@import\nclass List<T> {\n  def new\n  def [...](x T) List<T>\n\n  def [](x int) T\n  def []=(x int, y T) T\n\n  def count int\n  def isEmpty bool\n  def resize(size int, defaultValue T)\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n  def appendOne(x T)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeIf(x fn(T) bool)\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n\n  def takeFirst T\n  def takeLast T\n  def takeAt(x int) T\n  def takeRange(start int, end int) List<T>\n\n  def first T\n  def first=(x T) T { return self[0] = x }\n  def last T\n  def last=(x T) T { return self[count - 1] = x }\n\n  def in(x T) bool\n  def indexOf(x T) int\n  def lastIndexOf(x T) int\n\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def clone List<T>\n  def each(x fn(T))\n  def equals(x List<T>) bool\n  def filter(x fn(T) bool) List<T>\n  def map<R>(x fn(T) R) List<R>\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n}\n\n@import\nclass StringMap<T> {\n  def new\n  def {...}(key string, value T) StringMap<T>\n\n  def [](key string) T\n  def []=(key string, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<string>\n  def values List<T>\n\n  def clone StringMap<T>\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def remove(key string)\n}\n\n@import\nclass IntMap<T> {\n  def new\n  def {...}(key int, value T) IntMap<T>\n\n  def [](key int) T\n  def []=(key int, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<int>\n  def values List<T>\n\n  def clone IntMap<T>\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def remove(key int)\n}\n\nclass Box<T> {\n  var value T\n}\n\n################################################################################\n# Implementations\n\nclass int {\n  def **(x int) int {\n    var y = self\n    var z = x < 0 ? 0 : 1\n    while x > 0 {\n      if (x & 1) != 0 { z *= y }\n      x >>= 1\n      y *= y\n    }\n    return z\n  }\n\n  def <=>(x int) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass double {\n  def **(x double) double {\n    return Math.pow(self, x)\n  }\n\n  def <=>(x double) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass List {\n  def resize(count int, defaultValue T) {\n    while self.count < count { append(defaultValue) }\n    while self.count > count { removeLast }\n  }\n\n  def removeAll(value T) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if self[i] != value {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def removeDuplicates {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      var found = false\n      var value = self[i]\n      for j in 0..i {\n        if value == self[j] {\n          found = true\n          break\n        }\n      }\n      if !found {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def shuffle {\n    var n = count\n    for i in 0..n - 1 {\n      swap(i, i + ((Math.random * (n - i)) as int))\n    }\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n}\n';
-  Skew.NATIVE_LIBRARY_CPP = '\nclass bool {\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  def toString string {\n    return dynamic.intToString(self)\n  }\n}\n\nclass double {\n  def toString string {\n    return dynamic.doubleToString(self)\n  }\n\n  def isNaN bool {\n    return self != self\n  }\n}\n';
+  Skew.NATIVE_LIBRARY = '\nconst RELEASE = false\n\nenum Target {\n  NONE\n  CPLUSPLUS\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @alwaysinline\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @neverinline\ndef @prefer\ndef @rename(name string)\ndef @skip\ndef @spreads\n\n@spreads {\n  def @using(name string) # For use with C#\n  def @include(name string) # For use with C++\n}\n\n@import if TARGET == .NONE\n@skip if RELEASE\ndef assert(truth bool)\n\n@import if TARGET == .NONE\nnamespace Math {\n  @prefer\n  def abs(x double) double\n  def abs(x int) int\n\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n\n  def sin(x double) double\n  def cos(x double) double\n  def tan(x double) double\n\n  def floor(x double) double\n  def ceil(x double) double\n  def round(x double) double\n\n  def exp(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def sqrt(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  def E double        { return 2.718281828459045 }\n  def INFINITY double { return 1 / 0.0 }\n  def NAN double      { return 0 / 0.0 }\n  def PI double       { return 3.141592653589793 }\n  def SQRT_2 double   { return 2 ** 0.5 }\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def - int\n  def ~ int\n\n  def +(x int) int\n  def -(x int) int\n  def *(x int) int\n  def /(x int) int\n  def %(x int) int\n  def **(x int) int\n  def <=>(x int) int\n  def <<(x int) int\n  def >>(x int) int\n  def >>>(x int) int\n  def &(x int) int\n  def |(x int) int\n  def ^(x int) int\n\n  def <<=(x int) int\n  def >>=(x int) int\n  def &=(x int) int\n  def |=(x int) int\n  def ^=(x int) int\n\n  if TARGET != .CSHARP {\n    def >>>=(x int)\n  }\n\n  if TARGET != .JAVASCRIPT {\n    def ++ int\n    def -- int\n\n    def %=(x int) int\n    def +=(x int) int\n    def -=(x int) int\n    def *=(x int) int\n    def /=(x int) int\n  }\n\n  def toString string\n}\n\n@import\nclass double {\n  def + double\n  def ++ double\n  def - double\n  def -- double\n\n  def *(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def **(x double) double\n  def <=>(x double) int\n\n  def *=(x double) double\n  def +=(x double) double\n  def -=(x double) double\n  def /=(x double) double\n\n  def isFinite bool\n  def isNaN bool\n\n  def toString string\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string) string\n  def <=>(x string) int\n\n  def count int\n  def in(x string) bool\n  def indexOf(x string) int\n  def lastIndexOf(x string) int\n  def startsWith(x string) bool\n  def endsWith(x string) bool\n\n  def [](x int) int\n  def get(x int) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n\n  def split(x string) List<string>\n  def join(x List<string>) string\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n\n  def toLowerCase string\n  def toUpperCase string\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .NONE\nclass StringBuilder {\n  def new\n  def append(x string)\n  def toString string\n}\n\n@import\nclass List<T> {\n  def new\n  def [...](x T) List<T>\n\n  def [](x int) T\n  def []=(x int, y T) T\n\n  def count int\n  def isEmpty bool\n  def resize(count int, defaultValue T)\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n  def appendOne(x T)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeIf(x fn(T) bool)\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n\n  def takeFirst T\n  def takeLast T\n  def takeAt(x int) T\n  def takeRange(start int, end int) List<T>\n\n  def first T\n  def first=(x T) T { return self[0] = x }\n  def last T\n  def last=(x T) T { return self[count - 1] = x }\n\n  def in(x T) bool\n  def indexOf(x T) int\n  def lastIndexOf(x T) int\n\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def clone List<T>\n  def each(x fn(T))\n  def equals(x List<T>) bool\n  def filter(x fn(T) bool) List<T>\n  def map<R>(x fn(T) R) List<R>\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n}\n\n@import\nclass StringMap<T> {\n  def new\n  def {...}(key string, value T) StringMap<T>\n\n  def [](key string) T\n  def []=(key string, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<string>\n  def values List<T>\n\n  def clone StringMap<T>\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def remove(key string)\n}\n\n@import\nclass IntMap<T> {\n  def new\n  def {...}(key int, value T) IntMap<T>\n\n  def [](key int) T\n  def []=(key int, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<int>\n  def values List<T>\n\n  def clone IntMap<T>\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def remove(key int)\n}\n\nclass Box<T> {\n  var value T\n}\n\n################################################################################\n# Implementations\n\nclass int {\n  def **(x int) int {\n    var y = self\n    var z = x < 0 ? 0 : 1\n    while x > 0 {\n      if (x & 1) != 0 { z *= y }\n      x >>= 1\n      y *= y\n    }\n    return z\n  }\n\n  def <=>(x int) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass double {\n  def **(x double) double {\n    return Math.pow(self, x)\n  }\n\n  def <=>(x double) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass List {\n  def resize(count int, defaultValue T) {\n    while self.count < count { append(defaultValue) }\n    while self.count > count { removeLast }\n  }\n\n  def removeAll(value T) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if self[i] != value {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def removeDuplicates {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      var found = false\n      var value = self[i]\n      for j in 0..i {\n        if value == self[j] {\n          found = true\n          break\n        }\n      }\n      if !found {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def shuffle {\n    var n = count\n    for i in 0..n - 1 {\n      swap(i, i + ((Math.random * (n - i)) as int))\n    }\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n}\n';
+  Skew.NATIVE_LIBRARY_CPP = '\nnamespace Math {\n  @import {\n    def abs(x double) double\n    def abs(x int) int\n\n    def acos(x double) double\n    def asin(x double) double\n    def atan(x double) double\n    def atan2(x double, y double) double\n\n    def sin(x double) double\n    def cos(x double) double\n    def tan(x double) double\n\n    def floor(x double) double\n    def ceil(x double) double\n    def round(x double) double\n\n    def exp(x double) double\n    def log(x double) double\n    def pow(x double, y double) double\n    def sqrt(x double) double\n\n    def max(x double, y double) double\n    def max(x int, y int) int\n\n    def min(x double, y double) double\n    def min(x int, y int) int\n\n    def random double\n  }\n}\n\nclass bool {\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  def toString string {\n    return dynamic.intToString(self)\n  }\n}\n\nclass double {\n  def toString string {\n    return dynamic.doubleToString(self)\n  }\n\n  def isNaN bool {\n    return self != self\n  }\n}\n\nclass string {\n  @rename("compare")\n  def <=>(x string) int\n\n  @rename("contains")\n  def in(x string) bool\n}\n\nclass List {\n  @rename("contains")\n  def in(x T) bool\n}\n\nclass StringMap {\n  @rename("contains")\n  def in(x string) bool\n}\n\nclass IntMap {\n  @rename("contains")\n  def in(x int) bool\n}\n\n@import {\n  class StringBuilder {}\n  def assert(truth bool)\n}\n';
   Skew.NATIVE_LIBRARY_CS = '\n@using("System.Diagnostics")\ndef assert(truth bool) {\n  dynamic.Debug.Assert(truth)\n}\n\n@using("System")\nvar __random dynamic.Random = null\n\n@using("System")\n@import\nnamespace Math {\n  @rename("Abs") if TARGET == .CSHARP\n  def abs(x double) double\n  @rename("Abs") if TARGET == .CSHARP\n  def abs(x int) int\n\n  @rename("Acos") if TARGET == .CSHARP\n  def acos(x double) double\n  @rename("Asin") if TARGET == .CSHARP\n  def asin(x double) double\n  @rename("Atan") if TARGET == .CSHARP\n  def atan(x double) double\n  @rename("Atan2") if TARGET == .CSHARP\n  def atan2(x double, y double) double\n\n  @rename("Sin") if TARGET == .CSHARP\n  def sin(x double) double\n  @rename("Cos") if TARGET == .CSHARP\n  def cos(x double) double\n  @rename("Tan") if TARGET == .CSHARP\n  def tan(x double) double\n\n  @rename("Floor") if TARGET == .CSHARP\n  def floor(x double) double\n  @rename("Ceiling") if TARGET == .CSHARP\n  def ceil(x double) double\n  @rename("Round") if TARGET == .CSHARP\n  def round(x double) double\n\n  @rename("Exp") if TARGET == .CSHARP\n  def exp(x double) double\n  @rename("Log") if TARGET == .CSHARP\n  def log(x double) double\n  @rename("Pow") if TARGET == .CSHARP\n  def pow(x double, y double) double\n  @rename("Sqrt") if TARGET == .CSHARP\n  def sqrt(x double) double\n\n  @rename("Max") if TARGET == .CSHARP\n  def max(x double, y double) double\n  @rename("Max") if TARGET == .CSHARP\n  def max(x int, y int) int\n\n  @rename("Min") if TARGET == .CSHARP\n  def min(x double, y double) double\n  @rename("Min") if TARGET == .CSHARP\n  def min(x int, y int) int\n\n  def random double {\n    __random ?= dynamic.Random.new()\n    return __random.NextDouble()\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return !isNaN && !dynamic.double.IsInfinity(self)\n  }\n\n  def isNaN bool {\n    return dynamic.double.IsNaN(self)\n  }\n}\n\n@using("System.Text")\n@import\nclass StringBuilder {\n  @rename("Append")\n  def append(x string)\n\n  @rename("ToString")\n  def toString string\n}\n\nclass bool {\n  @rename("ToString")\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  @rename("ToString")\n  def toString string\n\n  def >>>(x int) int {\n    return dynamic.unchecked(self as dynamic.uint >> x) as int\n  }\n}\n\nclass double {\n  @rename("ToString")\n  def toString string\n}\n\nclass string {\n  @rename("CompareTo")\n  def <=>(x string) int\n\n  @rename("StartsWith")\n  def startsWith(x string) bool\n\n  @rename("EndsWith")\n  def endsWith(x string) bool\n\n  @rename("Contains")\n  def in(x string) bool\n\n  @rename("IndexOf")\n  def indexOf(x string) int\n\n  @rename("LastIndexOf")\n  def lastIndexOf(x string) int\n\n  @rename("Replace")\n  def replaceAll(before string, after string) string\n\n  @rename("Substring") {\n    def slice(start int) string\n    def slice(start int, end int) string\n  }\n\n  @rename("ToLower")\n  def toLowerCase string\n\n  @rename("ToUpper")\n  def toUpperCase string\n\n  def count int {\n    return (self as dynamic).Length\n  }\n\n  def get(index int) string {\n    return fromCodeUnit(self[index])\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  @using("System.Linq")\n  @using("System")\n  def split(separator string) List<string> {\n    var separators = [separator]\n    return dynamic.Enumerable.ToList((self as dynamic).Split(dynamic.Enumerable.ToArray(separators as dynamic), dynamic.StringSplitOptions.None))\n  }\n\n  def join(parts List<string>) string {\n    return dynamic.string.Join(self, parts)\n  }\n\n  def slice(start int, end int) string {\n    return (self as dynamic).Substring(start, end - start)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.string.new(codeUnit as dynamic.char, 1)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var builder = StringBuilder.new\n    for codeUnit in codeUnits {\n      builder.append(codeUnit as dynamic.char)\n    }\n    return builder.toString\n  }\n}\n\n@using("System.Collections.Generic")\nclass List {\n  @rename("Contains")\n  def in(x T) bool\n\n  @rename("Add")\n  def append(value T)\n\n  @rename("AddRange")\n  def append(value List<T>)\n\n  @rename("Sort")\n  def sort(x fn(T, T) int)\n\n  @rename("Reverse")\n  def reverse\n\n  @rename("RemoveAll")\n  def removeIf(x fn(T) bool)\n\n  @rename("RemoveAt")\n  def removeAt(x int)\n\n  @rename("Remove")\n  def removeOne(x T)\n\n  @rename("TrueForAll")\n  def all(x fn(T) bool) bool\n\n  @rename("ForEach")\n  def each(x fn(T))\n\n  @rename("FindAll")\n  def filter(x fn(T) bool) List<T>\n\n  @rename("ConvertAll")\n  def map<R>(x fn(T) R) List<R>\n\n  @rename("IndexOf")\n  def indexOf(x T) int\n\n  @rename("LastIndexOf")\n  def lastIndexOf(x T) int\n\n  @rename("Insert")\n  def insert(x int, value T)\n\n  @rename("InsertRange")\n  def insert(x int, value List<T>)\n\n  def appendOne(x T) {\n    if !(x in self) {\n      append(x)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    (self as dynamic).RemoveRange(start, end - start)\n  }\n\n  @using("System.Linq") {\n    @rename("SequenceEqual")\n    def equals(x List<T>) bool\n\n    @rename("First")\n    def first T\n\n    @rename("Last")\n    def last T\n  }\n\n  def any(callback fn(T) bool) bool {\n    return !all(x => !callback(x))\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).Count\n  }\n\n  def prepend(value T) {\n    insert(0, value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def removeFirst {\n    removeAt(0)\n  }\n\n  def removeLast {\n    removeAt(count - 1)\n  }\n\n  def takeFirst T {\n    var value = first\n    removeFirst\n    return value\n  }\n\n  def takeLast T {\n    var value = last\n    removeLast\n    return value\n  }\n\n  def takeAt(x int) T {\n    var value = self[x]\n    removeAt(x)\n    return value\n  }\n\n  def takeRange(start int, end int) List<T> {\n    var value = slice(start, end)\n    removeRange(start, end)\n    return value\n  }\n\n  def slice(start int) List<T> {\n    return slice(start, count)\n  }\n\n  def slice(start int, end int) List<T> {\n    return (self as dynamic).GetRange(start, end - start)\n  }\n\n  def clone List<T> {\n    var clone = new\n    clone.append(self)\n    return clone\n  }\n}\n\n@using("System.Collections.Generic")\n@rename("Dictionary")\nclass StringMap {\n  @rename("Count")\n  def count int\n\n  @rename("ContainsKey")\n  def in(key string) bool\n\n  @rename("Remove")\n  def remove(key string)\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def {...}(key string, value T) StringMap<T> {\n    (self as dynamic).Add(key, value)\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Keys)\n  }\n\n  def values List<T> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Values)\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def each(x fn(string, T)) {\n    for pair in self as dynamic {\n      x(pair.Key, pair.Value)\n    }\n  }\n}\n\n@using("System.Collections.Generic")\n@rename("Dictionary")\nclass IntMap {\n  @rename("Count")\n  def count int\n\n  @rename("ContainsKey")\n  def in(key int) bool\n\n  @rename("Remove")\n  def remove(key int)\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def {...}(key int, value T) IntMap<T> {\n    (self as dynamic).Add(key, value)\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Keys)\n  }\n\n  def values List<T> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Values)\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def each(x fn(int, T)) {\n    for pair in self as dynamic {\n      x(pair.Key, pair.Value)\n    }\n  }\n}\n';
   Skew.NATIVE_LIBRARY_JS = '\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = dynamic.Object.create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) => {\n  const ah dynamic = (a >> 16) & 65535\n  const bh dynamic = (b >> 16) & 65535\n  const al dynamic = a & 65535\n  const bl dynamic = b & 65535\n  return al * bl + ((ah * bl + al * bh) << 16) | 0\n}\n\nconst __isInt = (value dynamic) => value == (value | 0)\nconst __isBool = (value dynamic) => value == !!value\nconst __isDouble = (value dynamic) => value == +value || dynamic.isNaN(value)\nconst __isString = (value dynamic) => dynamic.typeof(value) == "string"\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error("Assertion failed")\n  }\n}\n\n@import\nnamespace Math {}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNaN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def <=>(x string) int {\n    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)\n  }\n\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def endsWith(text string) bool {\n    return count >= text.count && slice(count - text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.String.fromCharCode(codeUnit)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var result = ""\n    for codeUnit in codeUnits {\n      result += string.fromCodeUnit(codeUnit)\n    }\n    return result\n  }\n}\n\nclass StringBuilder {\n  var buffer = ""\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\n@rename("Array")\nclass List {\n  @rename("shift") {\n    def removeFirst\n    def takeFirst T\n  }\n\n  @rename("pop") {\n    def removeLast\n    def takeLast T\n  }\n\n  @rename("unshift")\n  def prepend(x T)\n\n  @rename("push")\n  def append(x T)\n\n  @rename("every") if TARGET == .JAVASCRIPT\n  def all(x fn(T) bool) bool\n\n  @rename("some") if TARGET == .JAVASCRIPT\n  def any(x fn(T) bool) bool\n\n  @rename("slice") if TARGET == .JAVASCRIPT\n  def clone List<T>\n\n  @rename("forEach") if TARGET == .JAVASCRIPT\n  def each(x fn(T))\n\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    return self[0]\n  }\n\n  def last T {\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def insert(index int, values List<T>) {\n    for value in values {\n      insert(index, value)\n      index++\n    }\n  }\n\n  def insert(index int, value T) {\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeAt(x int) {\n    (self as dynamic).splice(x, 1)\n  }\n\n  def takeAt(x int) T {\n    return (self as dynamic).splice(x, 1)[0]\n  }\n\n  def takeRange(start int, end int) List<T> {\n    return (self as dynamic).splice(start, end - start)\n  }\n\n  def appendOne(value T) {\n    if !(value in self) {\n      append(value)\n    }\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    (self as dynamic).splice(start, end - start)\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def equals(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n}\n\nnamespace List {\n  def new List<T> {\n    return [] as dynamic\n  }\n}\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def count int {\n    return keys.count\n  }\n\n  def isEmpty bool {\n    for key in self as dynamic {\n      return false\n    }\n    return true\n  }\n\n  def get(key string, defaultValue T) T {\n    var value = self[key]\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete(self[key])\n  }\n\n  def each(x fn(string, T)) {\n    for key in self as dynamic {\n      x(key, self[key])\n    }\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return {} as dynamic\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def count int {\n    return values.count\n  }\n\n  def isEmpty bool {\n    for key in self as dynamic {\n      return false\n    }\n    return true\n  }\n\n  def get(key int, defaultValue T) T {\n    var value = self[key]\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in self as dynamic {\n      keys.append(key as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete(self[key])\n  }\n\n  def each(x fn(int, T)) {\n    for key in self as dynamic {\n      x(key as int, self[key])\n    }\n  }\n}\n';
   Skew.UNICODE_LIBRARY = '\nnamespace Unicode {\n  enum Encoding {\n    UTF8\n    UTF16\n    UTF32\n  }\n\n  const STRING_ENCODING Encoding =\n    TARGET == .CSHARP || TARGET == .JAVASCRIPT ? .UTF16 :\n    .UTF32\n\n  class StringIterator {\n    var value = ""\n    var index = 0\n    var stop = 0\n\n    def reset(text string, start int) StringIterator {\n      value = text\n      index = start\n      stop = text.count\n      return self\n    }\n\n    def countCodePointsUntil(stop int) int {\n      var count = 0\n      while index < stop && nextCodePoint >= 0 {\n        count++\n      }\n      return count\n    }\n\n    if STRING_ENCODING == .UTF8 {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index++]\n        if a < 0xC0 { return a }\n        if index >= stop { return -1 }\n        var b = value[index++]\n        if a < 0xE0 { return ((a & 0x1F) << 6) | (b & 0x3F) }\n        if index >= stop { return -1 }\n        var c = value[index++]\n        if a < 0xF0 { return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F) }\n        if index >= stop { return -1 }\n        var d = value[index++]\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)\n      }\n    }\n\n    else if STRING_ENCODING == .UTF16 {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index++]\n        if a < 0xD800 || a >= 0xDC00 { return a }\n        if index >= stop { return -1 }\n        var b = value[index++]\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)\n      }\n    }\n\n    else {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        return value[index++]\n      }\n    }\n  }\n\n  namespace StringIterator {\n    const INSTANCE = StringIterator.new\n  }\n\n  def codeUnitCountForCodePoints(codePoints List<int>, encoding Encoding) int {\n    var count = 0\n\n    switch encoding {\n      case .UTF8 {\n        for codePoint in codePoints {\n          if codePoint < 0x80 { count++ }\n          else if codePoint < 0x800 { count += 2 }\n          else if codePoint < 0x10000 { count += 3 }\n          else { count += 4 }\n        }\n      }\n\n      case .UTF16 {\n        for codePoint in codePoints {\n          if codePoint < 0x10000 { count++ }\n          else { count += 2 }\n        }\n      }\n\n      case .UTF32 {\n        count = codePoints.count\n      }\n    }\n\n    return count\n  }\n}\n\nclass string {\n  if Unicode.STRING_ENCODING == .UTF32 {\n    def codePoints List<int> {\n      return codeUnits\n    }\n  }\n\n  else {\n    def codePoints List<int> {\n      var codePoints List<int> = []\n      var instance = Unicode.StringIterator.INSTANCE\n      instance.reset(self, 0)\n\n      while true {\n        var codePoint = instance.nextCodePoint\n        if codePoint < 0 {\n          return codePoints\n        }\n        codePoints.append(codePoint)\n      }\n    }\n  }\n}\n\nnamespace string {\n  def fromCodePoints(codePoints List<int>) string {\n    var builder = StringBuilder.new\n    for codePoint in codePoints {\n      builder.append(fromCodePoint(codePoint))\n    }\n    return builder.toString\n  }\n\n  if Unicode.STRING_ENCODING == .UTF8 {\n    def fromCodePoint(codePoint int) string {\n      return\n        codePoint < 0x80 ? fromCodeUnit(codePoint) : (\n          codePoint < 0x800 ? fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0) : (\n            codePoint < 0x10000 ? fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0) : (\n              fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0)\n            ) + fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80)\n          ) + fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80)\n        ) + fromCodeUnit((codePoint & 0x3F) | 0x80)\n    }\n  }\n\n  else if Unicode.STRING_ENCODING == .UTF16 {\n    def fromCodePoint(codePoint int) string {\n      return codePoint < 0x10000 ? fromCodeUnit(codePoint) :\n        fromCodeUnit(((codePoint - 0x10000) >> 10) + 0xD800) +\n        fromCodeUnit(((codePoint - 0x10000) & ((1 << 10) - 1)) + 0xDC00)\n    }\n  }\n\n  else {\n    def fromCodePoint(codePoint int) string {\n      return fromCodeUnit(codePoint)\n    }\n  }\n}\n';

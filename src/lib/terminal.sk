@@ -27,13 +27,6 @@ namespace Terminal {
     Color.CYAN: 96,
   }
 
-  def setColor(color Color)
-  def width int
-  def height int
-  def print(text string)
-  def flush
-  def write(text string)
-
   if TARGET == .JAVASCRIPT {
     def setColor(color Color) {
       if dynamic.process.stdout.isTTY {
@@ -97,6 +90,17 @@ namespace Terminal {
     @using("System")
     def write(text string) {
       dynamic.Console.Write(text)
+    }
+  }
+
+  else {
+    @import {
+      def setColor(color Color)
+      def width int
+      def height int
+      def print(text string)
+      def flush
+      def write(text string)
     }
   }
 }

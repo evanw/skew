@@ -19,15 +19,18 @@ SOURCES_TEST += src/lib/terminal.sk
 SOURCES_TEST += src/lib/unit.sk
 SOURCES_TEST += tests/*.sk
 
-JS_FLAGS += --target=js
-JS_FLAGS += --inline-functions
-JS_FLAGS += --verbose
-JS_FLAGS += --message-limit=0
+FLAGS += --inline-functions
+FLAGS += --verbose
+FLAGS += --message-limit=0
 
+JS_FLAGS += $(FLAGS)
+JS_FLAGS += --target=js
+
+CS_FLAGS += $(FLAGS)
 CS_FLAGS += --target=cs
-CS_FLAGS += --inline-functions
-CS_FLAGS += --verbose
-CS_FLAGS += --message-limit=0
+
+CPP_FLAGS += $(FLAGS)
+CPP_FLAGS += --target=cpp
 
 default: compile-skewc compile-api
 
@@ -60,6 +63,10 @@ check-cs: | build
 	mcs -debug build/skewc2.cs
 	mono --debug build/skewc2.exe $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc3.cs
 	diff build/skewc2.cs build/skewc3.cs
+
+check-cpp: | build
+	node skewc.js $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc.cpp
+	clang++ build/skewc.cpp -std=c++11 -ferror-limit=0 -include src/backend/cpp.h
 
 check-determinism: | build
 	# Debug

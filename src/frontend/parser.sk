@@ -20,8 +20,6 @@ namespace Skew.Parsing {
   var expressionParser Pratt
   var typeParser Pratt
 
-  def parseDoubleLiteral(text string) double
-
   def parseIntLiteral(log Log, range Range) Box<int> {
     var text = range.toString
     var isNegative = text.startsWith("-") # Parse negative signs for use with the "--define" flag

@@ -188,4 +188,9 @@ namespace Skew.Parsing {
       return dynamic.double.Parse(text)
     }
   }
+
+  else {
+    @import
+    def parseDoubleLiteral(text string) double
+  }
 }

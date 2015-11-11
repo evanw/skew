@@ -200,7 +200,7 @@ class List<T> {
 
   def count int
   def isEmpty bool
-  def resize(size int, defaultValue T)
+  def resize(count int, defaultValue T)
 
   @prefer
   def append(x T)

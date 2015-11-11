@@ -531,7 +531,7 @@ namespace Skew {
           _emit(_indent + "for (")
           _emitType(symbol.resolvedType, .DECLARATION)
           _emit(_mangleName(symbol) + " : ")
-          if value.resolvedType.isReference {
+          if _isReferenceType(value.resolvedType) {
             _emit("*")
             _emitExpression(value, .UNARY_PREFIX)
           } else {
@@ -617,7 +617,7 @@ namespace Skew {
           var target = node.dotTarget
           var type = target.resolvedType
           _emitExpression(target, .MEMBER)
-          _emit((type != null && type.isReference ? "->" : ".") + (symbol != null ? _mangleName(symbol) : node.asString))
+          _emit((type != null && _isReferenceType(type) ? "->" : ".") + (symbol != null ? _mangleName(symbol) : node.asString))
         }
 
         case .CONSTANT {
@@ -683,17 +683,31 @@ namespace Skew {
         }
 
         case .INDEX {
-          _emitExpression(node.indexLeft, .UNARY_POSTFIX)
+          var left = node.indexLeft
+          if _isReferenceType(left.resolvedType) {
+            _emit("(*")
+            _emitExpression(left, .UNARY_PREFIX)
+            _emit(")")
+          } else {
+            _emitExpression(left, .UNARY_POSTFIX)
+          }
           _emit("[")
           _emitExpression(node.indexRight, .LOWEST)
           _emit("]")
         }
 
         case .ASSIGN_INDEX {
+          var left = node.assignIndexLeft
           if Precedence.ASSIGN < precedence {
             _emit("(")
           }
-          _emitExpression(node.assignIndexLeft, .UNARY_POSTFIX)
+          if _isReferenceType(left.resolvedType) {
+            _emit("(*")
+            _emitExpression(left, .UNARY_PREFIX)
+            _emit(")")
+          } else {
+            _emitExpression(left, .UNARY_POSTFIX)
+          }
           _emit("[")
           _emitExpression(node.assignIndexCenter, .LOWEST)
           _emit("] = ")
@@ -757,11 +771,11 @@ namespace Skew {
           _emit("new ")
           _emitType(node.resolvedType, .BARE)
           if node.hasChildren {
-            _emit("()")
-          } else {
-            _emit(" { ")
+            _emit("({ ")
             _emitCommaSeparatedExpressions(node.firstChild, null)
-            _emit(" }")
+            _emit("})")
+          } else {
+            _emit("()")
           }
         }
 
@@ -864,12 +878,16 @@ namespace Skew {
           _emit(">")
         }
 
-        if type.isReference && mode != .BARE {
+        if _isReferenceType(type) && mode != .BARE {
           _emit(" *")
         } else if mode == .DECLARATION {
           _emit(" ")
         }
       }
+    }
+
+    def _isReferenceType(type Type) bool {
+      return type.isReference && type != _cache.stringType
     }
 
     def _finalizeEmittedFile {
