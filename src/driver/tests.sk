@@ -164,6 +164,17 @@ namespace Skew.Tests {
     return "[" + ", ".join(values) + "]"
   }
 
+  def toString(node Node) string {
+    if node == null {
+      return "null"
+    }
+    var parts = [node.kind.toString]
+    for child = node.firstChild; child != null; child = child.nextSibling {
+      parts.append(toString(child))
+    }
+    return toString(parts)
+  }
+
   def toString(value IntMap<double>) string {
     var keys = value.keys
     keys.sort((a, b) => a <=> b)
@@ -197,6 +208,7 @@ namespace Skew.Tests {
     # Unit tests
     testFormatting
     testLibrary
+    testNode
     testUnicode
 
     var report = Unit.TerminalReport.new

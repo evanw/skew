@@ -1,0 +1,409 @@
+enum Skew.NodeKind {
+  A
+  B
+  C
+  D
+  E
+  F
+  G
+}
+
+namespace Skew.Tests {
+  def testNode {
+    var visit fn(Node)
+
+    visit = node => {
+      assert(node.previousSibling == null || node.previousSibling.nextSibling == node)
+      assert(node.nextSibling == null || node.nextSibling.previousSibling == node)
+      assert(node.firstChild == null || node.firstChild.previousSibling == null)
+      assert(node.lastChild == null || node.lastChild.nextSibling == null)
+
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        assert(child.parent == node)
+        visit(child)
+      }
+    }
+
+    var verify = (root Node) string => {
+      if root != null {
+        visit(root)
+      }
+
+      return toString(root)
+    }
+
+    ################################################################################
+    # lastChild/previousSibling
+
+    test("previousSibling", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).previousSibling), "null")
+    })
+
+    test("lastChild", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).lastChild), "[C]")
+    })
+
+    test("lastChild.lastChild", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).lastChild.lastChild), "null")
+    })
+
+    test("lastChild.previousSibling", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).lastChild.previousSibling), "[B]")
+    })
+
+    test("lastChild.previousSibling.previousSibling", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).lastChild.previousSibling.previousSibling), "null")
+    })
+
+    ################################################################################
+    # firstChild/nextSibling
+
+    test("nextSibling", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).nextSibling), "null")
+    })
+
+    test("firstChild", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).firstChild), "[B]")
+    })
+
+    test("firstChild.firstChild", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).firstChild.firstChild), "null")
+    })
+
+    test("firstChild.nextSibling", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).firstChild.nextSibling), "[C]")
+    })
+
+    test("firstChild.nextSibling.nextSibling", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).firstChild.nextSibling.nextSibling), "null")
+    })
+
+    ################################################################################
+    # prependChild
+
+    test("prependChild 1", expect => {
+      expect(verify(Node.new(.A).prependChild(Node.new(.B))), "[A, [B]]")
+    })
+
+    test("prependChild 2", expect => {
+      expect(verify(Node.new(.A).prependChild(Node.new(.B)).prependChild(Node.new(.C))), "[A, [C], [B]]")
+    })
+
+    ################################################################################
+    # appendChild
+
+    test("appendChild 1", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B))), "[A, [B]]")
+    })
+
+    test("appendChild 2", expect => {
+      expect(verify(Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))), "[A, [B], [C]]")
+    })
+
+    ################################################################################
+    # appendChildrenFrom
+
+    test("appendChildrenFrom 1", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var D = Node.new(.D)
+
+      expect((ABC == ABC.appendChildrenFrom(D)).toString, "true")
+      expect(verify(ABC), "[A, [B], [C]]")
+      expect(verify(D), "[D]")
+    })
+
+    test("appendChildrenFrom 2", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var DEF = Node.new(.D).appendChild(Node.new(.E)).appendChild(Node.new(.F))
+
+      expect((ABC == ABC.appendChildrenFrom(DEF)).toString, "true")
+      expect(verify(ABC), "[A, [B], [C], [E], [F]]")
+      expect(verify(DEF), "[D]")
+    })
+
+    ################################################################################
+    # insertChildBefore
+
+    test("insertChildBefore 1", expect => {
+      var A = Node.new(.A)
+      var B = Node.new(.B)
+
+      expect((A == A.insertChildBefore(null, null)).toString, "true")
+      expect(verify(A), "[A]")
+      expect(verify(B), "[B]")
+    })
+
+    test("insertChildBefore 2", expect => {
+      var A = Node.new(.A)
+      var B = Node.new(.B)
+
+      expect((A == A.insertChildBefore(null, B)).toString, "true")
+      expect(verify(A), "[A, [B]]")
+      expect(verify(B), "[B]")
+    })
+
+    test("insertChildBefore 3", expect => {
+      var AB = Node.new(.A).appendChild(Node.new(.B))
+      var C = Node.new(.C)
+
+      expect((AB == AB.insertChildBefore(null, C)).toString, "true")
+      expect(verify(AB), "[A, [B], [C]]")
+      expect(verify(C), "[C]")
+    })
+
+    test("insertChildBefore 4", expect => {
+      var AB = Node.new(.A).appendChild(Node.new(.B))
+      var C = Node.new(.C)
+
+      expect((AB == AB.insertChildBefore(AB.firstChild, C)).toString, "true")
+      expect(verify(AB), "[A, [C], [B]]")
+      expect(verify(C), "[C]")
+    })
+
+    ################################################################################
+    # insertChildAfter
+
+    test("insertChildAfter 1", expect => {
+      var A = Node.new(.A)
+      var B = Node.new(.B)
+
+      expect((A == A.insertChildAfter(null, null)).toString, "true")
+      expect(verify(A), "[A]")
+      expect(verify(B), "[B]")
+    })
+
+    test("insertChildAfter 2", expect => {
+      var A = Node.new(.A)
+      var B = Node.new(.B)
+
+      expect((A == A.insertChildAfter(null, B)).toString, "true")
+      expect(verify(A), "[A, [B]]")
+      expect(verify(B), "[B]")
+    })
+
+    test("insertChildAfter 3", expect => {
+      var AB = Node.new(.A).appendChild(Node.new(.B))
+      var C = Node.new(.C)
+
+      expect((AB == AB.insertChildAfter(null, C)).toString, "true")
+      expect(verify(AB), "[A, [C], [B]]")
+      expect(verify(C), "[C]")
+    })
+
+    test("insertChildAfter 4", expect => {
+      var AB = Node.new(.A).appendChild(Node.new(.B))
+      var C = Node.new(.C)
+
+      expect((AB == AB.insertChildAfter(AB.firstChild, C)).toString, "true")
+      expect(verify(AB), "[A, [B], [C]]")
+      expect(verify(C), "[C]")
+    })
+
+    ################################################################################
+    # insertChildrenAfterFrom
+
+    test("insertChildrenAfterFrom 1", expect => {
+      var A = Node.new(.A)
+      var BCD = Node.new(.B).appendChild(Node.new(.C)).appendChild(Node.new(.D))
+
+      A.insertChildrenAfterFrom(BCD, null)
+      expect(verify(A), "[A, [C], [D]]")
+      expect(verify(BCD), "[B]")
+    })
+
+    test("insertChildrenAfterFrom 2", expect => {
+      var AB = Node.new(.A).appendChild(Node.new(.B))
+      var CDE = Node.new(.C).appendChild(Node.new(.D)).appendChild(Node.new(.E))
+
+      AB.insertChildrenAfterFrom(CDE, null)
+      expect(verify(AB), "[A, [D], [E], [B]]")
+      expect(verify(CDE), "[C]")
+    })
+
+    test("insertChildrenAfterFrom 3", expect => {
+      var AB = Node.new(.A).appendChild(Node.new(.B))
+      var CDE = Node.new(.C).appendChild(Node.new(.D)).appendChild(Node.new(.E))
+
+      AB.insertChildrenAfterFrom(CDE, AB.firstChild)
+      expect(verify(AB), "[A, [B], [D], [E]]")
+      expect(verify(CDE), "[C]")
+    })
+
+    ################################################################################
+    # remove
+
+    test("remove 1", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var B = ABC.firstChild.remove
+
+      expect(verify(B), "[B]")
+      expect(verify(ABC), "[A, [C]]")
+    })
+
+    test("remove 2", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var C = ABC.lastChild.remove
+
+      expect(verify(C), "[C]")
+      expect(verify(ABC), "[A, [B]]")
+    })
+
+    ################################################################################
+    # removeChildren
+
+    test("removeChildren 1", expect => {
+      var A = Node.new(.A)
+
+      A.removeChildren
+      expect(verify(A), "[A]")
+    })
+
+    test("removeChildren 2", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+
+      ABC.removeChildren
+      expect(verify(ABC), "[A]")
+    })
+
+    ################################################################################
+    # replaceWith
+
+    test("replaceWith 1", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var D = Node.new(.D)
+      var B = ABC.firstChild.replaceWith(D)
+
+      expect(verify(ABC), "[A, [D], [C]]")
+      expect(verify(D), "[D]")
+      expect(verify(B), "[B]")
+    })
+
+    test("replaceWith 2", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var D = Node.new(.D)
+      var C = ABC.lastChild.replaceWith(D)
+
+      expect(verify(ABC), "[A, [B], [D]]")
+      expect(verify(D), "[D]")
+      expect(verify(C), "[C]")
+    })
+
+    test("replaceWith 3", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var DEF = Node.new(.D).appendChild(Node.new(.E)).appendChild(Node.new(.F))
+      var B = ABC.firstChild.replaceWith(DEF)
+
+      expect(verify(ABC), "[A, [D, [E], [F]], [C]]")
+      expect(verify(DEF), "[D, [E], [F]]")
+      expect(verify(B), "[B]")
+    })
+
+    test("replaceWith 4", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var DEF = Node.new(.D).appendChild(Node.new(.E)).appendChild(Node.new(.F))
+      var C = ABC.lastChild.replaceWith(DEF)
+
+      expect(verify(ABC), "[A, [B], [D, [E], [F]]]")
+      expect(verify(DEF), "[D, [E], [F]]")
+      expect(verify(C), "[C]")
+    })
+
+    ################################################################################
+    # replaceWithChildrenFrom
+
+    test("replaceWithChildrenFrom 1", expect => {
+      var ABCD = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).appendChild(Node.new(.D))
+      var EFG = Node.new(.E).appendChild(Node.new(.F)).appendChild(Node.new(.G))
+      var B = ABCD.firstChild.replaceWithChildrenFrom(EFG)
+
+      expect(verify(ABCD), "[A, [F], [G], [C], [D]]")
+      expect(verify(EFG), "[E]")
+      expect(verify(B), "[B]")
+    })
+
+    test("replaceWithChildrenFrom 2", expect => {
+      var ABCD = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).appendChild(Node.new(.D))
+      var EFG = Node.new(.E).appendChild(Node.new(.F)).appendChild(Node.new(.G))
+      var C = ABCD.firstChild.nextSibling.replaceWithChildrenFrom(EFG)
+
+      expect(verify(ABCD), "[A, [B], [F], [G], [D]]")
+      expect(verify(EFG), "[E]")
+      expect(verify(C), "[C]")
+    })
+
+    test("replaceWithChildrenFrom 3", expect => {
+      var ABCD = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).appendChild(Node.new(.D))
+      var EFG = Node.new(.E).appendChild(Node.new(.F)).appendChild(Node.new(.G))
+      var D = ABCD.lastChild.replaceWithChildrenFrom(EFG)
+
+      expect(verify(ABCD), "[A, [B], [C], [F], [G]]")
+      expect(verify(EFG), "[E]")
+      expect(verify(D), "[D]")
+    })
+
+    test("replaceWithChildrenFrom 4", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var D = Node.new(.D)
+      var B = ABC.firstChild.replaceWithChildrenFrom(D)
+
+      expect(verify(ABC), "[A, [C]]")
+      expect(verify(D), "[D]")
+      expect(verify(B), "[B]")
+    })
+
+    test("replaceWithChildrenFrom 5", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+      var D = Node.new(.D)
+      var C = ABC.lastChild.replaceWithChildrenFrom(D)
+
+      expect(verify(ABC), "[A, [B]]")
+      expect(verify(D), "[D]")
+      expect(verify(C), "[C]")
+    })
+
+    ################################################################################
+    # swapWith
+
+    test("swapWith 1", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+
+      ABC.firstChild.swapWith(ABC.lastChild)
+      expect(verify(ABC), "[A, [C], [B]]")
+    })
+
+    test("swapWith 2", expect => {
+      var ABC = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C))
+
+      ABC.lastChild.swapWith(ABC.firstChild)
+      expect(verify(ABC), "[A, [C], [B]]")
+    })
+
+    test("swapWith 3", expect => {
+      var ABCD = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).appendChild(Node.new(.D))
+
+      ABCD.firstChild.swapWith(ABCD.lastChild)
+      expect(verify(ABCD), "[A, [D], [C], [B]]")
+    })
+
+    test("swapWith 4", expect => {
+      var ABCD = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).appendChild(Node.new(.D))
+
+      ABCD.lastChild.swapWith(ABCD.firstChild)
+      expect(verify(ABCD), "[A, [D], [C], [B]]")
+    })
+
+    test("swapWith 5", expect => {
+      var ABCD = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).appendChild(Node.new(.D))
+
+      ABCD.firstChild.swapWith(ABCD.firstChild.nextSibling)
+      expect(verify(ABCD), "[A, [C], [B], [D]]")
+    })
+
+    test("swapWith 6", expect => {
+      var ABCD = Node.new(.A).appendChild(Node.new(.B)).appendChild(Node.new(.C)).appendChild(Node.new(.D))
+
+      ABCD.lastChild.swapWith(ABCD.lastChild.previousSibling)
+      expect(verify(ABCD), "[A, [B], [D], [C]]")
+    })
+  }
+}

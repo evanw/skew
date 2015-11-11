@@ -455,7 +455,7 @@ namespace Skew {
     }
 
     def insertChildAfter(before Node, after Node) Node {
-      if before == null {
+      if after == null {
         return self
       }
 

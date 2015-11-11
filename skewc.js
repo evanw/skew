@@ -7402,7 +7402,7 @@
   };
 
   Skew.Node.prototype.insertChildAfter = function(before, after) {
-    if (before == null) {
+    if (after == null) {
       return this;
     }
 
