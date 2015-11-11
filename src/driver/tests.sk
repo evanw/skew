@@ -116,36 +116,40 @@ namespace Skew.Tests {
     return test
   }
 
-  def testExpect(text string, answer bool, expected bool) Unit.Test {
-    return test(text, expectString => expectString(answer.toString, expected.toString))
+  def testExpect(text string, answer fn() bool, expected bool) Unit.Test {
+    return test(text, expectString => expectString(answer().toString, expected.toString))
   }
 
-  def testExpect(text string, answer double, expected double) Unit.Test {
-    return test(text, expectString => expectString(answer.toString, expected.toString))
+  def testExpect(text string, answer fn() int, expected int) Unit.Test {
+    return test(text, expectString => expectString(answer().toString, expected.toString))
   }
 
-  def testExpect(text string, answer string, expected string) Unit.Test {
-    return test(text, expectString => expectString(answer, expected))
+  def testExpect(text string, answer fn() double, expected double) Unit.Test {
+    return test(text, expectString => expectString(answer().toString, expected.toString))
   }
 
-  def testExpect(text string, answer List<int>, expected List<int>) Unit.Test {
-    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  def testExpect(text string, answer fn() string, expected string) Unit.Test {
+    return test(text, expectString => expectString(answer(), expected))
   }
 
-  def testExpect(text string, answer List<double>, expected List<double>) Unit.Test {
-    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  def testExpect(text string, answer fn() List<int>, expected List<int>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer()), toString(expected)))
   }
 
-  def testExpect(text string, answer List<string>, expected List<string>) Unit.Test {
-    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  def testExpect(text string, answer fn() List<double>, expected List<double>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer()), toString(expected)))
   }
 
-  def testExpect(text string, answer IntMap<double>, expected IntMap<double>) Unit.Test {
-    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  def testExpect(text string, answer fn() List<string>, expected List<string>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer()), toString(expected)))
   }
 
-  def testExpect(text string, answer StringMap<double>, expected StringMap<double>) Unit.Test {
-    return test(text, expectString => expectString(toString(answer), toString(expected)))
+  def testExpect(text string, answer fn() IntMap<double>, expected IntMap<double>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer()), toString(expected)))
+  }
+
+  def testExpect(text string, answer fn() StringMap<double>, expected StringMap<double>) Unit.Test {
+    return test(text, expectString => expectString(toString(answer()), toString(expected)))
   }
 
   def toString(values List<int>) string {
