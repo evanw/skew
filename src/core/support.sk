@@ -176,21 +176,19 @@ namespace Skew.PrettyPrint {
 
 # Language-specific stuff
 
-namespace Skew.Parsing {
-  if TARGET == .JAVASCRIPT {
-    def parseDoubleLiteral(text string) double {
-      return +(text as dynamic)
-    }
+if TARGET == .JAVASCRIPT {
+  def parseDoubleLiteral(text string) double {
+    return +(text as dynamic)
   }
+}
 
-  else if TARGET == .CSHARP {
-    def parseDoubleLiteral(text string) double {
-      return dynamic.double.Parse(text)
-    }
+else if TARGET == .CSHARP {
+  def parseDoubleLiteral(text string) double {
+    return dynamic.double.Parse(text)
   }
+}
 
-  else {
-    @import
-    def parseDoubleLiteral(text string) double
-  }
+else {
+  @import
+  def parseDoubleLiteral(text string) double
 }

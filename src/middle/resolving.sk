@@ -174,7 +174,7 @@ namespace Skew.Resolving {
 
       # Special-case doubles
       else if type == _cache.doubleType {
-        var number = Parsing.parseDoubleLiteral(value)
+        var number = parseDoubleLiteral(value)
         if !number.isNaN {
           node = Node.createDouble(number)
         }
@@ -2826,6 +2826,10 @@ namespace Skew.Resolving {
           _log.semanticErrorNoCommonType(node.range, left.resolvedType, right.resolvedType)
         } else {
           node.resolvedType = _cache.boolType
+
+          # Make sure type casts are inserted
+          _checkConversion(left, commonType, .IMPLICIT)
+          _checkConversion(right, commonType, .IMPLICIT)
         }
 
         return

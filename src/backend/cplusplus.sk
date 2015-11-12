@@ -165,7 +165,7 @@ namespace Skew {
           _emitNewlineAfterSymbol(symbol)
         }
 
-        case .OBJECT_CLASS {
+        case .OBJECT_CLASS, .OBJECT_INTERFACE {
           _adjustNamespace(symbol)
           _emitNewlineBeforeSymbol(symbol, .DECLARE)
           _emitTypeParameters(symbol.parameters)
@@ -181,15 +181,25 @@ namespace Skew {
       }
 
       switch symbol.kind {
-        case .OBJECT_CLASS {
+        case .OBJECT_CLASS, .OBJECT_INTERFACE {
           _adjustNamespace(symbol)
           _emitNewlineBeforeSymbol(symbol, .DEFINE)
           _emitComments(symbol.comments)
           _emitTypeParameters(symbol.parameters)
           _emit(_indent + "struct " + _mangleName(symbol))
-          if symbol.baseClass != null {
+          if symbol.extends != null || symbol.implements != null {
             _emit(" : ")
-            _emitType(symbol.baseClass.resolvedType, .BARE)
+            if symbol.extends != null {
+              _emitExpressionOrType(symbol.extends, symbol.baseType)
+            }
+            if symbol.implements != null {
+              for node in symbol.implements {
+                if node != symbol.implements.first || symbol.extends != null {
+                  _emit(", ")
+                }
+                _emitExpressionOrType(node, node.resolvedType)
+              }
+            }
           }
           _emit(" {\n")
           _increaseIndent
@@ -238,7 +248,7 @@ namespace Skew {
         _emit("static ")
       }
       if symbol.kind != .FUNCTION_CONSTRUCTOR {
-        if mode == .DEFINE && symbol.isVirtual {
+        if mode == .DEFINE && (symbol.isVirtual || block == null) {
           _emit("virtual ")
         }
         _emitType(symbol.resolvedType.returnType, .DECLARATION)
@@ -281,6 +291,9 @@ namespace Skew {
       else {
         if symbol.overridden != null && symbol.kind != .FUNCTION_CONSTRUCTOR {
           _emit(" override")
+        }
+        if block == null {
+          _emit(" = 0")
         }
         _emit(";\n")
       }
@@ -461,6 +474,9 @@ namespace Skew {
                 assert(child.kind == .VARIABLE)
                 if child.previousSibling != null {
                   _emit(", ")
+                  if _isReferenceType(symbol.resolvedType) {
+                    _emit("*")
+                  }
                 }
                 _emit(_mangleName(symbol) + " = ")
                 _emitExpression(symbol.value, .COMMA)
@@ -666,7 +682,9 @@ namespace Skew {
 
         case .CAST {
           var value = node.castValue
-          if node.castType.resolvedType == .DYNAMIC {
+          if value.kind == .NULL && node.resolvedType == _cache.stringType {
+            _emit("string()")
+          } else if node.castType.resolvedType == .DYNAMIC {
             _emitExpression(value, precedence)
           } else {
             if Precedence.UNARY_POSTFIX < precedence {
@@ -771,7 +789,7 @@ namespace Skew {
           _emit("new ")
           _emitType(node.resolvedType, .BARE)
           if node.hasChildren {
-            _emit("({ ")
+            _emit("({")
             _emitCommaSeparatedExpressions(node.firstChild, null)
             _emit("})")
           } else {
@@ -837,6 +855,14 @@ namespace Skew {
       BARE
       NORMAL
       DECLARATION
+    }
+
+    def _emitExpressionOrType(node Node, type Type) {
+      if node != null && (type == null || type == .DYNAMIC) {
+        _emitExpression(node, .LOWEST)
+      } else {
+        _emitType(type, .BARE)
+      }
     }
 
     def _emitType(type Type, mode CppEmitType) {
@@ -953,7 +979,7 @@ namespace Skew {
       return symbol.name
     }
 
-    var _isKeyword = {
+    const _isKeyword = {
       "alignas": 0,
       "alignof": 0,
       "and": 0,

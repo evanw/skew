@@ -43,6 +43,10 @@ class int {
   def toString string {
     return dynamic.intToString(self)
   }
+
+  def >>>(x int) int {
+    return (self as dynamic.unsigned >> x) as dynamic.signed
+  }
 }
 
 class double {
@@ -50,8 +54,14 @@ class double {
     return dynamic.doubleToString(self)
   }
 
-  def isNaN bool {
-    return self != self
+  @include(\"<math.h>\") {
+    def isNaN bool {
+      return dynamic.isnan(self)
+    }
+
+    def isFinite bool {
+      return dynamic.isfinite(self)
+    }
   }
 }
 

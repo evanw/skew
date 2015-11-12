@@ -8,6 +8,7 @@ namespace Unicode {
   }
 
   const STRING_ENCODING Encoding =
+    TARGET == .CPLUSPLUS ? .UTF8 :
     TARGET == .CSHARP || TARGET == .JAVASCRIPT ? .UTF16 :
     .UTF32
 
