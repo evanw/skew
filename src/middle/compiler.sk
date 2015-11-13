@@ -38,7 +38,6 @@ namespace Skew {
     def new {
       passes = [
         LexingPass.new,
-        TokenProcessingPass.new,
         ParsingPass.new,
         MergingPass.new,
         ResolvingPass.new,

@@ -1,7 +1,6 @@
 namespace Skew {
   enum PassKind {
     LEXING
-    TOKEN_PROCESSING
   }
 
   class LexingPass : Pass {
@@ -16,29 +15,9 @@ namespace Skew {
     }
   }
 
-  class TokenProcessingPass : Pass {
-    over kind PassKind {
-      return .TOKEN_PROCESSING
-    }
-
-    over run(context PassContext) {
-      for tokens in context.tokens {
-        prepareTokens(tokens)
-      }
-    }
-  }
-
   class Token {
     var range Range
     var kind TokenKind
-
-    def firstCodeUnit int {
-      if kind == .END_OF_FILE {
-        return 0
-      }
-      assert(range.start < range.source.contents.count)
-      return range.source.contents[range.start]
-    }
   }
 
   var REMOVE_NEWLINE_BEFORE IntMap<int> = {
@@ -58,7 +37,9 @@ namespace Skew {
   def tokenize(log Log, source Source) List<Token> {
     var tokens List<Token> = []
     var text = source.contents
-    var text_length = text.count
+    var count = text.count
+    var previousKind TokenKind = .NULL
+    var stack List<Token> = []
 
     # For backing up
     var yy_last_accepting_state = 0
@@ -67,17 +48,17 @@ namespace Skew {
     # The current character pointer
     var yy_cp = 0
 
-    while yy_cp < text_length {
+    while yy_cp < count {
       var yy_current_state = 1 # Reset the NFA
       var yy_bp = yy_cp # The pointer to the beginning of the token
 
       # Search for a match
       while yy_current_state != YY_JAM_STATE {
-        if yy_cp >= text_length {
+        if yy_cp >= count {
           break # This prevents syntax errors from causing infinite loops
         }
         var c = text[yy_cp]
-        var index = c < 127 ? c : 127
+        var index = c < 127 ? c : 127 # All of the interesting characters are ASCII
         var yy_c = yy_ec[index]
         if yy_accept[yy_current_state] != .YY_INVALID_ACTION {
           yy_last_accepting_state = yy_current_state
@@ -107,8 +88,13 @@ namespace Skew {
         continue
       }
 
+      # Stop at the end of the file
+      if yy_act == .END_OF_FILE {
+        break
+      }
+
       # This is the default action in flex, which is usually called ECHO
-      else if yy_act == .ERROR {
+      if yy_act == .ERROR {
         var iterator = Unicode.StringIterator.INSTANCE.reset(text, yy_bp)
         iterator.nextCodePoint
         var range = Range.new(source, yy_bp, iterator.index)
@@ -116,151 +102,96 @@ namespace Skew {
         break
       }
 
-      # Ignore END_OF_FILE since this loop must still perform the last action
-      else if yy_act != .END_OF_FILE {
-        tokens.append(Token.new(Range.new(source, yy_bp, yy_cp), yy_act))
+      var token = Token.new(Range.new(source, yy_bp, yy_cp), yy_act)
 
-        # These tokens start with a ">" and may need to be split if we discover
-        # that they should really be END_PARAMETER_LIST tokens. Save enough room
-        # for these tokens to be split into pieces, that way all of the tokens
-        # don't have to be shifted over repeatedly inside prepareTokens(). The
-        # ">>" token may become ">" + ">", the ">=" token may become ">" + "=",
-        # the ">>>" token may become ">" + ">>" and ultimately ">" + ">" + ">",
-        # the ">>=" token may ultimately become ">" + ">" + "=", and the ">>>="
-        # token may ultimately become ">" + ">" + ">" + "=".
-        if yy_act == .ASSIGN_SHIFT_RIGHT || yy_act == .ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == .GREATER_THAN_OR_EQUAL || yy_act == .SHIFT_RIGHT || yy_act == .UNSIGNED_SHIFT_RIGHT {
-          tokens.append(null)
+      # Tokens that start with a greater than may need to be split, potentially multiple times
+      var loop = true
+      while loop {
+        var tokenStartsWithGreaterThan = text[token.range.start] == '>'
+        var tokenKind = token.kind
+        loop = false
 
-          if yy_act == .ASSIGN_SHIFT_RIGHT || yy_act == .ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == .UNSIGNED_SHIFT_RIGHT {
-            tokens.append(null)
-
-            if yy_act == .ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == .UNSIGNED_SHIFT_RIGHT {
-              tokens.append(null)
-            }
-          }
-        }
-      }
-    }
-
-    # Every token stream ends in END_OF_FILE
-    tokens.append(Token.new(Range.new(source, text_length, text_length), .END_OF_FILE))
-
-    # Also return preprocessor token presence so the preprocessor can be avoided
-    return tokens
-  }
-
-  def prepareTokens(tokens List<Token>) {
-    var previousKind TokenKind = .NULL
-    var stack List<Token> = []
-    var count = 0
-
-    for i in 0..tokens.count {
-      var token = tokens[i]
-
-      # Skip null placeholders after tokens that start with a greater than. Each
-      # token that may need to split has enough nulls after it for all the pieces.
-      # It's a lot faster to remove null gaps during token preparation than to
-      # insert pieces in the middle of the token stream (O(n) vs O(n^2)).
-      if token == null {
-        continue
-      }
-
-      # Compress tokens to eliminate unused null gaps
-      tokens[count++] = token
-
-      # Tokens that start with a greater than may need to be split
-      var tokenKind = token.kind
-      var tokenStartsWithGreaterThan = token.firstCodeUnit == '>'
-
-      # Remove tokens from the stack if they aren't working out
-      while !stack.isEmpty {
-        var top = stack.last
-        var topKind = top.kind
-
-        # Stop parsing a type if we find a token that no type expression uses
-        if topKind == .LESS_THAN && tokenKind != .LESS_THAN && tokenKind != .IDENTIFIER && tokenKind != .COMMA && tokenKind != .DYNAMIC &&
-            tokenKind != .DOT && tokenKind != .LEFT_PARENTHESIS && tokenKind != .RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan {
-          stack.removeLast
-        } else {
-          break
-        }
-      }
-
-      # Group open
-      if tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET || tokenKind == .LESS_THAN {
-        stack.append(token)
-      }
-
-      # Group close
-      else if tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan {
-        # Search for a matching opposite token
+        # Remove tokens from the stack if they aren't working out
         while !stack.isEmpty {
           var top = stack.last
           var topKind = top.kind
 
-          # Don't match closing angle brackets that don't work since they are just operators
-          if tokenStartsWithGreaterThan && topKind != .LESS_THAN {
+          # Stop parsing a type if we find a token that no type expression uses
+          if topKind == .LESS_THAN && tokenKind != .LESS_THAN && tokenKind != .IDENTIFIER && tokenKind != .COMMA && tokenKind != .DYNAMIC &&
+              tokenKind != .DOT && tokenKind != .LEFT_PARENTHESIS && tokenKind != .RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan {
+            stack.removeLast
+          } else {
             break
           }
+        }
 
-          # Consume the current token
-          stack.removeLast
+        # Group open
+        if tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET || tokenKind == .LESS_THAN {
+          stack.append(token)
+        }
 
-          # Special-case angle brackets matches
-          if topKind == .LESS_THAN {
+        # Group close
+        else if tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan {
+          # Search for a matching opposite token
+          while !stack.isEmpty {
+            var top = stack.last
+            var topKind = top.kind
 
-            # Remove tentative matches that didn't work out
-            if !tokenStartsWithGreaterThan {
-              continue
+            # Don't match ">" that don't work since they are just operators
+            if tokenStartsWithGreaterThan && topKind != .LESS_THAN {
+              break
             }
 
-            # Break apart operators that start with a closing angle bracket
-            if tokenKind != .GREATER_THAN {
-              var range = token.range
-              var start = range.start
-              assert(i + 1 < tokens.count)
-              assert(tokens[i + 1] == null)
-              assert(
-                tokenKind == .ASSIGN_SHIFT_RIGHT ||
-                tokenKind == .ASSIGN_UNSIGNED_SHIFT_RIGHT ||
-                tokenKind == .GREATER_THAN_OR_EQUAL ||
-                tokenKind == .SHIFT_RIGHT ||
-                tokenKind == .UNSIGNED_SHIFT_RIGHT)
-              tokens[i + 1] = Token.new(Range.new(range.source, start + 1, range.end),
-                tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
-                tokenKind == .UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
-                tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
-                tokenKind == .ASSIGN_SHIFT_RIGHT ? .GREATER_THAN_OR_EQUAL :
-                tokenKind == .ASSIGN_UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
-                .NULL)
-              token.range = Range.new(range.source, start, start + 1)
-            }
+            # Consume the current token
+            stack.removeLast
 
-            # Convert < and > into bounds for type parameter lists
-            top.kind = .START_PARAMETER_LIST
-            token.kind = .END_PARAMETER_LIST
-            tokenKind = .END_PARAMETER_LIST
+            # Special-case angle brackets matches and ignore tentative matches that didn't work out
+            if topKind == .LESS_THAN && tokenStartsWithGreaterThan {
+
+              # Break apart operators that start with a closing angle bracket
+              if tokenKind != .GREATER_THAN {
+                tokens.append(Token.new(Range.new(source, yy_bp, yy_bp + 1), .END_PARAMETER_LIST))
+                token.range.start = yy_bp + 1
+                token.kind =
+                  tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
+                  tokenKind == .UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
+                  tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
+                  tokenKind == .ASSIGN_SHIFT_RIGHT ? .GREATER_THAN_OR_EQUAL :
+                  tokenKind == .ASSIGN_UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
+                  .NULL
+                assert(token.kind != .NULL)
+                loop = tokenKind != .GREATER_THAN_OR_EQUAL # Split this token again
+              } else {
+                token.kind = .END_PARAMETER_LIST
+              }
+
+              # Convert the "<" into a bound for type parameter lists
+              top.kind = .START_PARAMETER_LIST
+
+              # Stop the search since we found a match
+              break
+            }
           }
-
-          # Stop the search since we found a match
-          break
         }
       }
 
       # Remove newlines based on the previous token to enable line continuations.
       # Make sure to be conservative. We want to be like Python, not like
       # JavaScript ASI! Anything that is at all ambiguous should be disallowed.
-      if previousKind == .NEWLINE && tokenKind in REMOVE_NEWLINE_BEFORE {
-        tokens[count - 2] = token
-        count--
+      if previousKind == .NEWLINE && token.kind in REMOVE_NEWLINE_BEFORE {
+        tokens.removeLast
       }
-      previousKind = tokenKind
+      previousKind = token.kind
+
+      # Accumulate the token for this iteration
+      tokens.append(token)
     }
 
-    # Trim off the remaining tokens due to null gap removal
-    while tokens.count > count {
-      tokens.removeLast
-    }
+    # Every token stream ends in END_OF_FILE
+    tokens.append(Token.new(Range.new(source, count, count), .END_OF_FILE))
+
+    # Also return preprocessor token presence so the preprocessor can be avoided
+    return tokens
   }
 
   enum TokenKind {
@@ -378,6 +309,9 @@ namespace Skew {
       INT_HEX: "integer",
       INT_OCTAL: "integer",
       STRING: "string",
+
+      START_PARAMETER_LIST: "\"<\"",
+      END_PARAMETER_LIST: "\">\"",
     }
   }
 }

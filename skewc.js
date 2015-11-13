@@ -334,7 +334,9 @@
   Skew.tokenize = function(log, source) {
     var tokens = [];
     var text = source.contents;
-    var text_length = text.length;
+    var count = text.length;
+    var previousKind = Skew.TokenKind.NULL;
+    var stack = [];
 
     // For backing up
     var yy_last_accepting_state = 0;
@@ -343,7 +345,7 @@
     // The current character pointer
     var yy_cp = 0;
 
-    while (yy_cp < text_length) {
+    while (yy_cp < count) {
       // Reset the NFA
       var yy_current_state = 1;
 
@@ -352,12 +354,14 @@
 
       // Search for a match
       while (yy_current_state != Skew.YY_JAM_STATE) {
-        if (yy_cp >= text_length) {
+        if (yy_cp >= count) {
           // This prevents syntax errors from causing infinite loops
           break;
         }
 
         var c = text.charCodeAt(yy_cp);
+
+        // All of the interesting characters are ASCII
         var index = c < 127 ? c : 127;
         var yy_c = Skew.yy_ec[index];
 
@@ -393,8 +397,13 @@
         continue;
       }
 
+      // Stop at the end of the file
+      if (yy_act == Skew.TokenKind.END_OF_FILE) {
+        break;
+      }
+
       // This is the default action in flex, which is usually called ECHO
-      else if (yy_act == Skew.TokenKind.ERROR) {
+      if (yy_act == Skew.TokenKind.ERROR) {
         var iterator = Unicode.StringIterator.INSTANCE.reset(text, yy_bp);
         iterator.nextCodePoint();
         var range = new Skew.Range(source, yy_bp, iterator.index);
@@ -402,141 +411,96 @@
         break;
       }
 
-      // Ignore END_OF_FILE since this loop must still perform the last action
-      else if (yy_act != Skew.TokenKind.END_OF_FILE) {
-        tokens.push(new Skew.Token(new Skew.Range(source, yy_bp, yy_cp), yy_act));
+      var token = new Skew.Token(new Skew.Range(source, yy_bp, yy_cp), yy_act);
 
-        // These tokens start with a ">" and may need to be split if we discover
-        // that they should really be END_PARAMETER_LIST tokens. Save enough room
-        // for these tokens to be split into pieces, that way all of the tokens
-        // don't have to be shifted over repeatedly inside prepareTokens(). The
-        // ">>" token may become ">" + ">", the ">=" token may become ">" + "=",
-        // the ">>>" token may become ">" + ">>" and ultimately ">" + ">" + ">",
-        // the ">>=" token may ultimately become ">" + ">" + "=", and the ">>>="
-        // token may ultimately become ">" + ">" + ">" + "=".
-        if (yy_act == Skew.TokenKind.ASSIGN_SHIFT_RIGHT || yy_act == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == Skew.TokenKind.GREATER_THAN_OR_EQUAL || yy_act == Skew.TokenKind.SHIFT_RIGHT || yy_act == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT) {
-          tokens.push(null);
+      // Tokens that start with a greater than may need to be split, potentially multiple times
+      var loop = true;
 
-          if (yy_act == Skew.TokenKind.ASSIGN_SHIFT_RIGHT || yy_act == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT) {
-            tokens.push(null);
+      while (loop) {
+        var tokenStartsWithGreaterThan = text.charCodeAt(token.range.start) == 62;
+        var tokenKind = token.kind;
+        loop = false;
 
-            if (yy_act == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT || yy_act == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT) {
-              tokens.push(null);
-            }
-          }
-        }
-      }
-    }
-
-    // Every token stream ends in END_OF_FILE
-    tokens.push(new Skew.Token(new Skew.Range(source, text_length, text_length), Skew.TokenKind.END_OF_FILE));
-
-    // Also return preprocessor token presence so the preprocessor can be avoided
-    return tokens;
-  };
-
-  Skew.prepareTokens = function(tokens) {
-    var previousKind = Skew.TokenKind.NULL;
-    var stack = [];
-    var count = 0;
-
-    for (var i = 0, count1 = tokens.length; i < count1; i = i + 1 | 0) {
-      var token = tokens[i];
-
-      // Skip null placeholders after tokens that start with a greater than. Each
-      // token that may need to split has enough nulls after it for all the pieces.
-      // It's a lot faster to remove null gaps during token preparation than to
-      // insert pieces in the middle of the token stream (O(n) vs O(n^2)).
-      if (token == null) {
-        continue;
-      }
-
-      // Compress tokens to eliminate unused null gaps
-      tokens[(count = count + 1 | 0) + -1 | 0] = token;
-
-      // Tokens that start with a greater than may need to be split
-      var tokenKind = token.kind;
-      var tokenStartsWithGreaterThan = token.firstCodeUnit() == 62;
-
-      // Remove tokens from the stack if they aren't working out
-      while (!(stack.length == 0)) {
-        var top = in_List.last(stack);
-        var topKind = top.kind;
-
-        // Stop parsing a type if we find a token that no type expression uses
-        if (topKind == Skew.TokenKind.LESS_THAN && tokenKind != Skew.TokenKind.LESS_THAN && tokenKind != Skew.TokenKind.IDENTIFIER && tokenKind != Skew.TokenKind.COMMA && tokenKind != Skew.TokenKind.DYNAMIC && tokenKind != Skew.TokenKind.DOT && tokenKind != Skew.TokenKind.LEFT_PARENTHESIS && tokenKind != Skew.TokenKind.RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan) {
-          stack.pop();
-        }
-
-        else {
-          break;
-        }
-      }
-
-      // Group open
-      if (tokenKind == Skew.TokenKind.LEFT_PARENTHESIS || tokenKind == Skew.TokenKind.LEFT_BRACE || tokenKind == Skew.TokenKind.LEFT_BRACKET || tokenKind == Skew.TokenKind.LESS_THAN) {
-        stack.push(token);
-      }
-
-      // Group close
-      else if (tokenKind == Skew.TokenKind.RIGHT_PARENTHESIS || tokenKind == Skew.TokenKind.RIGHT_BRACE || tokenKind == Skew.TokenKind.RIGHT_BRACKET || tokenStartsWithGreaterThan) {
-        // Search for a matching opposite token
+        // Remove tokens from the stack if they aren't working out
         while (!(stack.length == 0)) {
-          var top1 = in_List.last(stack);
-          var topKind1 = top1.kind;
+          var top = in_List.last(stack);
+          var topKind = top.kind;
 
-          // Don't match closing angle brackets that don't work since they are just operators
-          if (tokenStartsWithGreaterThan && topKind1 != Skew.TokenKind.LESS_THAN) {
+          // Stop parsing a type if we find a token that no type expression uses
+          if (topKind == Skew.TokenKind.LESS_THAN && tokenKind != Skew.TokenKind.LESS_THAN && tokenKind != Skew.TokenKind.IDENTIFIER && tokenKind != Skew.TokenKind.COMMA && tokenKind != Skew.TokenKind.DYNAMIC && tokenKind != Skew.TokenKind.DOT && tokenKind != Skew.TokenKind.LEFT_PARENTHESIS && tokenKind != Skew.TokenKind.RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan) {
+            stack.pop();
+          }
+
+          else {
             break;
           }
+        }
 
-          // Consume the current token
-          stack.pop();
+        // Group open
+        if (tokenKind == Skew.TokenKind.LEFT_PARENTHESIS || tokenKind == Skew.TokenKind.LEFT_BRACE || tokenKind == Skew.TokenKind.LEFT_BRACKET || tokenKind == Skew.TokenKind.LESS_THAN) {
+          stack.push(token);
+        }
 
-          // Special-case angle brackets matches
-          if (topKind1 == Skew.TokenKind.LESS_THAN) {
-            // Remove tentative matches that didn't work out
-            if (!tokenStartsWithGreaterThan) {
-              continue;
+        // Group close
+        else if (tokenKind == Skew.TokenKind.RIGHT_PARENTHESIS || tokenKind == Skew.TokenKind.RIGHT_BRACE || tokenKind == Skew.TokenKind.RIGHT_BRACKET || tokenStartsWithGreaterThan) {
+          // Search for a matching opposite token
+          while (!(stack.length == 0)) {
+            var top1 = in_List.last(stack);
+            var topKind1 = top1.kind;
+
+            // Don't match ">" that don't work since they are just operators
+            if (tokenStartsWithGreaterThan && topKind1 != Skew.TokenKind.LESS_THAN) {
+              break;
             }
 
-            // Break apart operators that start with a closing angle bracket
-            if (tokenKind != Skew.TokenKind.GREATER_THAN) {
-              var range = token.range;
-              var start = range.start;
-              assert((i + 1 | 0) < tokens.length);
-              assert(tokens[i + 1 | 0] == null);
-              assert(tokenKind == Skew.TokenKind.ASSIGN_SHIFT_RIGHT || tokenKind == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT || tokenKind == Skew.TokenKind.GREATER_THAN_OR_EQUAL || tokenKind == Skew.TokenKind.SHIFT_RIGHT || tokenKind == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT);
-              tokens[i + 1 | 0] = new Skew.Token(new Skew.Range(range.source, start + 1 | 0, range.end), tokenKind == Skew.TokenKind.SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN : tokenKind == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : tokenKind == Skew.TokenKind.GREATER_THAN_OR_EQUAL ? Skew.TokenKind.ASSIGN : tokenKind == Skew.TokenKind.ASSIGN_SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN_OR_EQUAL : tokenKind == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : Skew.TokenKind.NULL);
-              token.range = new Skew.Range(range.source, start, start + 1 | 0);
-            }
+            // Consume the current token
+            stack.pop();
 
-            // Convert < and > into bounds for type parameter lists
-            top1.kind = Skew.TokenKind.START_PARAMETER_LIST;
-            token.kind = Skew.TokenKind.END_PARAMETER_LIST;
-            tokenKind = Skew.TokenKind.END_PARAMETER_LIST;
+            // Special-case angle brackets matches and ignore tentative matches that didn't work out
+            if (topKind1 == Skew.TokenKind.LESS_THAN && tokenStartsWithGreaterThan) {
+              // Break apart operators that start with a closing angle bracket
+              if (tokenKind != Skew.TokenKind.GREATER_THAN) {
+                tokens.push(new Skew.Token(new Skew.Range(source, yy_bp, yy_bp + 1 | 0), Skew.TokenKind.END_PARAMETER_LIST));
+                token.range.start = yy_bp + 1 | 0;
+                token.kind = tokenKind == Skew.TokenKind.SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN : tokenKind == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : tokenKind == Skew.TokenKind.GREATER_THAN_OR_EQUAL ? Skew.TokenKind.ASSIGN : tokenKind == Skew.TokenKind.ASSIGN_SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN_OR_EQUAL : tokenKind == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : Skew.TokenKind.NULL;
+                assert(token.kind != Skew.TokenKind.NULL);
+
+                // Split this token again
+                loop = tokenKind != Skew.TokenKind.GREATER_THAN_OR_EQUAL;
+              }
+
+              else {
+                token.kind = Skew.TokenKind.END_PARAMETER_LIST;
+              }
+
+              // Convert the "<" into a bound for type parameter lists
+              top1.kind = Skew.TokenKind.START_PARAMETER_LIST;
+
+              // Stop the search since we found a match
+              break;
+            }
           }
-
-          // Stop the search since we found a match
-          break;
         }
       }
 
       // Remove newlines based on the previous token to enable line continuations.
       // Make sure to be conservative. We want to be like Python, not like
       // JavaScript ASI! Anything that is at all ambiguous should be disallowed.
-      if (previousKind == Skew.TokenKind.NEWLINE && tokenKind in Skew.REMOVE_NEWLINE_BEFORE) {
-        tokens[count - 2 | 0] = token;
-        count = count - 1 | 0;
+      if (previousKind == Skew.TokenKind.NEWLINE && token.kind in Skew.REMOVE_NEWLINE_BEFORE) {
+        tokens.pop();
       }
 
-      previousKind = tokenKind;
+      previousKind = token.kind;
+
+      // Accumulate the token for this iteration
+      tokens.push(token);
     }
 
-    // Trim off the remaining tokens due to null gap removal
-    while (tokens.length > count) {
-      tokens.pop();
-    }
+    // Every token stream ends in END_OF_FILE
+    tokens.push(new Skew.Token(new Skew.Range(source, count, count), Skew.TokenKind.END_OF_FILE));
+
+    // Also return preprocessor token presence so the preprocessor can be avoided
+    return tokens;
   };
 
   Skew.compile = function(log, options, inputs) {
@@ -946,16 +910,15 @@
     EMITTING: 0,
     PARSING: 1,
     LEXING: 2,
-    TOKEN_PROCESSING: 3,
-    CALL_GRAPH: 4,
-    FOLDING: 5,
-    GLOBALIZING: 6,
-    INLINING: 7,
-    INTERFACE_REMOVAL: 8,
-    MERGING: 10,
-    MOTION: 11,
-    RENAMING: 12,
-    RESOLVING: 13
+    CALL_GRAPH: 3,
+    FOLDING: 4,
+    GLOBALIZING: 5,
+    INLINING: 6,
+    INTERFACE_REMOVAL: 7,
+    MERGING: 9,
+    MOTION: 10,
+    RENAMING: 11,
+    RESOLVING: 12
   };
 
   Skew.EmitMode = {
@@ -11751,15 +11714,6 @@
     this.kind = kind;
   };
 
-  Skew.Token.prototype.firstCodeUnit = function() {
-    if (this.kind == Skew.TokenKind.END_OF_FILE) {
-      return 0;
-    }
-
-    assert(this.range.start < this.range.source.contents.length);
-    return this.range.source.contents.charCodeAt(this.range.start);
-  };
-
   Skew.CallSite = function(callNode, enclosingSymbol) {
     this.callNode = callNode;
     this.enclosingSymbol = enclosingSymbol;
@@ -12002,7 +11956,6 @@
     self.passes = null;
     self.passes = [
       new Skew.LexingPass(),
-      new Skew.TokenProcessingPass(),
       new Skew.ParsingPass(),
       new Skew.MergingPass(),
       new Skew.ResolvingPass(),
@@ -12107,40 +12060,6 @@
     context.callGraph = new Skew.CallGraph(context.global);
   };
 
-  Skew.TokenProcessingPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.TokenProcessingPass, Skew.Pass);
-
-  Skew.TokenProcessingPass.prototype.kind = function() {
-    return Skew.PassKind.TOKEN_PROCESSING;
-  };
-
-  Skew.TokenProcessingPass.prototype.run = function(context) {
-    for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
-      var tokens = list[i];
-      Skew.prepareTokens(tokens);
-    }
-  };
-
-  Skew.LexingPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.LexingPass, Skew.Pass);
-
-  Skew.LexingPass.prototype.kind = function() {
-    return Skew.PassKind.LEXING;
-  };
-
-  Skew.LexingPass.prototype.run = function(context) {
-    for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
-      var source = list[i];
-      context.tokens.push(Skew.tokenize(context.log, source));
-    }
-  };
-
   Skew.ParsingPass = function() {
     Skew.Pass.call(this);
   };
@@ -12174,6 +12093,23 @@
     if (emitter != null) {
       emitter.visit(context.global);
       context.outputs = emitter.sources();
+    }
+  };
+
+  Skew.LexingPass = function() {
+    Skew.Pass.call(this);
+  };
+
+  __extends(Skew.LexingPass, Skew.Pass);
+
+  Skew.LexingPass.prototype.kind = function() {
+    return Skew.PassKind.LEXING;
+  };
+
+  Skew.LexingPass.prototype.run = function(context) {
+    for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
+      var source = list[i];
+      context.tokens.push(Skew.tokenize(context.log, source));
     }
   };
 
@@ -20693,10 +20629,10 @@
   Skew.Type.NULL = null;
   Skew.Type._nextID = 0;
   Skew.Environment._nextID = 0;
-  Skew.in_PassKind._strings = ['EMITTING', 'PARSING', 'LEXING', 'TOKEN_PROCESSING', 'CALL_GRAPH', 'FOLDING', 'GLOBALIZING', 'INLINING', 'INTERFACE_REMOVAL', 'LAMBDA_LIFTING', 'MERGING', 'MOTION', 'RENAMING', 'RESOLVING'];
+  Skew.in_PassKind._strings = ['EMITTING', 'PARSING', 'LEXING', 'CALL_GRAPH', 'FOLDING', 'GLOBALIZING', 'INLINING', 'INTERFACE_REMOVAL', 'LAMBDA_LIFTING', 'MERGING', 'MOTION', 'RENAMING', 'RESOLVING'];
   Skew.in_NodeKind._strings = ['ANNOTATION', 'BLOCK', 'CASE', 'CATCH', 'VARIABLE', 'BREAK', 'CONTINUE', 'EXPRESSION', 'FOR', 'FOREACH', 'IF', 'RETURN', 'SWITCH', 'THROW', 'TRY', 'VARIABLES', 'WHILE', 'ASSIGN_INDEX', 'CALL', 'CAST', 'CONSTANT', 'DOT', 'HOOK', 'INDEX', 'INITIALIZER_LIST', 'INITIALIZER_MAP', 'LAMBDA', 'LAMBDA_TYPE', 'NAME', 'NULL', 'NULL_DOT', 'PAIR', 'PARAMETERIZE', 'SEQUENCE', 'SUPER', 'TYPE', 'TYPE_CHECK', 'COMPLEMENT', 'NEGATIVE', 'NOT', 'POSITIVE', 'POSTFIX_DECREMENT', 'POSTFIX_INCREMENT', 'PREFIX_DECREMENT', 'PREFIX_INCREMENT', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'IN', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'NULL_JOIN', 'POWER', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'UNSIGNED_SHIFT_RIGHT', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_NULL', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_SUBTRACT', 'ASSIGN_UNSIGNED_SHIFT_RIGHT'];
   Skew.in_SymbolKind._strings = ['PARAMETER_FUNCTION', 'PARAMETER_OBJECT', 'OBJECT_CLASS', 'OBJECT_ENUM', 'OBJECT_GLOBAL', 'OBJECT_INTERFACE', 'OBJECT_NAMESPACE', 'OBJECT_WRAPPED', 'FUNCTION_ANNOTATION', 'FUNCTION_CONSTRUCTOR', 'FUNCTION_GLOBAL', 'FUNCTION_INSTANCE', 'FUNCTION_LOCAL', 'OVERLOADED_ANNOTATION', 'OVERLOADED_GLOBAL', 'OVERLOADED_INSTANCE', 'VARIABLE_ARGUMENT', 'VARIABLE_ENUM', 'VARIABLE_GLOBAL', 'VARIABLE_INSTANCE', 'VARIABLE_LOCAL'];
-  Skew.in_TokenKind._toString = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.COMMENT, 'comment'), Skew.TokenKind.NEWLINE, '"\\n"'), Skew.TokenKind.WHITESPACE, 'whitespace'), Skew.TokenKind.AS, '"as"'), Skew.TokenKind.BREAK, '"break"'), Skew.TokenKind.CASE, '"case"'), Skew.TokenKind.CATCH, '"catch"'), Skew.TokenKind.CLASS, '"class"'), Skew.TokenKind.CONST, '"const"'), Skew.TokenKind.CONTINUE, '"continue"'), Skew.TokenKind.DEF, '"def"'), Skew.TokenKind.DEFAULT, '"default"'), Skew.TokenKind.DYNAMIC, '"dynamic"'), Skew.TokenKind.ELSE, '"else"'), Skew.TokenKind.ENUM, '"enum"'), Skew.TokenKind.FALSE, '"false"'), Skew.TokenKind.FINALLY, '"finally"'), Skew.TokenKind.FOR, '"for"'), Skew.TokenKind.IF, '"if"'), Skew.TokenKind.IN, '"in"'), Skew.TokenKind.INTERFACE, '"interface"'), Skew.TokenKind.IS, '"is"'), Skew.TokenKind.NAMESPACE, '"namespace"'), Skew.TokenKind.NULL, '"null"'), Skew.TokenKind.OVER, '"over"'), Skew.TokenKind.RETURN, '"return"'), Skew.TokenKind.SUPER, '"super"'), Skew.TokenKind.SWITCH, '"switch"'), Skew.TokenKind.THROW, '"throw"'), Skew.TokenKind.TRUE, '"true"'), Skew.TokenKind.TRY, '"try"'), Skew.TokenKind.VAR, '"var"'), Skew.TokenKind.WHILE, '"while"'), Skew.TokenKind.ARROW, '"=>"'), Skew.TokenKind.ASSIGN, '"="'), Skew.TokenKind.ASSIGN_BITWISE_AND, '"&="'), Skew.TokenKind.ASSIGN_BITWISE_OR, '"|="'), Skew.TokenKind.ASSIGN_BITWISE_XOR, '"^="'), Skew.TokenKind.ASSIGN_DIVIDE, '"/="'), Skew.TokenKind.ASSIGN_INDEX, '"[]="'), Skew.TokenKind.ASSIGN_MINUS, '"-="'), Skew.TokenKind.ASSIGN_MULTIPLY, '"*="'), Skew.TokenKind.ASSIGN_PLUS, '"+="'), Skew.TokenKind.ASSIGN_POWER, '"**="'), Skew.TokenKind.ASSIGN_REMAINDER, '"%="'), Skew.TokenKind.ASSIGN_SHIFT_LEFT, '"<<="'), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, '">>="'), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, '">>>="'), Skew.TokenKind.BITWISE_AND, '"&"'), Skew.TokenKind.BITWISE_OR, '"|"'), Skew.TokenKind.BITWISE_XOR, '"^"'), Skew.TokenKind.COLON, '":"'), Skew.TokenKind.COMMA, '","'), Skew.TokenKind.COMPARE, '"<=>"'), Skew.TokenKind.DECREMENT, '"--"'), Skew.TokenKind.DIVIDE, '"/"'), Skew.TokenKind.DOT, '"."'), Skew.TokenKind.DOT_DOT, '".."'), Skew.TokenKind.DOUBLE_COLON, '"::"'), Skew.TokenKind.EQUAL, '"=="'), Skew.TokenKind.GREATER_THAN, '">"'), Skew.TokenKind.GREATER_THAN_OR_EQUAL, '">="'), Skew.TokenKind.INCREMENT, '"++"'), Skew.TokenKind.INDEX, '"[]"'), Skew.TokenKind.LEFT_BRACE, '"{"'), Skew.TokenKind.LEFT_BRACKET, '"["'), Skew.TokenKind.LEFT_PARENTHESIS, '"("'), Skew.TokenKind.LESS_THAN, '"<"'), Skew.TokenKind.LESS_THAN_OR_EQUAL, '"<="'), Skew.TokenKind.LIST, '"[...]"'), Skew.TokenKind.LIST_NEW, '"[new]"'), Skew.TokenKind.LOGICAL_AND, '"&&"'), Skew.TokenKind.LOGICAL_OR, '"||"'), Skew.TokenKind.MINUS, '"-"'), Skew.TokenKind.MULTIPLY, '"*"'), Skew.TokenKind.NOT, '"!"'), Skew.TokenKind.NOT_EQUAL, '"!="'), Skew.TokenKind.NULL_DOT, '"?."'), Skew.TokenKind.NULL_JOIN, '"??"'), Skew.TokenKind.PLUS, '"+"'), Skew.TokenKind.POWER, '"**"'), Skew.TokenKind.QUESTION_MARK, '"?"'), Skew.TokenKind.REMAINDER, '"%"'), Skew.TokenKind.RIGHT_BRACE, '"}"'), Skew.TokenKind.RIGHT_BRACKET, '"]"'), Skew.TokenKind.RIGHT_PARENTHESIS, '")"'), Skew.TokenKind.SEMICOLON, '";"'), Skew.TokenKind.SET, '"{...}"'), Skew.TokenKind.SET_NEW, '"{new}"'), Skew.TokenKind.SHIFT_LEFT, '"<<"'), Skew.TokenKind.SHIFT_RIGHT, '">>"'), Skew.TokenKind.TILDE, '"~"'), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, '">>>"'), Skew.TokenKind.ANNOTATION, 'annotation'), Skew.TokenKind.CHARACTER, 'character'), Skew.TokenKind.DOUBLE, 'double'), Skew.TokenKind.END_OF_FILE, 'end of input'), Skew.TokenKind.IDENTIFIER, 'identifier'), Skew.TokenKind.INT, 'integer'), Skew.TokenKind.INT_BINARY, 'integer'), Skew.TokenKind.INT_HEX, 'integer'), Skew.TokenKind.INT_OCTAL, 'integer'), Skew.TokenKind.STRING, 'string');
+  Skew.in_TokenKind._toString = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.COMMENT, 'comment'), Skew.TokenKind.NEWLINE, '"\\n"'), Skew.TokenKind.WHITESPACE, 'whitespace'), Skew.TokenKind.AS, '"as"'), Skew.TokenKind.BREAK, '"break"'), Skew.TokenKind.CASE, '"case"'), Skew.TokenKind.CATCH, '"catch"'), Skew.TokenKind.CLASS, '"class"'), Skew.TokenKind.CONST, '"const"'), Skew.TokenKind.CONTINUE, '"continue"'), Skew.TokenKind.DEF, '"def"'), Skew.TokenKind.DEFAULT, '"default"'), Skew.TokenKind.DYNAMIC, '"dynamic"'), Skew.TokenKind.ELSE, '"else"'), Skew.TokenKind.ENUM, '"enum"'), Skew.TokenKind.FALSE, '"false"'), Skew.TokenKind.FINALLY, '"finally"'), Skew.TokenKind.FOR, '"for"'), Skew.TokenKind.IF, '"if"'), Skew.TokenKind.IN, '"in"'), Skew.TokenKind.INTERFACE, '"interface"'), Skew.TokenKind.IS, '"is"'), Skew.TokenKind.NAMESPACE, '"namespace"'), Skew.TokenKind.NULL, '"null"'), Skew.TokenKind.OVER, '"over"'), Skew.TokenKind.RETURN, '"return"'), Skew.TokenKind.SUPER, '"super"'), Skew.TokenKind.SWITCH, '"switch"'), Skew.TokenKind.THROW, '"throw"'), Skew.TokenKind.TRUE, '"true"'), Skew.TokenKind.TRY, '"try"'), Skew.TokenKind.VAR, '"var"'), Skew.TokenKind.WHILE, '"while"'), Skew.TokenKind.ARROW, '"=>"'), Skew.TokenKind.ASSIGN, '"="'), Skew.TokenKind.ASSIGN_BITWISE_AND, '"&="'), Skew.TokenKind.ASSIGN_BITWISE_OR, '"|="'), Skew.TokenKind.ASSIGN_BITWISE_XOR, '"^="'), Skew.TokenKind.ASSIGN_DIVIDE, '"/="'), Skew.TokenKind.ASSIGN_INDEX, '"[]="'), Skew.TokenKind.ASSIGN_MINUS, '"-="'), Skew.TokenKind.ASSIGN_MULTIPLY, '"*="'), Skew.TokenKind.ASSIGN_PLUS, '"+="'), Skew.TokenKind.ASSIGN_POWER, '"**="'), Skew.TokenKind.ASSIGN_REMAINDER, '"%="'), Skew.TokenKind.ASSIGN_SHIFT_LEFT, '"<<="'), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, '">>="'), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, '">>>="'), Skew.TokenKind.BITWISE_AND, '"&"'), Skew.TokenKind.BITWISE_OR, '"|"'), Skew.TokenKind.BITWISE_XOR, '"^"'), Skew.TokenKind.COLON, '":"'), Skew.TokenKind.COMMA, '","'), Skew.TokenKind.COMPARE, '"<=>"'), Skew.TokenKind.DECREMENT, '"--"'), Skew.TokenKind.DIVIDE, '"/"'), Skew.TokenKind.DOT, '"."'), Skew.TokenKind.DOT_DOT, '".."'), Skew.TokenKind.DOUBLE_COLON, '"::"'), Skew.TokenKind.EQUAL, '"=="'), Skew.TokenKind.GREATER_THAN, '">"'), Skew.TokenKind.GREATER_THAN_OR_EQUAL, '">="'), Skew.TokenKind.INCREMENT, '"++"'), Skew.TokenKind.INDEX, '"[]"'), Skew.TokenKind.LEFT_BRACE, '"{"'), Skew.TokenKind.LEFT_BRACKET, '"["'), Skew.TokenKind.LEFT_PARENTHESIS, '"("'), Skew.TokenKind.LESS_THAN, '"<"'), Skew.TokenKind.LESS_THAN_OR_EQUAL, '"<="'), Skew.TokenKind.LIST, '"[...]"'), Skew.TokenKind.LIST_NEW, '"[new]"'), Skew.TokenKind.LOGICAL_AND, '"&&"'), Skew.TokenKind.LOGICAL_OR, '"||"'), Skew.TokenKind.MINUS, '"-"'), Skew.TokenKind.MULTIPLY, '"*"'), Skew.TokenKind.NOT, '"!"'), Skew.TokenKind.NOT_EQUAL, '"!="'), Skew.TokenKind.NULL_DOT, '"?."'), Skew.TokenKind.NULL_JOIN, '"??"'), Skew.TokenKind.PLUS, '"+"'), Skew.TokenKind.POWER, '"**"'), Skew.TokenKind.QUESTION_MARK, '"?"'), Skew.TokenKind.REMAINDER, '"%"'), Skew.TokenKind.RIGHT_BRACE, '"}"'), Skew.TokenKind.RIGHT_BRACKET, '"]"'), Skew.TokenKind.RIGHT_PARENTHESIS, '")"'), Skew.TokenKind.SEMICOLON, '";"'), Skew.TokenKind.SET, '"{...}"'), Skew.TokenKind.SET_NEW, '"{new}"'), Skew.TokenKind.SHIFT_LEFT, '"<<"'), Skew.TokenKind.SHIFT_RIGHT, '">>"'), Skew.TokenKind.TILDE, '"~"'), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, '">>>"'), Skew.TokenKind.ANNOTATION, 'annotation'), Skew.TokenKind.CHARACTER, 'character'), Skew.TokenKind.DOUBLE, 'double'), Skew.TokenKind.END_OF_FILE, 'end of input'), Skew.TokenKind.IDENTIFIER, 'identifier'), Skew.TokenKind.INT, 'integer'), Skew.TokenKind.INT_BINARY, 'integer'), Skew.TokenKind.INT_HEX, 'integer'), Skew.TokenKind.INT_OCTAL, 'integer'), Skew.TokenKind.STRING, 'string'), Skew.TokenKind.START_PARAMETER_LIST, '"<"'), Skew.TokenKind.END_PARAMETER_LIST, '">"');
   Terminal.colorToEscapeCode = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Terminal.Color.DEFAULT, 0), Terminal.Color.BOLD, 1), Terminal.Color.GRAY, 90), Terminal.Color.RED, 91), Terminal.Color.GREEN, 92), Terminal.Color.YELLOW, 93), Terminal.Color.BLUE, 94), Terminal.Color.MAGENTA, 95), Terminal.Color.CYAN, 96);
 
   process.exit(Skew.main(process.argv.slice(2)));
