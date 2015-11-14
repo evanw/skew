@@ -111,6 +111,14 @@
       <key>patterns</key>
       <array>
         <dict>
+          <key>begin</key>
+          <string>\\\(</string>
+          <key>end</key>
+          <string>\)</string>
+          <key>name</key>
+          <string>string.interpolated.skew</string>
+        </dict>
+        <dict>
           <key>match</key>
           <string>\\.</string>
           <key>name</key>
