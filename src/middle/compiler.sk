@@ -57,7 +57,7 @@ namespace Skew {
     }
 
     def define(name string, value string) {
-      var range = Source.new("<internal>", "--define:" + name + "=" + value).entireRange
+      var range = Source.new("<internal>", "--define:\(name)=\(value)").entireRange
       defines[name] = Define.new(range.slice(9, 9 + name.count), range.fromEnd(value.count))
     }
 
@@ -139,9 +139,9 @@ namespace Skew {
       var builder = StringBuilder.new
 
       # Compilation time
-      builder.append("Total time: " + totalTimer.elapsedMilliseconds)
+      builder.append("Total time: \(totalTimer.elapsedMilliseconds)")
       for passTimer in passTimers {
-        builder.append("\n  " + passTimer.kind.toString + ": " + passTimer.timer.elapsedMilliseconds)
+        builder.append("\n  \(passTimer.kind): \(passTimer.timer.elapsedMilliseconds)")
       }
 
       # Sources
@@ -151,11 +151,11 @@ namespace Skew {
         totalBytes += source.contents.count
         totalLines += source.lineCount
       }
-      builder.append("\nOutputs: " + outputs.count.toString + " file" + PrettyPrint.plural(outputs.count) +
-        " (" + bytesToString(totalBytes) + ", " + totalLines.toString + " line" + PrettyPrint.plural(totalLines) + ")")
+      builder.append("\nOutputs: \(outputs.count) file\(PrettyPrint.plural(outputs.count)) " +
+        "(\(bytesToString(totalBytes)), \(totalLines) line\(PrettyPrint.plural(totalLines)))")
       for source in outputs {
         var lines = source.lineCount
-        builder.append("\n  " + source.name + " (" + bytesToString(source.contents.count) + ", " + lines.toString + " line" + PrettyPrint.plural(lines) + ")")
+        builder.append("\n  \(source.name) (\(bytesToString(source.contents.count)), \(lines) line\(PrettyPrint.plural(lines)))")
       }
 
       return builder.toString

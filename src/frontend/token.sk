@@ -51,46 +51,73 @@ namespace Skew {
     while yy_cp < count {
       var yy_current_state = 1 # Reset the NFA
       var yy_bp = yy_cp # The pointer to the beginning of the token
+      var yy_act TokenKind = .ERROR
 
-      # Search for a match
-      while yy_current_state != YY_JAM_STATE {
-        if yy_cp >= count {
-          break # This prevents syntax errors from causing infinite loops
-        }
-        var c = text[yy_cp]
-        var index = c < 127 ? c : 127 # All of the interesting characters are ASCII
-        var yy_c = yy_ec[index]
-        if yy_accept[yy_current_state] != .YY_INVALID_ACTION {
-          yy_last_accepting_state = yy_current_state
-          yy_last_accepting_cpos = yy_cp
-        }
-        while yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state {
-          yy_current_state = yy_def[yy_current_state]
-          if yy_current_state >= YY_ACCEPT_LENGTH {
-            yy_c = yy_meta[yy_c]
+      # Special-case string interpolation
+      var c = text[yy_cp]
+      if c == '"' || c == ')' && !stack.isEmpty && stack.last.kind == .START_STRING_INTERPOLATION {
+        var isStringInterpolation = c == ')'
+        yy_cp++
+        while yy_cp < count {
+          c = text[yy_cp++]
+          if c == '"' {
+            yy_act = isStringInterpolation ? .END_STRING_INTERPOLATION : .STRING
+            break
+          }
+          if c == '\\' {
+            if yy_cp == count {
+              break
+            }
+            c = text[yy_cp++]
+            if c == '(' {
+              yy_act = isStringInterpolation ? .CONTINUE_STRING_INTERPOLATION : .START_STRING_INTERPOLATION
+              break
+            }
           }
         }
-        yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c]
-        yy_cp++
       }
 
-      # Find the action
-      var yy_act = yy_accept[yy_current_state]
-      while yy_act == .YY_INVALID_ACTION {
-        # Have to back up
-        yy_cp = yy_last_accepting_cpos
-        yy_current_state = yy_last_accepting_state
+      # Search for a match
+      else {
+        while yy_current_state != YY_JAM_STATE {
+          if yy_cp >= count {
+            break # This prevents syntax errors from causing infinite loops
+          }
+          c = text[yy_cp]
+          var index = c < 127 ? c : 127 # All of the interesting characters are ASCII
+          var yy_c = yy_ec[index]
+          if yy_accept[yy_current_state] != .YY_INVALID_ACTION {
+            yy_last_accepting_state = yy_current_state
+            yy_last_accepting_cpos = yy_cp
+          }
+          while yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state {
+            yy_current_state = yy_def[yy_current_state]
+            if yy_current_state >= YY_ACCEPT_LENGTH {
+              yy_c = yy_meta[yy_c]
+            }
+          }
+          yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c]
+          yy_cp++
+        }
+
+        # Find the action
         yy_act = yy_accept[yy_current_state]
-      }
+        while yy_act == .YY_INVALID_ACTION {
+          # Have to back up
+          yy_cp = yy_last_accepting_cpos
+          yy_current_state = yy_last_accepting_state
+          yy_act = yy_accept[yy_current_state]
+        }
 
-      # Ignore whitespace
-      if yy_act == .WHITESPACE {
-        continue
-      }
+        # Ignore whitespace
+        if yy_act == .WHITESPACE {
+          continue
+        }
 
-      # Stop at the end of the file
-      if yy_act == .END_OF_FILE {
-        break
+        # Stop at the end of the file
+        if yy_act == .END_OF_FILE {
+          break
+        }
       }
 
       # This is the default action in flex, which is usually called ECHO
@@ -126,12 +153,15 @@ namespace Skew {
         }
 
         # Group open
-        if tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET || tokenKind == .LESS_THAN {
+        if tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET ||
+            tokenKind == .LESS_THAN || tokenKind == .START_STRING_INTERPOLATION {
           stack.append(token)
         }
 
         # Group close
-        else if tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET || tokenStartsWithGreaterThan {
+        else if tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET ||
+            tokenKind == .END_STRING_INTERPOLATION || tokenStartsWithGreaterThan {
+
           # Search for a matching opposite token
           while !stack.isEmpty {
             var top = stack.last
@@ -144,6 +174,14 @@ namespace Skew {
 
             # Consume the current token
             stack.removeLast
+
+            # Stop if it's a match
+            if tokenKind == .RIGHT_PARENTHESIS && topKind == .LEFT_PARENTHESIS ||
+                tokenKind == .RIGHT_BRACKET && topKind == .LEFT_BRACKET ||
+                tokenKind == .RIGHT_BRACE && topKind == .LEFT_BRACE ||
+                tokenKind == .END_STRING_INTERPOLATION && topKind == .START_STRING_INTERPOLATION {
+              break
+            }
 
             # Special-case angle brackets matches and ignore tentative matches that didn't work out
             if topKind == .LESS_THAN && tokenStartsWithGreaterThan {
@@ -195,6 +233,15 @@ namespace Skew {
   }
 
   enum TokenKind {
+    # Type parameters are surrounded by "<" and ">"
+    END_PARAMETER_LIST
+    START_PARAMETER_LIST
+
+    # String interpolation looks like "start\( 1 )continue( 2 )end"
+    CONTINUE_STRING_INTERPOLATION
+    END_STRING_INTERPOLATION
+    START_STRING_INTERPOLATION
+
     def toString string {
       assert(self in _toString)
       return _toString[self]
@@ -310,8 +357,12 @@ namespace Skew {
       INT_OCTAL: "integer",
       STRING: "string",
 
-      START_PARAMETER_LIST: "\"<\"",
       END_PARAMETER_LIST: "\">\"",
+      START_PARAMETER_LIST: "\"<\"",
+
+      CONTINUE_STRING_INTERPOLATION: "string interpolation",
+      END_STRING_INTERPOLATION: "string interpolation",
+      START_STRING_INTERPOLATION: "string interpolation",
     }
   }
 }

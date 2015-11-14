@@ -46,7 +46,7 @@ namespace Skew {
         case "c++" { options.target = CPlusPlusTarget.new }
         case "js" { options.target = JavaScriptTarget.new }
         case "lisp-tree" { options.target = LispTreeTarget.new }
-        default { throw dynamic.Error.new("Invalid target '" + args.target + "'") }
+        default { throw dynamic.Error.new("Invalid target '\(args.target)'") }
       }
 
       for i in 0..args.inputs.length {
@@ -169,7 +169,7 @@ namespace Skew {
       switch message.type {
         case "compile" { return handleCompile(message) }
         case "tooltip-query" { return handleTooltipQuery(message) }
-        default { throw dynamic.Error.new("Unexpected message type '" + message.type + "'") }
+        default { throw dynamic.Error.new("Unexpected message type '\(message.type)'") }
       }
     }
 

@@ -11,10 +11,6 @@ template = '''
 namespace Skew {
   enum TokenKind {
 %(actions)s
-
-    # Token kinds not used by flex
-    START_PARAMETER_LIST
-    END_PARAMETER_LIST
   }
 
   %(yy_accept)s

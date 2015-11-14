@@ -55,10 +55,10 @@ namespace Skew {
     const MB = 1 << 20
     const GB = 1 << 30
     if bytes == 1 { return "1 byte" }
-    if bytes < KB { return bytes.toString + " bytes" }
-    if bytes < MB { return formatNumber(bytes / (KB as double)) + "kb" }
-    if bytes < GB { return formatNumber(bytes / (MB as double)) + "mb" }
-    return formatNumber(bytes / (GB as double)) + "gb"
+    if bytes < KB { return "\(bytes) bytes" }
+    if bytes < MB { return "\(formatNumber(bytes / (KB as double)))kb" }
+    if bytes < GB { return "\(formatNumber(bytes / (MB as double)))mb" }
+    return "\(formatNumber(bytes / (GB as double)))gb"
   }
 
   def doubleToStringWithDot(value double) string {
@@ -93,12 +93,12 @@ namespace Skew.PrettyPrint {
   }
 
   def joinQuoted(parts List<string>, trailing string) string {
-    return join(parts.map<string>(part => "\"" + part + "\""), trailing)
+    return join(parts.map<string>(part => "\"\(part)\""), trailing)
   }
 
   def join(parts List<string>, trailing string) string {
     if parts.count < 3 {
-      return (" " + trailing + " ").join(parts)
+      return " \(trailing) ".join(parts)
     }
     var text = ""
     for i in 0..parts.count {

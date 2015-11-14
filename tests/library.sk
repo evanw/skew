@@ -386,6 +386,7 @@ namespace Skew.Tests {
     testExpect("\"a\\0b\\0c\".replaceAll(\"\\0\", \"\\0\\0\")", => "a\0b\0c".replaceAll("\0", "\0\0"), "a\0\0b\0\0c")
     testExpect("\"a\\0B\\0c\\0D\".toUpperCase", => "a\0B\0c\0D".toUpperCase, "A\0B\0C\0D")
     testExpect("\"a\\0B\\0c\\0D\".toLowerCase", => "a\0B\0c\0D".toLowerCase, "a\0b\0c\0d")
+    testExpect("\"a\\0B\\0c\\0D\".toString", => "a\0B\0c\0D".toString, "a\0B\0c\0D")
 
     ################################################################################
     # List<T>

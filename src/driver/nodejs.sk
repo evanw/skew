@@ -120,18 +120,18 @@ namespace Skew {
     var hasWarnings = log.hasWarnings
     var summary = ""
     if hasWarnings {
-      summary += log.warningCount.toString + " warning" + PrettyPrint.plural(log.warningCount)
+      summary += "\(log.warningCount) warning\(PrettyPrint.plural(log.warningCount))"
       if hasErrors {
         summary += " and "
       }
     }
     if hasErrors {
-      summary += log.errorCount.toString + " error" + PrettyPrint.plural(log.errorCount)
+      summary += "\(log.errorCount) error\(PrettyPrint.plural(log.errorCount))"
     }
     if hasWarnings || hasErrors {
       Terminal.write(summary + " generated")
-      printWithColor(.GRAY, diagnosticCount < log.diagnostics.count ? " (only showing " + diagnosticLimit.toString +
-        " message" + PrettyPrint.plural(diagnosticLimit) + ", use \"--message-limit=0\" to see all)\n" : "\n")
+      printWithColor(.GRAY, diagnosticCount >= log.diagnostics.count ? "\n" :
+        " (only showing \(diagnosticLimit) message\(PrettyPrint.plural(diagnosticLimit)), use \"--message-limit=0\" to see all)\n")
     }
   }
 
@@ -152,13 +152,13 @@ namespace Skew {
   def parseOptions(log Log, parser Options.Parser, arguments List<string>) CompilerOptions {
     # Configure the parser
     parser.define(.BOOL, .HELP, "--help", "Prints this message.").aliases(["-help", "?", "-?", "-h", "-H", "/?", "/h", "/H"])
-    parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are " + joinKeys(VALID_TARGETS.keys) + ".")
+    parser.define(.STRING, .TARGET, "--target", "Sets the target format. Valid targets are \(joinKeys(VALID_TARGETS.keys)).")
     parser.define(.STRING, .OUTPUT_FILE, "--output-file", "Combines all output into a single file. Mutually exclusive with --output-dir.")
     parser.define(.STRING, .OUTPUT_DIRECTORY, "--output-dir", "Places all output files in the specified directory. Mutually exclusive with --output-file.")
     parser.define(.BOOL, .NO_OUTPUT, "--no-output", "Stops after the type checking pass and does not generate any output.")
     parser.define(.BOOL, .RELEASE, "--release", "Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.")
     parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.")
-    parser.define(.INT, .MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is " + DEFAULT_MESSAGE_LIMIT.toString + ".")
+    parser.define(.INT, .MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is \(DEFAULT_MESSAGE_LIMIT).")
     parser.define(.STRING_LIST, .DEFINE, "--define", "Override variable values at compile time.")
     parser.define(.BOOL, .JS_MANGLE, "--js-mangle", "Transforms emitted JavaScript to be as small as possible. The \"@export\" annotation prevents renaming a symbol.")
     parser.define(.BOOL, .JS_MINIFY, "--js-minify", "Remove whitespace when compiling to JavaScript.")
@@ -240,23 +240,23 @@ namespace Skew {
 
   class Log {
     def commandLineErrorExpectedDefineValue(range Range, name string) {
-      error(range, "Use \"--define:" + name + "=___\" to provide a value")
+      error(range, "Use \"--define:\(name)=___\" to provide a value")
     }
 
     def commandLineErrorMissingOutput(range Range, first string, second string) {
-      error(range, "Specify the output location using either \"" + first + "\" or \"" + second + "\"")
+      error(range, "Specify the output location using either \"\(first)\" or \"\(second)\"")
     }
 
     def commandLineErrorDuplicateOutput(range Range, first string, second string) {
-      error(range, "Cannot specify both \"" + first + "\" and \"" + second + "\"")
+      error(range, "Cannot specify both \"\(first)\" and \"\(second)\"")
     }
 
     def commandLineErrorUnreadableFile(range Range, name string) {
-      error(range, "Could not read from \"" + name + "\"")
+      error(range, "Could not read from \"\(name)\"")
     }
 
     def commandLineErrorUnwritableFile(range Range, name string) {
-      error(range, "Could not write to \"" + name + "\"")
+      error(range, "Could not write to \"\(name)\"")
     }
 
     def commandLineErrorNoInputFiles(range Range) {
@@ -268,7 +268,7 @@ namespace Skew {
     }
 
     def commandLineErrorInvalidEnum(range Range, name string, found string, expected List<string>) {
-      error(range, "Invalid " + name + " \"" + found + "\", must be either " + PrettyPrint.joinQuoted(expected, "or"))
+      error(range, "Invalid \(name) \"\(found)\", must be either \(PrettyPrint.joinQuoted(expected, "or"))")
     }
   }
 

@@ -1,30 +1,30 @@
 namespace Skew {
   class Log {
     def commandLineWarningDuplicateFlagValue(range Range, name string, previous Range) {
-      warning(range, "Multiple values are specified for \"" + name + "\", using the later value")
+      warning(range, "Multiple values are specified for \"\(name)\", using the later value")
       if previous != null {
         note(previous, "Ignoring the previous value")
       }
     }
 
     def commandLineErrorBadFlag(range Range, name string) {
-      error(range, "Unknown command line flag \"" + name + "\"")
+      error(range, "Unknown command line flag \"\(name)\"")
     }
 
     def commandLineErrorMissingValue(range Range, text string) {
-      error(range, "Use \"" + text + "\" to provide a value")
+      error(range, "Use \"\(text)\" to provide a value")
     }
 
     def commandLineErrorExpectedToken(range Range, expected string, found string, text string) {
-      error(range, "Expected \"" + expected + "\" but found \"" + found + "\" in \"" + text + "\"")
+      error(range, "Expected \"\(expected)\" but found \"\(found)\" in \"\(text)\"")
     }
 
     def commandLineErrorNonBooleanValue(range Range, value string, text string) {
-      error(range, "Expected \"true\" or \"false\" but found \"" + value + "\" in \"" + text + "\"")
+      error(range, "Expected \"true\" or \"false\" but found \"\(value)\" in \"\(text)\"")
     }
 
     def commandLineErrorNonIntegerValue(range Range, value string, text string) {
-      error(range, "Expected integer constant but found \"" + value + "\" in \"" + text + "\"")
+      error(range, "Expected integer constant but found \"\(value)\" in \"\(text)\"")
     }
   }
 }
@@ -111,7 +111,7 @@ namespace Skew.Options {
         var needsQuotes = " " in argument
         var start = source.contents.count + (needsQuotes as int)
         ranges.append(Range.new(source, start, start + argument.count))
-        source.contents += needsQuotes ? "'" + argument + "' " : argument + " "
+        source.contents += needsQuotes ? "'\(argument)' " : argument + " "
       }
 
       # Parse each argument

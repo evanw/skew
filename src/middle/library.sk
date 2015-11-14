@@ -174,6 +174,7 @@ class string {
 
   def toLowerCase string
   def toUpperCase string
+  def toString string { return self }
 }
 
 namespace string {

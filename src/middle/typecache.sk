@@ -419,7 +419,7 @@ namespace Skew {
         if argumentCount == rightArguments.count && parameterCount == right.parameters.count {
           # Generate enough dummy type parameters
           for i in _parameters.count..parameterCount {
-            var symbol = ParameterSymbol.new(.PARAMETER_FUNCTION, "T" + i.toString)
+            var symbol = ParameterSymbol.new(.PARAMETER_FUNCTION, "T\(i)")
             symbol.resolvedType = Type.new(.SYMBOL, symbol)
             symbol.state = .INITIALIZED
             _parameters.append(symbol.resolvedType)

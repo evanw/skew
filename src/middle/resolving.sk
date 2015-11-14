@@ -1278,6 +1278,7 @@ namespace Skew.Resolving {
         case .NULL_DOT { _resolveNullDot(node, scope) }
         case .PARAMETERIZE { _resolveParameterize(node, scope) }
         case .SEQUENCE { _resolveSequence(node, scope, context) }
+        case .STRING_INTERPOLATION { _resolveStringInterpolation(node, scope) }
         case .SUPER { _resolveSuper(node, scope) }
         case .TYPE {}
         case .TYPE_CHECK { _resolveTypeCheck(node, scope) }
@@ -2734,6 +2735,25 @@ namespace Skew.Resolving {
       for child = node.firstChild; child != null; child = child.nextSibling {
         _resolveAsParameterizedExpressionWithTypeContext(child, scope, child.nextSibling == null ? context : null)
       }
+    }
+
+    def _resolveStringInterpolation(node Node, scope Scope) {
+      assert(node.childCount % 2 == 1)
+      _resolveChildrenAsParameterizedExpressions(node, scope)
+
+      # Convert the string interpolation into a series of string concatenations
+      var joined Node = null
+      while node.hasChildren {
+        var child = node.firstChild.remove
+        if child.isString && child.asString == "" {
+          continue
+        } else if child.resolvedType != .DYNAMIC && child.resolvedType != _cache.stringType {
+          child = Node.createDot(child, "toString").withRange(child.range)
+        }
+        joined = joined != null ? Node.createBinary(.ADD, joined, child).withRange(Range.span(joined.range, child.range)) : child
+      }
+      node.become(joined != null ? joined : Node.createString(""))
+      _resolveAsParameterizedExpression(node, scope)
     }
 
     def _resolveSuper(node Node, scope Scope) {

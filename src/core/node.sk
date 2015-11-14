@@ -39,6 +39,7 @@ namespace Skew {
     PAIR
     PARAMETERIZE
     SEQUENCE
+    STRING_INTERPOLATION
     SUPER
     TYPE
     TYPE_CHECK
@@ -1017,6 +1018,10 @@ namespace Skew {
 
     def createSequence Node {
       return new(.SEQUENCE)
+    }
+
+    def createStringInterpolation Node {
+      return new(.STRING_INTERPOLATION)
     }
 
     def createSequence(before Node, after Node) Node {

@@ -21,25 +21,25 @@ namespace Skew.IDE {
       switch symbol.kind {
         case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
           var arguments = symbol.asFunctionSymbol.arguments
-          text += "def " + symbol.name
+          text += "def \(symbol.name)"
           if !arguments.isEmpty {
             text += "("
             for i in 0..arguments.count {
               if i != 0 {
                 text += ", "
               }
-              text += arguments[i].name + " " + symbol.resolvedType.argumentTypes[i].toString
+              text += "\(arguments[i].name) \(symbol.resolvedType.argumentTypes[i])"
             }
             text += ")"
           }
           if symbol.resolvedType.returnType != null {
-            text += " " + symbol.resolvedType.returnType.toString
+            text += " \(symbol.resolvedType.returnType)"
           }
         }
 
         case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
           var value = symbol.asVariableSymbol.value
-          text += (symbol.isConst ? "const " : "var ") + symbol.name + " " + symbol.resolvedType.toString
+          text += "\(symbol.isConst ? "const" : "var") \(symbol.name) \(symbol.resolvedType)"
           if symbol.isConst && !symbol.isLoopVariable && value != null && value.kind == .CONSTANT {
             text += " = "
             switch value.content.kind {
@@ -52,35 +52,35 @@ namespace Skew.IDE {
         }
 
         case .OBJECT_CLASS {
-          text += "class " + symbol.name
+          text += "class \(symbol.name)"
           if symbol.asObjectSymbol.baseType != null {
-            text += " : " + symbol.asObjectSymbol.baseType.toString
+            text += " : \(symbol.asObjectSymbol.baseType)"
           }
           if symbol.asObjectSymbol.interfaceTypes != null {
             var types = symbol.asObjectSymbol.interfaceTypes
             for i in 0..types.count {
-              text += (i != 0 ? ", " : " :: ") + types[i].toString
+              text += "\(i != 0 ? ", " : " :: ")\(types[i])"
             }
           }
         }
 
         case .OBJECT_WRAPPED {
-          text += "type " + symbol.name
+          text += "type \(symbol.name)"
           if symbol.asObjectSymbol.wrappedType != null {
-            text += " = " + symbol.asObjectSymbol.wrappedType.toString
+            text += " = \(symbol.asObjectSymbol.wrappedType)"
           }
         }
 
         case .OBJECT_ENUM {
-          text += "enum " + symbol.name
+          text += "enum \(symbol.name)"
         }
 
         case .OBJECT_INTERFACE {
-          text += "interface " + symbol.name
+          text += "interface \(symbol.name)"
         }
 
         case .OBJECT_NAMESPACE {
-          text += "namespace " + symbol.name
+          text += "namespace \(symbol.name)"
         }
 
         default {
