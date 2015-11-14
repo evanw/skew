@@ -1363,6 +1363,7 @@ namespace Skew.Parsing {
           return null
         }
         node.appendChild(value)
+        context.skipWhitespace
         token = context.current
         if !context.eat(.CONTINUE_STRING_INTERPOLATION) && !context.expect(.END_STRING_INTERPOLATION) {
           return null

@@ -6143,5 +6143,68 @@ def main {
   ~~~
 ")
 
+# Test a string interpolation error case
+test("
+var x = \"\\()\"
+", "
+<stdin>:1:12: error: Unexpected string interpolation
+var x = \"\\()\"
+           ~~
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\(1)\\()\"
+", "
+<stdin>:1:16: error: Unexpected string interpolation
+var x = \"\\(1)\\()\"
+               ~~
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\([)\\(])\"
+", "
+<stdin>:1:14: error: Syntax error \"\\\"
+var x = \"\\([)\\(])\"
+             ^
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\({)\\(})\"
+", "
+<stdin>:1:14: error: Syntax error \"\\\"
+var x = \"\\({)\\(})\"
+             ^
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\(()\\())\"
+", "
+<stdin>:1:14: error: Syntax error \"\\\"
+var x = \"\\(()\\())\"
+             ^
+")
+
+# Test string interpolation on different types
+test("
+class NoToString {}
+class WrongToString { def toString NoToString { return null } }
+class CorrectToString { def toString string { return null } }
+
+var x = \"\\(NoToString.new)\"
+var y = \"\\(WrongToString.new)\"
+var z = \"\\(CorrectToString.new)\"
+", "
+<stdin>:5:12: error: \"toString\" is not declared on type \"NoToString\"
+var x = \"\\(NoToString.new)\"
+           ~~~~~~~~~~~~~~
+<stdin>:6:12: error: Cannot convert from type \"NoToString\" to type \"string\"
+var y = \"\\(WrongToString.new)\"
+           ~~~~~~~~~~~~~~~~~
+")
+
   }
 }

@@ -2809,5 +2809,93 @@ def main(foo Foo) {
 })();
 ").js
 
+# Test string interpolation empty string omission
+test("
+@export {
+  var a = \"\\(1)\"
+  var b = \"a\\(1)\"
+  var c = \"\\(1)b\"
+  var d = \"a\\(1)b\"
+  var e = \"\\(\"\")\\(\"\")\"
+  var f = \"\\(\"\")\\(\"\")\\(1)\\(\"\")\\(\"\")\"
+}
+", "
+(function() {
+  a = (1).toString();
+  b = 'a' + (1).toString();
+  c = (1).toString() + 'b';
+  d = 'a' + (1).toString() + 'b';
+  e = '';
+  f = (1).toString();
+})();
+").js
+
+# Test string interpolation toString insertion
+test("
+@import {
+  def x int
+  def y dynamic
+}
+
+@export
+var z = \"\\(x)\\(y)\"
+", "
+(function() {
+  z = x().toString() + y();
+})();
+").js
+
+# Test nested string interpolation
+test("
+var x = => \"\"
+
+@export
+var y =
+  \"\\(1)\\(\"a\")\\(
+    \"\\(x())\\((x()))\\(
+      \"\\(\"b\" + x() + \"c\")\\((x() + \"d\" + x()))\"
+    )\"
+  )\"
+", "
+(function() {
+  var x = function() {
+    return '';
+  };
+  y = (1).toString() + 'a' + (x() + x() + ('b' + x() + 'c' + (x() + 'd' + x())));
+})();
+").js
+
+# Test string interpolation order without constant folding
+test("
+@import
+def x string
+
+@export {
+  var y = x + \"\\(x)\\(x)\"
+  var z = \"a\\(x)b\" + \"c\\(x)d\"
+}
+", "
+(function() {
+  y = x() + (x() + x());
+  z = 'a' + x() + 'b' + ('c' + x() + 'd');
+})();
+").js
+
+# Test string interpolation order with constant folding
+test("
+@import
+def x string
+
+@export {
+  var y = x + \"\\(x)\\(x)\"
+  var z = \"a\\(x)b\" + \"c\\(x)d\"
+}
+", "
+(function() {
+  y = x() + x() + x();
+  z = 'a' + x() + 'bc' + x() + 'd';
+})();
+").js.foldAllConstants
+
   }
 }

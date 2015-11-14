@@ -2749,11 +2749,13 @@ namespace Skew.Resolving {
           continue
         } else if child.resolvedType != .DYNAMIC && child.resolvedType != _cache.stringType {
           child = Node.createDot(child, "toString").withRange(child.range)
+          _resolveAsParameterizedExpressionWithConversion(child, scope, _cache.stringType)
         }
         joined = joined != null ? Node.createBinary(.ADD, joined, child).withRange(Range.span(joined.range, child.range)) : child
+        _resolveAsParameterizedExpressionWithConversion(joined, scope, _cache.stringType)
       }
       node.become(joined != null ? joined : Node.createString(""))
-      _resolveAsParameterizedExpression(node, scope)
+      _resolveAsParameterizedExpressionWithConversion(node, scope, _cache.stringType)
     }
 
     def _resolveSuper(node Node, scope Scope) {
