@@ -498,9 +498,10 @@
             if (topKind1 == Skew.TokenKind.LESS_THAN && tokenStartsWithGreaterThan) {
               // Break apart operators that start with a closing angle bracket
               if (tokenKind != Skew.TokenKind.GREATER_THAN) {
-                tokens.push(new Skew.Token(new Skew.Range(source, yy_bp, yy_bp + 1 | 0), Skew.TokenKind.END_PARAMETER_LIST));
-                token.range.start = yy_bp + 1 | 0;
-                token.kind = tokenKind == Skew.TokenKind.SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN : tokenKind == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : tokenKind == Skew.TokenKind.GREATER_THAN_OR_EQUAL ? Skew.TokenKind.ASSIGN : tokenKind == Skew.TokenKind.ASSIGN_SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN_OR_EQUAL : tokenKind == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : Skew.TokenKind.NULL;
+                var start = token.range.start;
+                tokens.push(new Skew.Token(new Skew.Range(source, start, start + 1 | 0), Skew.TokenKind.END_PARAMETER_LIST));
+                token.range.start = start + 1 | 0;
+                token.kind = tokenKind == Skew.TokenKind.SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN : tokenKind == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : tokenKind == Skew.TokenKind.GREATER_THAN_OR_EQUAL ? Skew.TokenKind.ASSIGN : tokenKind == Skew.TokenKind.ASSIGN_SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN_OR_EQUAL : tokenKind == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.ASSIGN_SHIFT_RIGHT : Skew.TokenKind.NULL;
                 assert(token.kind != Skew.TokenKind.NULL);
 
                 // Split this token again
@@ -11132,6 +11133,7 @@
         }
 
         node.appendChild(value);
+        context.skipWhitespace();
         token = context.current();
 
         if (!context.eat(Skew.TokenKind.CONTINUE_STRING_INTERPOLATION) && !context.expect(Skew.TokenKind.END_STRING_INTERPOLATION)) {
@@ -18042,13 +18044,15 @@
 
       else if (child.resolvedType != Skew.Type.DYNAMIC && child.resolvedType != this._cache.stringType) {
         child = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('toString')).appendChild(child).withRange(child.range);
+        this._resolveAsParameterizedExpressionWithConversion(child, scope, this._cache.stringType);
       }
 
       joined = joined != null ? Skew.Node.createBinary(Skew.NodeKind.ADD, joined, child).withRange(Skew.Range.span(joined.range, child.range)) : child;
+      this._resolveAsParameterizedExpressionWithConversion(joined, scope, this._cache.stringType);
     }
 
     node.become(joined != null ? joined : new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.StringContent('')));
-    this._resolveAsParameterizedExpression(node, scope);
+    this._resolveAsParameterizedExpressionWithConversion(node, scope, this._cache.stringType);
   };
 
   Skew.Resolving.Resolver.prototype._resolveSuper = function(node, scope) {

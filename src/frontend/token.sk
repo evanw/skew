@@ -188,14 +188,15 @@ namespace Skew {
 
               # Break apart operators that start with a closing angle bracket
               if tokenKind != .GREATER_THAN {
-                tokens.append(Token.new(Range.new(source, yy_bp, yy_bp + 1), .END_PARAMETER_LIST))
-                token.range.start = yy_bp + 1
+                var start = token.range.start
+                tokens.append(Token.new(Range.new(source, start, start + 1), .END_PARAMETER_LIST))
+                token.range.start = start + 1
                 token.kind =
                   tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
                   tokenKind == .UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
                   tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
                   tokenKind == .ASSIGN_SHIFT_RIGHT ? .GREATER_THAN_OR_EQUAL :
-                  tokenKind == .ASSIGN_UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
+                  tokenKind == .ASSIGN_UNSIGNED_SHIFT_RIGHT ? .ASSIGN_SHIFT_RIGHT :
                   .NULL
                 assert(token.kind != .NULL)
                 loop = tokenKind != .GREATER_THAN_OR_EQUAL # Split this token again

@@ -6206,5 +6206,50 @@ var y = \"\\(WrongToString.new)\"
            ~~~~~~~~~~~~~~~~~
 ")
 
+# Test splitting the ">>" token
+test("
+var x y<x>>
+", "
+<stdin>:1:11: error: Expected \"\\n\" but found \">\"
+var x y<x>>
+          ^
+")
+
+# Test splitting the ">=" token
+test("
+var x y<x>==
+", "
+<stdin>:1:12: error: Unexpected \"=\"
+var x y<x>==
+           ^
+")
+
+# Test splitting the ">>>" token
+test("
+var x y<x>>>
+", "
+<stdin>:1:11: error: Expected \"\\n\" but found \">>\"
+var x y<x>>>
+          ~~
+")
+
+# Test splitting the ">>=" token
+test("
+var x y<x>>=
+", "
+<stdin>:1:11: error: Expected \"\\n\" but found \">=\"
+var x y<x>>=
+          ~~
+")
+
+# Test splitting the ">>>=" token
+test("
+var x y<x>>>=
+", "
+<stdin>:1:11: error: Expected \"\\n\" but found \">>=\"
+var x y<x>>>=
+          ~~~
+")
+
   }
 }
