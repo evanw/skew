@@ -2897,5 +2897,29 @@ def x string
 })();
 ").js.foldAllConstants
 
+# Check assignment operators inside global variable initializers
+test("
+class Foo {
+  var y Foo = null
+  var z = 0
+}
+
+var x = Foo.new
+
+@export
+var y = x.y.z += 2
+", "
+(function() {
+  function Foo() {
+    this.y = null;
+    this.z = 0;
+  }
+
+  var ref;
+  var x = new Foo();
+  y = (ref = x.y).z = ref.z + 2 | 0;
+})();
+").js
+
   }
 }

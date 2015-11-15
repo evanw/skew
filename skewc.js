@@ -14808,6 +14808,7 @@
     this._foreachLoops = [];
     this._localVariableStatistics = {};
     this._controlFlow = new Skew.ControlFlowAnalyzer();
+    this._generatedGlobalVariables = [];
     this._constantFolder = null;
     this._isMergingGuards = true;
   };
@@ -14821,6 +14822,7 @@
     self._iterativelyMergeGuards();
     self._resolveGlobal();
     self._removeObsoleteFunctions(self._global);
+    in_List.insert1(self._global.variables, 0, self._generatedGlobalVariables);
   };
 
   // Put the guts of the function inside another function because V8 doesn't
@@ -18203,22 +18205,35 @@
 
   Skew.Resolving.Resolver.prototype._generateReference = function(scope, type) {
     var enclosingFunction = scope.findEnclosingFunctionOrLambda();
-    var block = enclosingFunction.symbol.block;
-    var symbol = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, enclosingFunction.generateName('ref'));
-    var after = block.firstChild();
+    var symbol = null;
+
+    // Add a local variable
+    if (enclosingFunction != null) {
+      var block = enclosingFunction.symbol.block;
+
+      // Make sure the call to "super" is still the first statement
+      var after = block.firstChild();
+
+      if (after.isSuperCallStatement()) {
+        after = after.nextSibling();
+      }
+
+      // Add the new variable to the top of the function
+      symbol = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, enclosingFunction.generateName('ref'));
+      block.insertChildBefore(after, new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(symbol)));
+    }
+
+    // Otherwise, add a global variable
+    else {
+      symbol = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_GLOBAL, this._global.scope.generateName('ref'));
+      symbol.parent = this._global;
+      this._generatedGlobalVariables.push(symbol);
+    }
 
     // Force-initialize the symbol
     symbol.type = new Skew.Node(Skew.NodeKind.TYPE).withType(type);
     symbol.resolvedType = type;
     symbol.state = Skew.SymbolState.INITIALIZED;
-
-    // Make sure the call to "super" is still the first statement
-    if (after.isSuperCallStatement()) {
-      after = after.nextSibling();
-    }
-
-    // Add the new variable to the top of the function
-    block.insertChildBefore(after, new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(symbol)));
     return Skew.Node.createSymbolReference(symbol);
   };
 
@@ -18485,7 +18500,6 @@
   };
 
   Skew.Resolving.Resolver.prototype._promoteToAssignment = function(node, extracted) {
-    assert(node.parent() != null);
     assert(extracted.parent() == null);
 
     if (extracted.kind == Skew.NodeKind.INDEX) {
@@ -20440,6 +20454,14 @@
     for (var i = 0, list = values, count1 = list.length; i < count1; i = i + 1 | 0) {
       var value = list[i];
       self.push(value);
+    }
+  };
+
+  in_List.insert1 = function(self, index, values) {
+    for (var i = 0, list = values, count1 = list.length; i < count1; i = i + 1 | 0) {
+      var value = list[i];
+      self.splice(index, 0, value);
+      index = index + 1 | 0;
     }
   };
 

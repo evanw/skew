@@ -43,6 +43,7 @@ namespace Skew.Resolving {
     const _foreachLoops List<Node> = []
     const _localVariableStatistics IntMap<LocalVariableStatistics> = {}
     const _controlFlow = ControlFlowAnalyzer.new
+    const _generatedGlobalVariables List<VariableSymbol> = []
     var _constantFolder Folding.ConstantFolder = null
     var _isMergingGuards = true
 
@@ -52,6 +53,7 @@ namespace Skew.Resolving {
       _iterativelyMergeGuards
       _resolveGlobal
       _removeObsoleteFunctions(_global)
+      _global.variables.insert(0, _generatedGlobalVariables)
     }
 
     # Put the guts of the function inside another function because V8 doesn't
@@ -2900,23 +2902,34 @@ namespace Skew.Resolving {
 
     def _generateReference(scope Scope, type Type) Node {
       var enclosingFunction = scope.findEnclosingFunctionOrLambda
-      var block = enclosingFunction.symbol.block
-      var symbol = VariableSymbol.new(.VARIABLE_LOCAL, enclosingFunction.generateName("ref"))
-      var after = block.firstChild
+      var symbol VariableSymbol = null
+
+      # Add a local variable
+      if enclosingFunction != null {
+        var block = enclosingFunction.symbol.block
+
+        # Make sure the call to "super" is still the first statement
+        var after = block.firstChild
+        if after.isSuperCallStatement {
+          after = after.nextSibling
+        }
+
+        # Add the new variable to the top of the function
+        symbol = VariableSymbol.new(.VARIABLE_LOCAL, enclosingFunction.generateName("ref"))
+        block.insertChildBefore(after, Node.createVariables.appendChild(Node.createVariable(symbol)))
+      }
+
+      # Otherwise, add a global variable
+      else {
+        symbol = VariableSymbol.new(.VARIABLE_GLOBAL, _global.scope.generateName("ref"))
+        symbol.parent = _global
+        _generatedGlobalVariables.append(symbol)
+      }
 
       # Force-initialize the symbol
       symbol.type = Node.createType(type)
       symbol.resolvedType = type
       symbol.state = .INITIALIZED
-
-      # Make sure the call to "super" is still the first statement
-      if after.isSuperCallStatement {
-        after = after.nextSibling
-      }
-
-      # Add the new variable to the top of the function
-      block.insertChildBefore(after, Node.createVariables.appendChild(Node.createVariable(symbol)))
-
       return Node.createSymbolReference(symbol)
     }
 
@@ -3163,7 +3176,6 @@ namespace Skew.Resolving {
     }
 
     def _promoteToAssignment(node Node, extracted Node) {
-      assert(node.parent != null)
       assert(extracted.parent == null)
 
       if extracted.kind == .INDEX {
