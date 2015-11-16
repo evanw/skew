@@ -222,6 +222,7 @@ namespace Skew.Renaming {
     "[]=": "set",
 
     # Initializer operators
+    "<>...</>": "append",
     "[...]": "append",
     "[new]": "new",
     "{...}": "insert",

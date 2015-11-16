@@ -732,6 +732,7 @@ namespace Skew.Parsing {
     TokenKind.SHIFT_RIGHT: 0,
     TokenKind.TILDE: 0,
     TokenKind.UNSIGNED_SHIFT_RIGHT: 0,
+    TokenKind.XML_CHILD: 0,
   }
 
   enum ForbiddenGroup {
@@ -1560,7 +1561,37 @@ namespace Skew.Parsing {
       return Node.createHook(left, middle, right).withRange(context.spanSince(left.range))
     }
 
+    # XML literals
+    pratt.parselet(.START_XML, .LOWEST).prefix = (context) => {
+      var token = context.next
+      var tag = parseDotChain(context)
+      if tag == null {
+        return null
+      }
+      if !context.expect(.XML_EMPTY) {
+        return null
+      }
+      var attributes = Node.createSequence
+      return Node.createXML(tag, attributes).withRange(context.spanSince(token.range))
+    }
+
     return pratt
+  }
+
+  def parseDotChain(context ParserContext) Node {
+    var current = context.current
+    if !context.expect(.IDENTIFIER) {
+      return null
+    }
+    var chain = Node.createName(current.range.toString).withRange(current.range)
+    while context.eat(.DOT) {
+      current = context.current
+      if !context.expect(.IDENTIFIER) {
+        return null
+      }
+      chain = Node.createDot(chain, current.range.toString).withRange(context.spanSince(chain.range))
+    }
+    return chain
   }
 
   def createTypeParser Pratt {

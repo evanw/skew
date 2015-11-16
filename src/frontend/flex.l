@@ -59,6 +59,8 @@
 "::"                              DOUBLE_COLON;
 ":"                               COLON;
 ";"                               SEMICOLON;
+"<>...</>"                        XML_CHILD;
+"/>"                              XML_EMPTY;
 "**="                             ASSIGN_POWER;
 "+="                              ASSIGN_PLUS;
 "-="                              ASSIGN_MINUS;

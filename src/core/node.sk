@@ -43,6 +43,7 @@ namespace Skew {
     SUPER
     TYPE
     TYPE_CHECK
+    XML
 
     # Unary operators
     COMPLEMENT
@@ -1061,6 +1062,12 @@ namespace Skew {
       return new(.TYPE_CHECK).appendChild(value).appendChild(type)
     }
 
+    def createXML(tag Node, attributes Node) Node {
+      assert(tag.kind.isExpression)
+      assert(attributes.kind == .SEQUENCE)
+      return new(.XML).appendChild(tag).appendChild(attributes)
+    }
+
     def createUnary(kind NodeKind, value Node) Node {
       assert(kind.isUnary)
       assert(value.kind.isExpression)
@@ -1250,6 +1257,20 @@ namespace Skew {
       assert(childCount == 2)
       assert(_lastChild.kind.isExpression)
       return _lastChild
+    }
+
+    def xmlTag Node {
+      assert(kind == .XML)
+      assert(childCount >= 2)
+      assert(_firstChild.kind.isExpression)
+      return _firstChild
+    }
+
+    def xmlAttributes Node {
+      assert(kind == .XML)
+      assert(childCount >= 2)
+      assert(_firstChild._nextSibling.kind == .SEQUENCE)
+      return _firstChild._nextSibling
     }
 
     def unaryValue Node {

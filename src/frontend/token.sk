@@ -30,6 +30,30 @@ namespace Skew {
     TokenKind.RIGHT_PARENTHESIS: 0,
   }
 
+  const FORBID_XML_AFTER IntMap<int> = {
+    TokenKind.CHARACTER: 0,
+    TokenKind.DECREMENT: 0,
+    TokenKind.DEF: 0,
+    TokenKind.DOUBLE: 0,
+    TokenKind.DYNAMIC: 0,
+    TokenKind.END_STRING_INTERPOLATION: 0,
+    TokenKind.FALSE: 0,
+    TokenKind.IDENTIFIER: 0,
+    TokenKind.INCREMENT: 0,
+    TokenKind.INT: 0,
+    TokenKind.INT_BINARY: 0,
+    TokenKind.INT_HEX: 0,
+    TokenKind.INT_OCTAL: 0,
+    TokenKind.NULL: 0,
+    TokenKind.OVER: 0,
+    TokenKind.RIGHT_BRACE: 0,
+    TokenKind.RIGHT_BRACKET: 0,
+    TokenKind.RIGHT_PARENTHESIS: 0,
+    TokenKind.STRING: 0,
+    TokenKind.SUPER: 0,
+    TokenKind.TRUE: 0,
+  }
+
   # This is the inner loop from "flex", an ancient lexer generator. The output
   # of flex is pretty bad (obfuscated variable names and the opposite of modular
   # code) but it's fast and somewhat standard for compiler design. The code below
@@ -75,6 +99,16 @@ namespace Skew {
             }
           }
         }
+      }
+
+      # Special-case XML literals
+      else if c == '<' && !(previousKind in FORBID_XML_AFTER) {
+        yy_cp++
+        yy_act = .START_XML
+      }
+      else if c == '>' && !stack.isEmpty && stack.last.kind == .START_XML {
+        yy_cp++
+        yy_act = .END_XML
       }
 
       # Search for a match
@@ -154,13 +188,13 @@ namespace Skew {
 
         # Group open
         if tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET ||
-            tokenKind == .LESS_THAN || tokenKind == .START_STRING_INTERPOLATION {
+            tokenKind == .LESS_THAN || tokenKind == .START_STRING_INTERPOLATION || tokenKind == .START_XML {
           stack.append(token)
         }
 
         # Group close
         else if tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET ||
-            tokenKind == .END_STRING_INTERPOLATION || tokenStartsWithGreaterThan {
+            tokenKind == .END_STRING_INTERPOLATION || tokenKind == .END_XML || tokenStartsWithGreaterThan {
 
           # Search for a matching opposite token
           while !stack.isEmpty {
@@ -237,6 +271,10 @@ namespace Skew {
     # Type parameters are surrounded by "<" and ">"
     END_PARAMETER_LIST
     START_PARAMETER_LIST
+
+    # XML entities are surrounded by "<" and ">" (or "/>" but that's defined by flex)
+    END_XML
+    START_XML
 
     # String interpolation looks like "start\( 1 )continue( 2 )end"
     CONTINUE_STRING_INTERPOLATION
@@ -360,6 +398,10 @@ namespace Skew {
 
       END_PARAMETER_LIST: "\">\"",
       START_PARAMETER_LIST: "\"<\"",
+
+      END_XML: "\">\"",
+      XML_EMPTY: "\"/>\"",
+      START_XML: "\"<\"",
 
       CONTINUE_STRING_INTERPOLATION: "string interpolation",
       END_STRING_INTERPOLATION: "string interpolation",
