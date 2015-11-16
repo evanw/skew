@@ -58,9 +58,7 @@ namespace Skew.Inlining {
           callSite.enclosingSymbol.annotations = annotations
         }
         for annotation in spreadingAnnotations {
-          if !(annotation in annotations) {
-            annotations.append(annotation)
-          }
+          annotations.appendOne(annotation)
         }
       }
 

@@ -2189,7 +2189,9 @@ namespace Skew {
       }
 
       # "a ? a : b" => "a || b"
-      if test.looksTheSameAs(trueValue) && test.hasNoSideEffects {
+      # "a = b ? a : c" => "(a = b) || c"
+      if test.looksTheSameAs(trueValue) && test.hasNoSideEffects ||
+          test.kind.isBinaryAssign && test.binaryLeft.looksTheSameAs(trueValue) && test.binaryLeft.hasNoSideEffects {
         node.become(Node.createBinary(.LOGICAL_OR, test.remove, falseValue.remove))
         return
       }
@@ -2704,7 +2706,8 @@ namespace Skew {
 
     def _shouldRenameSymbol(symbol Symbol) bool {
       # Don't rename annotations since "@rename" is used for renaming and is identified by name
-      return !symbol.isImportedOrExported && !symbol.isRenamed && symbol.kind != .FUNCTION_ANNOTATION && symbol.kind != .OBJECT_GLOBAL && symbol.kind != .FUNCTION_LOCAL
+      return !symbol.isImportedOrExported && !symbol.isRenamed && !symbol.isPrimaryConstructor &&
+        symbol.kind != .FUNCTION_ANNOTATION && symbol.kind != .OBJECT_GLOBAL && symbol.kind != .FUNCTION_LOCAL
     }
 
     def _mangleName(symbol Symbol) string {

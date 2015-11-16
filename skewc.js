@@ -6165,7 +6165,8 @@
     }
 
     // "a ? a : b" => "a || b"
-    if (test.looksTheSameAs(trueValue) && test.hasNoSideEffects()) {
+    // "a = b ? a : c" => "(a = b) || c"
+    if (test.looksTheSameAs(trueValue) && test.hasNoSideEffects() || Skew.in_NodeKind.isBinaryAssign(test.kind) && test.binaryLeft().looksTheSameAs(trueValue) && test.binaryLeft().hasNoSideEffects()) {
       node.become(Skew.Node.createBinary(Skew.NodeKind.LOGICAL_OR, test.remove(), falseValue.remove()));
       return;
     }
@@ -6731,7 +6732,7 @@
 
   Skew.JavaScriptEmitter._shouldRenameSymbol = function(symbol) {
     // Don't rename annotations since "@rename" is used for renaming and is identified by name
-    return !symbol.isImportedOrExported() && !symbol.isRenamed() && symbol.kind != Skew.SymbolKind.FUNCTION_ANNOTATION && symbol.kind != Skew.SymbolKind.OBJECT_GLOBAL && symbol.kind != Skew.SymbolKind.FUNCTION_LOCAL;
+    return !symbol.isImportedOrExported() && !symbol.isRenamed() && !symbol.isPrimaryConstructor() && symbol.kind != Skew.SymbolKind.FUNCTION_ANNOTATION && symbol.kind != Skew.SymbolKind.OBJECT_GLOBAL && symbol.kind != Skew.SymbolKind.FUNCTION_LOCAL;
   };
 
   Skew.JavaScriptEmitter._mangleName = function(symbol) {
@@ -13813,10 +13814,7 @@
 
         for (var i2 = 0, list1 = spreadingAnnotations, count1 = list1.length; i2 < count1; i2 = i2 + 1 | 0) {
           var annotation = list1[i2];
-
-          if (!(annotations.indexOf(annotation) != -1)) {
-            annotations.push(annotation);
-          }
+          in_List.appendOne(annotations, annotation);
         }
       }
 
@@ -20462,6 +20460,12 @@
       var value = list[i];
       self.splice(index, 0, value);
       index = index + 1 | 0;
+    }
+  };
+
+  in_List.appendOne = function(self, value) {
+    if (!(self.indexOf(value) != -1)) {
+      self.push(value);
     }
   };
 

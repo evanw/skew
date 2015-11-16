@@ -1020,15 +1020,15 @@ class Baz {
 }
 ", "
 (function() {
-  foo = function(a, e, f) {
-    var b = new g;
-    t('' + a), t(q + a.toString()), t(a + ''), t(a.toString() + a), t(e + ''), t(f.toString(0) + ''), t(b.c() + '');
+  foo = function(a, d, e) {
+    var b = new f;
+    t('' + a), t(q + a.toString()), t(a + ''), t(a.toString() + a), t(d + ''), t(e.toString(0) + ''), t(b.c() + '');
   };
 
-  function g() {
+  function f() {
   }
 
-  g.prototype.c = function() {
+  f.prototype.c = function() {
     return '';
   };
 })();
@@ -1062,33 +1062,33 @@ def main(args List<string>) int {
 }
 ", "
 (function() {
-  function i(a, c) {
-    a.prototype = Object.create(c.prototype), a.prototype.constructor = a;
+  function h(a, b) {
+    a.prototype = Object.create(b.prototype), a.prototype.constructor = a;
   }
 
-  var j = Math.imul || function(a, c) {
-    var f = a >> 16 & 65535, g = c >> 16 & 65535, d = a & 65535, e = c & 65535;
-    return d * e + (f * e + d * g << 16) | 0;
+  var i = Math.imul || function(a, b) {
+    var e = a >> 16 & 65535, f = b >> 16 & 65535, c = a & 65535, d = b & 65535;
+    return c * d + (e * d + c * f << 16) | 0;
   };
 
-  function m(a) {
-    return new l, j(h(a), 100);
+  function l(a) {
+    return new k, i(g(a), 100);
   }
 
-  function h(a) {
+  function g(a) {
     return a.length;
   }
 
+  function j() {
+  }
+
   function k() {
+    j.call(this);
   }
 
-  function l() {
-    k.call(this);
-  }
+  h(k, j);
 
-  i(l, k);
-
-  process.exit(m(process.argv.slice(2)));
+  process.exit(l(process.argv.slice(2)));
 })();
 ").jsMangle
 
@@ -1728,17 +1728,17 @@ def main {
 }
 ", "
 (function() {
-  function e() {
-    var a = function(c) {
-      return a(c);
-    };
-    a(new d);
-  }
-
   function d() {
+    var a = function(b) {
+      return a(b);
+    };
+    a(new c);
   }
 
-  e();
+  function c() {
+  }
+
+  d();
 })();
 ").jsMangle.inlineAllFunctions
 
@@ -1756,18 +1756,18 @@ def main {
 }
 ", "
 (function() {
-  function f() {
-    var a = function(d) {
-      return d.a.map(a);
+  function e() {
+    var a = function(c) {
+      return c.a.map(a);
     };
-    a(new e);
+    a(new d);
   }
 
-  function e() {
+  function d() {
     this.a = [];
   }
 
-  f();
+  e();
 })();
 ").jsMangle.inlineAllFunctions.globalizeAllFunctions
 
@@ -1784,14 +1784,14 @@ def main bool {
 ", "
 (function() {
   main = function() {
-    var a = new c;
-    return a instanceof c || a instanceof c;
+    var a = new b;
+    return a instanceof b || a instanceof b;
   };
 
-  function c() {
+  function b() {
   }
 
-  var d = {};
+  var c = {};
 })();
 ").jsMangle
 
@@ -1814,18 +1814,18 @@ def main {
 }
 ", "
 (function() {
-  function f() {
-    var b = new e, c = b;
+  function e() {
+    var b = new d, c = b;
     b.a(), c.a();
   }
 
-  function e() {
+  function d() {
   }
 
-  e.prototype.a = function() {
+  d.prototype.a = function() {
   };
 
-  f();
+  e();
 })();
 ").jsMangle
 
@@ -1856,18 +1856,18 @@ def main {
 }
 ", "
 (function() {
-  function g() {
-    var d = new f, e = new f, b = d;
-    d.a(), e.a(), b.a(), b = e, b.a();
-  }
-
   function f() {
+    var c = new e, d = new e, b = c;
+    c.a(), d.a(), b.a(), b = d, b.a();
   }
 
-  f.prototype.a = function() {
+  function e() {
+  }
+
+  e.prototype.a = function() {
   };
 
-  g();
+  f();
 })();
 ").jsMangle
 
@@ -1890,18 +1890,18 @@ def main {
 }
 ", "
 (function() {
-  function f() {
-    var b = new e, c = b;
+  function e() {
+    var b = new d, c = b;
     a(b), a(c);
   }
 
   function a(b) {
   }
 
-  function e() {
+  function d() {
   }
 
-  f();
+  e();
 })();
 ").jsMangle.globalizeAllFunctions
 
@@ -1932,24 +1932,24 @@ def main {
 }
 ", "
 (function() {
-  function i() {
-    var c = new g, d = new h, b = c;
+  function g() {
+    var c = new e, d = new f, b = c;
     c.a(), d.a(), b.a(), b = d, b.a();
   }
 
-  function g() {
+  function e() {
   }
 
-  g.prototype.a = function() {
+  e.prototype.a = function() {
   };
 
-  function h() {
+  function f() {
   }
 
-  h.prototype.a = function() {
+  f.prototype.a = function() {
   };
 
-  i();
+  g();
 })();
 ").jsMangle.globalizeAllFunctions
 
@@ -1982,34 +1982,34 @@ def main {
 }
 ", "
 (function() {
-  function i() {
-    var c = new g, d = new h;
+  function g() {
+    var c = new e, d = new f;
     c.a(0), c.b(!1), d.a(0), d.b(!1);
   }
 
-  function g() {
+  function e() {
   }
 
   // Foo.foo(x int)
-  g.prototype.a = function(c) {
+  e.prototype.a = function(c) {
   };
 
   // Foo.foo(x bool)
-  g.prototype.b = function(c) {
+  e.prototype.b = function(c) {
   };
 
-  function h() {
+  function f() {
   }
 
   // Bar.foo(x int)
-  h.prototype.a = function(c) {
+  f.prototype.a = function(c) {
   };
 
   // Bar.foo(x bool)
-  h.prototype.b = function(c) {
+  f.prototype.b = function(c) {
   };
 
-  i();
+  g();
 })();
 ").jsMangle
 
@@ -2067,22 +2067,22 @@ def main {
 ", "
 (function() {
   main = function() {
-    new e, new e.c(0);
+    new d, new d.b(0);
   };
 
-  function e() {
+  function d() {
     this.a = function(a) {
       return a;
     };
   }
 
-  e.c = function(a) {
-    this.a = function(d) {
-      return d;
+  d.b = function(a) {
+    this.a = function(c) {
+      return c;
     };
   };
 
-  e.c.prototype = e.prototype;
+  d.b.prototype = d.prototype;
 })();
 ").jsMangle
 
@@ -2099,11 +2099,11 @@ def main {
 ", "
 (function() {
   main = function() {
-    new c;
+    new b;
   };
 
-  function c() {
-    this.b = 0;
+  function b() {
+    this.a = 0;
   }
 })();
 ").jsMangle.foldAllConstants
@@ -2123,11 +2123,11 @@ def main int {
 ", "
 (function() {
   main = function() {
-    var a = new c;
+    var a = new b;
     return a.a;
   };
 
-  function c() {
+  function b() {
     this.a = 1;
   }
 })();
@@ -2150,21 +2150,21 @@ def main(x int) {
 (function() {
   main = function(a) {
     try {
-      throw new c;
+      throw new b;
     }
 
-    catch (d) {
-      if (d instanceof c) {
-        throw d;
+    catch (c) {
+      if (c instanceof b) {
+        throw c;
       }
 
       else {
-        throw d;
+        throw c;
       }
     }
   };
 
-  function c() {
+  function b() {
   }
 })();
 ").jsMangle
@@ -2189,7 +2189,6 @@ namespace ns2 {
   var y = 0.0
 }
 var z = 0.0
-
 ", "
 (function() {
   main = function() {
@@ -2201,6 +2200,28 @@ var z = 0.0
   x = 0;
   ns2.y = 0;
   var a = 0, c = 0, d = 0, b = 0;
+})();
+").jsMangle
+
+# Check mangling of hook expressions containing assignments
+test("
+class Foo {
+  var y Foo = null
+}
+
+@export
+def test(x Foo) Foo {
+  return (x = x.y) != null ? x : Foo.new
+}
+", "
+(function() {
+  test = function(a) {
+    return (a = a.a) || new b;
+  };
+
+  function b() {
+    this.a = null;
+  }
 })();
 ").jsMangle
 
