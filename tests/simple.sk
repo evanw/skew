@@ -6136,11 +6136,18 @@ def foo Foo {
 
 def main {
   foo ?= foo
+  var bar = foo ?= foo
 }
 ", "
 <stdin>:9:3: error: Cannot store to this location
   foo ?= foo
   ~~~
+<stdin>:10:13: error: Cannot store to this location
+  var bar = foo ?= foo
+            ~~~
+<stdin>:10:7: warning: Local variable \"bar\" is never read
+  var bar = foo ?= foo
+      ~~~
 ")
 
 # Test a string interpolation error case

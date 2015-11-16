@@ -16759,6 +16759,7 @@
       var left = value.binaryLeft();
       var right = value.binaryRight();
       this._resolveAsParameterizedExpressionWithTypeContext(left, scope, null);
+      this._checkStorage(left, scope);
       var test1 = Skew.Node.createBinary(Skew.NodeKind.EQUAL, this._extractExpressionForAssignment(left, scope), new Skew.Node(Skew.NodeKind.NULL)).withRange(left.range);
       var assign = Skew.Node.createBinary(Skew.NodeKind.ASSIGN, left.remove(), right.remove()).withRange(node.range).withFlags(Skew.Node.WAS_ASSIGN_NULL);
       var block1 = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createExpression(assign).withRange(node.range)).withRange(node.range);
@@ -18112,6 +18113,7 @@
     // Special-case the "?=" operator
     if (kind == Skew.NodeKind.ASSIGN_NULL) {
       this._resolveAsParameterizedExpressionWithTypeContext(left, scope, context);
+      this._checkStorage(left, scope);
       var test1 = Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, this._extractExpressionForAssignment(left, scope), new Skew.Node(Skew.NodeKind.NULL)).withRange(left.range);
       var assign = Skew.Node.createBinary(Skew.NodeKind.ASSIGN, left.remove(), right.remove()).withRange(node.range).withFlags(Skew.Node.WAS_ASSIGN_NULL);
       node.become(Skew.Node.createHook(test1, left.clone(), assign).withRange(node.range));
@@ -18276,7 +18278,12 @@
     }
 
     // Handle name expressions
-    return node.clone();
+    if (node.kind == Skew.NodeKind.NAME) {
+      return node.clone();
+    }
+
+    // Handle everything else
+    return this._extractExpression(node, scope);
   };
 
   Skew.Resolving.Resolver.prototype._resolveOperatorOverload = function(node, scope) {
