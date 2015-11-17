@@ -6258,5 +6258,48 @@ var x y<x>>>=
           ~~~
 ")
 
+# Test error messages about forbidden operator customizations
+test("
+class Foo {
+  def ==(x bool)
+  def !=(x bool)
+  def <(x bool)
+  def >(x bool)
+  def <=(x bool)
+  def >=(x bool)
+  def &&(x bool)
+  def ||(x bool)
+  def =(x bool)
+}
+", "
+<stdin>:2:7: error: The \"==\" operator is not customizable because that wouldn't work with generics, which are implemented with type erasure
+  def ==(x bool)
+      ~~
+<stdin>:3:7: error: The \"!=\" operator is not customizable because that wouldn't work with generics, which are implemented with type erasure
+  def !=(x bool)
+      ~~
+<stdin>:4:7: error: The \"<\" operator is not customizable because it's automatically implemented using the \"<=>\" operator (customize the \"<=>\" operator instead)
+  def <(x bool)
+      ^
+<stdin>:5:7: error: The \">\" operator is not customizable because it's automatically implemented using the \"<=>\" operator (customize the \"<=>\" operator instead)
+  def >(x bool)
+      ^
+<stdin>:6:7: error: The \"<=\" operator is not customizable because it's automatically implemented using the \"<=>\" operator (customize the \"<=>\" operator instead)
+  def <=(x bool)
+      ~~
+<stdin>:7:7: error: The \">=\" operator is not customizable because it's automatically implemented using the \"<=>\" operator (customize the \"<=>\" operator instead)
+  def >=(x bool)
+      ~~
+<stdin>:8:7: error: The \"&&\" operator is not customizable because of its special short-circuit evaluation behavior
+  def &&(x bool)
+      ~~
+<stdin>:9:7: error: The \"||\" operator is not customizable because of its special short-circuit evaluation behavior
+  def ||(x bool)
+      ~~
+<stdin>:10:7: error: The \"=\" operator is not customizable because value types are not supported by the language
+  def =(x bool)
+      ^
+")
+
   }
 }

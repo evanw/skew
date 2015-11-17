@@ -9130,12 +9130,12 @@
     this.error(range, 'Functions without arguments do not use parentheses');
   };
 
-  Skew.Log.prototype.semanticErrorComparisonOperatorNotInt = function(range) {
-    this.error(range, 'The comparison operator must have a return type of "int"');
-  };
-
   Skew.Log.prototype.syntaxErrorBadDeclarationInsideType = function(range) {
     this.error(range, 'Cannot use this declaration here');
+  };
+
+  Skew.Log.prototype.syntaxErrorBadOperatorCustomization = function(range, kind, why) {
+    this.error(range, 'The ' + Skew.in_TokenKind.toString(kind) + ' operator is not customizable because ' + why);
   };
 
   Skew.Log._expectedCountText = function(singular, expected, found) {
@@ -9175,6 +9175,10 @@
 
   Skew.Log.prototype.semanticWarningUnusedExpression = function(range) {
     this.warning(range, 'Unused expression');
+  };
+
+  Skew.Log.prototype.semanticErrorComparisonOperatorNotInt = function(range) {
+    this.error(range, 'The comparison operator must have a return type of "int"');
   };
 
   Skew.Log.prototype.semanticErrorDuplicateSymbol = function(range, name, previous) {
@@ -10632,13 +10636,24 @@
       }
 
       context.next();
-
-      // Parse the symbol name
       var nameToken = context.current();
       var range = nameToken.range;
       var name = range.toString();
-      var isOperator = kind == Skew.SymbolKind.FUNCTION_INSTANCE && nameToken.kind in Skew.Parsing.operatorOverloadTokenKinds;
+      var isOperator = false;
 
+      // Only check for custom operators for instance functions
+      if (kind == Skew.SymbolKind.FUNCTION_INSTANCE) {
+        if (nameToken.kind in Skew.Parsing.customOperators) {
+          isOperator = true;
+        }
+
+        else if (nameToken.kind in Skew.Parsing.forbiddenCustomOperators) {
+          context.log.syntaxErrorBadOperatorCustomization(range, nameToken.kind, Skew.Parsing.forbiddenGroupDescription[Skew.Parsing.forbiddenCustomOperators[nameToken.kind]]);
+          isOperator = true;
+        }
+      }
+
+      // Parse the symbol name
       if (isOperator) {
         context.next();
       }
@@ -11403,6 +11418,13 @@
     return Skew.Parsing.createStringNode(context.log, token.range);
   };
 
+  Skew.Parsing.ForbiddenGroup = {
+    ASSIGN: 0,
+    COMPARE: 1,
+    EQUAL: 2,
+    LOGICAL: 3
+  };
+
   Skew.ParserContext = function(log, _tokens) {
     this.log = log;
     this.inNonVoidFunction = false;
@@ -11892,16 +11914,6 @@
     return null;
   };
 
-  Skew.LispTreeTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.LispTreeTarget, Skew.CompilerTarget);
-
-  Skew.LispTreeTarget.prototype.createEmitter = function(context) {
-    return new Skew.LispTreeEmitter(context.options);
-  };
-
   Skew.JavaScriptTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -12006,6 +12018,16 @@
 
   Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
     return new Skew.CPlusPlusEmitter(context.options, context.cache);
+  };
+
+  Skew.LispTreeTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.LispTreeTarget, Skew.CompilerTarget);
+
+  Skew.LispTreeTarget.prototype.createEmitter = function(context) {
+    return new Skew.LispTreeEmitter(context.options);
   };
 
   Skew.Define = function(name, value) {
@@ -12121,20 +12143,6 @@
     return this;
   };
 
-  Skew.CallGraphPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.CallGraphPass, Skew.Pass);
-
-  Skew.CallGraphPass.prototype.kind = function() {
-    return Skew.PassKind.CALL_GRAPH;
-  };
-
-  Skew.CallGraphPass.prototype.run = function(context) {
-    context.callGraph = new Skew.CallGraph(context.global);
-  };
-
   Skew.ParsingPass = function() {
     Skew.Pass.call(this);
   };
@@ -12169,6 +12177,20 @@
       emitter.visit(context.global);
       context.outputs = emitter.sources();
     }
+  };
+
+  Skew.CallGraphPass = function() {
+    Skew.Pass.call(this);
+  };
+
+  __extends(Skew.CallGraphPass, Skew.Pass);
+
+  Skew.CallGraphPass.prototype.kind = function() {
+    return Skew.PassKind.CALL_GRAPH;
+  };
+
+  Skew.CallGraphPass.prototype.run = function(context) {
+    context.callGraph = new Skew.CallGraph(context.global);
   };
 
   Skew.LexingPass = function() {
@@ -20662,7 +20684,11 @@
   Skew.Symbol._nextID = 0;
   Skew.Parsing.expressionParser = null;
   Skew.Parsing.typeParser = null;
-  Skew.Parsing.operatorOverloadTokenKinds = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_INDEX, 0), Skew.TokenKind.ASSIGN_MINUS, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_POWER, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.COMPARE, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.IN, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INDEX, 0), Skew.TokenKind.LIST, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.POWER, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SET, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.TILDE, 0), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, 0);
+  Skew.Parsing.customOperators = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_INDEX, 0), Skew.TokenKind.ASSIGN_MINUS, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_POWER, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.COMPARE, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.IN, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INDEX, 0), Skew.TokenKind.LIST, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.POWER, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SET, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.TILDE, 0), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, 0);
+  Skew.Parsing.forbiddenCustomOperators = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.ASSIGN, Skew.Parsing.ForbiddenGroup.ASSIGN), Skew.TokenKind.EQUAL, Skew.Parsing.ForbiddenGroup.EQUAL), Skew.TokenKind.GREATER_THAN, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.GREATER_THAN_OR_EQUAL, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LESS_THAN, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LESS_THAN_OR_EQUAL, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LOGICAL_AND, Skew.Parsing.ForbiddenGroup.LOGICAL), Skew.TokenKind.LOGICAL_OR, Skew.Parsing.ForbiddenGroup.LOGICAL), Skew.TokenKind.NOT_EQUAL, Skew.Parsing.ForbiddenGroup.EQUAL);
+
+  // These are prefixed with "the operator \"...\" is not customizable because "
+  Skew.Parsing.forbiddenGroupDescription = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.Parsing.ForbiddenGroup.ASSIGN, 'value types are not supported by the language'), Skew.Parsing.ForbiddenGroup.COMPARE, 'it\'s automatically implemented using the "<=>" operator (customize the "<=>" operator instead)'), Skew.Parsing.ForbiddenGroup.EQUAL, "that wouldn't work with generics, which are implemented with type erasure"), Skew.Parsing.ForbiddenGroup.LOGICAL, 'of its special short-circuit evaluation behavior');
   Skew.Parsing.dotInfixParselet = function(context, left) {
     context.next();
     var range = context.current().range;

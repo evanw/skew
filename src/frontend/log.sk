@@ -101,12 +101,12 @@ namespace Skew {
       error(range, "Functions without arguments do not use parentheses")
     }
 
-    def semanticErrorComparisonOperatorNotInt(range Range) {
-      error(range, "The comparison operator must have a return type of \"int\"")
-    }
-
     def syntaxErrorBadDeclarationInsideType(range Range) {
       error(range, "Cannot use this declaration here")
+    }
+
+    def syntaxErrorBadOperatorCustomization(range Range, kind TokenKind, why string) {
+      error(range, "The \(kind) operator is not customizable because \(why)")
     }
   }
 
@@ -146,6 +146,10 @@ namespace Skew {
 
     def semanticWarningUnusedExpression(range Range) {
       warning(range, "Unused expression")
+    }
+
+    def semanticErrorComparisonOperatorNotInt(range Range) {
+      error(range, "The comparison operator must have a return type of \"int\"")
     }
 
     def semanticErrorDuplicateSymbol(range Range, name string, previous Range) {

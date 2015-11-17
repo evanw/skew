@@ -697,7 +697,7 @@ namespace Skew.Parsing {
     return parameters
   }
 
-  const operatorOverloadTokenKinds IntMap<int> = {
+  const customOperators IntMap<int> = {
     TokenKind.ASSIGN_BITWISE_AND: 0,
     TokenKind.ASSIGN_BITWISE_OR: 0,
     TokenKind.ASSIGN_BITWISE_XOR: 0,
@@ -732,6 +732,33 @@ namespace Skew.Parsing {
     TokenKind.SHIFT_RIGHT: 0,
     TokenKind.TILDE: 0,
     TokenKind.UNSIGNED_SHIFT_RIGHT: 0,
+  }
+
+  enum ForbiddenGroup {
+    ASSIGN
+    COMPARE
+    EQUAL
+    LOGICAL
+  }
+
+  const forbiddenCustomOperators IntMap<ForbiddenGroup> = {
+    TokenKind.ASSIGN: .ASSIGN,
+    TokenKind.EQUAL: .EQUAL,
+    TokenKind.GREATER_THAN: .COMPARE,
+    TokenKind.GREATER_THAN_OR_EQUAL: .COMPARE,
+    TokenKind.LESS_THAN: .COMPARE,
+    TokenKind.LESS_THAN_OR_EQUAL: .COMPARE,
+    TokenKind.LOGICAL_AND: .LOGICAL,
+    TokenKind.LOGICAL_OR: .LOGICAL,
+    TokenKind.NOT_EQUAL: .EQUAL,
+  }
+
+  # These are prefixed with "the operator \"...\" is not customizable because "
+  const forbiddenGroupDescription IntMap<string> = {
+    ForbiddenGroup.ASSIGN: "value types are not supported by the language",
+    ForbiddenGroup.COMPARE: "it's automatically implemented using the \"<=>\" operator (customize the \"<=>\" operator instead)",
+    ForbiddenGroup.EQUAL: "that wouldn't work with generics, which are implemented with type erasure",
+    ForbiddenGroup.LOGICAL: "of its special short-circuit evaluation behavior",
   }
 
   def parseAfterBlock(context ParserContext) bool {
@@ -838,11 +865,23 @@ namespace Skew.Parsing {
       }
       context.next
 
-      # Parse the symbol name
       var nameToken = context.current
       var range = nameToken.range
       var name = range.toString
-      var isOperator = kind == .FUNCTION_INSTANCE && nameToken.kind in operatorOverloadTokenKinds
+      var isOperator = false
+
+      # Only check for custom operators for instance functions
+      if kind == .FUNCTION_INSTANCE {
+        if nameToken.kind in customOperators {
+          isOperator = true
+        } else if nameToken.kind in forbiddenCustomOperators {
+          context.log.syntaxErrorBadOperatorCustomization(range, nameToken.kind,
+            forbiddenGroupDescription[forbiddenCustomOperators[nameToken.kind]])
+          isOperator = true
+        }
+      }
+
+      # Parse the symbol name
       if isOperator {
         context.next
       } else if kind == .FUNCTION_GLOBAL && context.eat(.ANNOTATION) {
