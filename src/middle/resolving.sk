@@ -3235,7 +3235,18 @@ namespace Skew.Resolving {
       # Forbid bare function references
       if !symbol.isSetter && node.resolvedType != .DYNAMIC && kind.isFunctionOrOverloadedFunction && kind != .FUNCTION_ANNOTATION &&
           !_isCallValue(node) && (parent == null || parent.kind != .PARAMETERIZE || !_isCallValue(parent)) {
-        _log.semanticErrorMustCallFunction(node.internalRangeOrRange, symbol.name)
+        var lower = 0x7FFFFFFF
+        var upper = -1
+        if kind.isFunction {
+          lower = upper = symbol.asFunctionSymbol.arguments.count
+        } else {
+          for function in symbol.asOverloadedFunctionSymbol.symbols {
+            var count = function.arguments.count
+            if count < lower { lower = count }
+            if count > upper { upper = count }
+          }
+        }
+        _log.semanticErrorMustCallFunction(node.internalRangeOrRange, symbol.name, lower, upper)
         node.resolvedType = .DYNAMIC
       }
 

@@ -279,7 +279,7 @@ def main(x int) {
   x ? x : x
 }
 ", "
-<stdin>:2:3: error: The function \"main\" must be called
+<stdin>:2:3: error: The function \"main\" takes 1 argument and must be called
   main
   ~~~~
 <stdin>:3:3: warning: Unused expression
@@ -1117,7 +1117,7 @@ def foo(x int) {
 <stdin>:15:3: error: Cannot infer a type for this literal
   {0.5: 1} - 1
   ~~~~~~~~
-<stdin>:16:4: error: The function \"foo\" must be called
+<stdin>:16:4: error: The function \"foo\" takes 1 argument and must be called
   [foo]
    ~~~
 <stdin>:16:3: warning: Unused expression
@@ -3067,10 +3067,10 @@ def main {
   Foo.new(0).foo
 }
 ", "
-<stdin>:8:7: error: The function \"new\" must be called
+<stdin>:8:7: error: The function \"new\" takes 1 argument and must be called
   Foo.new
       ~~~
-<stdin>:9:14: error: The function \"foo\" must be called
+<stdin>:9:14: error: The function \"foo\" takes 1 argument and must be called
   Foo.new(0).foo
              ~~~
 ")
@@ -3089,7 +3089,7 @@ def main {
   var foo = Foo.new
 }
 ", "
-<stdin>:11:17: error: The function \"new\" must be called
+<stdin>:11:17: error: The function \"new\" takes 1 argument and must be called
   var foo = Foo.new
                 ~~~
 <stdin>:11:7: warning: Local variable \"foo\" is never read
@@ -4793,7 +4793,7 @@ class Bar : Foo {
   def new { super }
 }
 ", "
-<stdin>:6:13: error: The function \"new\" must be called
+<stdin>:6:13: error: The function \"new\" takes 1 argument and must be called
   def new { super }
             ~~~~~
 ")
@@ -5481,7 +5481,7 @@ test("
 def foo<T>(x T) {}
 def main { foo<int> }
 ", "
-<stdin>:2:12: error: The function \"foo\" must be called
+<stdin>:2:12: error: The function \"foo\" takes 1 argument and must be called
 def main { foo<int> }
            ~~~
 ")
@@ -6299,6 +6299,45 @@ class Foo {
 <stdin>:10:7: error: The \"=\" operator is not customizable because value types are not supported by the language
   def =(x bool)
       ^
+")
+
+# Test the argument count error for incorrect implicit calls
+test("
+class Foo {
+  def foo(x int)
+  def bar(x int)
+  def bar(x int) {}
+  def baz(x int)
+  def baz(x double) {}
+  def baz2(x int, y int, z int)
+  def baz2(x double, y double) {}
+  def baz3(x int, y int)
+  def baz3(x double, y double, z double) {}
+}
+
+def main(foo Foo) {
+  foo.foo
+  foo.bar
+  foo.baz
+  foo.baz2
+  foo.baz3
+}
+", "
+<stdin>:14:7: error: The function \"foo\" takes 1 argument and must be called
+  foo.foo
+      ~~~
+<stdin>:15:7: error: The function \"bar\" takes 1 argument and must be called
+  foo.bar
+      ~~~
+<stdin>:16:7: error: The function \"baz\" takes 1 argument and must be called
+  foo.baz
+      ~~~
+<stdin>:17:7: error: The function \"baz2\" takes between 2 and 3 arguments and must be called
+  foo.baz2
+      ~~~~
+<stdin>:18:7: error: The function \"baz3\" takes between 2 and 3 arguments and must be called
+  foo.baz3
+      ~~~~
 ")
 
   }

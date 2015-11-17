@@ -9544,8 +9544,14 @@
     this.error(range, 'Cannot use "' + name + '" outside a loop');
   };
 
-  Skew.Log.prototype.semanticErrorMustCallFunction = function(range, name) {
-    this.error(range, 'The function "' + name + '" must be called');
+  Skew.Log.prototype.semanticErrorMustCallFunction = function(range, name, lower, upper) {
+    if (lower == upper) {
+      this.error(range, 'The function "' + name + '" takes ' + lower.toString() + ' argument' + (lower == 1 ? '' : 's') + ' and must be called');
+    }
+
+    else {
+      this.error(range, 'The function "' + name + '" takes between ' + lower.toString() + ' and ' + upper.toString() + ' arguments and must be called');
+    }
   };
 
   Skew.Log.prototype.semanticErrorDuplicateEntryPoint = function(range, previous) {
@@ -18559,7 +18565,7 @@
     if (!symbol.isGetter() && Skew.in_SymbolKind.isOverloadedFunction(kind) && (!Skew.Resolving.Resolver._isCallValue(node) || parent.hasOneChild())) {
       var overloaded = symbol.asOverloadedFunctionSymbol();
 
-      for (var i = 0, list = overloaded.symbols, count = list.length; i < count; i = i + 1 | 0) {
+      for (var i = 0, list = overloaded.symbols, count1 = list.length; i < count1; i = i + 1 | 0) {
         var getter = list[i];
 
         // Just return the first getter assuming errors for duplicate getters
@@ -18584,7 +18590,29 @@
 
     // Forbid bare function references
     if (!symbol.isSetter() && node.resolvedType != Skew.Type.DYNAMIC && Skew.in_SymbolKind.isFunctionOrOverloadedFunction(kind) && kind != Skew.SymbolKind.FUNCTION_ANNOTATION && !Skew.Resolving.Resolver._isCallValue(node) && (parent == null || parent.kind != Skew.NodeKind.PARAMETERIZE || !Skew.Resolving.Resolver._isCallValue(parent))) {
-      this._log.semanticErrorMustCallFunction(node.internalRangeOrRange(), symbol.name);
+      var lower = 2147483647;
+      var upper = -1;
+
+      if (Skew.in_SymbolKind.isFunction(kind)) {
+        lower = upper = symbol.asFunctionSymbol().$arguments.length;
+      }
+
+      else {
+        for (var i1 = 0, list1 = symbol.asOverloadedFunctionSymbol().symbols, count2 = list1.length; i1 < count2; i1 = i1 + 1 | 0) {
+          var $function = list1[i1];
+          var count = $function.$arguments.length;
+
+          if (count < lower) {
+            lower = count;
+          }
+
+          if (count > upper) {
+            upper = count;
+          }
+        }
+      }
+
+      this._log.semanticErrorMustCallFunction(node.internalRangeOrRange(), symbol.name, lower, upper);
       node.resolvedType = Skew.Type.DYNAMIC;
     }
 

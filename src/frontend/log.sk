@@ -499,8 +499,12 @@ namespace Skew {
       error(range, "Cannot use \"\(name)\" outside a loop")
     }
 
-    def semanticErrorMustCallFunction(range Range, name string) {
-      error(range, "The function \"\(name)\" must be called")
+    def semanticErrorMustCallFunction(range Range, name string, lower int, upper int) {
+      if lower == upper {
+        error(range, "The function \"\(name)\" takes \(lower) argument\(PrettyPrint.plural(lower)) and must be called")
+      } else {
+        error(range, "The function \"\(name)\" takes between \(lower) and \(upper) arguments and must be called")
+      }
     }
 
     def semanticErrorDuplicateEntryPoint(range Range, previous Range) {
