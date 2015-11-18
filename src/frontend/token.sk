@@ -36,7 +36,7 @@ namespace Skew {
     TokenKind.DEF: 0,
     TokenKind.DOUBLE: 0,
     TokenKind.DYNAMIC: 0,
-    TokenKind.END_STRING_INTERPOLATION: 0,
+    TokenKind.STRING_INTERPOLATION_END: 0,
     TokenKind.FALSE: 0,
     TokenKind.IDENTIFIER: 0,
     TokenKind.INCREMENT: 0,
@@ -79,13 +79,13 @@ namespace Skew {
 
       # Special-case string interpolation
       var c = text[yy_cp]
-      if c == '"' || c == ')' && !stack.isEmpty && stack.last.kind == .START_STRING_INTERPOLATION {
+      if c == '"' || c == ')' && !stack.isEmpty && stack.last.kind == .STRING_INTERPOLATION_START {
         var isStringInterpolation = c == ')'
         yy_cp++
         while yy_cp < count {
           c = text[yy_cp++]
           if c == '"' {
-            yy_act = isStringInterpolation ? .END_STRING_INTERPOLATION : .STRING
+            yy_act = isStringInterpolation ? .STRING_INTERPOLATION_END : .STRING
             break
           }
           if c == '\\' {
@@ -94,7 +94,7 @@ namespace Skew {
             }
             c = text[yy_cp++]
             if c == '(' {
-              yy_act = isStringInterpolation ? .CONTINUE_STRING_INTERPOLATION : .START_STRING_INTERPOLATION
+              yy_act = isStringInterpolation ? .STRING_INTERPOLATION_CONTINUE : .STRING_INTERPOLATION_START
               break
             }
           }
@@ -102,13 +102,9 @@ namespace Skew {
       }
 
       # Special-case XML literals
-      else if c == '<' && !(previousKind in FORBID_XML_AFTER) {
+      else if c == '>' && !stack.isEmpty && stack.last.kind == .XML_START {
         yy_cp++
-        yy_act = .START_XML
-      }
-      else if c == '>' && !stack.isEmpty && stack.last.kind == .START_XML {
-        yy_cp++
-        yy_act = .END_XML
+        yy_act = .XML_END
       }
 
       # Search for a match
@@ -154,6 +150,11 @@ namespace Skew {
         }
       }
 
+      # Special-case XML literals
+      if yy_act == .LESS_THAN && !(previousKind in FORBID_XML_AFTER) {
+        yy_act = .XML_START
+      }
+
       # This is the default action in flex, which is usually called ECHO
       if yy_act == .ERROR {
         var iterator = Unicode.StringIterator.INSTANCE.reset(text, yy_bp)
@@ -188,13 +189,13 @@ namespace Skew {
 
         # Group open
         if tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET ||
-            tokenKind == .LESS_THAN || tokenKind == .START_STRING_INTERPOLATION || tokenKind == .START_XML {
+            tokenKind == .LESS_THAN || tokenKind == .STRING_INTERPOLATION_START || tokenKind == .XML_START {
           stack.append(token)
         }
 
         # Group close
         else if tokenKind == .RIGHT_PARENTHESIS || tokenKind == .RIGHT_BRACE || tokenKind == .RIGHT_BRACKET ||
-            tokenKind == .END_STRING_INTERPOLATION || tokenKind == .END_XML || tokenStartsWithGreaterThan {
+            tokenKind == .STRING_INTERPOLATION_END || tokenKind == .XML_END || tokenStartsWithGreaterThan {
 
           # Search for a matching opposite token
           while !stack.isEmpty {
@@ -213,7 +214,7 @@ namespace Skew {
             if tokenKind == .RIGHT_PARENTHESIS && topKind == .LEFT_PARENTHESIS ||
                 tokenKind == .RIGHT_BRACKET && topKind == .LEFT_BRACKET ||
                 tokenKind == .RIGHT_BRACE && topKind == .LEFT_BRACE ||
-                tokenKind == .END_STRING_INTERPOLATION && topKind == .START_STRING_INTERPOLATION {
+                tokenKind == .STRING_INTERPOLATION_END && topKind == .STRING_INTERPOLATION_START {
               break
             }
 
@@ -223,7 +224,7 @@ namespace Skew {
               # Break apart operators that start with a closing angle bracket
               if tokenKind != .GREATER_THAN {
                 var start = token.range.start
-                tokens.append(Token.new(Range.new(source, start, start + 1), .END_PARAMETER_LIST))
+                tokens.append(Token.new(Range.new(source, start, start + 1), .PARAMETER_LIST_END))
                 token.range.start = start + 1
                 token.kind =
                   tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
@@ -235,11 +236,11 @@ namespace Skew {
                 assert(token.kind != .NULL)
                 loop = tokenKind != .GREATER_THAN_OR_EQUAL # Split this token again
               } else {
-                token.kind = .END_PARAMETER_LIST
+                token.kind = .PARAMETER_LIST_END
               }
 
               # Convert the "<" into a bound for type parameter lists
-              top.kind = .START_PARAMETER_LIST
+              top.kind = .PARAMETER_LIST_START
 
               # Stop the search since we found a match
               break
@@ -269,17 +270,17 @@ namespace Skew {
 
   enum TokenKind {
     # Type parameters are surrounded by "<" and ">"
-    END_PARAMETER_LIST
-    START_PARAMETER_LIST
+    PARAMETER_LIST_END
+    PARAMETER_LIST_START
 
-    # XML entities are surrounded by "<" and ">" (or "/>" but that's defined by flex)
-    END_XML
-    START_XML
+    # XML entities are surrounded by "<" and ">" (or "</" and "/>" but those are defined by flex)
+    XML_END
+    XML_START
 
     # String interpolation looks like "start\( 1 )continue( 2 )end"
-    CONTINUE_STRING_INTERPOLATION
-    END_STRING_INTERPOLATION
-    START_STRING_INTERPOLATION
+    STRING_INTERPOLATION_CONTINUE
+    STRING_INTERPOLATION_END
+    STRING_INTERPOLATION_START
 
     def toString string {
       assert(self in _toString)
@@ -396,16 +397,17 @@ namespace Skew {
       INT_OCTAL: "integer",
       STRING: "string",
 
-      END_PARAMETER_LIST: "\">\"",
-      START_PARAMETER_LIST: "\"<\"",
+      PARAMETER_LIST_END: "\">\"",
+      PARAMETER_LIST_START: "\"<\"",
 
-      END_XML: "\">\"",
-      XML_EMPTY: "\"/>\"",
-      START_XML: "\"<\"",
+      XML_END: "\">\"",
+      XML_END_EMPTY: "\"/>\"",
+      XML_START: "\"<\"",
+      XML_START_CLOSE: "\"</\"",
 
-      CONTINUE_STRING_INTERPOLATION: "string interpolation",
-      END_STRING_INTERPOLATION: "string interpolation",
-      START_STRING_INTERPOLATION: "string interpolation",
+      STRING_INTERPOLATION_CONTINUE: "string interpolation",
+      STRING_INTERPOLATION_END: "string interpolation",
+      STRING_INTERPOLATION_START: "string interpolation",
     }
   }
 }

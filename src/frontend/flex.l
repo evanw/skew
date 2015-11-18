@@ -60,7 +60,8 @@
 ":"                               COLON;
 ";"                               SEMICOLON;
 "<>...</>"                        XML_CHILD;
-"/>"                              XML_EMPTY;
+"</"                              XML_START_CLOSE;
+"/>"                              XML_END_EMPTY;
 "**="                             ASSIGN_POWER;
 "+="                              ASSIGN_PLUS;
 "-="                              ASSIGN_MINUS;

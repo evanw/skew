@@ -108,6 +108,13 @@ namespace Skew {
     def syntaxErrorBadOperatorCustomization(range Range, kind TokenKind, why string) {
       error(range, "The \(kind) operator is not customizable because \(why)")
     }
+
+    def syntaxErrorXMLClosingTagMismatch(range Range, found string, expected string, openingRange Range) {
+      error(range, "Expected \"\(expected)\" but found \"\(found)\" in XML literal")
+      if openingRange != null {
+        note(openingRange, "Attempted to match opening tag here")
+      }
+    }
   }
 
   namespace Log {
@@ -435,6 +442,10 @@ namespace Skew {
       if newRange != null {
         note(newRange, "The constructor that was called recursively is here")
       }
+    }
+
+    def semanticErrorXMLTypeInferenceFailed(range Range) {
+      error(range, "Cannot infer a type for this literal")
     }
 
     def semanticErrorDuplicateOverload(range Range, name string, previous Range) {

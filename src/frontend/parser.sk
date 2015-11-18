@@ -691,7 +691,7 @@ namespace Skew.Parsing {
         break
       }
     }
-    if !context.expect(.END_PARAMETER_LIST) {
+    if !context.expect(.PARAMETER_LIST_END) {
       return null
     }
     return parameters
@@ -970,7 +970,7 @@ namespace Skew.Parsing {
           }
 
           # Parse type parameters
-          if context.eat(.START_PARAMETER_LIST) {
+          if context.eat(.PARAMETER_LIST_START) {
             function.parameters = parseTypeParameters(context, .PARAMETER_FUNCTION)
             if function.parameters == null {
               return false
@@ -1008,7 +1008,7 @@ namespace Skew.Parsing {
           object.range = range
           object.parent = parent
 
-          if kind != .OBJECT_NAMESPACE && context.eat(.START_PARAMETER_LIST) {
+          if kind != .OBJECT_NAMESPACE && context.eat(.PARAMETER_LIST_START) {
             object.parameters = parseTypeParameters(context, .PARAMETER_OBJECT)
             if object.parameters == null {
               return false
@@ -1285,7 +1285,7 @@ namespace Skew.Parsing {
         break
       }
     }
-    if !context.expect(.END_PARAMETER_LIST) {
+    if !context.expect(.PARAMETER_LIST_END) {
       return null
     }
     return value.withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
@@ -1391,10 +1391,10 @@ namespace Skew.Parsing {
     pratt.parselet(.LEFT_BRACKET, .LOWEST).prefix = initializerParselet
     pratt.parselet(.LIST_NEW, .LOWEST).prefix = initializerParselet
     pratt.parselet(.SET_NEW, .LOWEST).prefix = initializerParselet
-    pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = parameterizedParselet
+    pratt.parselet(.PARAMETER_LIST_START, .MEMBER).infix = parameterizedParselet
 
     # String interpolation
-    pratt.parselet(.START_STRING_INTERPOLATION, .LOWEST).prefix = (context) => {
+    pratt.parselet(.STRING_INTERPOLATION_START, .LOWEST).prefix = (context) => {
       var token = context.next
       var node = Node.createStringInterpolation.appendChild(createStringNode(context.log, token.range))
       while true {
@@ -1405,11 +1405,11 @@ namespace Skew.Parsing {
         node.appendChild(value)
         context.skipWhitespace
         token = context.current
-        if !context.eat(.CONTINUE_STRING_INTERPOLATION) && !context.expect(.END_STRING_INTERPOLATION) {
+        if !context.eat(.STRING_INTERPOLATION_CONTINUE) && !context.expect(.STRING_INTERPOLATION_END) {
           return null
         }
         node.appendChild(createStringNode(context.log, token.range))
-        if token.kind == .END_STRING_INTERPOLATION {
+        if token.kind == .STRING_INTERPOLATION_END {
           break
         }
       }
@@ -1562,20 +1562,48 @@ namespace Skew.Parsing {
     }
 
     # XML literals
-    pratt.parselet(.START_XML, .LOWEST).prefix = (context) => {
+    pratt.parselet(.XML_START, .LOWEST).prefix = (context) => {
       var token = context.next
       var tag = parseDotChain(context)
       if tag == null {
         return null
       }
-      if !context.expect(.XML_EMPTY) {
+      var attributes = Node.createSequence
+      var xml = Node.createXML(tag, attributes)
+      if context.eat(.XML_END_EMPTY) {
+        return xml.withRange(context.spanSince(token.range))
+      }
+      if !context.expect(.XML_END) {
         return null
       }
-      var attributes = Node.createSequence
-      return Node.createXML(tag, attributes).withRange(context.spanSince(token.range))
+      while !context.eat(.XML_START_CLOSE) {
+        var value = expressionParser.parse(context, .LOWEST)
+        if value == null {
+          return null
+        }
+        xml.appendChild(value)
+      }
+      var closingTag = parseDotChain(context)
+      if closingTag == null {
+        return null
+      }
+      if !tag.looksTheSameAs(closingTag) {
+        context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, dotChainToString(tag), dotChainToString(closingTag), tag.range)
+        return null
+      }
+      if !context.expect(.XML_END) {
+        return null
+      }
+      return xml.withRange(context.spanSince(token.range))
     }
 
     return pratt
+  }
+
+  def dotChainToString(node Node) string {
+    assert(node.kind == .NAME || node.kind == .DOT)
+    if node.kind == .NAME { return node.asString }
+    return dotChainToString(node.dotTarget) + "." + node.asString
   }
 
   def parseDotChain(context ParserContext) Node {
@@ -1589,7 +1617,7 @@ namespace Skew.Parsing {
       if !context.expect(.IDENTIFIER) {
         return null
       }
-      chain = Node.createDot(chain, current.range.toString).withRange(context.spanSince(chain.range))
+      chain = Node.createDot(chain, current.range.toString).withRange(context.spanSince(chain.range)).withInternalRange(current.range)
     }
     return chain
   }
@@ -1599,7 +1627,7 @@ namespace Skew.Parsing {
 
     pratt.literal(.DYNAMIC, (context, token) => Node.createType(.DYNAMIC).withRange(token.range))
     pratt.parselet(.DOT, .MEMBER).infix = dotInfixParselet
-    pratt.parselet(.START_PARAMETER_LIST, .MEMBER).infix = parameterizedParselet
+    pratt.parselet(.PARAMETER_LIST_START, .MEMBER).infix = parameterizedParselet
 
     # Name expressions or lambda type expressions like "fn(int) int"
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = (context) => {

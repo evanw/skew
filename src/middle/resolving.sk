@@ -1284,6 +1284,7 @@ namespace Skew.Resolving {
         case .SUPER { _resolveSuper(node, scope) }
         case .TYPE {}
         case .TYPE_CHECK { _resolveTypeCheck(node, scope) }
+        case .XML { _resolveXML(node, scope) }
 
         default {
           if node.kind.isBinary { _resolveBinary(node, scope, context) }
@@ -2820,6 +2821,22 @@ namespace Skew.Resolving {
       else if value.resolvedType != .DYNAMIC && _cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) && (type.resolvedType != .DYNAMIC || type.kind == .TYPE) {
         _log.semanticWarningExtraTypeCheck(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
       }
+    }
+
+    def _resolveXML(node Node, scope Scope) {
+      var tag = node.xmlTag
+      _resolveAsParameterizedType(tag, scope)
+
+      # Make sure there's a constructor to call
+      var new = _findMember(tag.resolvedType, "new")
+      if new == null {
+        _log.semanticErrorXMLTypeInferenceFailed(node.range)
+        return
+      }
+
+      # Become a constructor call
+      node.become(Node.createCall(Node.createMemberReference(tag.remove, new).withRange(node.range)).withRange(node.range))
+      _resolveAsParameterizedExpression(node, scope)
     }
 
     def _resolveBinary(node Node, scope Scope, context Type) {

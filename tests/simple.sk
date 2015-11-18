@@ -6434,5 +6434,32 @@ def main(foo Foo) {
       ~~~~
 ")
 
+# Test XML literals
+test("
+var foo = <Foo/>
+var foo2 = <Foo></Foo>
+var bar = <Foo.Bar/>
+var bar2 = <Foo.Bar></Foo.Bar>
+var baz = <Foo.Baz/>
+var baz2 = <Foo.Baz></Foo.Baz>
+
+class Foo {
+  class Bar {}
+}
+", "
+<stdin>:5:16: error: \"Baz\" is not declared on type \"Foo\"
+var baz = <Foo.Baz/>
+               ~~~
+<stdin>:5:11: error: Cannot infer a type for this literal
+var baz = <Foo.Baz/>
+          ~~~~~~~~~~
+<stdin>:6:17: error: \"Baz\" is not declared on type \"Foo\"
+var baz2 = <Foo.Baz></Foo.Baz>
+                ~~~
+<stdin>:6:12: error: Cannot infer a type for this literal
+var baz2 = <Foo.Baz></Foo.Baz>
+           ~~~~~~~~~~~~~~~~~~~
+")
+
   }
 }
