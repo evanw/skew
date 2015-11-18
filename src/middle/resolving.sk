@@ -1029,7 +1029,7 @@ namespace Skew.Resolving {
         # Missing a return statement is an error
         if symbol.kind != .FUNCTION_CONSTRUCTOR {
           var returnType = symbol.resolvedType.returnType
-          if returnType != null && returnType != .DYNAMIC && block.hasControlFlowAtEnd {
+          if returnType != null && !symbol.isDynamicLambda && block.hasControlFlowAtEnd {
             _log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType)
           }
         }
@@ -1729,7 +1729,7 @@ namespace Skew.Resolving {
 
       # Check for a returned value
       if value == null {
-        if returnType != null && returnType != .DYNAMIC {
+        if returnType != null && !function.isDynamicLambda {
           _log.semanticErrorExpectedReturnValue(node.range, returnType)
         }
         return
@@ -2548,6 +2548,7 @@ namespace Skew.Resolving {
             argument.type ?= Node.createType(.DYNAMIC)
           }
           symbol.returnType ?= Node.createType(.DYNAMIC)
+          symbol.flags |= Symbol.IS_DYNAMIC_LAMBDA
         }
       }
 

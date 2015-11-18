@@ -8699,6 +8699,10 @@
     return (this.flags & Skew.Symbol.IS_VIRTUAL) != 0;
   };
 
+  Skew.Symbol.prototype.isDynamicLambda = function() {
+    return (this.flags & Skew.Symbol.IS_DYNAMIC_LAMBDA) != 0;
+  };
+
   // Combinations
   Skew.Symbol.prototype.isImportedOrExported = function() {
     return (this.flags & (Skew.Symbol.IS_IMPORTED | Skew.Symbol.IS_EXPORTED)) != 0;
@@ -15973,7 +15977,7 @@
       if (symbol.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
         var returnType = symbol.resolvedType.returnType;
 
-        if (returnType != null && returnType != Skew.Type.DYNAMIC && block.hasControlFlowAtEnd()) {
+        if (returnType != null && !symbol.isDynamicLambda() && block.hasControlFlowAtEnd()) {
           this._log.semanticErrorMissingReturn(symbol.range, symbol.name, returnType);
         }
       }
@@ -16901,7 +16905,7 @@
 
     // Check for a returned value
     if (value == null) {
-      if (returnType != null && returnType != Skew.Type.DYNAMIC) {
+      if (returnType != null && !$function.isDynamicLambda()) {
         this._log.semanticErrorExpectedReturnValue(node.range, returnType);
       }
 
@@ -17841,6 +17845,8 @@
         if (symbol.returnType == null) {
           symbol.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(Skew.Type.DYNAMIC);
         }
+
+        symbol.flags |= Skew.Symbol.IS_DYNAMIC_LAMBDA;
       }
     }
 
@@ -20709,6 +20715,7 @@
   Skew.Symbol.IS_OBSOLETE = 1 << 19;
   Skew.Symbol.IS_PRIMARY_CONSTRUCTOR = 1 << 20;
   Skew.Symbol.IS_VIRTUAL = 1 << 21;
+  Skew.Symbol.IS_DYNAMIC_LAMBDA = 1 << 22;
   Skew.Symbol._nextID = 0;
   Skew.Parsing.expressionParser = null;
   Skew.Parsing.typeParser = null;

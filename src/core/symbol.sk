@@ -116,6 +116,7 @@ namespace Skew {
     const IS_OBSOLETE = 1 << 19
     const IS_PRIMARY_CONSTRUCTOR = 1 << 20
     const IS_VIRTUAL = 1 << 21
+    const IS_DYNAMIC_LAMBDA = 1 << 22
   }
 
   class Symbol {
@@ -168,6 +169,7 @@ namespace Skew {
     def isObsolete bool           { return (flags & IS_OBSOLETE) != 0 }
     def isPrimaryConstructor bool { return (flags & IS_PRIMARY_CONSTRUCTOR) != 0 }
     def isVirtual bool            { return (flags & IS_VIRTUAL) != 0 }
+    def isDynamicLambda bool      { return (flags & IS_DYNAMIC_LAMBDA) != 0 }
 
     # Combinations
     def isImportedOrExported bool { return (flags & (IS_IMPORTED | IS_EXPORTED)) != 0 }

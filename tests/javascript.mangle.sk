@@ -169,6 +169,7 @@ def foo(x dynamic) dynamic {
       return x
     }
   }
+  return 0
 }
 
 @export
@@ -180,9 +181,7 @@ def bar(x double) int {
 ", "
 (function() {
   foo = function(a) {
-    if ((a.foo(1), a.y && (a.foo(2), a.y)) || (a.foo(3), a.y && (a.foo(4), a.y))) {
-      return a.foo(0), a;
-    }
+    return (a.foo(1), a.y && (a.foo(2), a.y)) || (a.foo(3), a.y && (a.foo(4), a.y)) ? (a.foo(0), a) : 0;
   };
 
   bar = function(a) {

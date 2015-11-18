@@ -302,6 +302,7 @@ def main(x int) {
           ^
 ")
 
+# Check unused expression warnings for lambdas that return nothing
 test("
 def main {
   bar(x => foo(x))
@@ -324,6 +325,7 @@ def bar(x fn(int)) {
            ^
 ")
 
+# Test return statement checks in the presence of the dynamic type
 test("
 def main {
   x => x
@@ -334,7 +336,15 @@ def main {
   var b dynamic = => {}
   var c dynamic = => { return }
   var d dynamic = => { return 0 }
+  var e fn() dynamic = x => x
+  var f fn() dynamic = => {}
+  var g fn() dynamic = => { return }
+  var h fn() dynamic = => { return 0 }
 }
+
+def a dynamic {}
+def b dynamic { return }
+def c dynamic { return 0 }
 ", "
 <stdin>:2:3: error: Unable to determine the type of \"x\"
   x => x
@@ -354,6 +364,24 @@ def main {
 <stdin>:5:3: warning: Unused expression
   => { return 0 }
   ~~~~~~~~~~~~~~~
+<stdin>:10:24: error: Unable to determine the type of \"x\"
+  var e fn() dynamic = x => x
+                       ^
+<stdin>:10:24: error: Cannot convert from type \"fn(dynamic) dynamic\" to type \"fn() dynamic\"
+  var e fn() dynamic = x => x
+                       ~~~~~~
+<stdin>:11:24: error: All control paths for \"<lambda>\" must return a value of type \"dynamic\"
+  var f fn() dynamic = => {}
+                       ~~~~~
+<stdin>:12:29: error: Must return a value of type \"dynamic\"
+  var g fn() dynamic = => { return }
+                            ~~~~~~
+<stdin>:16:5: error: All control paths for \"a\" must return a value of type \"dynamic\"
+def a dynamic {}
+    ^
+<stdin>:17:17: error: Must return a value of type \"dynamic\"
+def b dynamic { return }
+                ~~~~~~
 <stdin>:6:7: warning: Local variable \"a\" is never read
   var a dynamic = x => x
       ^
@@ -365,6 +393,18 @@ def main {
       ^
 <stdin>:9:7: warning: Local variable \"d\" is never read
   var d dynamic = => { return 0 }
+      ^
+<stdin>:10:7: warning: Local variable \"e\" is never read
+  var e fn() dynamic = x => x
+      ^
+<stdin>:11:7: warning: Local variable \"f\" is never read
+  var f fn() dynamic = => {}
+      ^
+<stdin>:12:7: warning: Local variable \"g\" is never read
+  var g fn() dynamic = => { return }
+      ^
+<stdin>:13:7: warning: Local variable \"h\" is never read
+  var h fn() dynamic = => { return 0 }
       ^
 ")
 
