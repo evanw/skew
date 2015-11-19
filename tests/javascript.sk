@@ -2922,5 +2922,26 @@ var y = x.y.z += 2
 })();
 ").js
 
+# Check for a crash when inlining an XML-style literal that calls a global function
+test("
+@export
+var foo = <Foo/>
+
+class Foo {}
+
+namespace Foo {
+  def <new> Foo {
+    return Foo.new
+  }
+}
+", "
+(function() {
+  function Foo() {
+  }
+
+  foo = new Foo();
+})();
+").js.inlineAllFunctions
+
   }
 }

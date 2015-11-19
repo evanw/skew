@@ -2830,8 +2830,7 @@ namespace Skew.Resolving {
       _resolveAsParameterizedType(tag, scope)
 
       # Make sure there's a constructor to call
-      var new = _findMember(tag.resolvedType, "<new>")
-      if new == null {
+      if _findMember(tag.resolvedType, "<new>") == null {
         _log.semanticErrorXMLTypeInferenceFailed(node.range, tag.resolvedType)
         return
       }
@@ -2843,7 +2842,8 @@ namespace Skew.Resolving {
       }
 
       # Call the constructor
-      var chain = Node.createCall(Node.createMemberReference(tag.remove, new).withRange(node.range)).withRange(node.range)
+      var chain = Node.createDot(tag.remove, "<new>").withRange(node.range)
+      _resolveAsParameterizedExpression(chain, scope)
 
       # Chain children off the constructor
       while firstChild != null {
