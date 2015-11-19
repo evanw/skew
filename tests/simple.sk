@@ -6442,9 +6442,14 @@ var bar = <Foo.Bar/>
 var bar2 = <Foo.Bar></Foo.Bar>
 var baz = <Foo.Baz/>
 var baz2 = <Foo.Baz></Foo.Baz>
+var i = <int/>
 
 class Foo {
-  class Bar {}
+  class Bar {
+    def <new> {}
+  }
+
+  def <new> {}
 }
 ", "
 <stdin>:5:16: error: \"Baz\" is not declared on type \"Foo\"
@@ -6459,6 +6464,35 @@ var baz2 = <Foo.Baz></Foo.Baz>
 <stdin>:6:12: error: Cannot infer a type for this literal
 var baz2 = <Foo.Baz></Foo.Baz>
            ~~~~~~~~~~~~~~~~~~~
+<stdin>:7:9: error: Implement a constructor called \"<new>\" on type \"int\" to add support for XML-style literals
+var i = <int/>
+        ~~~~~~
+
+")
+
+# Test XML literals with inheritance
+test("
+class Foo {
+  def <new> {}
+}
+
+class Bar : Foo {
+}
+
+class Baz : Foo {
+  def <new> {}
+}
+
+var foo = <Foo/>
+var bar = <Bar/>
+var baz = <Baz/>
+", "
+<stdin>:9:7: error: Constructors for derived types must start with a call to \"super\"
+  def <new> {}
+      ~~~~~
+<stdin>:13:11: error: Implement a constructor called \"<new>\" on type \"Bar\" to add support for XML-style literals
+var bar = <Bar/>
+          ~~~~~~
 ")
 
 # Test child element function error
@@ -6469,9 +6503,11 @@ var bar = <Bar/>
 var bar2 = <Bar>1</Bar>
 
 class Foo {
+  def <new> {}
 }
 
 class Bar {
+  def <new> {}
   def <>...</>(x int) Bar { return self }
 }
 ", "
@@ -6526,6 +6562,7 @@ var foo =
   </Foo>
 
 class Foo {
+  def <new> {}
   def <>...</>(x Foo) Foo { return self }
 }
 ", "

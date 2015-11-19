@@ -448,8 +448,12 @@ namespace Skew {
       }
     }
 
-    def semanticErrorXMLTypeInferenceFailed(range Range) {
-      error(range, "Cannot infer a type for this literal")
+    def semanticErrorXMLTypeInferenceFailed(range Range, type Type) {
+      if type == .DYNAMIC {
+        error(range, "Cannot infer a type for this literal")
+      } else {
+        error(range, "Implement a constructor called \"<new>\" on type \"\(type)\" to add support for XML-style literals")
+      }
     }
 
     def semanticErrorDuplicateOverload(range Range, name string, previous Range) {

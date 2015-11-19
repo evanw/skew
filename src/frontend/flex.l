@@ -35,6 +35,7 @@
 "var"                             VAR;
 "while"                           WHILE;
 
+"<new>"                           XML_NEW;
 "[...]"                           LIST;
 "[new]"                           LIST_NEW;
 "{...}"                           SET;

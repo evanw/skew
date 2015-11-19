@@ -2830,9 +2830,9 @@ namespace Skew.Resolving {
       _resolveAsParameterizedType(tag, scope)
 
       # Make sure there's a constructor to call
-      var new = _findMember(tag.resolvedType, "new")
+      var new = _findMember(tag.resolvedType, "<new>")
       if new == null {
-        _log.semanticErrorXMLTypeInferenceFailed(node.range)
+        _log.semanticErrorXMLTypeInferenceFailed(node.range, tag.resolvedType)
         return
       }
 

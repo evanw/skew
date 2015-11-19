@@ -77,6 +77,7 @@ namespace Skew {
         validArgumentCounts[value.text] = value.validArgumentCounts
       }
       validArgumentCounts["<>...</>"] = [1]
+      validArgumentCounts["<new>"] = [0]
       validArgumentCounts["[...]"] = [1]
       validArgumentCounts["[new]"] = [0, 1]
       validArgumentCounts["{...}"] = [2]
