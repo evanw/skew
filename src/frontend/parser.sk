@@ -1569,6 +1569,23 @@ namespace Skew.Parsing {
         return null
       }
       var attributes = Node.createSequence
+
+      # Parse attributes
+      context.skipWhitespace
+      while context.peek(.IDENTIFIER) {
+        var name = context.next.range
+        if !context.expect(.ASSIGN) {
+          return null
+        }
+        var value = expressionParser.parse(context, (Precedence.UNARY_PREFIX - 1) as Precedence)
+        if value == null {
+          return null
+        }
+        attributes.appendChild(Node.createAttribute(name.toString, value).withRange(context.spanSince(name)).withInternalRange(name))
+        context.skipWhitespace
+      }
+
+      # Parse end of tag
       var xml = Node.createXML(tag, attributes)
       context.skipWhitespace
       if context.eat(.XML_END_EMPTY) {
@@ -1581,11 +1598,14 @@ namespace Skew.Parsing {
       # Parse children
       context.skipWhitespace
       while !context.eat(.XML_START_CLOSE) {
-        var value = expressionParser.parse(context, .LOWEST)
+        var value = expressionParser.parse(context, (Precedence.UNARY_PREFIX - 1) as Precedence)
         if value == null {
           return null
         }
         xml.appendChild(value)
+        if !context.eat(.NEWLINE) && !context.eat(.COMMENT) && !context.peek(.XML_START_CLOSE) && !context.expect(.XML_START_CLOSE) {
+          return null
+        }
         context.skipWhitespace
       }
 

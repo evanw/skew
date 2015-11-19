@@ -6464,9 +6464,9 @@ var baz2 = <Foo.Baz></Foo.Baz>
 # Test child element function error
 test("
 var foo = <Foo/>
-var foo2 = <Foo>1 2 3</Foo>
+var foo2 = <Foo>1</Foo>
 var bar = <Bar/>
-var bar2 = <Bar>1 2 3</Bar>
+var bar2 = <Bar>1</Bar>
 
 class Foo {
 }
@@ -6476,7 +6476,7 @@ class Bar {
 }
 ", "
 <stdin>:2:17: error: Implement a function called \"<>...</>\" on type \"Foo\" to add support for child elements
-var foo2 = <Foo>1 2 3</Foo>
+var foo2 = <Foo>1</Foo>
                 ^
 ")
 
@@ -6529,6 +6529,89 @@ class Foo {
   def <>...</>(x Foo) Foo { return self }
 }
 ", "
+")
+
+# Test XML literal with child comment
+test("
+var foo =
+  <Foo>
+    null # Comment
+  </Foo>
+", "
+<stdin>:2:4: error: \"Foo\" is not declared
+  <Foo>
+   ~~~
+<stdin>:2:3: error: Cannot infer a type for this literal
+  <Foo>
+  ~~~~~
+")
+
+# Test XML literal with child comment
+test("
+var foo =
+  <Foo>
+    null
+    # Comment
+  </Foo>
+", "
+<stdin>:2:4: error: \"Foo\" is not declared
+  <Foo>
+   ~~~
+<stdin>:2:3: error: Cannot infer a type for this literal
+  <Foo>
+  ~~~~~
+")
+
+# Test XML literal with child comment
+test("
+var foo =
+  <Foo>
+    # Comment
+    null
+  </Foo>
+", "
+<stdin>:2:4: error: \"Foo\" is not declared
+  <Foo>
+   ~~~
+<stdin>:2:3: error: Cannot infer a type for this literal
+  <Foo>
+  ~~~~~
+")
+
+# Test XML children precedence
+test("
+var foo =
+  <Foo>
+    <Foo>bar</Foo>
+    <Foo>bar.bar</Foo>
+    <Foo>++bar</Foo>
+    <Foo>bar++</Foo>
+    <Foo>(bar + bar)</Foo>
+    <Foo>
+      bar
+      +bar # This is the second of two expressions, not a single expression
+    </Foo>
+    <Foo>bar + bar</Foo>
+  </Foo>
+", "
+<stdin>:12:14: error: Expected \"</\" but found \"+\"
+    <Foo>bar + bar</Foo>
+             ^
+")
+
+# Test XML attribute precedence
+test("
+var foo = <Foo
+  foo=bar
+  foo=++bar
+  foo=bar++
+  foo=(bar + bar)
+  foo=bar + bar
+/>
+", "
+<stdin>:6:11: error: Expected \">\" but found \"+\"
+  foo=bar + bar
+          ^
 ")
 
   }

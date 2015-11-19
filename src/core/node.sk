@@ -2,6 +2,7 @@ namespace Skew {
   enum NodeKind {
     # Other
     ANNOTATION
+    ATTRIBUTE
     BLOCK
     CASE
     CATCH
@@ -852,6 +853,11 @@ namespace Skew {
       return new(.ANNOTATION).appendChild(value).appendChild(test)
     }
 
+    def createAttribute(name string, value Node) Node {
+      assert(value.kind.isExpression)
+      return new(.ATTRIBUTE).withContent(StringContent.new(name)).appendChild(value)
+    }
+
     def createBlock Node {
       return new(.BLOCK)
     }
@@ -863,6 +869,11 @@ namespace Skew {
     def createCatch(symbol VariableSymbol, block Node) Node {
       assert(block.kind == .BLOCK)
       return new(.CATCH).appendChild(block).withSymbol(symbol)
+    }
+
+    # This adds the initializer expression to the tree for ease of traversal
+    def createVariable(symbol VariableSymbol) Node {
+      return new(.VARIABLE).appendChild(symbol.value).withSymbol(symbol)
     }
 
     def createBreak Node {
@@ -917,11 +928,6 @@ namespace Skew {
     def createTry(tryBlock Node) Node {
       assert(tryBlock.kind == .BLOCK)
       return new(.TRY).appendChild(tryBlock)
-    }
-
-    # This adds the initializer expression to the tree for ease of traversal
-    def createVariable(symbol VariableSymbol) Node {
-      return new(.VARIABLE).appendChild(symbol.value).withSymbol(symbol)
     }
 
     def createVariables Node {
@@ -1132,7 +1138,7 @@ namespace Skew {
     }
 
     def asString string {
-      assert(kind == .NAME || kind == .DOT || kind == .CONSTANT || kind == .NULL_DOT)
+      assert(kind == .NAME || kind == .DOT || kind == .CONSTANT || kind == .NULL_DOT || kind == .ATTRIBUTE)
       return content.asString
     }
 
@@ -1176,6 +1182,13 @@ namespace Skew {
       return _firstChild._nextSibling
     }
 
+    def xmlAttributeValue Node {
+      assert(kind == .ATTRIBUTE)
+      assert(childCount == 1)
+      assert(_firstChild.kind.isExpression)
+      return _firstChild
+    }
+
     def caseBlock Node {
       assert(kind == .CASE)
       assert(childCount >= 1)
@@ -1187,6 +1200,13 @@ namespace Skew {
       assert(kind == .CATCH)
       assert(childCount == 1)
       assert(_firstChild.kind == .BLOCK)
+      return _firstChild
+    }
+
+    def variableValue Node {
+      assert(kind == .VARIABLE)
+      assert(childCount <= 1)
+      assert(_firstChild == null || _firstChild.kind.isExpression)
       return _firstChild
     }
 
@@ -1312,13 +1332,6 @@ namespace Skew {
       assert(childCount >= 1)
       var finallyBlock = _lastChild
       return finallyBlock != tryBlock && finallyBlock.kind == .BLOCK ? finallyBlock : null
-    }
-
-    def variableValue Node {
-      assert(kind == .VARIABLE)
-      assert(childCount <= 1)
-      assert(_firstChild == null || _firstChild.kind.isExpression)
-      return _firstChild
     }
 
     def whileTest Node {
