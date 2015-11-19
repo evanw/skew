@@ -1570,30 +1570,40 @@ namespace Skew.Parsing {
       }
       var attributes = Node.createSequence
       var xml = Node.createXML(tag, attributes)
+      context.skipWhitespace
       if context.eat(.XML_END_EMPTY) {
         return xml.withRange(context.spanSince(token.range))
       }
       if !context.expect(.XML_END) {
         return null
       }
+
+      # Parse children
+      context.skipWhitespace
       while !context.eat(.XML_START_CLOSE) {
         var value = expressionParser.parse(context, .LOWEST)
         if value == null {
           return null
         }
         xml.appendChild(value)
+        context.skipWhitespace
       }
+
+      # Parse closing tag
       var closingTag = parseDotChain(context)
       if closingTag == null {
         return null
       }
-      if !tag.looksTheSameAs(closingTag) {
-        context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, dotChainToString(tag), dotChainToString(closingTag), tag.range)
-        return null
-      }
+      context.skipWhitespace
       if !context.expect(.XML_END) {
         return null
       }
+
+      # Validate closing tag (not a fatal error)
+      if !tag.looksTheSameAs(closingTag) {
+        context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, dotChainToString(closingTag), dotChainToString(tag), tag.range)
+      }
+
       return xml.withRange(context.spanSince(token.range))
     }
 

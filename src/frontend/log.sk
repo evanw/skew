@@ -115,6 +115,10 @@ namespace Skew {
         note(openingRange, "Attempted to match opening tag here")
       }
     }
+
+    def semanticErrorXMLMissingAppend(range Range, type Type) {
+      error(range, "Implement a function called \"<>...</>\" on type \"\(type)\" to add support for child elements")
+    }
   }
 
   namespace Log {

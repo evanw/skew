@@ -2825,6 +2825,8 @@ namespace Skew.Resolving {
 
     def _resolveXML(node Node, scope Scope) {
       var tag = node.xmlTag
+      var attributes = node.xmlAttributes
+      var firstChild = attributes.nextSibling
       _resolveAsParameterizedType(tag, scope)
 
       # Make sure there's a constructor to call
@@ -2834,8 +2836,24 @@ namespace Skew.Resolving {
         return
       }
 
-      # Become a constructor call
-      node.become(Node.createCall(Node.createMemberReference(tag.remove, new).withRange(node.range)).withRange(node.range))
+      # Make sure there's an append function to call if needed
+      if firstChild != null && _findMember(tag.resolvedType, "<>...</>") == null {
+        _log.semanticErrorXMLMissingAppend(firstChild.range, tag.resolvedType)
+        return
+      }
+
+      # Call the constructor
+      var chain = Node.createCall(Node.createMemberReference(tag.remove, new).withRange(node.range)).withRange(node.range)
+
+      # Chain children off the constructor
+      while firstChild != null {
+        var next = firstChild.nextSibling
+        chain = Node.createCall(Node.createDot(chain, "<>...</>").withRange(firstChild.range)).appendChild(firstChild.remove).withRange(firstChild.range)
+        firstChild = next
+      }
+
+      # Resolve the chain
+      node.become(chain)
       _resolveAsParameterizedExpression(node, scope)
     }
 

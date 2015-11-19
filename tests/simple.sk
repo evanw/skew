@@ -6461,5 +6461,75 @@ var baz2 = <Foo.Baz></Foo.Baz>
            ~~~~~~~~~~~~~~~~~~~
 ")
 
+# Test child element function error
+test("
+var foo = <Foo/>
+var foo2 = <Foo>1 2 3</Foo>
+var bar = <Bar/>
+var bar2 = <Bar>1 2 3</Bar>
+
+class Foo {
+}
+
+class Bar {
+  def <>...</>(x int) Bar { return self }
+}
+", "
+<stdin>:2:17: error: Implement a function called \"<>...</>\" on type \"Foo\" to add support for child elements
+var foo2 = <Foo>1 2 3</Foo>
+                ^
+")
+
+# Test XML tag mismatch
+test("
+var foo = <Foo></Foo.Bar>
+", "
+<stdin>:1:18: error: Expected \"Foo\" but found \"Foo.Bar\" in XML literal
+var foo = <Foo></Foo.Bar>
+                 ~~~~~~~
+<stdin>:1:12: note: Attempted to match opening tag here
+var foo = <Foo></Foo.Bar>
+           ~~~
+")
+
+# Test multi-line XML literals
+test("
+var foo = <
+Foo/>
+", "
+<stdin>:1:12: error: Expected identifier but found \"\\n\"
+var foo = <
+           ^
+")
+
+# Test multi-line XML literals
+test("
+var foo = <Foo></
+Foo>
+", "
+<stdin>:1:18: error: Expected identifier but found \"\\n\"
+var foo = <Foo></
+                 ^
+")
+
+# Test multi-line XML literals
+test("
+var foo =
+  <Foo>
+    <Foo/>
+    <Foo>
+      <Foo
+      />
+    </Foo
+    >
+    <Foo/>
+  </Foo>
+
+class Foo {
+  def <>...</>(x Foo) Foo { return self }
+}
+", "
+")
+
   }
 }
