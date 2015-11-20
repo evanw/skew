@@ -6651,5 +6651,44 @@ var foo = <Foo
           ^
 ")
 
+# Test XML attribute type checking
+test("
+var foo = <Foo
+  foo=false
+  bar=false
+  baz=false
+  nope=0
+  foo=0
+  bar=.BAR
+  baz=0
+/>
+
+class Foo {
+  var foo = 0
+  var bar Bar = .FOO
+
+  def <new> {}
+  def baz=(x int) {}
+}
+
+enum Bar {
+  FOO
+  BAR
+}
+", "
+<stdin>:2:7: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  foo=false
+      ~~~~~
+<stdin>:3:7: error: Cannot convert from type \"bool\" to type \"Bar\"
+  bar=false
+      ~~~~~
+<stdin>:4:7: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  baz=false
+      ~~~~~
+<stdin>:5:3: error: \"nope\" is not declared on type \"Foo\"
+  nope=0
+  ~~~~
+")
+
   }
 }

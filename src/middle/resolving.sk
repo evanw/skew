@@ -2843,7 +2843,19 @@ namespace Skew.Resolving {
 
       # Call the constructor
       var chain = Node.createDot(tag.remove, "<new>").withRange(node.range)
+      var needsSequence = attributes.hasChildren
+      var result = chain
       _resolveAsParameterizedExpression(chain, scope)
+
+      # Assign to attributes if necessary
+      if needsSequence {
+        result = Node.createSequence.withRange(node.range).appendChild(_extractExpression(chain, scope))
+        for child = attributes.firstChild; child != null; child = child.nextSibling {
+          result.appendChild(Node.createBinary(.ASSIGN,
+            Node.createDot(chain.clone, child.asString).withRange(child.internalRange),
+            child.attributeValue.remove).withRange(child.range))
+        }
+      }
 
       # Chain children off the constructor
       while firstChild != null {
@@ -2853,7 +2865,7 @@ namespace Skew.Resolving {
       }
 
       # Resolve the chain
-      node.become(chain)
+      node.become(needsSequence ? result.appendChild(chain) : chain)
       _resolveAsParameterizedExpression(node, scope)
     }
 

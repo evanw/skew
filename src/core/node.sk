@@ -1182,7 +1182,7 @@ namespace Skew {
       return _firstChild._nextSibling
     }
 
-    def xmlAttributeValue Node {
+    def attributeValue Node {
       assert(kind == .ATTRIBUTE)
       assert(childCount == 1)
       assert(_firstChild.kind.isExpression)

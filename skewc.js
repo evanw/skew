@@ -257,6 +257,7 @@
       }
 
       Skew.validArgumentCounts['<>...</>'] = [1];
+      Skew.validArgumentCounts['<new>'] = [0];
       Skew.validArgumentCounts['[...]'] = [1];
       Skew.validArgumentCounts['[new]'] = [0, 1];
       Skew.validArgumentCounts['{...}'] = [2];
@@ -7090,101 +7091,102 @@
   Skew.NodeKind = {
     // Other
     ANNOTATION: 0,
-    BLOCK: 1,
-    CASE: 2,
-    CATCH: 3,
-    VARIABLE: 4,
+    ATTRIBUTE: 1,
+    BLOCK: 2,
+    CASE: 3,
+    CATCH: 4,
+    VARIABLE: 5,
 
     // Statements
-    BREAK: 5,
-    CONTINUE: 6,
-    EXPRESSION: 7,
-    FOR: 8,
-    FOREACH: 9,
-    IF: 10,
-    RETURN: 11,
-    SWITCH: 12,
-    THROW: 13,
-    TRY: 14,
-    VARIABLES: 15,
-    WHILE: 16,
+    BREAK: 6,
+    CONTINUE: 7,
+    EXPRESSION: 8,
+    FOR: 9,
+    FOREACH: 10,
+    IF: 11,
+    RETURN: 12,
+    SWITCH: 13,
+    THROW: 14,
+    TRY: 15,
+    VARIABLES: 16,
+    WHILE: 17,
 
     // Expressions
-    ASSIGN_INDEX: 17,
-    CALL: 18,
-    CAST: 19,
-    CONSTANT: 20,
-    DOT: 21,
-    HOOK: 22,
-    INDEX: 23,
-    INITIALIZER_LIST: 24,
-    INITIALIZER_MAP: 25,
-    LAMBDA: 26,
-    LAMBDA_TYPE: 27,
-    NAME: 28,
-    NULL: 29,
-    NULL_DOT: 30,
-    PAIR: 31,
-    PARAMETERIZE: 32,
-    SEQUENCE: 33,
-    STRING_INTERPOLATION: 34,
-    SUPER: 35,
-    TYPE: 36,
-    TYPE_CHECK: 37,
-    XML: 38,
+    ASSIGN_INDEX: 18,
+    CALL: 19,
+    CAST: 20,
+    CONSTANT: 21,
+    DOT: 22,
+    HOOK: 23,
+    INDEX: 24,
+    INITIALIZER_LIST: 25,
+    INITIALIZER_MAP: 26,
+    LAMBDA: 27,
+    LAMBDA_TYPE: 28,
+    NAME: 29,
+    NULL: 30,
+    NULL_DOT: 31,
+    PAIR: 32,
+    PARAMETERIZE: 33,
+    SEQUENCE: 34,
+    STRING_INTERPOLATION: 35,
+    SUPER: 36,
+    TYPE: 37,
+    TYPE_CHECK: 38,
+    XML: 39,
 
     // Unary operators
-    COMPLEMENT: 39,
-    NEGATIVE: 40,
-    NOT: 41,
-    POSITIVE: 42,
-    POSTFIX_DECREMENT: 43,
-    POSTFIX_INCREMENT: 44,
-    PREFIX_DECREMENT: 45,
-    PREFIX_INCREMENT: 46,
+    COMPLEMENT: 40,
+    NEGATIVE: 41,
+    NOT: 42,
+    POSITIVE: 43,
+    POSTFIX_DECREMENT: 44,
+    POSTFIX_INCREMENT: 45,
+    PREFIX_DECREMENT: 46,
+    PREFIX_INCREMENT: 47,
 
     // Binary operators
-    ADD: 47,
-    BITWISE_AND: 48,
-    BITWISE_OR: 49,
-    BITWISE_XOR: 50,
-    COMPARE: 51,
-    DIVIDE: 52,
-    EQUAL: 53,
-    IN: 54,
-    LOGICAL_AND: 55,
-    LOGICAL_OR: 56,
-    MULTIPLY: 57,
-    NOT_EQUAL: 58,
-    NULL_JOIN: 59,
-    POWER: 60,
-    REMAINDER: 61,
-    SHIFT_LEFT: 62,
-    SHIFT_RIGHT: 63,
-    SUBTRACT: 64,
-    UNSIGNED_SHIFT_RIGHT: 65,
+    ADD: 48,
+    BITWISE_AND: 49,
+    BITWISE_OR: 50,
+    BITWISE_XOR: 51,
+    COMPARE: 52,
+    DIVIDE: 53,
+    EQUAL: 54,
+    IN: 55,
+    LOGICAL_AND: 56,
+    LOGICAL_OR: 57,
+    MULTIPLY: 58,
+    NOT_EQUAL: 59,
+    NULL_JOIN: 60,
+    POWER: 61,
+    REMAINDER: 62,
+    SHIFT_LEFT: 63,
+    SHIFT_RIGHT: 64,
+    SUBTRACT: 65,
+    UNSIGNED_SHIFT_RIGHT: 66,
 
     // Binary comparison operators
-    GREATER_THAN: 66,
-    GREATER_THAN_OR_EQUAL: 67,
-    LESS_THAN: 68,
-    LESS_THAN_OR_EQUAL: 69,
+    GREATER_THAN: 67,
+    GREATER_THAN_OR_EQUAL: 68,
+    LESS_THAN: 69,
+    LESS_THAN_OR_EQUAL: 70,
 
     // Binary assigment operators
-    ASSIGN: 70,
-    ASSIGN_ADD: 71,
-    ASSIGN_BITWISE_AND: 72,
-    ASSIGN_BITWISE_OR: 73,
-    ASSIGN_BITWISE_XOR: 74,
-    ASSIGN_DIVIDE: 75,
-    ASSIGN_MULTIPLY: 76,
-    ASSIGN_NULL: 77,
-    ASSIGN_POWER: 78,
-    ASSIGN_REMAINDER: 79,
-    ASSIGN_SHIFT_LEFT: 80,
-    ASSIGN_SHIFT_RIGHT: 81,
-    ASSIGN_SUBTRACT: 82,
-    ASSIGN_UNSIGNED_SHIFT_RIGHT: 83
+    ASSIGN: 71,
+    ASSIGN_ADD: 72,
+    ASSIGN_BITWISE_AND: 73,
+    ASSIGN_BITWISE_OR: 74,
+    ASSIGN_BITWISE_XOR: 75,
+    ASSIGN_DIVIDE: 76,
+    ASSIGN_MULTIPLY: 77,
+    ASSIGN_NULL: 78,
+    ASSIGN_POWER: 79,
+    ASSIGN_REMAINDER: 80,
+    ASSIGN_SHIFT_LEFT: 81,
+    ASSIGN_SHIFT_RIGHT: 82,
+    ASSIGN_SUBTRACT: 83,
+    ASSIGN_UNSIGNED_SHIFT_RIGHT: 84
   };
 
   // Flags
@@ -7919,9 +7921,19 @@
     return new Skew.Node(Skew.NodeKind.ANNOTATION).appendChild(value).appendChild(test);
   };
 
+  Skew.Node.createAttribute = function(name, value) {
+    assert(Skew.in_NodeKind.isExpression(value.kind));
+    return new Skew.Node(Skew.NodeKind.ATTRIBUTE).withContent(new Skew.StringContent(name)).appendChild(value);
+  };
+
   Skew.Node.createCatch = function(symbol, block) {
     assert(block.kind == Skew.NodeKind.BLOCK);
     return new Skew.Node(Skew.NodeKind.CATCH).appendChild(block).withSymbol(symbol);
+  };
+
+  // This adds the initializer expression to the tree for ease of traversal
+  Skew.Node.createVariable = function(symbol) {
+    return new Skew.Node(Skew.NodeKind.VARIABLE).appendChild(symbol.value).withSymbol(symbol);
   };
 
   Skew.Node.createExpression = function(value) {
@@ -7968,11 +7980,6 @@
   Skew.Node.createTry = function(tryBlock) {
     assert(tryBlock.kind == Skew.NodeKind.BLOCK);
     return new Skew.Node(Skew.NodeKind.TRY).appendChild(tryBlock);
-  };
-
-  // This adds the initializer expression to the tree for ease of traversal
-  Skew.Node.createVariable = function(symbol) {
-    return new Skew.Node(Skew.NodeKind.VARIABLE).appendChild(symbol.value).withSymbol(symbol);
   };
 
   Skew.Node.createIndex = function(left, right) {
@@ -8108,7 +8115,7 @@
   };
 
   Skew.Node.prototype.asString = function() {
-    assert(this.kind == Skew.NodeKind.NAME || this.kind == Skew.NodeKind.DOT || this.kind == Skew.NodeKind.CONSTANT || this.kind == Skew.NodeKind.NULL_DOT);
+    assert(this.kind == Skew.NodeKind.NAME || this.kind == Skew.NodeKind.DOT || this.kind == Skew.NodeKind.CONSTANT || this.kind == Skew.NodeKind.NULL_DOT || this.kind == Skew.NodeKind.ATTRIBUTE);
     return Skew.in_Content.asString(this.content);
   };
 
@@ -8152,6 +8159,13 @@
     return this._firstChild._nextSibling;
   };
 
+  Skew.Node.prototype.attributeValue = function() {
+    assert(this.kind == Skew.NodeKind.ATTRIBUTE);
+    assert(this.childCount() == 1);
+    assert(Skew.in_NodeKind.isExpression(this._firstChild.kind));
+    return this._firstChild;
+  };
+
   Skew.Node.prototype.caseBlock = function() {
     assert(this.kind == Skew.NodeKind.CASE);
     assert(this.childCount() >= 1);
@@ -8163,6 +8177,13 @@
     assert(this.kind == Skew.NodeKind.CATCH);
     assert(this.childCount() == 1);
     assert(this._firstChild.kind == Skew.NodeKind.BLOCK);
+    return this._firstChild;
+  };
+
+  Skew.Node.prototype.variableValue = function() {
+    assert(this.kind == Skew.NodeKind.VARIABLE);
+    assert(this.childCount() <= 1);
+    assert(this._firstChild == null || Skew.in_NodeKind.isExpression(this._firstChild.kind));
     return this._firstChild;
   };
 
@@ -8244,6 +8265,13 @@
     return this._firstChild;
   };
 
+  Skew.Node.prototype.xmlAttributes = function() {
+    assert(this.kind == Skew.NodeKind.XML);
+    assert(this.childCount() >= 2);
+    assert(this._firstChild._nextSibling.kind == Skew.NodeKind.SEQUENCE);
+    return this._firstChild._nextSibling;
+  };
+
   Skew.Node.prototype.unaryValue = function() {
     assert(Skew.in_NodeKind.isUnary(this.kind));
     assert(this.childCount() == 1);
@@ -8283,13 +8311,6 @@
     assert(this.childCount() >= 1);
     var finallyBlock = this._lastChild;
     return finallyBlock != this.tryBlock() && finallyBlock.kind == Skew.NodeKind.BLOCK ? finallyBlock : null;
-  };
-
-  Skew.Node.prototype.variableValue = function() {
-    assert(this.kind == Skew.NodeKind.VARIABLE);
-    assert(this.childCount() <= 1);
-    assert(this._firstChild == null || Skew.in_NodeKind.isExpression(this._firstChild.kind));
-    return this._firstChild;
   };
 
   Skew.Node.prototype.whileTest = function() {
@@ -9083,21 +9104,22 @@
     WHITESPACE: 104,
     XML_CHILD: 105,
     XML_END_EMPTY: 106,
-    XML_START_CLOSE: 107,
-    YY_INVALID_ACTION: 108,
+    XML_NEW: 107,
+    XML_START_CLOSE: 108,
+    YY_INVALID_ACTION: 109,
 
     // Type parameters are surrounded by "<" and ">"
-    PARAMETER_LIST_END: 109,
-    PARAMETER_LIST_START: 110,
+    PARAMETER_LIST_END: 110,
+    PARAMETER_LIST_START: 111,
 
     // XML entities are surrounded by "<" and ">" (or "</" and "/>" but those are defined by flex)
-    XML_END: 111,
-    XML_START: 112,
+    XML_END: 112,
+    XML_START: 113,
 
     // String interpolation looks like "start\( 1 )continue( 2 )end"
-    STRING_INTERPOLATION_CONTINUE: 113,
-    STRING_INTERPOLATION_END: 114,
-    STRING_INTERPOLATION_START: 115
+    STRING_INTERPOLATION_CONTINUE: 114,
+    STRING_INTERPOLATION_END: 115,
+    STRING_INTERPOLATION_START: 116
   };
 
   Skew.DiagnosticKind = {
@@ -9185,6 +9207,10 @@
     if (openingRange != null) {
       this.note(openingRange, 'Attempted to match opening tag here');
     }
+  };
+
+  Skew.Log.prototype.semanticErrorXMLMissingAppend = function(range, type) {
+    this.error(range, 'Implement a function called "<>...</>" on type "' + type.toString() + '" to add support for child elements');
   };
 
   Skew.Log._expectedCountText = function(singular, expected, found) {
@@ -9525,8 +9551,14 @@
     }
   };
 
-  Skew.Log.prototype.semanticErrorXMLTypeInferenceFailed = function(range) {
-    this.error(range, 'Cannot infer a type for this literal');
+  Skew.Log.prototype.semanticErrorXMLTypeInferenceFailed = function(range, type) {
+    if (type == Skew.Type.DYNAMIC) {
+      this.error(range, 'Cannot infer a type for this literal');
+    }
+
+    else {
+      this.error(range, 'Implement a constructor called "<new>" on type "' + type.toString() + '" to add support for XML-style literals');
+    }
   };
 
   Skew.Log.prototype.semanticErrorDuplicateOverload = function(range, name, previous) {
@@ -10729,7 +10761,7 @@
         kind = Skew.SymbolKind.FUNCTION_ANNOTATION;
       }
 
-      else if (context.eat(Skew.TokenKind.LIST_NEW) || context.eat(Skew.TokenKind.SET_NEW)) {
+      else if (context.eat(Skew.TokenKind.LIST_NEW) || context.eat(Skew.TokenKind.SET_NEW) || context.eat(Skew.TokenKind.XML_NEW)) {
         if (kind == Skew.SymbolKind.FUNCTION_INSTANCE) {
           kind = Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
         }
@@ -11419,7 +11451,30 @@
       }
 
       var attributes = new Skew.Node(Skew.NodeKind.SEQUENCE);
+
+      // Parse attributes
+      context.skipWhitespace();
+
+      while (context.peek(Skew.TokenKind.IDENTIFIER)) {
+        var name = context.next().range;
+
+        if (!context.expect(Skew.TokenKind.ASSIGN)) {
+          return null;
+        }
+
+        var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.UNARY_PREFIX - 1 | 0);
+
+        if (value == null) {
+          return null;
+        }
+
+        attributes.appendChild(Skew.Node.createAttribute(name.toString(), value).withRange(context.spanSince(name)).withInternalRange(name));
+        context.skipWhitespace();
+      }
+
+      // Parse end of tag
       var xml = Skew.Node.createXML(tag, attributes);
+      context.skipWhitespace();
 
       if (context.eat(Skew.TokenKind.XML_END_EMPTY)) {
         return xml.withRange(context.spanSince(token.range));
@@ -11429,29 +11484,41 @@
         return null;
       }
 
-      while (!context.eat(Skew.TokenKind.XML_START_CLOSE)) {
-        var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
+      // Parse children
+      context.skipWhitespace();
 
-        if (value == null) {
+      while (!context.eat(Skew.TokenKind.XML_START_CLOSE)) {
+        var value1 = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.UNARY_PREFIX - 1 | 0);
+
+        if (value1 == null) {
           return null;
         }
 
-        xml.appendChild(value);
+        xml.appendChild(value1);
+
+        if (!context.eat(Skew.TokenKind.NEWLINE) && !context.eat(Skew.TokenKind.COMMENT) && !context.peek(Skew.TokenKind.XML_START_CLOSE) && !context.expect(Skew.TokenKind.XML_START_CLOSE)) {
+          return null;
+        }
+
+        context.skipWhitespace();
       }
 
+      // Parse closing tag
       var closingTag = Skew.Parsing.parseDotChain(context);
 
       if (closingTag == null) {
         return null;
       }
 
-      if (!tag.looksTheSameAs(closingTag)) {
-        context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, Skew.Parsing.dotChainToString(tag), Skew.Parsing.dotChainToString(closingTag), tag.range);
-        return null;
-      }
+      context.skipWhitespace();
 
       if (!context.expect(Skew.TokenKind.XML_END)) {
         return null;
+      }
+
+      // Validate closing tag (not a fatal error)
+      if (!tag.looksTheSameAs(closingTag)) {
+        context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, Skew.Parsing.dotChainToString(closingTag), Skew.Parsing.dotChainToString(tag), tag.range);
       }
 
       return xml.withRange(context.spanSince(token.range));
@@ -18294,18 +18361,46 @@
 
   Skew.Resolving.Resolver.prototype._resolveXML = function(node, scope) {
     var tag = node.xmlTag();
+    var attributes = node.xmlAttributes();
+    var firstChild = attributes.nextSibling();
     this._resolveAsParameterizedType(tag, scope);
 
     // Make sure there's a constructor to call
-    var $new = this._findMember(tag.resolvedType, 'new');
-
-    if ($new == null) {
-      this._log.semanticErrorXMLTypeInferenceFailed(node.range);
+    if (this._findMember(tag.resolvedType, '<new>') == null) {
+      this._log.semanticErrorXMLTypeInferenceFailed(node.range, tag.resolvedType);
       return;
     }
 
-    // Become a constructor call
-    node.become(Skew.Node.createCall(Skew.Node.createMemberReference(tag.remove(), $new).withRange(node.range)).withRange(node.range));
+    // Make sure there's an append function to call if needed
+    if (firstChild != null && this._findMember(tag.resolvedType, '<>...</>') == null) {
+      this._log.semanticErrorXMLMissingAppend(firstChild.range, tag.resolvedType);
+      return;
+    }
+
+    // Call the constructor
+    var chain = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('<new>')).appendChild(tag.remove()).withRange(node.range);
+    var needsSequence = attributes.hasChildren();
+    var result = chain;
+    this._resolveAsParameterizedExpression(chain, scope);
+
+    // Assign to attributes if necessary
+    if (needsSequence) {
+      result = new Skew.Node(Skew.NodeKind.SEQUENCE).withRange(node.range).appendChild(this._extractExpression(chain, scope));
+
+      for (var child = attributes.firstChild(); child != null; child = child.nextSibling()) {
+        result.appendChild(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(child.asString())).appendChild(chain.clone()).withRange(child.internalRange), child.attributeValue().remove()).withRange(child.range));
+      }
+    }
+
+    // Chain children off the constructor
+    while (firstChild != null) {
+      var next = firstChild.nextSibling();
+      chain = Skew.Node.createCall(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('<>...</>')).appendChild(chain).withRange(firstChild.range)).appendChild(firstChild.remove()).withRange(firstChild.range);
+      firstChild = next;
+    }
+
+    // Resolve the chain
+    node.become(needsSequence ? result.appendChild(chain) : chain);
     this._resolveAsParameterizedExpression(node, scope);
   };
 
@@ -20819,15 +20914,15 @@
   Skew.BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   Skew.operatorInfo = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.NodeKind.COMPLEMENT, new Skew.OperatorInfo('~', Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [0], Skew.NodeKind.NULL)), Skew.NodeKind.NEGATIVE, new Skew.OperatorInfo('-', Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [0, 1], Skew.NodeKind.NULL)), Skew.NodeKind.NOT, new Skew.OperatorInfo('!', Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [0], Skew.NodeKind.NULL)), Skew.NodeKind.POSITIVE, new Skew.OperatorInfo('+', Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [0, 1], Skew.NodeKind.NULL)), Skew.NodeKind.POSTFIX_DECREMENT, new Skew.OperatorInfo('--', Skew.Precedence.UNARY_POSTFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [0], Skew.NodeKind.SUBTRACT)), Skew.NodeKind.POSTFIX_INCREMENT, new Skew.OperatorInfo('++', Skew.Precedence.UNARY_POSTFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [0], Skew.NodeKind.ADD)), Skew.NodeKind.PREFIX_DECREMENT, new Skew.OperatorInfo('--', Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [0], Skew.NodeKind.SUBTRACT)), Skew.NodeKind.PREFIX_INCREMENT, new Skew.OperatorInfo('++', Skew.Precedence.UNARY_PREFIX, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [0], Skew.NodeKind.ADD)), Skew.NodeKind.ADD, new Skew.OperatorInfo('+', Skew.Precedence.ADD, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [0, 1], Skew.NodeKind.NULL)), Skew.NodeKind.BITWISE_AND, new Skew.OperatorInfo('&', Skew.Precedence.BITWISE_AND, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.BITWISE_OR, new Skew.OperatorInfo('|', Skew.Precedence.BITWISE_OR, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.BITWISE_XOR, new Skew.OperatorInfo('^', Skew.Precedence.BITWISE_XOR, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.COMPARE, new Skew.OperatorInfo('<=>', Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.DIVIDE, new Skew.OperatorInfo('/', Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.EQUAL, new Skew.OperatorInfo('==', Skew.Precedence.EQUAL, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, [1], Skew.NodeKind.NULL)), Skew.NodeKind.GREATER_THAN, new Skew.OperatorInfo('>', Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.GREATER_THAN_OR_EQUAL, new Skew.OperatorInfo('>=', Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.IN, new Skew.OperatorInfo('in', Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.LESS_THAN, new Skew.OperatorInfo('<', Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.LESS_THAN_OR_EQUAL, new Skew.OperatorInfo('<=', Skew.Precedence.COMPARE, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.LOGICAL_AND, new Skew.OperatorInfo('&&', Skew.Precedence.LOGICAL_AND, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, [1], Skew.NodeKind.NULL)), Skew.NodeKind.LOGICAL_OR, new Skew.OperatorInfo('||', Skew.Precedence.LOGICAL_OR, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, [1], Skew.NodeKind.NULL)), Skew.NodeKind.MULTIPLY, new Skew.OperatorInfo('*', Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.NOT_EQUAL, new Skew.OperatorInfo('!=', Skew.Precedence.EQUAL, Skew.Associativity.LEFT, Skew.OperatorKind.FIXED, [1], Skew.NodeKind.NULL)), Skew.NodeKind.POWER, new Skew.OperatorInfo('**', Skew.Precedence.UNARY_PREFIX, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.REMAINDER, new Skew.OperatorInfo('%', Skew.Precedence.MULTIPLY, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.SHIFT_LEFT, new Skew.OperatorInfo('<<', Skew.Precedence.SHIFT, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.SHIFT_RIGHT, new Skew.OperatorInfo('>>', Skew.Precedence.SHIFT, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.SUBTRACT, new Skew.OperatorInfo('-', Skew.Precedence.ADD, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [0, 1], Skew.NodeKind.NULL)), Skew.NodeKind.UNSIGNED_SHIFT_RIGHT, new Skew.OperatorInfo('>>>', Skew.Precedence.SHIFT, Skew.Associativity.LEFT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL)), Skew.NodeKind.ASSIGN, new Skew.OperatorInfo('=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.FIXED, [1], Skew.NodeKind.NULL)), Skew.NodeKind.ASSIGN_ADD, new Skew.OperatorInfo('+=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.ADD)), Skew.NodeKind.ASSIGN_BITWISE_AND, new Skew.OperatorInfo('&=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.BITWISE_AND)), Skew.NodeKind.ASSIGN_BITWISE_OR, new Skew.OperatorInfo('|=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.BITWISE_OR)), Skew.NodeKind.ASSIGN_BITWISE_XOR, new Skew.OperatorInfo('^=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.BITWISE_XOR)), Skew.NodeKind.ASSIGN_DIVIDE, new Skew.OperatorInfo('/=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.DIVIDE)), Skew.NodeKind.ASSIGN_MULTIPLY, new Skew.OperatorInfo('*=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.MULTIPLY)), Skew.NodeKind.ASSIGN_POWER, new Skew.OperatorInfo('**=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.POWER)), Skew.NodeKind.ASSIGN_REMAINDER, new Skew.OperatorInfo('%=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.REMAINDER)), Skew.NodeKind.ASSIGN_SHIFT_LEFT, new Skew.OperatorInfo('<<=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.SHIFT_LEFT)), Skew.NodeKind.ASSIGN_SHIFT_RIGHT, new Skew.OperatorInfo('>>=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.SHIFT_RIGHT)), Skew.NodeKind.ASSIGN_SUBTRACT, new Skew.OperatorInfo('-=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.SUBTRACT)), Skew.NodeKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, new Skew.OperatorInfo('>>>=', Skew.Precedence.ASSIGN, Skew.Associativity.RIGHT, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.UNSIGNED_SHIFT_RIGHT)), Skew.NodeKind.ASSIGN_INDEX, new Skew.OperatorInfo('[]=', Skew.Precedence.MEMBER, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [2], Skew.NodeKind.NULL)), Skew.NodeKind.INDEX, new Skew.OperatorInfo('[]', Skew.Precedence.MEMBER, Skew.Associativity.NONE, Skew.OperatorKind.OVERRIDABLE, [1], Skew.NodeKind.NULL));
   Skew.validArgumentCounts = null;
-  Skew.yy_accept = [Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.END_OF_FILE, Skew.TokenKind.ERROR, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT, Skew.TokenKind.ERROR, Skew.TokenKind.COMMENT, Skew.TokenKind.REMAINDER, Skew.TokenKind.BITWISE_AND, Skew.TokenKind.ERROR, Skew.TokenKind.LEFT_PARENTHESIS, Skew.TokenKind.RIGHT_PARENTHESIS, Skew.TokenKind.MULTIPLY, Skew.TokenKind.PLUS, Skew.TokenKind.COMMA, Skew.TokenKind.MINUS, Skew.TokenKind.DOT, Skew.TokenKind.DIVIDE, Skew.TokenKind.INT, Skew.TokenKind.INT, Skew.TokenKind.COLON, Skew.TokenKind.SEMICOLON, Skew.TokenKind.LESS_THAN, Skew.TokenKind.ASSIGN, Skew.TokenKind.GREATER_THAN, Skew.TokenKind.QUESTION_MARK, Skew.TokenKind.ERROR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACKET, Skew.TokenKind.RIGHT_BRACKET, Skew.TokenKind.BITWISE_XOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACE, Skew.TokenKind.BITWISE_OR, Skew.TokenKind.RIGHT_BRACE, Skew.TokenKind.TILDE, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.STRING, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.COMMENT, Skew.TokenKind.COMMENT, Skew.TokenKind.ASSIGN_REMAINDER, Skew.TokenKind.LOGICAL_AND, Skew.TokenKind.ASSIGN_BITWISE_AND, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.CHARACTER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.POWER, Skew.TokenKind.ASSIGN_MULTIPLY, Skew.TokenKind.INCREMENT, Skew.TokenKind.ASSIGN_PLUS, Skew.TokenKind.DECREMENT, Skew.TokenKind.ASSIGN_MINUS, Skew.TokenKind.DOT_DOT, Skew.TokenKind.ASSIGN_DIVIDE, Skew.TokenKind.XML_END_EMPTY, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE_COLON, Skew.TokenKind.XML_START_CLOSE, Skew.TokenKind.SHIFT_LEFT, Skew.TokenKind.LESS_THAN_OR_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.EQUAL, Skew.TokenKind.ARROW, Skew.TokenKind.GREATER_THAN_OR_EQUAL, Skew.TokenKind.SHIFT_RIGHT, Skew.TokenKind.NULL_DOT, Skew.TokenKind.ASSIGN_NULL, Skew.TokenKind.NULL_JOIN, Skew.TokenKind.ANNOTATION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_XOR, Skew.TokenKind.AS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IF, Skew.TokenKind.IN, Skew.TokenKind.IS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_OR, Skew.TokenKind.LOGICAL_OR, Skew.TokenKind.ASSIGN_POWER, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.INT_BINARY, Skew.TokenKind.INT_OCTAL, Skew.TokenKind.INT_HEX, Skew.TokenKind.ASSIGN_SHIFT_LEFT, Skew.TokenKind.COMPARE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_SHIFT_RIGHT, Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, Skew.TokenKind.ANNOTATION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.DEF, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRY, Skew.TokenKind.VAR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.CASE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.ELSE, Skew.TokenKind.ENUM, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.NULL, Skew.TokenKind.OVER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRUE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.LIST, Skew.TokenKind.LIST_NEW, Skew.TokenKind.BREAK, Skew.TokenKind.CATCH, Skew.TokenKind.CLASS, Skew.TokenKind.CONST, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FALSE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.SUPER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.THROW, Skew.TokenKind.WHILE, Skew.TokenKind.SET, Skew.TokenKind.SET_NEW, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.RETURN, Skew.TokenKind.SWITCH, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.DEFAULT, Skew.TokenKind.DYNAMIC, Skew.TokenKind.FINALLY, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.XML_CHILD, Skew.TokenKind.CONTINUE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.INTERFACE, Skew.TokenKind.NAMESPACE, Skew.TokenKind.YY_INVALID_ACTION];
+  Skew.yy_accept = [Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.END_OF_FILE, Skew.TokenKind.ERROR, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT, Skew.TokenKind.ERROR, Skew.TokenKind.COMMENT, Skew.TokenKind.REMAINDER, Skew.TokenKind.BITWISE_AND, Skew.TokenKind.ERROR, Skew.TokenKind.LEFT_PARENTHESIS, Skew.TokenKind.RIGHT_PARENTHESIS, Skew.TokenKind.MULTIPLY, Skew.TokenKind.PLUS, Skew.TokenKind.COMMA, Skew.TokenKind.MINUS, Skew.TokenKind.DOT, Skew.TokenKind.DIVIDE, Skew.TokenKind.INT, Skew.TokenKind.INT, Skew.TokenKind.COLON, Skew.TokenKind.SEMICOLON, Skew.TokenKind.LESS_THAN, Skew.TokenKind.ASSIGN, Skew.TokenKind.GREATER_THAN, Skew.TokenKind.QUESTION_MARK, Skew.TokenKind.ERROR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACKET, Skew.TokenKind.RIGHT_BRACKET, Skew.TokenKind.BITWISE_XOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACE, Skew.TokenKind.BITWISE_OR, Skew.TokenKind.RIGHT_BRACE, Skew.TokenKind.TILDE, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.STRING, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.COMMENT, Skew.TokenKind.COMMENT, Skew.TokenKind.ASSIGN_REMAINDER, Skew.TokenKind.LOGICAL_AND, Skew.TokenKind.ASSIGN_BITWISE_AND, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.CHARACTER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.POWER, Skew.TokenKind.ASSIGN_MULTIPLY, Skew.TokenKind.INCREMENT, Skew.TokenKind.ASSIGN_PLUS, Skew.TokenKind.DECREMENT, Skew.TokenKind.ASSIGN_MINUS, Skew.TokenKind.DOT_DOT, Skew.TokenKind.ASSIGN_DIVIDE, Skew.TokenKind.XML_END_EMPTY, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE_COLON, Skew.TokenKind.XML_START_CLOSE, Skew.TokenKind.SHIFT_LEFT, Skew.TokenKind.LESS_THAN_OR_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.EQUAL, Skew.TokenKind.ARROW, Skew.TokenKind.GREATER_THAN_OR_EQUAL, Skew.TokenKind.SHIFT_RIGHT, Skew.TokenKind.NULL_DOT, Skew.TokenKind.ASSIGN_NULL, Skew.TokenKind.NULL_JOIN, Skew.TokenKind.ANNOTATION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_XOR, Skew.TokenKind.AS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IF, Skew.TokenKind.IN, Skew.TokenKind.IS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_OR, Skew.TokenKind.LOGICAL_OR, Skew.TokenKind.ASSIGN_POWER, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.INT_BINARY, Skew.TokenKind.INT_OCTAL, Skew.TokenKind.INT_HEX, Skew.TokenKind.ASSIGN_SHIFT_LEFT, Skew.TokenKind.COMPARE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_SHIFT_RIGHT, Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, Skew.TokenKind.ANNOTATION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.DEF, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRY, Skew.TokenKind.VAR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.CASE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.ELSE, Skew.TokenKind.ENUM, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.NULL, Skew.TokenKind.OVER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRUE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.XML_NEW, Skew.TokenKind.LIST, Skew.TokenKind.LIST_NEW, Skew.TokenKind.BREAK, Skew.TokenKind.CATCH, Skew.TokenKind.CLASS, Skew.TokenKind.CONST, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FALSE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.SUPER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.THROW, Skew.TokenKind.WHILE, Skew.TokenKind.SET, Skew.TokenKind.SET_NEW, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.RETURN, Skew.TokenKind.SWITCH, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.DEFAULT, Skew.TokenKind.DYNAMIC, Skew.TokenKind.FINALLY, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.XML_CHILD, Skew.TokenKind.CONTINUE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.INTERFACE, Skew.TokenKind.NAMESPACE, Skew.TokenKind.YY_INVALID_ACTION];
   Skew.yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 6, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 21, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 29, 30, 29, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 32, 33, 34, 35, 31, 1, 36, 37, 38, 39, 40, 41, 31, 42, 43, 31, 44, 45, 46, 47, 48, 49, 31, 50, 51, 52, 53, 54, 55, 56, 57, 31, 58, 59, 60, 61, 1];
   Skew.yy_meta = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
-  Skew.yy_base = [0, 0, 0, 338, 339, 335, 60, 311, 59, 332, 309, 57, 57, 339, 339, 55, 56, 339, 53, 317, 45, 77, 83, 310, 339, 59, 47, 49, 61, 0, 0, 71, 339, 306, 279, 279, 64, 49, 63, 79, 79, 58, 274, 287, 66, 74, 290, 283, 112, 104, 339, 339, 322, 129, 339, 129, 339, 320, 319, 339, 339, 339, 339, 127, 339, 318, 295, 339, 339, 339, 339, 339, 339, 339, 339, 119, 125, 151, 129, 131, 0, 339, 339, 294, 292, 301, 339, 339, 339, 127, 339, 339, 339, 0, 0, 300, 290, 274, 339, 0, 273, 105, 276, 264, 269, 262, 257, 254, 261, 258, 254, 0, 251, 0, 256, 256, 260, 247, 249, 254, 246, 101, 245, 251, 277, 252, 339, 339, 339, 155, 159, 163, 149, 168, 0, 339, 339, 275, 339, 265, 0, 273, 339, 233, 251, 246, 247, 233, 138, 247, 246, 241, 234, 228, 242, 0, 237, 236, 230, 224, 220, 232, 219, 222, 229, 0, 0, 223, 251, 211, 178, 249, 339, 230, 229, 218, 0, 219, 209, 207, 215, 204, 210, 0, 0, 215, 209, 203, 201, 0, 0, 201, 200, 211, 193, 0, 207, 186, 185, 182, 186, 220, 339, 339, 0, 0, 0, 0, 196, 197, 198, 0, 195, 198, 189, 190, 0, 194, 0, 0, 339, 339, 218, 181, 181, 194, 174, 194, 158, 0, 0, 166, 121, 0, 0, 0, 104, 97, 339, 0, 51, 39, 0, 0, 339, 207, 211, 215, 217, 220, 223, 225];
-  Skew.yy_def = [0, 244, 1, 244, 244, 244, 244, 244, 245, 246, 244, 244, 247, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 248, 249, 244, 244, 244, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 244, 244, 244, 244, 244, 244, 244, 245, 244, 245, 246, 244, 244, 244, 244, 247, 244, 247, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 250, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 251, 249, 244, 244, 244, 244, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 250, 244, 244, 244, 244, 244, 251, 244, 244, 244, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 244, 244, 244, 244, 244, 244, 244, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 244, 244, 244, 244, 244, 244, 244, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 249, 244, 244, 244, 249, 249, 249, 249, 249, 249, 249, 249, 244, 249, 249, 249, 249, 249, 249, 244, 249, 249, 249, 249, 249, 0, 244, 244, 244, 244, 244, 244, 244];
-  Skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 30, 30, 30, 31, 4, 32, 33, 34, 35, 36, 37, 38, 39, 30, 40, 30, 30, 30, 41, 42, 30, 43, 44, 45, 30, 46, 47, 30, 30, 48, 49, 50, 51, 53, 53, 56, 61, 64, 66, 70, 68, 73, 74, 86, 87, 88, 89, 82, 90, 71, 243, 67, 69, 62, 83, 84, 85, 91, 95, 92, 104, 65, 242, 57, 75, 114, 76, 76, 76, 76, 75, 101, 76, 76, 76, 76, 96, 105, 77, 106, 102, 107, 115, 103, 77, 78, 108, 120, 77, 97, 118, 111, 119, 109, 77, 121, 79, 112, 110, 124, 126, 113, 53, 53, 80, 56, 241, 64, 129, 129, 129, 129, 75, 240, 76, 76, 76, 76, 132, 132, 133, 133, 133, 138, 139, 164, 77, 145, 146, 165, 125, 65, 239, 57, 127, 130, 77, 130, 132, 132, 131, 131, 131, 131, 129, 129, 129, 129, 131, 131, 131, 131, 131, 131, 131, 131, 170, 133, 133, 133, 179, 180, 199, 238, 199, 237, 170, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 55, 55, 55, 55, 58, 58, 58, 58, 63, 63, 63, 63, 93, 93, 94, 94, 94, 134, 134, 140, 140, 140, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 178, 177, 176, 175, 174, 173, 172, 171, 169, 168, 167, 166, 163, 162, 161, 160, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 144, 143, 142, 141, 137, 136, 135, 128, 244, 59, 244, 52, 123, 122, 117, 116, 100, 99, 98, 81, 72, 60, 59, 54, 52, 244, 3, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244];
-  Skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 11, 12, 15, 18, 16, 20, 20, 26, 26, 27, 27, 25, 28, 18, 241, 15, 16, 11, 25, 25, 25, 28, 31, 28, 37, 12, 240, 8, 21, 41, 21, 21, 21, 21, 22, 36, 22, 22, 22, 22, 31, 37, 21, 38, 36, 38, 41, 36, 22, 21, 39, 45, 21, 31, 44, 40, 44, 39, 22, 45, 21, 40, 39, 48, 49, 40, 53, 53, 21, 55, 237, 63, 75, 75, 75, 75, 76, 236, 76, 76, 76, 76, 78, 78, 79, 79, 79, 89, 89, 121, 76, 101, 101, 121, 48, 63, 232, 55, 49, 77, 76, 77, 132, 132, 77, 77, 77, 77, 129, 129, 129, 129, 130, 130, 130, 130, 131, 131, 131, 131, 129, 133, 133, 133, 148, 148, 170, 231, 170, 228, 129, 170, 170, 170, 170, 199, 199, 199, 199, 200, 200, 200, 200, 245, 245, 245, 245, 246, 246, 246, 246, 247, 247, 247, 247, 248, 248, 249, 249, 249, 250, 250, 251, 251, 251, 227, 226, 225, 224, 223, 222, 217, 215, 214, 213, 212, 210, 209, 208, 201, 198, 197, 196, 194, 193, 192, 191, 188, 187, 186, 185, 182, 181, 180, 179, 178, 177, 175, 174, 173, 171, 169, 168, 167, 164, 163, 162, 161, 160, 159, 158, 157, 156, 154, 153, 152, 151, 150, 149, 147, 146, 145, 144, 143, 141, 139, 137, 125, 124, 123, 122, 120, 119, 118, 117, 116, 115, 114, 112, 110, 109, 108, 107, 106, 105, 104, 103, 102, 100, 97, 96, 95, 85, 84, 83, 66, 65, 58, 57, 52, 47, 46, 43, 42, 35, 34, 33, 23, 19, 10, 9, 7, 5, 3, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244, 244];
-  Skew.YY_JAM_STATE = 244;
-  Skew.YY_ACCEPT_LENGTH = 245;
+  Skew.yy_base = [0, 0, 0, 342, 343, 339, 60, 315, 59, 336, 313, 57, 57, 343, 343, 55, 56, 343, 53, 321, 45, 77, 83, 314, 343, 59, 47, 49, 61, 0, 0, 71, 343, 310, 283, 283, 64, 51, 74, 79, 69, 58, 278, 291, 71, 86, 294, 287, 113, 105, 343, 343, 326, 129, 343, 129, 343, 324, 323, 343, 343, 343, 343, 126, 343, 322, 299, 343, 343, 343, 343, 343, 343, 343, 343, 119, 125, 148, 129, 131, 0, 343, 343, 298, 296, 305, 280, 343, 343, 343, 127, 343, 343, 343, 0, 0, 303, 293, 277, 343, 0, 276, 105, 279, 267, 272, 265, 260, 257, 264, 261, 257, 0, 254, 0, 259, 259, 263, 250, 252, 257, 249, 101, 248, 254, 280, 255, 343, 343, 343, 152, 156, 160, 165, 167, 0, 343, 343, 278, 238, 343, 267, 0, 275, 343, 235, 253, 248, 249, 235, 137, 249, 248, 243, 236, 230, 244, 0, 239, 238, 232, 226, 222, 234, 221, 224, 231, 0, 0, 225, 253, 213, 178, 251, 240, 343, 231, 230, 219, 0, 220, 210, 208, 216, 205, 211, 0, 0, 216, 210, 204, 202, 0, 0, 202, 201, 212, 194, 0, 208, 187, 186, 182, 186, 221, 343, 343, 343, 0, 0, 0, 0, 197, 198, 199, 0, 196, 199, 190, 191, 0, 195, 0, 0, 343, 343, 219, 182, 182, 195, 175, 195, 194, 0, 0, 169, 154, 0, 0, 0, 152, 104, 343, 0, 49, 39, 0, 0, 343, 207, 211, 215, 217, 220, 223, 225];
+  Skew.yy_def = [0, 248, 1, 248, 248, 248, 248, 248, 249, 250, 248, 248, 251, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 252, 253, 248, 248, 248, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 248, 248, 248, 248, 248, 248, 248, 249, 248, 249, 250, 248, 248, 248, 248, 251, 248, 251, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 254, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 255, 253, 248, 248, 248, 248, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 254, 248, 248, 248, 248, 248, 248, 255, 248, 248, 248, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 248, 248, 248, 248, 248, 248, 248, 248, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 248, 248, 248, 248, 248, 248, 248, 248, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 248, 248, 248, 253, 253, 253, 253, 253, 253, 253, 253, 248, 253, 253, 253, 253, 253, 253, 248, 253, 253, 253, 253, 253, 0, 248, 248, 248, 248, 248, 248, 248];
+  Skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 30, 30, 30, 31, 4, 32, 33, 34, 35, 36, 37, 38, 39, 30, 40, 30, 30, 30, 41, 42, 30, 43, 44, 45, 30, 46, 47, 30, 30, 48, 49, 50, 51, 53, 53, 56, 61, 64, 66, 70, 68, 73, 74, 87, 88, 89, 90, 82, 91, 71, 247, 67, 69, 62, 83, 84, 85, 92, 96, 93, 246, 65, 105, 57, 75, 115, 76, 76, 76, 76, 75, 102, 76, 76, 76, 76, 97, 86, 77, 106, 103, 112, 116, 104, 77, 78, 109, 113, 77, 98, 107, 114, 108, 110, 77, 119, 79, 120, 111, 121, 125, 127, 53, 53, 80, 56, 64, 122, 130, 130, 130, 130, 75, 245, 76, 76, 76, 76, 133, 133, 134, 134, 134, 140, 141, 166, 77, 147, 148, 167, 65, 126, 131, 57, 131, 128, 77, 132, 132, 132, 132, 130, 130, 130, 130, 132, 132, 132, 132, 132, 132, 132, 132, 172, 133, 133, 134, 134, 134, 182, 183, 244, 202, 172, 202, 243, 242, 203, 203, 203, 203, 203, 203, 203, 203, 203, 203, 203, 203, 55, 55, 55, 55, 58, 58, 58, 58, 63, 63, 63, 63, 94, 94, 95, 95, 95, 135, 135, 142, 142, 142, 241, 240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 224, 223, 222, 221, 220, 219, 218, 217, 216, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 190, 189, 188, 187, 186, 185, 184, 181, 180, 179, 178, 177, 176, 175, 174, 173, 171, 170, 169, 168, 165, 164, 163, 162, 161, 160, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 146, 145, 144, 143, 139, 138, 137, 136, 129, 248, 59, 248, 52, 124, 123, 118, 117, 101, 100, 99, 81, 72, 60, 59, 54, 52, 248, 3, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248];
+  Skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 11, 12, 15, 18, 16, 20, 20, 26, 26, 27, 27, 25, 28, 18, 245, 15, 16, 11, 25, 25, 25, 28, 31, 28, 244, 12, 37, 8, 21, 41, 21, 21, 21, 21, 22, 36, 22, 22, 22, 22, 31, 25, 21, 37, 36, 40, 41, 36, 22, 21, 39, 40, 21, 31, 38, 40, 38, 39, 22, 44, 21, 44, 39, 45, 48, 49, 53, 53, 21, 55, 63, 45, 75, 75, 75, 75, 76, 241, 76, 76, 76, 76, 78, 78, 79, 79, 79, 90, 90, 122, 76, 102, 102, 122, 63, 48, 77, 55, 77, 49, 76, 77, 77, 77, 77, 130, 130, 130, 130, 131, 131, 131, 131, 132, 132, 132, 132, 130, 133, 133, 134, 134, 134, 150, 150, 240, 172, 130, 172, 236, 235, 172, 172, 172, 172, 202, 202, 202, 202, 203, 203, 203, 203, 249, 249, 249, 249, 250, 250, 250, 250, 251, 251, 251, 251, 252, 252, 253, 253, 253, 254, 254, 255, 255, 255, 232, 231, 230, 229, 228, 227, 226, 221, 219, 218, 217, 216, 214, 213, 212, 204, 201, 200, 199, 197, 196, 195, 194, 191, 190, 189, 188, 185, 184, 183, 182, 181, 180, 178, 177, 176, 174, 173, 171, 170, 169, 166, 165, 164, 163, 162, 161, 160, 159, 158, 156, 155, 154, 153, 152, 151, 149, 148, 147, 146, 145, 143, 141, 139, 138, 126, 125, 124, 123, 121, 120, 119, 118, 117, 116, 115, 113, 111, 110, 109, 108, 107, 106, 105, 104, 103, 101, 98, 97, 96, 86, 85, 84, 83, 66, 65, 58, 57, 52, 47, 46, 43, 42, 35, 34, 33, 23, 19, 10, 9, 7, 5, 3, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248, 248];
+  Skew.YY_JAM_STATE = 248;
+  Skew.YY_ACCEPT_LENGTH = 249;
   Skew.REMOVE_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.DOT, 0), Skew.TokenKind.NEWLINE, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.RIGHT_BRACKET, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0);
   Skew.FORBID_XML_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.CHARACTER, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DEF, 0), Skew.TokenKind.DOUBLE, 0), Skew.TokenKind.DYNAMIC, 0), Skew.TokenKind.STRING_INTERPOLATION_END, 0), Skew.TokenKind.FALSE, 0), Skew.TokenKind.IDENTIFIER, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INT, 0), Skew.TokenKind.INT_BINARY, 0), Skew.TokenKind.INT_HEX, 0), Skew.TokenKind.INT_OCTAL, 0), Skew.TokenKind.NULL, 0), Skew.TokenKind.OVER, 0), Skew.TokenKind.RIGHT_BRACE, 0), Skew.TokenKind.RIGHT_BRACKET, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0), Skew.TokenKind.STRING, 0), Skew.TokenKind.SUPER, 0), Skew.TokenKind.TRUE, 0);
   Skew.NATIVE_LIBRARY = '\nconst RELEASE = false\n\nenum Target {\n  NONE\n  CPLUSPLUS\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @alwaysinline\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @neverinline\ndef @prefer\ndef @rename(name string)\ndef @skip\ndef @spreads\n\n@spreads {\n  def @using(name string) # For use with C#\n  def @include(name string) # For use with C++\n}\n\n@import if TARGET == .NONE\n@skip if RELEASE\ndef assert(truth bool)\n\n@import if TARGET == .NONE\nnamespace Math {\n  @prefer\n  def abs(x double) double\n  def abs(x int) int\n\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n\n  def sin(x double) double\n  def cos(x double) double\n  def tan(x double) double\n\n  def floor(x double) double\n  def ceil(x double) double\n  def round(x double) double\n\n  def exp(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def sqrt(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  def E double        { return 2.718281828459045 }\n  def INFINITY double { return 1 / 0.0 }\n  def NAN double      { return 0 / 0.0 }\n  def PI double       { return 3.141592653589793 }\n  def SQRT_2 double   { return 2 ** 0.5 }\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def - int\n  def ~ int\n\n  def +(x int) int\n  def -(x int) int\n  def *(x int) int\n  def /(x int) int\n  def %(x int) int\n  def **(x int) int\n  def <=>(x int) int\n  def <<(x int) int\n  def >>(x int) int\n  def >>>(x int) int\n  def &(x int) int\n  def |(x int) int\n  def ^(x int) int\n\n  def <<=(x int) int\n  def >>=(x int) int\n  def &=(x int) int\n  def |=(x int) int\n  def ^=(x int) int\n\n  if TARGET != .CSHARP {\n    def >>>=(x int)\n  }\n\n  if TARGET != .JAVASCRIPT {\n    def ++ int\n    def -- int\n\n    def %=(x int) int\n    def +=(x int) int\n    def -=(x int) int\n    def *=(x int) int\n    def /=(x int) int\n  }\n\n  def toString string\n}\n\n@import\nclass double {\n  def + double\n  def ++ double\n  def - double\n  def -- double\n\n  def *(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def **(x double) double\n  def <=>(x double) int\n\n  def *=(x double) double\n  def +=(x double) double\n  def -=(x double) double\n  def /=(x double) double\n\n  def isFinite bool\n  def isNaN bool\n\n  def toString string\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string) string\n  def <=>(x string) int\n\n  def count int\n  def in(x string) bool\n  def indexOf(x string) int\n  def lastIndexOf(x string) int\n  def startsWith(x string) bool\n  def endsWith(x string) bool\n\n  def [](x int) int\n  def get(x int) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n\n  def split(x string) List<string>\n  def join(x List<string>) string\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n\n  def toLowerCase string\n  def toUpperCase string\n  def toString string { return self }\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .NONE\nclass StringBuilder {\n  def new\n  def append(x string)\n  def toString string\n}\n\n@import\nclass List<T> {\n  def new\n  def [...](x T) List<T>\n\n  def [](x int) T\n  def []=(x int, y T) T\n\n  def count int\n  def isEmpty bool\n  def resize(count int, defaultValue T)\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n  def appendOne(x T)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeIf(x fn(T) bool)\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n\n  def takeFirst T\n  def takeLast T\n  def takeAt(x int) T\n  def takeRange(start int, end int) List<T>\n\n  def first T\n  def first=(x T) T { return self[0] = x }\n  def last T\n  def last=(x T) T { return self[count - 1] = x }\n\n  def in(x T) bool\n  def indexOf(x T) int\n  def lastIndexOf(x T) int\n\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def clone List<T>\n  def each(x fn(T))\n  def equals(x List<T>) bool\n  def filter(x fn(T) bool) List<T>\n  def map<R>(x fn(T) R) List<R>\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n}\n\n@import\nclass StringMap<T> {\n  def new\n  def {...}(key string, value T) StringMap<T>\n\n  def [](key string) T\n  def []=(key string, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<string>\n  def values List<T>\n\n  def clone StringMap<T>\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def remove(key string)\n}\n\n@import\nclass IntMap<T> {\n  def new\n  def {...}(key int, value T) IntMap<T>\n\n  def [](key int) T\n  def []=(key int, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<int>\n  def values List<T>\n\n  def clone IntMap<T>\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def remove(key int)\n}\n\nclass Box<T> {\n  var value T\n}\n\n################################################################################\n# Implementations\n\nclass int {\n  def **(x int) int {\n    var y = self\n    var z = x < 0 ? 0 : 1\n    while x > 0 {\n      if (x & 1) != 0 { z *= y }\n      x >>= 1\n      y *= y\n    }\n    return z\n  }\n\n  def <=>(x int) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass double {\n  def **(x double) double {\n    return Math.pow(self, x)\n  }\n\n  def <=>(x double) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass List {\n  def resize(count int, defaultValue T) {\n    while self.count < count { append(defaultValue) }\n    while self.count > count { removeLast }\n  }\n\n  def removeAll(value T) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if self[i] != value {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def removeDuplicates {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      var found = false\n      var value = self[i]\n      for j in 0..i {\n        if value == self[j] {\n          found = true\n          break\n        }\n      }\n      if !found {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def shuffle {\n    var n = count\n    for i in 0..n - 1 {\n      swap(i, i + ((Math.random * (n - i)) as int))\n    }\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n}\n';
@@ -21013,7 +21108,7 @@
   Skew.Type._nextID = 0;
   Skew.Environment._nextID = 0;
   Skew.in_PassKind._strings = ['EMITTING', 'PARSING', 'LEXING', 'CALL_GRAPH', 'FOLDING', 'GLOBALIZING', 'INLINING', 'INTERFACE_REMOVAL', 'LAMBDA_LIFTING', 'MERGING', 'MOTION', 'RENAMING', 'RESOLVING'];
-  Skew.in_NodeKind._strings = ['ANNOTATION', 'BLOCK', 'CASE', 'CATCH', 'VARIABLE', 'BREAK', 'CONTINUE', 'EXPRESSION', 'FOR', 'FOREACH', 'IF', 'RETURN', 'SWITCH', 'THROW', 'TRY', 'VARIABLES', 'WHILE', 'ASSIGN_INDEX', 'CALL', 'CAST', 'CONSTANT', 'DOT', 'HOOK', 'INDEX', 'INITIALIZER_LIST', 'INITIALIZER_MAP', 'LAMBDA', 'LAMBDA_TYPE', 'NAME', 'NULL', 'NULL_DOT', 'PAIR', 'PARAMETERIZE', 'SEQUENCE', 'STRING_INTERPOLATION', 'SUPER', 'TYPE', 'TYPE_CHECK', 'XML', 'COMPLEMENT', 'NEGATIVE', 'NOT', 'POSITIVE', 'POSTFIX_DECREMENT', 'POSTFIX_INCREMENT', 'PREFIX_DECREMENT', 'PREFIX_INCREMENT', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'IN', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'NULL_JOIN', 'POWER', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'UNSIGNED_SHIFT_RIGHT', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_NULL', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_SUBTRACT', 'ASSIGN_UNSIGNED_SHIFT_RIGHT'];
+  Skew.in_NodeKind._strings = ['ANNOTATION', 'ATTRIBUTE', 'BLOCK', 'CASE', 'CATCH', 'VARIABLE', 'BREAK', 'CONTINUE', 'EXPRESSION', 'FOR', 'FOREACH', 'IF', 'RETURN', 'SWITCH', 'THROW', 'TRY', 'VARIABLES', 'WHILE', 'ASSIGN_INDEX', 'CALL', 'CAST', 'CONSTANT', 'DOT', 'HOOK', 'INDEX', 'INITIALIZER_LIST', 'INITIALIZER_MAP', 'LAMBDA', 'LAMBDA_TYPE', 'NAME', 'NULL', 'NULL_DOT', 'PAIR', 'PARAMETERIZE', 'SEQUENCE', 'STRING_INTERPOLATION', 'SUPER', 'TYPE', 'TYPE_CHECK', 'XML', 'COMPLEMENT', 'NEGATIVE', 'NOT', 'POSITIVE', 'POSTFIX_DECREMENT', 'POSTFIX_INCREMENT', 'PREFIX_DECREMENT', 'PREFIX_INCREMENT', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'IN', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'NULL_JOIN', 'POWER', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'UNSIGNED_SHIFT_RIGHT', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_NULL', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_SUBTRACT', 'ASSIGN_UNSIGNED_SHIFT_RIGHT'];
   Skew.in_SymbolKind._strings = ['PARAMETER_FUNCTION', 'PARAMETER_OBJECT', 'OBJECT_CLASS', 'OBJECT_ENUM', 'OBJECT_GLOBAL', 'OBJECT_INTERFACE', 'OBJECT_NAMESPACE', 'OBJECT_WRAPPED', 'FUNCTION_ANNOTATION', 'FUNCTION_CONSTRUCTOR', 'FUNCTION_GLOBAL', 'FUNCTION_INSTANCE', 'FUNCTION_LOCAL', 'OVERLOADED_ANNOTATION', 'OVERLOADED_GLOBAL', 'OVERLOADED_INSTANCE', 'VARIABLE_ARGUMENT', 'VARIABLE_ENUM', 'VARIABLE_GLOBAL', 'VARIABLE_INSTANCE', 'VARIABLE_LOCAL'];
   Skew.in_TokenKind._toString = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.COMMENT, 'comment'), Skew.TokenKind.NEWLINE, '"\\n"'), Skew.TokenKind.WHITESPACE, 'whitespace'), Skew.TokenKind.AS, '"as"'), Skew.TokenKind.BREAK, '"break"'), Skew.TokenKind.CASE, '"case"'), Skew.TokenKind.CATCH, '"catch"'), Skew.TokenKind.CLASS, '"class"'), Skew.TokenKind.CONST, '"const"'), Skew.TokenKind.CONTINUE, '"continue"'), Skew.TokenKind.DEF, '"def"'), Skew.TokenKind.DEFAULT, '"default"'), Skew.TokenKind.DYNAMIC, '"dynamic"'), Skew.TokenKind.ELSE, '"else"'), Skew.TokenKind.ENUM, '"enum"'), Skew.TokenKind.FALSE, '"false"'), Skew.TokenKind.FINALLY, '"finally"'), Skew.TokenKind.FOR, '"for"'), Skew.TokenKind.IF, '"if"'), Skew.TokenKind.IN, '"in"'), Skew.TokenKind.INTERFACE, '"interface"'), Skew.TokenKind.IS, '"is"'), Skew.TokenKind.NAMESPACE, '"namespace"'), Skew.TokenKind.NULL, '"null"'), Skew.TokenKind.OVER, '"over"'), Skew.TokenKind.RETURN, '"return"'), Skew.TokenKind.SUPER, '"super"'), Skew.TokenKind.SWITCH, '"switch"'), Skew.TokenKind.THROW, '"throw"'), Skew.TokenKind.TRUE, '"true"'), Skew.TokenKind.TRY, '"try"'), Skew.TokenKind.VAR, '"var"'), Skew.TokenKind.WHILE, '"while"'), Skew.TokenKind.ARROW, '"=>"'), Skew.TokenKind.ASSIGN, '"="'), Skew.TokenKind.ASSIGN_BITWISE_AND, '"&="'), Skew.TokenKind.ASSIGN_BITWISE_OR, '"|="'), Skew.TokenKind.ASSIGN_BITWISE_XOR, '"^="'), Skew.TokenKind.ASSIGN_DIVIDE, '"/="'), Skew.TokenKind.ASSIGN_INDEX, '"[]="'), Skew.TokenKind.ASSIGN_MINUS, '"-="'), Skew.TokenKind.ASSIGN_MULTIPLY, '"*="'), Skew.TokenKind.ASSIGN_PLUS, '"+="'), Skew.TokenKind.ASSIGN_POWER, '"**="'), Skew.TokenKind.ASSIGN_REMAINDER, '"%="'), Skew.TokenKind.ASSIGN_SHIFT_LEFT, '"<<="'), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, '">>="'), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, '">>>="'), Skew.TokenKind.BITWISE_AND, '"&"'), Skew.TokenKind.BITWISE_OR, '"|"'), Skew.TokenKind.BITWISE_XOR, '"^"'), Skew.TokenKind.COLON, '":"'), Skew.TokenKind.COMMA, '","'), Skew.TokenKind.COMPARE, '"<=>"'), Skew.TokenKind.DECREMENT, '"--"'), Skew.TokenKind.DIVIDE, '"/"'), Skew.TokenKind.DOT, '"."'), Skew.TokenKind.DOT_DOT, '".."'), Skew.TokenKind.DOUBLE_COLON, '"::"'), Skew.TokenKind.EQUAL, '"=="'), Skew.TokenKind.GREATER_THAN, '">"'), Skew.TokenKind.GREATER_THAN_OR_EQUAL, '">="'), Skew.TokenKind.INCREMENT, '"++"'), Skew.TokenKind.INDEX, '"[]"'), Skew.TokenKind.LEFT_BRACE, '"{"'), Skew.TokenKind.LEFT_BRACKET, '"["'), Skew.TokenKind.LEFT_PARENTHESIS, '"("'), Skew.TokenKind.LESS_THAN, '"<"'), Skew.TokenKind.LESS_THAN_OR_EQUAL, '"<="'), Skew.TokenKind.LIST, '"[...]"'), Skew.TokenKind.LIST_NEW, '"[new]"'), Skew.TokenKind.LOGICAL_AND, '"&&"'), Skew.TokenKind.LOGICAL_OR, '"||"'), Skew.TokenKind.MINUS, '"-"'), Skew.TokenKind.MULTIPLY, '"*"'), Skew.TokenKind.NOT, '"!"'), Skew.TokenKind.NOT_EQUAL, '"!="'), Skew.TokenKind.NULL_DOT, '"?."'), Skew.TokenKind.NULL_JOIN, '"??"'), Skew.TokenKind.PLUS, '"+"'), Skew.TokenKind.POWER, '"**"'), Skew.TokenKind.QUESTION_MARK, '"?"'), Skew.TokenKind.REMAINDER, '"%"'), Skew.TokenKind.RIGHT_BRACE, '"}"'), Skew.TokenKind.RIGHT_BRACKET, '"]"'), Skew.TokenKind.RIGHT_PARENTHESIS, '")"'), Skew.TokenKind.SEMICOLON, '";"'), Skew.TokenKind.SET, '"{...}"'), Skew.TokenKind.SET_NEW, '"{new}"'), Skew.TokenKind.SHIFT_LEFT, '"<<"'), Skew.TokenKind.SHIFT_RIGHT, '">>"'), Skew.TokenKind.TILDE, '"~"'), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, '">>>"'), Skew.TokenKind.ANNOTATION, 'annotation'), Skew.TokenKind.CHARACTER, 'character'), Skew.TokenKind.DOUBLE, 'double'), Skew.TokenKind.END_OF_FILE, 'end of input'), Skew.TokenKind.IDENTIFIER, 'identifier'), Skew.TokenKind.INT, 'integer'), Skew.TokenKind.INT_BINARY, 'integer'), Skew.TokenKind.INT_HEX, 'integer'), Skew.TokenKind.INT_OCTAL, 'integer'), Skew.TokenKind.STRING, 'string'), Skew.TokenKind.PARAMETER_LIST_END, '">"'), Skew.TokenKind.PARAMETER_LIST_START, '"<"'), Skew.TokenKind.XML_END, '">"'), Skew.TokenKind.XML_END_EMPTY, '"/>"'), Skew.TokenKind.XML_START, '"<"'), Skew.TokenKind.XML_START_CLOSE, '"</"'), Skew.TokenKind.STRING_INTERPOLATION_CONTINUE, 'string interpolation'), Skew.TokenKind.STRING_INTERPOLATION_END, 'string interpolation'), Skew.TokenKind.STRING_INTERPOLATION_START, 'string interpolation');
   Terminal.colorToEscapeCode = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Terminal.Color.DEFAULT, 0), Terminal.Color.BOLD, 1), Terminal.Color.GRAY, 90), Terminal.Color.RED, 91), Terminal.Color.GREEN, 92), Terminal.Color.YELLOW, 93), Terminal.Color.BLUE, 94), Terminal.Color.MAGENTA, 95), Terminal.Color.CYAN, 96);
