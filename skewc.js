@@ -18283,6 +18283,8 @@
     for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
       this._resolveAsParameterizedExpressionWithTypeContext(child, scope, child.nextSibling() == null ? context : null);
     }
+
+    node.resolvedType = node.lastChild().resolvedType;
   };
 
   Skew.Resolving.Resolver.prototype._resolveStringInterpolation = function(node, scope) {

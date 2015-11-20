@@ -6485,6 +6485,36 @@ var foo2 = <Foo>1</Foo>
                 ^
 ")
 
+# Test XML literal return types
+test("
+var foo = <Foo/>.foo
+var foo2 = <Foo></Foo>.foo
+var foo3 = <Foo><Foo/></Foo>.foo
+var foo4 = <Foo foo=1/>.foo
+
+class Foo {
+  def <>...</>(x Foo) Foo {
+    return self
+  }
+}
+", "
+<stdin>:1:18: error: \"foo\" is not declared on type \"Foo\"
+var foo = <Foo/>.foo
+                 ~~~
+<stdin>:2:24: error: \"foo\" is not declared on type \"Foo\"
+var foo2 = <Foo></Foo>.foo
+                       ~~~
+<stdin>:3:30: error: \"foo\" is not declared on type \"Foo\"
+var foo3 = <Foo><Foo/></Foo>.foo
+                             ~~~
+<stdin>:4:17: error: \"foo\" is not declared on type \"Foo\"
+var foo4 = <Foo foo=1/>.foo
+                ~~~
+<stdin>:4:25: error: \"foo\" is not declared on type \"Foo\"
+var foo4 = <Foo foo=1/>.foo
+                        ~~~
+")
+
 # Test XML tag mismatch
 test("
 var foo = <Foo></Foo.Bar>

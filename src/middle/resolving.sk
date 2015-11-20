@@ -2759,6 +2759,7 @@ namespace Skew.Resolving {
       for child = node.firstChild; child != null; child = child.nextSibling {
         _resolveAsParameterizedExpressionWithTypeContext(child, scope, child.nextSibling == null ? context : null)
       }
+      node.resolvedType = node.lastChild.resolvedType
     }
 
     def _resolveStringInterpolation(node Node, scope Scope) {
