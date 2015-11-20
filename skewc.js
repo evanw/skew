@@ -11018,6 +11018,7 @@
       }
 
       parent.appendChild(value);
+      context.skipWhitespace();
       isFirst = false;
     }
 

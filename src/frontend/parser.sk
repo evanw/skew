@@ -1111,6 +1111,7 @@ namespace Skew.Parsing {
         return false
       }
       parent.appendChild(value)
+      context.skipWhitespace
       isFirst = false
     }
     return true
