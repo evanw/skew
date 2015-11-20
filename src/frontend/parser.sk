@@ -887,7 +887,7 @@ namespace Skew.Parsing {
         context.next
       } else if kind == .FUNCTION_GLOBAL && context.eat(.ANNOTATION) {
         kind = .FUNCTION_ANNOTATION
-      } else if context.eat(.LIST_NEW) || context.eat(.SET_NEW) || context.eat(.XML_NEW) {
+      } else if context.eat(.LIST_NEW) || context.eat(.SET_NEW) {
         if kind == .FUNCTION_INSTANCE {
           kind = .FUNCTION_CONSTRUCTOR
         }

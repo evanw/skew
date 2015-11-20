@@ -2927,19 +2927,21 @@ test("
 @export
 var foo = <Foo/>
 
-class Foo {}
+class Foo {
+  def new(x int) {}
+}
 
 namespace Foo {
-  def <new> Foo {
-    return Foo.new
+  def new Foo {
+    return Foo.new(0)
   }
 }
 ", "
 (function() {
-  function Foo() {
+  function Foo(x) {
   }
 
-  foo = new Foo();
+  foo = new Foo(0);
 })();
 ").js.inlineAllFunctions
 
@@ -2950,7 +2952,6 @@ var foo = <Foo foo=0 bar=<Foo bar=<Foo/> foo=1><Foo foo=2/></Foo>/>
 
 class Foo {
   var foo = 0
-  def <new> {}
   def <>...</>(x Foo) Foo { return self }
   def bar=(x Foo) {}
 }
