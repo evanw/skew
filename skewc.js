@@ -7308,6 +7308,10 @@
     return (this.flags & Skew.Node.WAS_ASSIGN_NULL) != 0;
   };
 
+  Skew.Node.prototype.isInitializerExpansion = function() {
+    return (this.flags & Skew.Node.IS_INITIALIZER_EXPANSION) != 0;
+  };
+
   // This is cheaper than childCount == 0
   Skew.Node.prototype.hasChildren = function() {
     return this._firstChild != null;
@@ -9470,6 +9474,14 @@
 
   Skew.Log.prototype.semanticErrorInitializerTypeInferenceFailed = function(range) {
     this.error(range, 'Cannot infer a type for this literal');
+  };
+
+  Skew.Log.prototype.semanticErrorInitializerRecursiveExpansion = function(range, newRange) {
+    this.error(range, 'Attempting to resolve this literal led to recursive expansion');
+
+    if (newRange != null) {
+      this.note(newRange, 'The constructor that was called recursively is here');
+    }
   };
 
   Skew.Log.prototype.semanticErrorDuplicateOverload = function(range, name, previous) {
@@ -17709,7 +17721,7 @@
 
   Skew.Resolving.Resolver.prototype._resolveInitializerWithContext = function(node, scope, context) {
     var isList = node.kind == Skew.NodeKind.INITIALIZER_LIST;
-    var create = this._findMember(context, isList ? '[new]' : '{new}');
+    var $new = this._findMember(context, isList ? '[new]' : '{new}');
     var add = this._findMember(context, isList ? '[...]' : '{...}');
 
     // Special-case imported literals to prevent an infinite loop for list literals
@@ -17737,7 +17749,7 @@
 
     // Use simple call chaining when there's an add operator present
     if (add != null) {
-      var chain = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(create != null ? create.name : 'new')).appendChild(new Skew.Node(Skew.NodeKind.TYPE).withType(context).withRange(node.range)).withRange(node.range);
+      var chain = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent($new != null ? $new.name : 'new')).appendChild(new Skew.Node(Skew.NodeKind.TYPE).withType(context).withRange(node.range)).withRange(node.range);
 
       while (node.hasChildren()) {
         var child1 = node.firstChild().remove();
@@ -17759,17 +17771,36 @@
     }
 
     // Make sure there's a constructor to call
-    if (create == null) {
-      this._log.semanticErrorInitializerTypeInferenceFailed(node.range);
+    if ($new == null) {
+      // Avoid emitting an extra error when the constructor doesn't have the right type:
+      //
+      //   def main Foo {
+      //     return []
+      //   }
+      //
+      //   class Foo {
+      //     def [new](x int) {}
+      //   }
+      //
+      if (!node.isInitializerExpansion()) {
+        this._log.semanticErrorInitializerTypeInferenceFailed(node.range);
+      }
+
       return false;
     }
 
-    var dot1 = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(create.name)).appendChild(new Skew.Node(Skew.NodeKind.TYPE).withType(context).withRange(node.range)).withRange(node.range);
+    // Avoid infinite expansion
+    if (node.isInitializerExpansion()) {
+      this._log.semanticErrorInitializerRecursiveExpansion(node.range, $new.range);
+      return false;
+    }
+
+    var dot1 = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent($new.name)).appendChild(new Skew.Node(Skew.NodeKind.TYPE).withType(context).withRange(node.range)).withRange(node.range);
 
     // Call the initializer constructor
     if (node.kind == Skew.NodeKind.INITIALIZER_MAP) {
-      var firstValues = new Skew.Node(Skew.NodeKind.INITIALIZER_LIST);
-      var secondValues = new Skew.Node(Skew.NodeKind.INITIALIZER_LIST);
+      var firstValues = new Skew.Node(Skew.NodeKind.INITIALIZER_LIST).withFlags(Skew.Node.IS_INITIALIZER_EXPANSION).withRange(node.range);
+      var secondValues = new Skew.Node(Skew.NodeKind.INITIALIZER_LIST).withFlags(Skew.Node.IS_INITIALIZER_EXPANSION).withRange(node.range);
 
       for (var child2 = node.firstChild(); child2 != null; child2 = child2.nextSibling()) {
         var first = child2.firstValue();
@@ -17782,7 +17813,8 @@
     }
 
     else {
-      node.become(Skew.Node.createCall(dot1).withRange(node.range).appendChild(new Skew.Node(Skew.NodeKind.INITIALIZER_LIST).appendChildrenFrom(node)));
+      var values = new Skew.Node(Skew.NodeKind.INITIALIZER_LIST).withFlags(Skew.Node.IS_INITIALIZER_EXPANSION).withRange(node.range);
+      node.become(Skew.Node.createCall(dot1).withRange(node.range).appendChild(values.appendChildrenFrom(node)));
     }
 
     this._resolveAsParameterizedExpressionWithConversion(node, scope, context);
@@ -20686,6 +20718,9 @@
 
   // This flag marks nodes that were converted from ASSIGN_NULL to ASSIGN nodes.
   Skew.Node.WAS_ASSIGN_NULL = 1 << 4;
+
+  // This flag marks list nodes that help implement initializer expressions.
+  Skew.Node.IS_INITIALIZER_EXPANSION = 1 << 5;
   Skew.Node._nextID = 0;
 
   // Flags

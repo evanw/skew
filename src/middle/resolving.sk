@@ -2437,7 +2437,7 @@ namespace Skew.Resolving {
 
     def _resolveInitializerWithContext(node Node, scope Scope, context Type) bool {
       var isList = node.kind == .INITIALIZER_LIST
-      var create = _findMember(context, isList ? "[new]" : "{new}")
+      var new = _findMember(context, isList ? "[new]" : "{new}")
       var add = _findMember(context, isList ? "[...]" : "{...}")
 
       # Special-case imported literals to prevent an infinite loop for list literals
@@ -2460,7 +2460,7 @@ namespace Skew.Resolving {
 
       # Use simple call chaining when there's an add operator present
       if add != null {
-        var chain = Node.createDot(Node.createType(context).withRange(node.range), create != null ? create.name : "new").withRange(node.range)
+        var chain = Node.createDot(Node.createType(context).withRange(node.range), new != null ? new.name : "new").withRange(node.range)
         while node.hasChildren {
           var child = node.firstChild.remove
           var dot = Node.createDot(chain, add.name).withRange(child.range)
@@ -2477,17 +2477,35 @@ namespace Skew.Resolving {
       }
 
       # Make sure there's a constructor to call
-      if create == null {
-        _log.semanticErrorInitializerTypeInferenceFailed(node.range)
+      if new == null {
+        # Avoid emitting an extra error when the constructor doesn't have the right type:
+        #
+        #   def main Foo {
+        #     return []
+        #   }
+        #
+        #   class Foo {
+        #     def [new](x int) {}
+        #   }
+        #
+        if !node.isInitializerExpansion {
+          _log.semanticErrorInitializerTypeInferenceFailed(node.range)
+        }
         return false
       }
 
-      var dot = Node.createDot(Node.createType(context).withRange(node.range), create.name).withRange(node.range)
+      # Avoid infinite expansion
+      if node.isInitializerExpansion {
+        _log.semanticErrorInitializerRecursiveExpansion(node.range, new.range)
+        return false
+      }
+
+      var dot = Node.createDot(Node.createType(context).withRange(node.range), new.name).withRange(node.range)
 
       # Call the initializer constructor
       if node.kind == .INITIALIZER_MAP {
-        var firstValues = Node.createList
-        var secondValues = Node.createList
+        var firstValues = Node.createList.withFlags(Node.IS_INITIALIZER_EXPANSION).withRange(node.range)
+        var secondValues = Node.createList.withFlags(Node.IS_INITIALIZER_EXPANSION).withRange(node.range)
         for child = node.firstChild; child != null; child = child.nextSibling {
           var first = child.firstValue
           var second = child.secondValue
@@ -2496,7 +2514,8 @@ namespace Skew.Resolving {
         }
         node.become(Node.createCall(dot).withRange(node.range).appendChild(firstValues).appendChild(secondValues))
       } else {
-        node.become(Node.createCall(dot).withRange(node.range).appendChild(Node.createList.appendChildrenFrom(node)))
+        var values = Node.createList.withFlags(Node.IS_INITIALIZER_EXPANSION).withRange(node.range)
+        node.become(Node.createCall(dot).withRange(node.range).appendChild(values.appendChildrenFrom(node)))
       }
       _resolveAsParameterizedExpressionWithConversion(node, scope, context)
       return true

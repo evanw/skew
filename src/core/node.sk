@@ -178,6 +178,9 @@ namespace Skew {
 
     # This flag marks nodes that were converted from ASSIGN_NULL to ASSIGN nodes.
     const WAS_ASSIGN_NULL = 1 << 4
+
+    # This flag marks list nodes that help implement initializer expressions.
+    const IS_INITIALIZER_EXPANSION = 1 << 5
   }
 
   # Nodes represent executable code (variable initializers and function bodies)
@@ -297,6 +300,10 @@ namespace Skew {
 
     def wasAssignNull bool {
       return (flags & WAS_ASSIGN_NULL) != 0
+    }
+
+    def isInitializerExpansion bool {
+      return (flags & IS_INITIALIZER_EXPANSION) != 0
     }
 
     # This is cheaper than childCount == 0

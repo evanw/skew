@@ -430,6 +430,13 @@ namespace Skew {
       error(range, "Cannot infer a type for this literal")
     }
 
+    def semanticErrorInitializerRecursiveExpansion(range Range, newRange Range) {
+      error(range, "Attempting to resolve this literal led to recursive expansion")
+      if newRange != null {
+        note(newRange, "The constructor that was called recursively is here")
+      }
+    }
+
     def semanticErrorDuplicateOverload(range Range, name string, previous Range) {
       error(range, "Duplicate overloaded function \"\(name)\"")
       if previous != null {

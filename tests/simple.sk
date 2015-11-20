@@ -3387,6 +3387,60 @@ def main {
       ~~~
 ")
 
+# Check list literal error messages
+test("
+def main Foo {
+  return []
+}
+
+class Foo {
+  def [new](x int) {}
+}
+", "
+<stdin>:6:13: error: Expected argument \"x\" to be of type \"List<T>\" instead of type \"int\"
+  def [new](x int) {}
+            ^
+")
+
+# Check map literal error messages
+test("
+def main Foo {
+  return {}
+}
+
+class Foo {
+  def {new}(x int, y int) {}
+}
+", "
+<stdin>:6:13: error: Expected argument \"x\" to be of type \"List<T>\" instead of type \"int\"
+  def {new}(x int, y int) {}
+            ^
+<stdin>:6:20: error: Expected argument \"y\" to be of type \"List<T>\" instead of type \"int\"
+  def {new}(x int, y int) {}
+                   ^
+")
+
+# Check for stack overflow due to infinite list literal recursion
+test("
+def main Foo {
+  return []
+}
+
+class Foo {
+  def [new](x Foo) {}
+}
+", "
+<stdin>:6:13: error: Expected argument \"x\" to be of type \"List<T>\" instead of type \"Foo\"
+  def [new](x Foo) {}
+            ^
+<stdin>:2:10: error: Attempting to resolve this literal led to recursive expansion
+  return []
+         ~~
+<stdin>:6:7: note: The constructor that was called recursively is here
+  def [new](x Foo) {}
+      ~~~~~
+")
+
 test("
 class Foo {
   var ivar = 0
