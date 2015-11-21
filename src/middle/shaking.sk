@@ -138,8 +138,8 @@ namespace Skew {
       for function in symbol.functions {
         _changeContext(function)
 
-        # Interface functions shouldn't cause interfaces to be emitted for dynamically-typed targets
-        if _mode != .IGNORE_TYPES || symbol.kind != .OBJECT_INTERFACE || function.kind != .FUNCTION_INSTANCE {
+        # Instance functions shouldn't cause their instance type to be emitted for dynamically-typed targets
+        if _mode != .IGNORE_TYPES || function.kind != .FUNCTION_INSTANCE {
           _recordUsage(symbol)
         }
 
@@ -153,7 +153,13 @@ namespace Skew {
 
       for variable in symbol.variables {
         _changeContext(variable)
-        _recordUsage(symbol)
+
+        # Instance variables shouldn't require the class to be present because
+        # accessing an instance variable already requires a constructed instance
+        if variable.kind != .VARIABLE_INSTANCE {
+          _recordUsage(symbol)
+        }
+
         _visitVariable(variable)
       }
     }

@@ -2805,8 +2805,6 @@ def main(foo Foo) {
       foo.foo;
     }
   };
-
-  var Foo = {};
 })();
 ").js
 
@@ -2974,6 +2972,32 @@ class Foo {
   foo = (ref = new Foo(), ref.foo = 0, ref.setBar((ref1 = new Foo(), ref1.setBar(new Foo()), ref1.foo = 1, ref1.append((ref2 = new Foo(), ref2.foo = 2, ref2)))), ref);
 })();
 ").js.inlineAllFunctions
+
+# Unused interface implementations should not be emitted
+test("
+interface IFoo {
+  def foo
+}
+
+class Foo :: IFoo {
+  const _foo fn(Foo)
+
+  def foo {
+    _foo(self)
+  }
+}
+
+@export
+def test(foo Foo) {
+  foo.foo
+}
+", "
+(function() {
+  test = function(foo) {
+    foo.foo();
+  };
+})();
+").js
 
   }
 }

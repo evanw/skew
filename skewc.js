@@ -19331,8 +19331,8 @@
       var $function = list1[i1];
       this._changeContext($function);
 
-      // Interface functions shouldn't cause interfaces to be emitted for dynamically-typed targets
-      if (this._mode != Skew.ShakingMode.IGNORE_TYPES || symbol.kind != Skew.SymbolKind.OBJECT_INTERFACE || $function.kind != Skew.SymbolKind.FUNCTION_INSTANCE) {
+      // Instance functions shouldn't cause their instance type to be emitted for dynamically-typed targets
+      if (this._mode != Skew.ShakingMode.IGNORE_TYPES || $function.kind != Skew.SymbolKind.FUNCTION_INSTANCE) {
         this._recordUsage(symbol);
       }
 
@@ -19347,7 +19347,13 @@
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
       var variable = list2[i2];
       this._changeContext(variable);
-      this._recordUsage(symbol);
+
+      // Instance variables shouldn't require the class to be present because
+      // accessing an instance variable already requires a constructed instance
+      if (variable.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
+        this._recordUsage(symbol);
+      }
+
       this._visitVariable(variable);
     }
   };

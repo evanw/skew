@@ -50,8 +50,6 @@ class Foo {
     var a = null, b = null;
     return '0' + 0 + 'false' + a + b.c();
   };
-
-  var d = {};
 })();
 ").jsMangle.foldAllConstants
 
@@ -2044,11 +2042,9 @@ def main(foo Foo, bar Bar) int {
 }
 ", "
 (function() {
-  main = function(a, c) {
+  main = function(a, b) {
     return a.a + 2 | 0;
   };
-
-  var b = {};
 })();
 ").jsMangle.foldAllConstants
 
@@ -2225,6 +2221,36 @@ def test(x Foo) Foo {
   }
 })();
 ").jsMangle
+
+# Interface removal with an instance variable shouldn't prevent dead code stripping a class constructor
+test("
+interface IFoo {
+  def foo
+}
+
+class Foo :: IFoo {
+  const _foo fn(Foo)
+
+  def foo {
+    _foo(self)
+  }
+}
+
+@export
+def test(foo Foo) {
+  foo.foo
+}
+", "
+(function() {
+  test = function(a) {
+    b(a);
+  };
+
+  function b(a) {
+    a.a(a);
+  }
+})();
+").jsMangle.globalizeAllFunctions
 
   }
 }

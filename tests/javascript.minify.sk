@@ -224,41 +224,5 @@ def main(x double) double {
 (function(){main=function(x){return x- -4+x+-4}})();
 ").jsMinify.foldAllConstants
 
-# Check for a bug that generated invalid JavaScript when a class was emitted without a constructor
-test("
-
-interface IFooA {
-  def foo
-}
-
-class FooA :: IFooA {
-  const _foo fn(FooA)
-  def foo { _foo(self) }
-}
-
-interface IFooB {
-  def foo
-}
-
-class FooB :: IFooB {
-  const _foo fn(FooB)
-  def foo { _foo(self) }
-}
-
-class Foo {
-  def foo(a IFooA, b IFooB) {
-    a.foo
-    b.foo
-  }
-}
-
-@export
-def test(foo Foo) {
-  foo.foo(null, null)
-}
-", "
-(function(){test=function(a){d(a,null,null)};function b(a){a.a(a)}function c(a){a.a(a)}function d(h,a,e){b(a),c(e)}var f={};var g={}})();
-").jsMinify.jsMangle.globalizeAllFunctions
-
   }
 }
