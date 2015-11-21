@@ -50,6 +50,7 @@ class Foo {
     var a = null, b = null;
     return '0' + 0 + 'false' + a + b.c();
   };
+
   var d = {};
 })();
 ").jsMangle.foldAllConstants
@@ -1652,8 +1653,8 @@ def main {
   main = function() {
     foo(bar), foo(bar instanceof Function), foo(f(bar)), foo(g(bar)), foo(e(bar)), foo(e(bar)), foo(e(bar)), foo(h(bar)), foo(bar instanceof b), foo(bar instanceof Dynamic);
   };
-  var b = {};
 
+  var b = {};
   var c = {};
 
   var d = {};
@@ -2046,6 +2047,7 @@ def main(foo Foo, bar Bar) int {
   main = function(a, c) {
     return a.a + 2 | 0;
   };
+
   var b = {};
 })();
 ").jsMangle.foldAllConstants

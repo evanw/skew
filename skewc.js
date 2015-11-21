@@ -4357,6 +4357,7 @@
     }
 
     this._previousSymbol = null;
+    this._addMapping(symbol.range);
   };
 
   Skew.JavaScriptEmitter.prototype._emitNewlineAfterSymbol = function(symbol) {
@@ -4401,7 +4402,6 @@
       case Skew.SymbolKind.OBJECT_INTERFACE:
       case Skew.SymbolKind.OBJECT_WRAPPED: {
         if (symbol.forwardTo == null) {
-          this._addMapping(symbol.range);
           this._emitNewlineBeforeSymbol(symbol);
           this._emitComments(symbol.comments);
           this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{}');
@@ -4412,7 +4412,6 @@
       }
 
       case Skew.SymbolKind.OBJECT_ENUM: {
-        this._addMapping(symbol.range);
         this._emitNewlineBeforeSymbol(symbol);
         this._emitComments(symbol.comments);
         this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{');
@@ -4432,7 +4431,6 @@
             }
 
             this._emit(this._newline);
-            this._addMapping(variable.range);
             this._emitNewlineBeforeSymbol(variable);
             this._emitComments(variable.comments);
             this._emit(this._indent + Skew.JavaScriptEmitter._mangleName(variable) + ':' + this._space);
@@ -4495,6 +4493,7 @@
 
         // Emit a namespace if the class is never constructed
         if (!foundPrimaryConstructor) {
+          this._emitNewlineBeforeSymbol(symbol);
           this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{}');
           this._emitSemicolonAfterStatement();
         }
@@ -4534,7 +4533,6 @@
       return;
     }
 
-    this._addMapping(symbol.range);
     this._emitNewlineBeforeSymbol(symbol);
     this._emitComments(symbol.comments);
     var isExpression = this._namespacePrefix != '' || symbol.isExported();
@@ -4581,7 +4579,6 @@
     }
 
     if (symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM && (symbol.value != null || this._namespacePrefix == '' || Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind))) {
-      this._addMapping(symbol.range);
       this._emitNewlineBeforeSymbol(symbol);
       this._emitComments(symbol.comments);
       this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() || Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind) ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol));

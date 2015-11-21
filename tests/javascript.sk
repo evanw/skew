@@ -68,7 +68,6 @@ def main {
   var A = {};
   A.B = {};
   A.B.C = {};
-
   A.B.C.foo = function() {
   };
 
@@ -1035,8 +1034,8 @@ def main {
   main = function() {
     Baz.foo(new Baz(), null);
   };
-  var Bar = {};
 
+  var Bar = {};
   Bar.foo = function(self) {
     return 0;
   };
@@ -2806,6 +2805,7 @@ def main(foo Foo) {
       foo.foo;
     }
   };
+
   var Foo = {};
 })();
 ").js

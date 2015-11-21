@@ -666,6 +666,7 @@ namespace Skew {
         _emit("\n")
       }
       _previousSymbol = null
+      _addMapping(symbol.range)
     }
 
     def _emitNewlineAfterSymbol(symbol Symbol) {
@@ -704,7 +705,6 @@ namespace Skew {
       switch symbol.kind {
         case .OBJECT_NAMESPACE, .OBJECT_INTERFACE, .OBJECT_WRAPPED {
           if symbol.forwardTo == null {
-            _addMapping(symbol.range)
             _emitNewlineBeforeSymbol(symbol)
             _emitComments(symbol.comments)
             _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
@@ -714,7 +714,6 @@ namespace Skew {
         }
 
         case .OBJECT_ENUM {
-          _addMapping(symbol.range)
           _emitNewlineBeforeSymbol(symbol)
           _emitComments(symbol.comments)
           _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{")
@@ -728,7 +727,6 @@ namespace Skew {
                 _emit(",")
               }
               _emit(_newline)
-              _addMapping(variable.range)
               _emitNewlineBeforeSymbol(variable)
               _emitComments(variable.comments)
               _emit(_indent + _mangleName(variable) + ":" + _space)
@@ -776,6 +774,7 @@ namespace Skew {
 
           # Emit a namespace if the class is never constructed
           if !foundPrimaryConstructor {
+            _emitNewlineBeforeSymbol(symbol)
             _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
             _emitSemicolonAfterStatement
           }
@@ -809,7 +808,6 @@ namespace Skew {
         return
       }
 
-      _addMapping(symbol.range)
       _emitNewlineBeforeSymbol(symbol)
       _emitComments(symbol.comments)
 
@@ -851,7 +849,6 @@ namespace Skew {
       }
 
       if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || _namespacePrefix == "" || symbol.kind.isLocalOrArgumentVariable) {
-        _addMapping(symbol.range)
         _emitNewlineBeforeSymbol(symbol)
         _emitComments(symbol.comments)
         _emit(_indent + (_namespacePrefix == "" && !symbol.isExported || symbol.kind.isLocalOrArgumentVariable ? "var " : _namespacePrefix) + _mangleName(symbol))
