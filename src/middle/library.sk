@@ -65,6 +65,10 @@ namespace Math {
   def min(x double, y double) double
   def min(x int, y int) int
 
+  @prefer
+  def clamp(x double, min double, max double) double
+  def clamp(x int, min int, max int) int
+
   def E double        { return 2.718281828459045 }
   def INFINITY double { return 1 / 0.0 }
   def NAN double      { return 0 / 0.0 }
@@ -391,6 +395,16 @@ class List {
     var temp = self[i]
     self[i] = self[j]
     self[j] = temp
+  }
+}
+
+namespace Math {
+  def clamp(x double, min double, max double) double {
+    return x < min ? min : x > max ? max : x
+  }
+
+  def clamp(x int, min int, max int) int {
+    return x < min ? min : x > max ? max : x
   }
 }
 "

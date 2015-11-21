@@ -1,6 +1,6 @@
 {
   "name": "skew",
-  "version": "0.5.66",
+  "version": "0.5.67",
   "author": "Evan Wallace",
   "description": "A compiler for the Skew programming language",
   "license": "MIT",

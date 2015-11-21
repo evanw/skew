@@ -54,6 +54,11 @@ namespace Skew.Tests {
     testExpect("Math.min(-2.0, 3.0)", => Math.min(-2.0, 3.0), -2)
     testExpect("Math.min(-2, 3)", => Math.min(-2, 3), -2)
 
+    testExpect("Math.clamp(-3.0, -1.0, 2.0)", => Math.clamp(-3.0, -1.0, 2.0), -1)
+    testExpect("Math.clamp(3.0, -1.0, 2.0)", => Math.clamp(3.0, -1.0, 2.0), 2)
+    testExpect("Math.clamp(-3, -1, 2)", => Math.clamp(-3, -1, 2), -1)
+    testExpect("Math.clamp(3, -1, 2)", => Math.clamp(3, -1, 2), 2)
+
     testExpect("Math.E", => Math.E, 2.718281828459045)
     testExpect("Math.INFINITY", => Math.INFINITY, 1 / 0.0)
     testExpect("Math.NAN", => Math.NAN, 0 / 0.0)
