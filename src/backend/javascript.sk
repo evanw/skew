@@ -103,7 +103,7 @@ namespace Skew {
 
       # Load special-cased variables
       for variable in global.variables {
-        var special = SPECIAL_VARIABLE_MAP.get(variable.name, .NONE)
+        var special = _specialVariableMap.get(variable.name, .NONE)
         if special != .NONE {
           _specialVariables[special] = variable
         }
@@ -1260,7 +1260,7 @@ namespace Skew {
         case .CALL {
           var value = node.callValue
           var call = value.kind == .SUPER
-          var isKeyword = value.kind == .NAME && value.symbol == null && value.asString in KEYWORD_CALL_MAP
+          var isKeyword = value.kind == .NAME && value.symbol == null && value.asString in _keywordCallMap
           var parenthesize = isKeyword && Precedence.UNARY_POSTFIX < precedence
           var wrap = value.kind == .LAMBDA && _lambdaMayNeedParentheses(node)
           var isNew = false
@@ -2748,6 +2748,7 @@ namespace Skew {
 
     const _isKeyword = {
       "arguments": 0,
+      "await": 0,
       "Boolean": 0,
       "break": 0,
       "case": 0,
@@ -2763,41 +2764,56 @@ namespace Skew {
       "do": 0,
       "double": 0,
       "else": 0,
+      "enum": 0,
+      "eval": 0,
       "export": 0,
       "extends": 0,
       "false": 0,
       "finally": 0,
       "float": 0,
       "for": 0,
-      "Function": 0,
       "function": 0,
+      "Function": 0,
       "if": 0,
+      "implements": 0,
       "import": 0,
       "in": 0,
       "instanceof": 0,
       "int": 0,
+      "interface": 0,
       "let": 0,
       "new": 0,
       "null": 0,
       "Number": 0,
       "Object": 0,
+      "package": 0,
+      "private": 0,
+      "protected": 0,
+      "public": 0,
       "return": 0,
+      "static": 0,
       "String": 0,
       "super": 0,
+      "switch": 0,
       "this": 0,
       "throw": 0,
       "true": 0,
       "try": 0,
+      "typeof": 0,
       "var": 0,
+      "void": 0,
+      "while": 0,
+      "with": 0,
+      "yield": 0,
     }
 
-    const KEYWORD_CALL_MAP = {
+    const _keywordCallMap = {
       "delete": 0,
       "typeof": 0,
       "void": 0,
     }
 
-    const SPECIAL_VARIABLE_MAP = {
+    const _specialVariableMap = {
       "__extends": SpecialVariable.EXTENDS,
       "__imul": SpecialVariable.MULTIPLY,
       "__isBool": SpecialVariable.IS_BOOL,

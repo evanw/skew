@@ -70,17 +70,17 @@ namespace Skew.Motion {
 
   def moveSymbolIntoNewNamespace(symbol Symbol, namespaces IntMap<Namespace>) ObjectSymbol {
     var parent = symbol.parent
-    var target = namespaces.get(parent.id, null)
-    var object = target?.child.asObjectSymbol
+    var namespace = namespaces.get(parent.id, null)
+    var object = namespace?.child.asObjectSymbol
 
     # Create a parallel namespace next to the parent
-    if target == null {
+    if namespace == null {
       var common = parent.parent.asObjectSymbol
       object = ObjectSymbol.new(.OBJECT_NAMESPACE, "in_" + parent.name)
       object.scope = ObjectScope.new(common.scope, object)
       object.parent = common
-      target = Namespace.new(common, object)
-      namespaces[parent.id] = target
+      namespace = Namespace.new(common, object)
+      namespaces[parent.id] = namespace
     }
 
     # Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)

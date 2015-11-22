@@ -6736,5 +6736,72 @@ def bar2 {
   ~~~~~
 ")
 
+# Check parsing of contextual keywords
+test("
+class Foo {
+  var class = 0
+  var def = 0
+  var enum = 0
+  var interface = 0
+  var namespace = 0
+  var over = 0
+}
+
+var foo = <Foo
+  class=1
+  def=1
+  enum=1
+  interface=1
+  namespace=1
+  over=1
+/>
+
+def bar {
+  var class = 0
+  var def = 0
+  var enum = 0
+  var interface = 0
+  var namespace = 0
+  var over = 0
+}
+", "
+<stdin>:20:7: warning: Local variable \"class\" is never read
+  var class = 0
+      ~~~~~
+<stdin>:21:7: warning: Local variable \"def\" is never read
+  var def = 0
+      ~~~
+<stdin>:22:7: warning: Local variable \"enum\" is never read
+  var enum = 0
+      ~~~~
+<stdin>:23:7: warning: Local variable \"interface\" is never read
+  var interface = 0
+      ~~~~~~~~~
+<stdin>:24:7: warning: Local variable \"namespace\" is never read
+  var namespace = 0
+      ~~~~~~~~~
+<stdin>:25:7: warning: Local variable \"over\" is never read
+  var over = 0
+      ~~~~
+")
+
+# The keyword "var" is a token, not a contextual keyword
+test("
+var var = 0
+", "
+<stdin>:1:5: error: Expected identifier but found \"var\"
+var var = 0
+    ~~~
+")
+
+# The keyword "const" is a token, not a contextual keyword
+test("
+var const = 0
+", "
+<stdin>:1:5: error: Expected identifier but found \"const\"
+var const = 0
+    ~~~~~
+")
+
   }
 }

@@ -709,6 +709,16 @@ namespace Skew.Parsing {
     return parameters
   }
 
+  const identifierToSymbolKind StringMap<SymbolKind> = {
+    "class": .OBJECT_CLASS,
+    "def": .FUNCTION_GLOBAL,
+    "enum": .OBJECT_ENUM,
+    "interface": .OBJECT_INTERFACE,
+    "namespace": .OBJECT_NAMESPACE,
+    "over": .FUNCTION_GLOBAL,
+    "type": .OBJECT_WRAPPED,
+  }
+
   const customOperators IntMap<int> = {
     TokenKind.ASSIGN_BITWISE_AND: 0,
     TokenKind.ASSIGN_BITWISE_OR: 0,
@@ -840,11 +850,12 @@ namespace Skew.Parsing {
     }
 
     var token = context.current
+    var text = token.range.toString
     var symbol Symbol = null
 
     # Special-case enum symbols
-    if parent.kind == .OBJECT_ENUM && token.kind == .IDENTIFIER {
-      var variable = VariableSymbol.new(.VARIABLE_ENUM, token.range.toString)
+    if parent.kind == .OBJECT_ENUM && token.kind == .IDENTIFIER && !(text in identifierToSymbolKind) {
+      var variable = VariableSymbol.new(.VARIABLE_ENUM, text)
       variable.range = token.range
       variable.parent = parent
       variable.flags |= Symbol.IS_CONST
@@ -857,20 +868,31 @@ namespace Skew.Parsing {
       # Parse the symbol kind
       var kind SymbolKind
       switch token.kind {
-        case .CLASS { kind = .OBJECT_CLASS }
-        case .CONST, .VAR { kind = parent.kind.hasInstances ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL }
-        case .DEF, .OVER { kind = parent.kind.hasInstances ? .FUNCTION_INSTANCE : .FUNCTION_GLOBAL }
-        case .ENUM { kind = .OBJECT_ENUM }
-        case .INTERFACE { kind = .OBJECT_INTERFACE }
-        case .NAMESPACE { kind = .OBJECT_NAMESPACE }
+        case .CONST, .VAR {
+          kind = parent.kind.hasInstances ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL
+        }
+
+        # For symbol kinds that can't live inside functions, use contextual
+        # keywords instead of special keyword tokens. This means these names
+        # are still available to be used as regular symbols:
+        #
+        #   class div {
+        #     var class = ""
+        #   }
+        #
+        #   var example = <div class="header"/>
+        #
         case .IDENTIFIER {
-          if token.range.toString == "type" {
-            kind = .OBJECT_WRAPPED
-          } else {
+          kind = identifierToSymbolKind.get(text, .OBJECT_GLOBAL)
+          if kind == .OBJECT_GLOBAL {
             context.unexpectedToken
             return false
           }
+          if kind == .FUNCTION_GLOBAL && parent.kind.hasInstances {
+            kind = .FUNCTION_INSTANCE
+          }
         }
+
         default {
           context.unexpectedToken
           return false
@@ -969,7 +991,7 @@ namespace Skew.Parsing {
           function.range = range
           function.parent = parent
 
-          if token.kind == .OVER {
+          if text == "over" {
             function.flags |= Symbol.IS_OVER
           }
 

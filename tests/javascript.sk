@@ -2999,5 +2999,49 @@ def test(foo Foo) {
 })();
 ").js
 
+# Check code generation of contextual keywords
+test("
+class Foo {
+  var class = 0
+  var def = 0
+  var enum = 0
+  var interface = 0
+  var namespace = 0
+  var over = 0
+}
+
+@export
+def test Foo {
+  var class = 0
+  var def = 0
+  var enum = 0
+  var interface = 0
+  var namespace = 0
+  var over = 0
+  return Foo.new
+}
+", "
+(function() {
+  test = function() {
+    var $class = 0;
+    var def = 0;
+    var $enum = 0;
+    var $interface = 0;
+    var namespace = 0;
+    var over = 0;
+    return new Foo();
+  };
+
+  function Foo() {
+    this.$class = 0;
+    this.def = 0;
+    this.$enum = 0;
+    this.$interface = 0;
+    this.namespace = 0;
+    this.over = 0;
+  }
+})();
+").js
+
   }
 }
