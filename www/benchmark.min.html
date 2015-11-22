@@ -1,0 +1,140 @@
+<canvas width="800" height="600" style="background:#EEE;"></canvas>
+<script src="../build/skew-api.min.js" id="skew-api"></script>
+<script>
+
+(function() {
+
+  function draw(context, times, count) {
+    var scale = 1 / (3 * 1000);
+
+    // Reset the canvas
+    var width = context.canvas.width;
+    var height = context.canvas.height;
+    var plotWidth = width - 100;
+    context.clearRect(0, 0, width, height);
+
+    // Skip the first few times so we can measure the time after the JIT has warmed up
+    var ignore = 2;
+
+    // Compute the average
+    var average = 0;
+    var included = 0;
+    for (var i = Math.min(ignore, times.length - 1); i < times.length; i++) {
+      average += times[i];
+      included++;
+    }
+    average /= included;
+
+    // Draw the times
+    for (var i = 0; i < times.length; i++) {
+      var x0 = (i + 0.2) * plotWidth / count;
+      var x1 = (i + 0.8) * plotWidth / count;
+      var y0 = height * (1 - times[i] * scale);
+      var y1 = height;
+      context.fillStyle = i < ignore ? '#777' : '#000';
+      context.fillRect(x0, y0, x1 - x0, y1 - y0);
+    }
+    context.fillStyle = '#000';
+
+    // Draw second lines
+    context.globalAlpha = 0.25;
+    for (var i = 1000; i <= 0.999 / scale; i += 1000) {
+      var y = height * (1 - i * scale);
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(width, y);
+      context.stroke();
+    }
+    context.globalAlpha = 1;
+
+    // Draw average line
+    var y = height * (1 - average * scale);
+    context.beginPath();
+    context.moveTo(0, y);
+    context.lineTo(plotWidth, y);
+    context.stroke();
+
+    // Draw average text
+    context.textBaseline = 'middle';
+    context.fillText('Average: ' + Math.round(average) + 'ms', plotWidth, y);
+  }
+
+  function fetch(url, callback) {
+    var xhr = new XMLHttpRequest;
+    xhr.open('GET', url);
+    xhr.onload = function() {
+      callback(xhr.responseText);
+    };
+    xhr.send();
+  }
+
+  function webWorkerMain() {
+    onmessage = function(e) {
+      var data = e.data;
+
+      // Load the API
+      eval(data.api);
+
+      function compile() {
+        var options = {};
+        options.target = 'js';
+        options.outputFile = 'compiled.js';
+        options.inputs = [{name: '<stdin>', contents: data.all}];
+        options.foldAllConstants = true;
+        options.inlineAllFunctions = true;
+        options.globalizeAllFunctions = true;
+        options.jsMangle = false;
+        options.jsMinify = true;
+        options.defines = {RELEASE: 'true'};
+        var result = Skew.compile(options);
+
+        // Compilation must succeed
+        if (result.log.diagnostics.length > 0 || result.outputs.length !== 1) {
+          throw new Error('Expected compilation to succeed cleanly\n\n' + result.log.text);
+        }
+
+        // Compilation must be identical
+        if (result.outputs[0].contents !== data.api) {
+          throw new Error('Expected compiled output to be the same');
+        }
+
+        postMessage('done');
+      }
+
+      for (var i = 0; i < data.count; i++) {
+        compile();
+      }
+    };
+  }
+
+  fetch('../build/benchmark.sk', function(all) {
+    fetch('../build/benchmark.js', function(api) {
+      var canvas = document.querySelector('canvas');
+      var context = canvas.getContext('2d');
+      var now = window.performance && performance.now
+        ? function() { return performance.now(); }
+        : function() { return +new Date; };
+      var times = [];
+      var count = 64;
+
+      // Use a web worker to avoid letting the browser cheat by doing GC while updating the progress plot
+      var worker = new Worker(URL.createObjectURL(new Blob([webWorkerMain + ';webWorkerMain();'])));
+      worker.onmessage = function() {
+        var after = now();
+        times.push(after - before);
+        draw(context, times, count);
+        before = after;
+      };
+
+      var before = now();
+      worker.postMessage({
+        all: all,
+        api: api,
+        count: count
+      });
+    });
+  });
+
+})();
+
+</script>

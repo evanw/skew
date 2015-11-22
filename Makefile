@@ -130,3 +130,7 @@ publish: test check
 	cat build/skewc.min.js >> npm/skewc
 	chmod +x npm/skewc
 	sh -c 'cd npm && npm version patch && npm publish'
+
+benchmark: | build
+	cat $(SOURCES_API) > build/benchmark.sk
+	node skewc.js build/benchmark.sk $(JS_FLAGS) --output-file=build/benchmark.js --release --js-mangle=false
