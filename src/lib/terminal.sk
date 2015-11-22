@@ -15,7 +15,7 @@ namespace Terminal {
     }
   }
 
-  const colorToEscapeCode IntMap<int> = {
+  const colorToEscapeCode = {
     Color.DEFAULT: 0,
     Color.BOLD: 1,
     Color.GRAY: 90,

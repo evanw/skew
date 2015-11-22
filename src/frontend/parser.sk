@@ -719,7 +719,7 @@ namespace Skew.Parsing {
     "type": .OBJECT_WRAPPED,
   }
 
-  const customOperators IntMap<int> = {
+  const customOperators = {
     TokenKind.ASSIGN_BITWISE_AND: 0,
     TokenKind.ASSIGN_BITWISE_OR: 0,
     TokenKind.ASSIGN_BITWISE_XOR: 0,
@@ -777,7 +777,7 @@ namespace Skew.Parsing {
   }
 
   # These are prefixed with "the operator \"...\" is not customizable because "
-  const forbiddenGroupDescription IntMap<string> = {
+  const forbiddenGroupDescription = {
     ForbiddenGroup.ASSIGN: "value types are not supported by the language",
     ForbiddenGroup.COMPARE: "it's automatically implemented using the \"<=>\" operator (customize the \"<=>\" operator instead)",
     ForbiddenGroup.EQUAL: "that wouldn't work with generics, which are implemented with type erasure",

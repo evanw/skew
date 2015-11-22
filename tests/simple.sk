@@ -5346,6 +5346,22 @@ const foo dynamic = {
 ", "
 ")
 
+# Check that enums work with IntMap type inference
+test("
+enum Foo {
+  FOO
+}
+
+def test bool {
+  var foo = {Foo.FOO: \"\"}
+  return foo
+}
+", "
+<stdin>:7:10: error: Cannot convert from type \"IntMap<string>\" to type \"bool\"
+  return foo
+         ~~~
+")
+
 # Check for a crash due to a bug with nested guards
 test("
 if true {

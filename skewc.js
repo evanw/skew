@@ -17851,13 +17851,15 @@
           }
 
           // Resolve remaining children using the type context if valid
-          if (keyType != null && valueType != null && Skew.Resolving.Resolver._isValidVariableType(keyType) && Skew.Resolving.Resolver._isValidVariableType(valueType)) {
-            if (keyType == this._cache.intType) {
+          if (keyType != null && valueType != null && Skew.Resolving.Resolver._isValidVariableType(valueType)) {
+            assert(!this._cache.isEquivalentToInt(keyType) || !this._cache.isEquivalentToString(keyType));
+
+            if (this._cache.isEquivalentToInt(keyType)) {
               this._resolveInitializerWithContext(node, scope, this._cache.createIntMapType(valueType));
               return;
             }
 
-            if (keyType == this._cache.stringType) {
+            if (this._cache.isEquivalentToString(keyType)) {
               this._resolveInitializerWithContext(node, scope, this._cache.createStringMapType(valueType));
               return;
             }

@@ -2402,12 +2402,13 @@ namespace Skew.Resolving {
             }
 
             # Resolve remaining children using the type context if valid
-            if keyType != null && valueType != null && _isValidVariableType(keyType) && _isValidVariableType(valueType) {
-              if keyType == _cache.intType {
+            if keyType != null && valueType != null && _isValidVariableType(valueType) {
+              assert(!_cache.isEquivalentToInt(keyType) || !_cache.isEquivalentToString(keyType))
+              if _cache.isEquivalentToInt(keyType) {
                 _resolveInitializerWithContext(node, scope, _cache.createIntMapType(valueType))
                 return
               }
-              if keyType == _cache.stringType {
+              if _cache.isEquivalentToString(keyType) {
                 _resolveInitializerWithContext(node, scope, _cache.createStringMapType(valueType))
                 return
               }

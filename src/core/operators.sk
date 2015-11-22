@@ -13,7 +13,7 @@ namespace Skew {
     OVERRIDABLE
   }
 
-  var operatorInfo IntMap<OperatorInfo> = {
+  var operatorInfo = {
     # Unary operators
     NodeKind.COMPLEMENT:                  OperatorInfo.new("~", .UNARY_PREFIX, .NONE, .OVERRIDABLE, [0], .NULL),
     NodeKind.NEGATIVE:                    OperatorInfo.new("-", .UNARY_PREFIX, .NONE, .OVERRIDABLE, [0, 1], .NULL),
