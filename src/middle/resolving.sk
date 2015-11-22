@@ -217,7 +217,7 @@ namespace Skew.Resolving {
 
       # The import/export annotations are inherited, except import isn't inherited for implemented functions
       if parent != null {
-        symbol.flags |= parent.flags & (symbol.kind.isFunction && symbol.asFunctionSymbol.block != null ? Symbol.IS_EXPORTED : Symbol.IS_IMPORTED | Symbol.IS_EXPORTED)
+        symbol.flags |= parent.flags & (symbol.kind.isFunction && symbol.asFunctionSymbol.block != null ? .IS_EXPORTED : .IS_IMPORTED | .IS_EXPORTED)
       }
 
       # Resolve annotations on this symbol after annotation inheritance. Don't
@@ -229,7 +229,7 @@ namespace Skew.Resolving {
       # Protected access used to be an annotation. It's now indicated with just
       # a leading underscore.
       if symbol.name.startsWith("_") && !symbol.kind.isLocal {
-        symbol.flags |= Symbol.IS_PROTECTED
+        symbol.flags |= .IS_PROTECTED
       }
     }
 
@@ -356,7 +356,7 @@ namespace Skew.Resolving {
             nextEnumValue++
           }
         }
-        symbol.flags |= Symbol.IS_VALUE_TYPE
+        symbol.flags |= .IS_VALUE_TYPE
       }
 
       _resolveAnnotations(symbol)
@@ -384,7 +384,7 @@ namespace Skew.Resolving {
         if symbol.baseClass == null || baseConstructor != null && baseConstructor.kind == .FUNCTION_CONSTRUCTOR {
           var generated = FunctionSymbol.new(.FUNCTION_CONSTRUCTOR, "new")
           generated.scope = FunctionScope.new(symbol.scope, generated)
-          generated.flags |= Symbol.IS_AUTOMATICALLY_GENERATED
+          generated.flags |= .IS_AUTOMATICALLY_GENERATED
           generated.parent = symbol
           generated.range = symbol.range
           generated.overridden = baseConstructor?.asFunctionSymbol
@@ -397,7 +397,7 @@ namespace Skew.Resolving {
       if kind == .OBJECT_ENUM && !symbol.isImported && !symbol.isFlags && !("toString" in symbol.members) {
         var generated = FunctionSymbol.new(.FUNCTION_INSTANCE, "toString")
         generated.scope = FunctionScope.new(symbol.scope, generated)
-        generated.flags |= Symbol.IS_AUTOMATICALLY_GENERATED
+        generated.flags |= .IS_AUTOMATICALLY_GENERATED
         generated.parent = symbol
         generated.range = symbol.range
         symbol.functions.append(generated)
@@ -659,7 +659,7 @@ namespace Skew.Resolving {
         if value.kind == .PAIR {
           var first = value.firstValue
           var second = value.secondValue
-          symbol.flags &= ~Symbol.IS_CONST
+          symbol.flags &= ~.IS_CONST
           symbol.value = first.remove
           var setup = Node.createVariables.appendChild(Node.createVariable(symbol))
           var symbolName = Node.createSymbolReference(symbol)
@@ -743,7 +743,7 @@ namespace Skew.Resolving {
 
         # Variables that are never re-assigned can safely be considered constants for constant folding
         if info.writeCount == 0 && _options.foldAllConstants {
-          symbol.flags |= Symbol.IS_CONST
+          symbol.flags |= .IS_CONST
         }
 
         # Unused local variables can safely be removed, but don't warn about "for i in 0..10 {}"
@@ -793,7 +793,7 @@ namespace Skew.Resolving {
       # makes many things much easier including lambda capture and devirtualization
       if symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR {
         symbol.this = VariableSymbol.new(.VARIABLE_ARGUMENT, "self")
-        symbol.this.flags |= Symbol.IS_CONST
+        symbol.this.flags |= .IS_CONST
         symbol.this.resolvedType = _cache.parameterize(symbol.parent.resolvedType)
         symbol.this.state = .INITIALIZED
       }
@@ -850,7 +850,7 @@ namespace Skew.Resolving {
       # Setters must have one argument
       else if symbol.isSetter && count != 1 {
         _log.semanticErrorWrongArgumentCount(symbol.range, symbol.name, 1)
-        symbol.flags &= ~Symbol.IS_SETTER
+        symbol.flags &= ~.IS_SETTER
       }
 
       # Validate argument count
@@ -932,7 +932,7 @@ namespace Skew.Resolving {
 
       # Make constructors without arguments into getters
       if symbol.arguments.isEmpty {
-        symbol.flags |= Symbol.IS_GETTER
+        symbol.flags |= .IS_GETTER
       }
     }
 
@@ -950,7 +950,7 @@ namespace Skew.Resolving {
 
       var strings = VariableSymbol.new(.VARIABLE_GLOBAL, parent.scope.generateName("_strings"))
       strings.value = names
-      strings.flags |= Symbol.IS_PROTECTED | Symbol.IS_CONST
+      strings.flags |= .IS_PROTECTED | .IS_CONST
       strings.state = .INITIALIZED
       strings.parent = parent
       strings.scope = parent.scope
@@ -960,7 +960,7 @@ namespace Skew.Resolving {
 
       symbol.returnType = Node.createType(_cache.stringType)
       symbol.block = Node.createBlock.appendChild(Node.createReturn(Node.createIndex(Node.createSymbolReference(strings), Node.createName("self"))))
-      symbol.flags |= Symbol.IS_GETTER
+      symbol.flags |= .IS_GETTER
     }
 
     def _resolveFunction(symbol FunctionSymbol) {
@@ -1170,7 +1170,7 @@ namespace Skew.Resolving {
       while i < symbols.count {
         var function = symbols[i]
         _initializeSymbol(function)
-        symbol.flags |= function.flags & Symbol.IS_SETTER
+        symbol.flags |= function.flags & .IS_SETTER
 
         var equivalence TypeCache.Equivalence = .NOT_EQUIVALENT
         var index = -1
@@ -1202,7 +1202,7 @@ namespace Skew.Resolving {
           var base = derived == function ? other : function
           _log.semanticErrorBadOverrideReturnType(derived.range, derived.name, parent.baseType, base.range)
           if isFromSameObject {
-            function.flags |= Symbol.IS_OBSOLETE
+            function.flags |= .IS_OBSOLETE
           }
         }
 
@@ -1213,7 +1213,7 @@ namespace Skew.Resolving {
         else if areReturnTypesDifferent || isFromSameObject && function.block != null && other.block != null {
           _log.semanticErrorDuplicateOverload(function.range, symbol.name, other.range)
           if isFromSameObject {
-            function.flags |= Symbol.IS_OBSOLETE
+            function.flags |= .IS_OBSOLETE
           }
         }
 
@@ -1221,8 +1221,8 @@ namespace Skew.Resolving {
         else if isFromSameObject ? function.block != null : function.parent.asObjectSymbol.hasBaseClass(other.parent) {
           if function.parent == parent && other.parent == parent {
             function.mergeInformationFrom(other)
-            function.flags |= function.block != null ? other.flags & ~Symbol.IS_IMPORTED : other.flags
-            other.flags |= Symbol.IS_OBSOLETE
+            function.flags |= function.block != null ? other.flags & ~.IS_IMPORTED : other.flags
+            other.flags |= .IS_OBSOLETE
           } else if !isFromSameObject {
             function.overridden = other
           }
@@ -1232,9 +1232,9 @@ namespace Skew.Resolving {
         # Keep "other"
         else {
           if function.parent == parent && other.parent == parent {
-            other.flags |= other.block != null ? function.flags & ~Symbol.IS_IMPORTED : function.flags
+            other.flags |= other.block != null ? function.flags & ~.IS_IMPORTED : function.flags
             other.mergeInformationFrom(function)
-            function.flags |= Symbol.IS_OBSOLETE
+            function.flags |= .IS_OBSOLETE
           } else if !isFromSameObject {
             other.overridden = function
           }
@@ -1508,16 +1508,16 @@ namespace Skew.Resolving {
       var flag = _annotationSymbolFlags.get(value.symbol.fullName, 0)
       if flag != 0 {
         switch flag {
-          case Symbol.IS_DEPRECATED {}
-          case Symbol.IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
-          case Symbol.IS_EXPORTED { isValid = !symbol.isImported }
-          case Symbol.IS_IMPORTED { isValid = !symbol.isExported && (!symbol.kind.isFunction || symbol.asFunctionSymbol.block == null) }
-          case Symbol.IS_INLINING_FORCED, Symbol.IS_INLINING_PREVENTED, Symbol.IS_PREFERRED { isValid = symbol.kind.isFunction }
-          case Symbol.IS_RENAMED {}
-          case Symbol.IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
-          case Symbol.SHOULD_SPREAD { isValid = symbol.kind == .FUNCTION_ANNOTATION }
+          case .IS_DEPRECATED {}
+          case .IS_ENTRY_POINT { isValid = symbol.kind == .FUNCTION_GLOBAL }
+          case .IS_EXPORTED { isValid = !symbol.isImported }
+          case .IS_IMPORTED { isValid = !symbol.isExported && (!symbol.kind.isFunction || symbol.asFunctionSymbol.block == null) }
+          case .IS_INLINING_FORCED, .IS_INLINING_PREVENTED, .IS_PREFERRED { isValid = symbol.kind.isFunction }
+          case .IS_RENAMED {}
+          case .IS_SKIPPED { isValid = symbol.kind.isFunction && symbol.resolvedType.returnType == null }
+          case .SHOULD_SPREAD { isValid = symbol.kind == .FUNCTION_ANNOTATION }
         }
-        if flag == Symbol.IS_INLINING_FORCED {
+        if flag == .IS_INLINING_FORCED {
           _options.isAlwaysInlinePresent = true
         }
         if !isValid {
@@ -1532,7 +1532,7 @@ namespace Skew.Resolving {
 
         # Only warn about duplicate annotations after checking the test expression
         if (symbol.flags & flag) != 0 {
-          if (symbol.parent.flags & flag & (Symbol.IS_IMPORTED | Symbol.IS_EXPORTED)) != 0 {
+          if (symbol.parent.flags & flag & (.IS_IMPORTED | .IS_EXPORTED)) != 0 {
             _log.semanticWarningRedundantAnnotation(value.range, value.symbol.name, symbol.name, symbol.parent.name)
           } else {
             _log.semanticWarningDuplicateAnnotation(value.range, value.symbol.name, symbol.name)
@@ -1542,7 +1542,7 @@ namespace Skew.Resolving {
         symbol.flags |= flag
 
         # Store the new name for later
-        if flag == Symbol.IS_RENAMED && value.hasTwoChildren {
+        if flag == .IS_RENAMED && value.hasTwoChildren {
           symbol.rename = value.lastChild.asString
         }
       }
@@ -1627,7 +1627,7 @@ namespace Skew.Resolving {
         _resolveAsParameterizedExpressionWithTypeContext(left, scope, null)
         _checkStorage(left, scope)
         var test = Node.createBinary(.EQUAL, _extractExpressionForAssignment(left, scope), Node.createNull).withRange(left.range)
-        var assign = Node.createBinary(.ASSIGN, left.remove, right.remove).withRange(node.range).withFlags(Node.WAS_ASSIGN_NULL)
+        var assign = Node.createBinary(.ASSIGN, left.remove, right.remove).withRange(node.range).withFlags(.WAS_ASSIGN_NULL)
         var block = Node.createBlock.appendChild(Node.createExpression(assign).withRange(node.range)).withRange(node.range)
         node.become(Node.createIf(test, block, null).withRange(node.range).withComments(node.comments))
         _resolveNode(node, scope, null)
@@ -1706,7 +1706,7 @@ namespace Skew.Resolving {
       scope.asLocalScope.define(symbol, _log)
       _localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
       symbol.resolvedType = type
-      symbol.flags |= Symbol.IS_CONST | Symbol.IS_LOOP_VARIABLE
+      symbol.flags |= .IS_CONST | .IS_LOOP_VARIABLE
       symbol.state = .INITIALIZED
 
       _resolveBlock(node.foreachBlock, scope)
@@ -2508,8 +2508,8 @@ namespace Skew.Resolving {
 
       # Call the initializer constructor
       if node.kind == .INITIALIZER_MAP {
-        var firstValues = Node.createList.withFlags(Node.IS_INITIALIZER_EXPANSION).withRange(node.range)
-        var secondValues = Node.createList.withFlags(Node.IS_INITIALIZER_EXPANSION).withRange(node.range)
+        var firstValues = Node.createList.withFlags(.IS_INITIALIZER_EXPANSION).withRange(node.range)
+        var secondValues = Node.createList.withFlags(.IS_INITIALIZER_EXPANSION).withRange(node.range)
         for child = node.firstChild; child != null; child = child.nextSibling {
           var first = child.firstValue
           var second = child.secondValue
@@ -2518,7 +2518,7 @@ namespace Skew.Resolving {
         }
         node.become(Node.createCall(dot).withRange(node.range).appendChild(firstValues).appendChild(secondValues))
       } else {
-        var values = Node.createList.withFlags(Node.IS_INITIALIZER_EXPANSION).withRange(node.range)
+        var values = Node.createList.withFlags(.IS_INITIALIZER_EXPANSION).withRange(node.range)
         node.become(Node.createCall(dot).withRange(node.range).appendChild(values.appendChildrenFrom(node)))
       }
       _resolveAsParameterizedExpressionWithConversion(node, scope, context)
@@ -2562,7 +2562,7 @@ namespace Skew.Resolving {
       else {
         # Only infer non-void return types if there's no type context
         if symbol.returnType == null {
-          symbol.flags |= Symbol.SHOULD_INFER_RETURN_TYPE
+          symbol.flags |= .SHOULD_INFER_RETURN_TYPE
         }
 
         # If there's dynamic type context, treat all arguments as dynamic
@@ -2571,7 +2571,7 @@ namespace Skew.Resolving {
             argument.type ?= Node.createType(.DYNAMIC)
           }
           symbol.returnType ?= Node.createType(.DYNAMIC)
-          symbol.flags |= Symbol.IS_DYNAMIC_LAMBDA
+          symbol.flags |= .IS_DYNAMIC_LAMBDA
         }
       }
 
@@ -2898,7 +2898,7 @@ namespace Skew.Resolving {
       if kind == .NULL_JOIN {
         _resolveAsParameterizedExpressionWithTypeContext(left, scope, context)
         var test = Node.createBinary(.NOT_EQUAL, _extractExpressionForAssignment(left, scope), Node.createNull).withRange(left.range)
-        node.become(Node.createHook(test, left.remove, right.remove).withRange(node.range).withFlags(Node.WAS_NULL_JOIN))
+        node.become(Node.createHook(test, left.remove, right.remove).withRange(node.range).withFlags(.WAS_NULL_JOIN))
         _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
         return
       }
@@ -2908,7 +2908,7 @@ namespace Skew.Resolving {
         _resolveAsParameterizedExpressionWithTypeContext(left, scope, context)
         _checkStorage(left, scope)
         var test = Node.createBinary(.NOT_EQUAL, _extractExpressionForAssignment(left, scope), Node.createNull).withRange(left.range)
-        var assign = Node.createBinary(.ASSIGN, left.remove, right.remove).withRange(node.range).withFlags(Node.WAS_ASSIGN_NULL)
+        var assign = Node.createBinary(.ASSIGN, left.remove, right.remove).withRange(node.range).withFlags(.WAS_ASSIGN_NULL)
         node.become(Node.createHook(test, left.clone, assign).withRange(node.range))
         _resolveAsParameterizedExpressionWithTypeContext(node, scope, context)
         return
@@ -3429,17 +3429,17 @@ namespace Skew.Resolving {
   }
 
   namespace Resolver {
-    const _annotationSymbolFlags = {
-      "@alwaysinline": Symbol.IS_INLINING_FORCED,
-      "@deprecated": Symbol.IS_DEPRECATED,
-      "@entry": Symbol.IS_ENTRY_POINT,
-      "@export": Symbol.IS_EXPORTED,
-      "@import": Symbol.IS_IMPORTED,
-      "@neverinline": Symbol.IS_INLINING_PREVENTED,
-      "@prefer": Symbol.IS_PREFERRED,
-      "@rename": Symbol.IS_RENAMED,
-      "@skip": Symbol.IS_SKIPPED,
-      "@spreads": Symbol.SHOULD_SPREAD,
+    const _annotationSymbolFlags StringMap<SymbolFlags> = {
+      "@alwaysinline": .IS_INLINING_FORCED,
+      "@deprecated": .IS_DEPRECATED,
+      "@entry": .IS_ENTRY_POINT,
+      "@export": .IS_EXPORTED,
+      "@import": .IS_IMPORTED,
+      "@neverinline": .IS_INLINING_PREVENTED,
+      "@prefer": .IS_PREFERRED,
+      "@rename": .IS_RENAMED,
+      "@skip": .IS_SKIPPED,
+      "@spreads": .SHOULD_SPREAD,
     }
 
     def _shouldCheckForSetter(node Node) bool {

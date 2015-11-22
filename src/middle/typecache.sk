@@ -28,11 +28,11 @@ namespace Skew {
     const _parameters List<Type> = []
 
     def loadGlobals(log Log, global ObjectSymbol) {
-      boolType = _loadGlobalObject(global, "bool", .OBJECT_CLASS, Symbol.IS_VALUE_TYPE)
+      boolType = _loadGlobalObject(global, "bool", .OBJECT_CLASS, .IS_VALUE_TYPE)
       boxType = _loadGlobalObject(global, "Box", .OBJECT_CLASS, 0)
-      doubleType = _loadGlobalObject(global, "double", .OBJECT_CLASS, Symbol.IS_VALUE_TYPE)
+      doubleType = _loadGlobalObject(global, "double", .OBJECT_CLASS, .IS_VALUE_TYPE)
       intMapType = _loadGlobalObject(global, "IntMap", .OBJECT_CLASS, 0)
-      intType = _loadGlobalObject(global, "int", .OBJECT_CLASS, Symbol.IS_VALUE_TYPE)
+      intType = _loadGlobalObject(global, "int", .OBJECT_CLASS, .IS_VALUE_TYPE)
       listType = _loadGlobalObject(global, "List", .OBJECT_CLASS, 0)
       mathType = _loadGlobalObject(global, "Math", .OBJECT_NAMESPACE, 0)
       stringMapType = _loadGlobalObject(global, "StringMap", .OBJECT_CLASS, 0)
@@ -470,7 +470,7 @@ namespace Skew {
   }
 
   namespace TypeCache {
-    def _loadGlobalObject(global ObjectSymbol, name string, kind SymbolKind, flags int) Type {
+    def _loadGlobalObject(global ObjectSymbol, name string, kind SymbolKind, flags SymbolFlags) Type {
       assert(kind.isObject)
       var symbol = global.members.get(name, null)
       assert(symbol != null)

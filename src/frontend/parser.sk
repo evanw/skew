@@ -178,7 +178,7 @@ namespace Skew.Parsing {
       symbol.range = range
 
       if token.kind == .CONST {
-        symbol.flags |= Symbol.IS_CONST
+        symbol.flags |= .IS_CONST
       }
 
       if peekType(context) {
@@ -635,7 +635,7 @@ namespace Skew.Parsing {
         if value == null {
           return false
         }
-        symbol.block = Node.createBlock.withRange(value.range).appendChild(Node.createReturn(value).withRange(value.range).withFlags(Node.IS_IMPLICIT_RETURN))
+        symbol.block = Node.createBlock.withRange(value.range).appendChild(Node.createReturn(value).withRange(value.range).withFlags(.IS_IMPLICIT_RETURN))
       }
     }
 
@@ -859,7 +859,7 @@ namespace Skew.Parsing {
       var variable = VariableSymbol.new(.VARIABLE_ENUM, text)
       variable.range = token.range
       variable.parent = parent
-      variable.flags |= Symbol.IS_CONST
+      variable.flags |= .IS_CONST
       parent.variables.append(variable)
       symbol = variable
       context.next
@@ -965,7 +965,7 @@ namespace Skew.Parsing {
           variable.parent = parent
 
           if token.kind == .CONST {
-            variable.flags |= Symbol.IS_CONST
+            variable.flags |= .IS_CONST
           }
 
           if peekType(context) {
@@ -993,14 +993,14 @@ namespace Skew.Parsing {
           function.parent = parent
 
           if text == "over" {
-            function.flags |= Symbol.IS_OVER
+            function.flags |= .IS_OVER
           }
 
           # Check for setters like "def foo=(x int) {}" but don't allow a space
           # between the name and the assignment operator
           if kind != .FUNCTION_ANNOTATION && nameToken.kind == .IDENTIFIER && context.peek(.ASSIGN) && context.current.range.start == nameToken.range.end {
             function.range = Range.span(function.range, context.next.range)
-            function.flags |= Symbol.IS_SETTER
+            function.flags |= .IS_SETTER
             function.name += "="
           }
 
@@ -1031,7 +1031,7 @@ namespace Skew.Parsing {
 
           # Don't mark operators as getters to avoid confusion with unary operators and compiler-generated call expressions
           if !isOperator && function.arguments.isEmpty {
-            function.flags |= Symbol.IS_GETTER
+            function.flags |= .IS_GETTER
           }
 
           parent.functions.append(function)
@@ -1044,7 +1044,7 @@ namespace Skew.Parsing {
           object.parent = parent
 
           if text == "flags" {
-            object.flags |= Symbol.IS_FLAGS
+            object.flags |= .IS_FLAGS
           }
 
           if kind != .OBJECT_NAMESPACE && context.eat(.PARAMETER_LIST_START) {
@@ -1561,7 +1561,7 @@ namespace Skew.Parsing {
         }
         if (value.kind != .NAME || !peekType(context)) && context.eat(.RIGHT_PARENTHESIS) {
           if value.kind != .NAME || !context.peek(.ARROW) {
-            return value.withRange(context.spanSince(token.range)).withFlags(Node.IS_INSIDE_PARENTHESES)
+            return value.withRange(context.spanSince(token.range)).withFlags(.IS_INSIDE_PARENTHESES)
           }
           context.undo
         }

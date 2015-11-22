@@ -167,7 +167,7 @@ namespace Skew {
         var lambdaRun = createFunction(lambda, .FUNCTION_INSTANCE, "run")
         var lambdaCall = Node.createSymbolCall(lambdaConstructor)
         lambdaRun.block = scope.node.symbol.asFunctionSymbol.block.remove
-        lambdaRun.flags |= Symbol.IS_EXPORTED # TODO: This needs to be called
+        lambdaRun.flags |= .IS_EXPORTED # TODO: This needs to be called
         scope.node.become(lambdaCall)
       }
 

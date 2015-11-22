@@ -169,38 +169,37 @@ namespace Skew {
     }
   }
 
-  # Flags
-  namespace Node {
+  flags NodeFlags {
     # An implicit return is a return statement inside an expression lambda. For
     # example, the lambda "x => x" is compiled into "x => { return x }" where
     # the return statement has this flag set.
-    const IS_IMPLICIT_RETURN = 1
+    IS_IMPLICIT_RETURN
 
     # This flag marks nodes that were wrapped in parentheses in the original
     # source code. It's used for warnings about C-style syntax in conditional
     # statements and to call a lambda returned from a getter.
-    const IS_INSIDE_PARENTHESES = 1 << 1
+    IS_INSIDE_PARENTHESES
 
     # This flag is only for blocks. A simple control flow analysis is run
     # during code resolution and blocks where control flow reaches the end of
     # the block have this flag set.
-    const HAS_CONTROL_FLOW_AT_END = 1 << 2
+    HAS_CONTROL_FLOW_AT_END
 
     # This flag marks nodes that were converted from NULL_JOIN to HOOK nodes.
-    const WAS_NULL_JOIN = 1 << 3
+    WAS_NULL_JOIN
 
     # This flag marks nodes that were converted from ASSIGN_NULL to ASSIGN nodes.
-    const WAS_ASSIGN_NULL = 1 << 4
+    WAS_ASSIGN_NULL
 
     # This flag marks list nodes that help implement initializer expressions.
-    const IS_INITIALIZER_EXPANSION = 1 << 5
+    IS_INITIALIZER_EXPANSION
   }
 
   # Nodes represent executable code (variable initializers and function bodies)
   class Node {
     const id = _createID
     var kind NodeKind
-    var flags = 0
+    var flags NodeFlags = 0
     var range Range = null
     var internalRange Range = null
     var symbol Symbol = null
@@ -275,49 +274,18 @@ namespace Skew {
       appendChildrenFrom(node)
     }
 
-    def parent Node {
-      return _parent
-    }
+    def parent Node          { return _parent }
+    def firstChild Node      { return _firstChild }
+    def lastChild Node       { return _lastChild }
+    def previousSibling Node { return _previousSibling }
+    def nextSibling Node     { return _nextSibling }
 
-    def firstChild Node {
-      return _firstChild
-    }
-
-    def lastChild Node {
-      return _lastChild
-    }
-
-    def previousSibling Node {
-      return _previousSibling
-    }
-
-    def nextSibling Node {
-      return _nextSibling
-    }
-
-    def isImplicitReturn bool {
-      return (flags & IS_IMPLICIT_RETURN) != 0
-    }
-
-    def isInsideParentheses bool {
-      return (flags & IS_INSIDE_PARENTHESES) != 0
-    }
-
-    def hasControlFlowAtEnd bool {
-      return (flags & HAS_CONTROL_FLOW_AT_END) != 0
-    }
-
-    def wasNullJoin bool {
-      return (flags & WAS_NULL_JOIN) != 0
-    }
-
-    def wasAssignNull bool {
-      return (flags & WAS_ASSIGN_NULL) != 0
-    }
-
-    def isInitializerExpansion bool {
-      return (flags & IS_INITIALIZER_EXPANSION) != 0
-    }
+    def isImplicitReturn bool       { return .IS_IMPLICIT_RETURN in flags }
+    def isInsideParentheses bool    { return .IS_INSIDE_PARENTHESES in flags }
+    def hasControlFlowAtEnd bool    { return .HAS_CONTROL_FLOW_AT_END in flags }
+    def wasNullJoin bool            { return .WAS_NULL_JOIN in flags }
+    def wasAssignNull bool          { return .WAS_ASSIGN_NULL in flags }
+    def isInitializerExpansion bool { return .IS_INITIALIZER_EXPANSION in flags }
 
     # This is cheaper than childCount == 0
     def hasChildren bool {
@@ -352,7 +320,7 @@ namespace Skew {
       return count
     }
 
-    def withFlags(value int) Node {
+    def withFlags(value NodeFlags) Node {
       flags = value
       return self
     }

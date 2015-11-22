@@ -110,8 +110,8 @@ namespace Skew {
 
       for function in symbol.functions {
         if function.overridden != null {
-          function.overridden.flags |= Symbol.IS_VIRTUAL
-          function.flags |= Symbol.IS_VIRTUAL
+          function.overridden.flags |= .IS_VIRTUAL
+          function.flags |= .IS_VIRTUAL
         }
       }
     }

@@ -31,7 +31,7 @@ namespace Skew {
       # Pop control flow
       var isLive = _isControlFlowLive.takeLast
       if isLive {
-        node.flags |= Node.HAS_CONTROL_FLOW_AT_END
+        node.flags |= .HAS_CONTROL_FLOW_AT_END
       }
 
       # Pop loop info

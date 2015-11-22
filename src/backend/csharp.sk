@@ -55,9 +55,27 @@ namespace Skew {
       shakingPass(global, entryPoint, .USE_TYPES)
       _markVirtualFunctions(global)
 
-      # All code in C# is inside objects, so just emit objects recursively
       var emitIndividualFiles = _options.outputDirectory != null
-      for object in _collectObjects(global) {
+      var objects = _collectObjects(global)
+
+      # Convert "flags" types to wrapped types
+      for object in objects {
+        if object.kind == .OBJECT_ENUM && object.isFlags {
+          object.kind = .OBJECT_WRAPPED
+          object.wrappedType = _cache.intType
+
+          # Enum values become normal global variables
+          for variable in object.variables {
+            if variable.kind == .VARIABLE_ENUM {
+              variable.kind = .VARIABLE_GLOBAL
+              variable.flags |= .IS_CSHARP_CONST
+            }
+          }
+        }
+      }
+
+      # All code in C# is inside objects, so just emit objects recursively
+      for object in objects {
         # Nested objects will be emitted by their parent
         if object.parent != null && object.parent.kind == .OBJECT_CLASS {
           continue
@@ -328,7 +346,7 @@ namespace Skew {
       } else {
         _emit(_indent + "public ")
         if symbol.kind == .VARIABLE_GLOBAL {
-          _emit("static ")
+          _emit(symbol.isCSharpConst ? "const " : "static ")
         }
         _emitExpressionOrType(symbol.type, symbol.resolvedType)
         _emit(" " + _mangleName(symbol))
@@ -351,7 +369,7 @@ namespace Skew {
       # C# has sane capture rules for "this" so no variable insertion is needed
       if symbol.this != null {
         symbol.this.name = "this"
-        symbol.this.flags |= Symbol.IS_EXPORTED
+        symbol.this.flags |= .IS_EXPORTED
       }
 
       _enclosingFunction = symbol

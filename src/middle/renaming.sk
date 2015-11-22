@@ -82,7 +82,7 @@ namespace Skew.Renaming {
       # Bake in the rename annotation now
       if rename != null {
         for function in group {
-          function.flags |= Symbol.IS_RENAMED
+          function.flags |= .IS_RENAMED
           function.name = rename
           function.rename = null
         }

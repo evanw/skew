@@ -1565,7 +1565,7 @@ namespace Skew {
           }
         } else if this != null {
           this.name = "this"
-          this.flags |= Symbol.IS_EXPORTED
+          this.flags |= .IS_EXPORTED
         }
 
         for argument in function.arguments {
@@ -1576,7 +1576,7 @@ namespace Skew {
         # Rename extra constructors overloads so they don't conflict
         if function.kind == .FUNCTION_CONSTRUCTOR {
           if isPrimaryConstructor {
-            function.flags |= Symbol.IS_PRIMARY_CONSTRUCTOR
+            function.flags |= .IS_PRIMARY_CONSTRUCTOR
             isPrimaryConstructor = false
           }
         }

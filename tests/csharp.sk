@@ -421,5 +421,78 @@ public class Globals
 }
 ").csharp
 
+# Check code generation for flags types
+test("
+flags Foo {
+  X0
+  X1
+  X2
+  X3
+  X4
+  X5
+  X6
+  X7
+  X8
+  X9
+
+  X10
+  X11
+  X12
+  X13
+  X14
+  X15
+  X16
+  X17
+  X18
+  X19
+
+  X20
+  X21
+  X22
+  X23
+  X24
+  X25
+  X26
+  X27
+  X28
+  X29
+
+  X30
+  X31
+}
+
+@export
+def test {
+  if !((.X0 | .X1) in (Foo.X30 | .X31)) {
+    var x = Foo.X0
+    x = .X1 | .X2
+    x &= ~.X3
+  }
+}
+", "
+public static class Foo
+{
+    public const int X0 = 1;
+    public const int X1 = 2;
+    public const int X2 = 4;
+    public const int X3 = 8;
+    public const int X30 = 1073741824;
+    public const int X31 = -2147483648;
+}
+
+public class Globals
+{
+    public static void test()
+    {
+        if (!(((Foo.X0 | Foo.X1) & (Foo.X30 | Foo.X31)) != 0))
+        {
+            int x = Foo.X0;
+            x = Foo.X1 | Foo.X2;
+            x &= ~Foo.X3;
+        }
+    }
+}
+").csharp
+
   }
 }
