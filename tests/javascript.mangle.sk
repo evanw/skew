@@ -2252,5 +2252,27 @@ def test(foo Foo) {
 })();
 ").jsMangle.globalizeAllFunctions
 
+# Check for a crash due to a cast with a resolved type of null after inlining
+test("
+class Foo {}
+
+namespace Foo {
+  def new(x bool) Foo {
+    return x as dynamic
+  }
+}
+
+@export
+def test {
+  var foo = Foo.new(false)
+}
+", "
+(function() {
+  test = function() {
+    var a = !1;
+  };
+})();
+").jsMangle.inlineAllFunctions
+
   }
 }

@@ -36,7 +36,7 @@ namespace Skew {
         if entryPoint.arguments.count == 1 {
           var argument = entryPoint.arguments.first
           var array = VariableSymbol.new(.VARIABLE_ARGUMENT, argument.name)
-          array.type = Node.createName("string[]")
+          array.type = Node.createName("string[]").withType(.DYNAMIC)
           array.resolvedType = .DYNAMIC
           entryPoint.arguments = [array]
 
@@ -44,7 +44,8 @@ namespace Skew {
           if entryPoint.block != null {
             array.name = entryPoint.scope.generateName(array.name)
             argument.kind = .VARIABLE_LOCAL
-            argument.value = Node.createCall(Node.createDot(Node.createType(argument.resolvedType), "new")).appendChild(Node.createSymbolReference(array))
+            argument.value = Node.createCall(Node.createDot(Node.createType(argument.resolvedType), "new").withType(.DYNAMIC))
+              .withType(.DYNAMIC).appendChild(Node.createSymbolReference(array))
             entryPoint.block.prependChild(Node.createVariables.appendChild(Node.createVariable(argument)))
           }
         }
@@ -868,17 +869,17 @@ namespace Skew {
 
           # Automatically promote integer literals to doubles instead of using a cast
           else if _cache.isEquivalentToDouble(resolvedType) && value.isInt {
-            _emitExpression(Node.createDouble(value.asInt), precedence)
+            _emitExpression(_cache.createDouble(value.asInt), precedence)
           }
 
           # C# doesn't have a cast from bool to int
           else if _cache.isNumeric(resolvedType) && value.resolvedType == _cache.boolType {
-            _emitExpression(Node.createHook(value.remove, Node.createInt(1), Node.createInt(0)), precedence)
+            _emitExpression(Node.createHook(value.remove, _cache.createInt(1), _cache.createInt(0)).withType(_cache.intType), precedence)
           }
 
           # C# doesn't have a cast from int to bool
           else if resolvedType == _cache.boolType && _cache.isNumeric(value.resolvedType) {
-            _emitExpression(Node.createBinary(.NOT_EQUAL, value.remove, Node.createInt(0)), precedence)
+            _emitExpression(Node.createBinary(.NOT_EQUAL, value.remove, _cache.createInt(0)).withType(_cache.boolType), precedence)
           }
 
           # Only emit a cast if the underlying types are different

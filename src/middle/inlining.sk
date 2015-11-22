@@ -102,6 +102,7 @@ namespace Skew.Inlining {
       var value = node.firstChild.remove
       var values List<Node> = []
       while node.hasChildren {
+        assert(node.firstChild.resolvedType != null)
         values.append(node.firstChild.remove)
       }
 
@@ -113,8 +114,9 @@ namespace Skew.Inlining {
       }
 
       assert((value.kind == .PARAMETERIZE ? value.parameterizeValue : value).kind == .NAME && value.symbol == info.symbol)
+      assert(clone.resolvedType != null)
       node.become(clone)
-      recursivelySubstituteArguments(node, info.symbol.arguments, values)
+      recursivelySubstituteArguments(node, node, info.symbol.arguments, values)
 
       # Remove the inlined result entirely if appropriate
       var parent = node.parent
@@ -142,13 +144,17 @@ namespace Skew.Inlining {
     }
   }
 
-  def recursivelySubstituteArguments(node Node, arguments List<VariableSymbol>, values List<Node>) {
+  def recursivelySubstituteArguments(root Node, node Node, arguments List<VariableSymbol>, values List<Node>) {
     # Substitute the argument if this is an argument name
     var symbol = node.symbol
     if symbol != null && symbol.kind.isVariable {
       var index = arguments.indexOf(symbol.asVariableSymbol)
       if index != -1 {
-        node.replaceWith(values[index])
+        if node == root {
+          node.become(values[index])
+        } else {
+          node.replaceWith(values[index])
+        }
         return
       }
     }
@@ -156,7 +162,7 @@ namespace Skew.Inlining {
     # Otherwise, recursively search for substitutions in all child nodes
     for child = node.firstChild, next Node = null; child != null; child = next {
       next = child.nextSibling
-      recursivelySubstituteArguments(child, arguments, values)
+      recursivelySubstituteArguments(root, child, arguments, values)
     }
   }
 
@@ -249,7 +255,7 @@ namespace Skew.Inlining {
           for i in 0..symbol.arguments.count {
             unusedArguments.append(i)
           }
-          return InliningInfo.new(symbol, Node.createNull, info.callSites, unusedArguments)
+          return InliningInfo.new(symbol, Node.createNull.withType(.NULL), info.callSites, unusedArguments)
         }
 
         var first = block.firstChild

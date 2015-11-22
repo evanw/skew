@@ -71,10 +71,6 @@ namespace Skew.Folding {
       _flatten(node, StringContent.new(value))
     }
 
-    def _createInt(value int) Node {
-      return Node.createInt(value).withType(_cache.intType)
-    }
-
     def foldConstants(node Node) {
       var kind = node.kind
 
@@ -726,14 +722,14 @@ namespace Skew.Folding {
         var value = andLeft.binaryLeft.remove
 
         if leftShift < rightShift {
-          value = Node.createBinary(andLeft.kind, value, _createInt(rightShift - leftShift)).withType(_cache.intType)
+          value = Node.createBinary(andLeft.kind, value, _cache.createInt(rightShift - leftShift)).withType(_cache.intType)
         }
 
         else if leftShift > rightShift {
-          value = Node.createBinary(.SHIFT_LEFT, value, _createInt(leftShift - rightShift)).withType(_cache.intType)
+          value = Node.createBinary(.SHIFT_LEFT, value, _cache.createInt(leftShift - rightShift)).withType(_cache.intType)
         }
 
-        node.become(Node.createBinary(.BITWISE_AND, value, _createInt(mask << leftShift)).withType(node.resolvedType))
+        node.become(Node.createBinary(.BITWISE_AND, value, _cache.createInt(mask << leftShift)).withType(node.resolvedType))
       }
     }
 
@@ -752,7 +748,7 @@ namespace Skew.Folding {
 
         if leftRight.isInt && rightRight.isInt && _isSameVariableReference(leftLeft, rightLeft) {
           var mask = leftRight.asInt | rightRight.asInt
-          node.become(Node.createBinary(.BITWISE_AND, leftLeft.remove, _createInt(mask)).withType(node.resolvedType))
+          node.become(Node.createBinary(.BITWISE_AND, leftLeft.remove, _cache.createInt(mask)).withType(node.resolvedType))
         }
       }
 

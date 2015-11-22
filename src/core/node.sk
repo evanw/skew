@@ -1034,24 +1034,26 @@ namespace Skew {
       return new(.SEQUENCE)
     }
 
-    def createStringInterpolation Node {
-      return new(.STRING_INTERPOLATION)
-    }
-
     def createSequence(before Node, after Node) Node {
       assert(before.kind.isExpression)
       assert(after.kind.isExpression)
+      assert(before.parent == null)
+      assert(after.parent == null)
 
       if before.kind == .SEQUENCE {
         if after.kind == .SEQUENCE {
-          return before.appendChildrenFrom(after)
+          return before.withType(after.resolvedType).appendChildrenFrom(after)
         }
-        return before.appendChild(after)
+        return before.withType(after.resolvedType).appendChild(after)
       }
       if after.kind == .SEQUENCE {
         return after.prependChild(before)
       }
-      return createSequence.appendChild(before).appendChild(after)
+      return createSequence.withType(after.resolvedType).appendChild(before).appendChild(after)
+    }
+
+    def createStringInterpolation Node {
+      return new(.STRING_INTERPOLATION)
     }
 
     def createSuper Node {
@@ -1088,7 +1090,7 @@ namespace Skew {
     }
 
     def createLambdaType Node {
-      return new(.LAMBDA_TYPE).appendChild(createType(null))
+      return new(.LAMBDA_TYPE).appendChild(createType(.NULL))
     }
 
     def createSymbolReference(symbol Symbol) Node {

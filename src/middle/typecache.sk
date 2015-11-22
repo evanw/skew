@@ -28,8 +28,6 @@ namespace Skew {
     const _parameters List<Type> = []
 
     def loadGlobals(log Log, global ObjectSymbol) {
-      Type.initialize
-
       boolType = _loadGlobalObject(global, "bool", .OBJECT_CLASS, Symbol.IS_VALUE_TYPE)
       boxType = _loadGlobalObject(global, "Box", .OBJECT_CLASS, 0)
       doubleType = _loadGlobalObject(global, "double", .OBJECT_CLASS, Symbol.IS_VALUE_TYPE)
@@ -186,6 +184,22 @@ namespace Skew {
       return null
     }
 
+    def createBool(value bool) Node {
+      return Node.createBool(value).withType(boolType)
+    }
+
+    def createInt(value int) Node {
+      return Node.createInt(value).withType(intType)
+    }
+
+    def createDouble(value double) Node {
+      return Node.createDouble(value).withType(doubleType)
+    }
+
+    def createString(value string) Node {
+      return Node.createString(value).withType(stringType)
+    }
+
     def createListType(itemType Type) Type {
       return substitute(listType, createEnvironment(listType.parameters, [itemType]))
     }
@@ -227,6 +241,8 @@ namespace Skew {
     }
 
     def createLambdaType(argumentTypes List<Type>, returnType Type) Type {
+      assert(returnType != .NULL) # This is used as a sentinel on LAMBDA_TYPE nodes
+
       var hash = _hashTypes(returnType != null ? returnType.id : -1, argumentTypes)
       var bucket = _lambdaTypes.get(hash, null)
 

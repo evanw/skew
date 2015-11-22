@@ -105,6 +105,7 @@ namespace Skew {
     var callGraph CallGraph = null
     var tokens List<List<Token>> = []
     var outputs List<Source> = []
+    var isResolvePassComplete = false
   }
 
   class Pass {
@@ -184,11 +185,7 @@ namespace Skew {
         passTimer.timer.start
         pass.run(context)
         passTimer.timer.stop
-
-        # This is expensive but can be used for debugging
-        if !RELEASE {
-          _verifyHierarchy(context.global)
-        }
+        context.verify
       }
     }
 
@@ -196,73 +193,89 @@ namespace Skew {
     return CompilerResult.new(context.cache, context.global, context.outputs, passTimers, totalTimer)
   }
 
-  def _verifyHierarchy(symbol ObjectSymbol) {
-    for object in symbol.objects {
-      assert(object.parent == symbol)
-      _verifyHierarchy(object)
+  class PassContext {
+    @skip if RELEASE
+    def verify {
+      _verifyHierarchy(global)
+    }
 
-      if object.extends != null {
-        _verifyHierarchy(object.extends, null)
+    def _verifyHierarchy(symbol ObjectSymbol) {
+      for object in symbol.objects {
+        assert(object.parent == symbol)
+        _verifyHierarchy(object)
+
+        if object.extends != null {
+          _verifyHierarchy(object.extends, null)
+        }
+
+        if object.implements != null {
+          for node in object.implements {
+            _verifyHierarchy(node, null)
+          }
+        }
       }
 
-      if object.implements != null {
-        for node in object.implements {
-          _verifyHierarchy(node, null)
+      for function in symbol.functions {
+        assert(function.parent == symbol)
+
+        if function.block != null {
+          _verifyHierarchy(function.block, null)
+        }
+      }
+
+      for variable in symbol.variables {
+        assert(variable.parent == symbol)
+
+        if variable.value != null {
+          _verifyHierarchy(variable.value, null)
+        }
+      }
+
+      if symbol.guards != null {
+        for guard in symbol.guards {
+          _verifyHierarchy(guard, symbol)
         }
       }
     }
 
-    for function in symbol.functions {
-      assert(function.parent == symbol)
+    def _verifyHierarchy(node Node, parent Node) {
+      assert(node.parent == parent)
 
-      if function.block != null {
-        _verifyHierarchy(function.block, null)
+      # All expressions must have a type after the type resolution pass
+      if isResolvePassComplete && node.kind.isExpression {
+        assert(node.resolvedType != null)
+      }
+
+      if node.kind == .VARIABLE {
+        assert(node.symbol != null)
+        assert(node.symbol.kind == .VARIABLE_LOCAL)
+        assert(node.symbol.asVariableSymbol.value == node.variableValue)
+      }
+
+      else if node.kind == .LAMBDA {
+        assert(node.symbol != null)
+        assert(node.symbol.kind == .FUNCTION_LOCAL)
+        assert(node.symbol.asFunctionSymbol.block == node.lambdaBlock)
+      }
+
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _verifyHierarchy(child, node)
       }
     }
 
-    for variable in symbol.variables {
-      assert(variable.parent == symbol)
+    def _verifyHierarchy(guard Guard, parent ObjectSymbol) {
+      assert(guard.parent == parent)
+      assert(guard.contents.parent == parent)
 
-      if variable.value != null {
-        _verifyHierarchy(variable.value, null)
+      if guard.test != null {
+        _verifyHierarchy(guard.test, null)
       }
-    }
 
-    if symbol.guards != null {
-      for guard in symbol.guards {
-        _verifyHierarchy(guard, symbol)
+      _verifyHierarchy(guard.contents)
+
+      if guard.elseGuard != null {
+        _verifyHierarchy(guard.elseGuard, parent)
       }
-    }
-  }
-
-  def _verifyHierarchy(node Node, parent Node) {
-    assert(node.parent == parent)
-
-    if node.kind == .VARIABLE {
-      assert(node.symbol != null && node.symbol.kind == .VARIABLE_LOCAL && node.symbol.asVariableSymbol.value == node.variableValue)
-    }
-
-    else if node.kind == .LAMBDA {
-      assert(node.symbol != null && node.symbol.kind == .FUNCTION_LOCAL && node.symbol.asFunctionSymbol.block == node.lambdaBlock)
-    }
-
-    for child = node.firstChild; child != null; child = child.nextSibling {
-      _verifyHierarchy(child, node)
-    }
-  }
-
-  def _verifyHierarchy(guard Guard, parent ObjectSymbol) {
-    assert(guard.parent == parent)
-    assert(guard.contents.parent == parent)
-
-    if guard.test != null {
-      _verifyHierarchy(guard.test, null)
-    }
-
-    _verifyHierarchy(guard.contents)
-
-    if guard.elseGuard != null {
-      _verifyHierarchy(guard.elseGuard, parent)
     }
   }
 }

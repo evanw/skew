@@ -3043,5 +3043,23 @@ def test Foo {
 })();
 ").js
 
+# Check for a crash due to a variable value changing unexpectedly after inlining
+test("
+def foo(x bool) dynamic {
+  return x
+}
+
+@export
+def test {
+  var bar = foo(false)
+}
+", "
+(function() {
+  test = function() {
+    var bar = false;
+  };
+})();
+").js.inlineAllFunctions
+
   }
 }

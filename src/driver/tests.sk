@@ -196,8 +196,19 @@ namespace Skew.Tests {
     return "{" + ", ".join(parts) + "}"
   }
 
+  if TARGET == .JAVASCRIPT {
+    def fixRuntime {
+      dynamic.Error.stackTraceLimit = Math.INFINITY
+    }
+  } else {
+    def fixRuntime {
+    }
+  }
+
   @entry
   def main int {
+    fixRuntime
+
     # End-to-end tests
     testCSharp
     testJavaScript

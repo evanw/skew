@@ -13,6 +13,7 @@ namespace Skew {
       if !context.log.hasErrors {
         Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log).resolve
       }
+      context.isResolvePassComplete = true
     }
   }
 }
@@ -688,7 +689,7 @@ namespace Skew.Resolving {
           # Create the index variable
           var index = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("i"))
           index.resolvedType = _cache.intType
-          index.value = Node.createInt(0).withType(_cache.intType)
+          index.value = _cache.createInt(0)
           index.state = .INITIALIZED
           var setup = Node.createVariables.appendChild(Node.createVariable(index))
           var indexName = Node.createSymbolReference(index)
@@ -1144,7 +1145,7 @@ namespace Skew.Resolving {
       }
 
       if unwrapped.isEnum {
-        return Node.createCast(Node.createInt(0).withType(_cache.intType), Node.createType(type)).withType(type)
+        return Node.createCast(_cache.createInt(0), Node.createType(type)).withType(type)
       }
 
       if unwrapped.isParameter {
@@ -1245,7 +1246,7 @@ namespace Skew.Resolving {
     def _resolveNodeSwitch(node Node, scope Scope, context Type) {
       switch node.kind {
         case .BLOCK { _resolveBlock(node, scope) }
-        case .PAIR { _resolvePair(node, scope) }
+        case .PAIR { _resolvePair(node, scope, context) }
 
         # Statements
         case .BREAK, .CONTINUE { _resolveJump(node, scope) }
@@ -1341,6 +1342,12 @@ namespace Skew.Resolving {
     def _resolveChildrenAsParameterizedExpressions(node Node, scope Scope) {
       for child = node.firstChild; child != null; child = child.nextSibling {
         _resolveAsParameterizedExpression(child, scope)
+      }
+    }
+
+    def _resolveChildrenAsParameterizedExpressionsWithDynamicTypeContext(node Node, scope Scope) {
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _resolveAsParameterizedExpressionWithTypeContext(child, scope, .DYNAMIC)
       }
     }
 
@@ -1577,7 +1584,15 @@ namespace Skew.Resolving {
       _controlFlow.popBlock(node)
     }
 
-    def _resolvePair(node Node, scope Scope) {
+    def _resolvePair(node Node, scope Scope, context Type) {
+      # Allow resolving a pair with a type context of "dynamic" to
+      # deliberately silence errors around needing type context
+      if context == .DYNAMIC {
+        _resolveAsParameterizedExpressionWithConversion(node.firstValue, scope, context)
+        _resolveAsParameterizedExpressionWithConversion(node.secondValue, scope, context)
+        return
+      }
+
       _resolveAsParameterizedExpression(node.firstValue, scope)
       _resolveAsParameterizedExpression(node.secondValue, scope)
     }
@@ -1959,6 +1974,7 @@ namespace Skew.Resolving {
         } else {
           _log.semanticErrorGetterCalledTwice(node.parent.internalRangeOrRange, symbol.name, symbol.range)
         }
+        _resolveChildrenAsParameterizedExpressionsWithDynamicTypeContext(node, scope)
         return false
       }
 
@@ -2000,6 +2016,7 @@ namespace Skew.Resolving {
       # Check argument count
       if expected != count {
         _log.semanticErrorArgumentCount(node.internalRangeOrRange, expected, count, function?.name, function?.range)
+        _resolveChildrenAsParameterizedExpressionsWithDynamicTypeContext(node, scope)
         return false
       }
 
@@ -2350,14 +2367,7 @@ namespace Skew.Resolving {
       # Make sure to resolve the children even if the initializer is invalid
       if context != null {
         if context == .DYNAMIC || !_resolveInitializerWithContext(node, scope, context) {
-          for child = node.firstChild; child != null; child = child.nextSibling {
-            if child.kind == .PAIR {
-              _resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, .DYNAMIC)
-              _resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, .DYNAMIC)
-            } else {
-              _resolveAsParameterizedExpressionWithConversion(child, scope, .DYNAMIC)
-            }
-          }
+          _resolveChildrenAsParameterizedExpressionsWithDynamicTypeContext(node, scope)
         }
         return
       }
@@ -2418,6 +2428,7 @@ namespace Skew.Resolving {
       }
 
       _log.semanticErrorInitializerTypeInferenceFailed(node.range)
+      _resolveChildrenAsParameterizedExpressionsWithDynamicTypeContext(node, scope)
     }
 
     def _resolveInitializerWithContext(node Node, scope Scope, context Type) bool {
@@ -2434,6 +2445,7 @@ namespace Skew.Resolving {
             if child.kind == .PAIR {
               _resolveAsParameterizedExpressionWithConversion(child.firstValue, scope, functionType.argumentTypes[0])
               _resolveAsParameterizedExpressionWithConversion(child.secondValue, scope, functionType.argumentTypes[1])
+              child.resolvedType = .DYNAMIC
             } else {
               _resolveAsParameterizedExpressionWithConversion(child, scope, functionType.argumentTypes[0])
             }
@@ -2578,7 +2590,7 @@ namespace Skew.Resolving {
       }
 
       # An empty return type is signaled by the type "null"
-      if lambdaReturnType.kind != .TYPE || lambdaReturnType.resolvedType != null {
+      if lambdaReturnType.kind != .TYPE || lambdaReturnType.resolvedType != .NULL {
         _resolveAsParameterizedType(lambdaReturnType, scope)
         returnType = lambdaReturnType.resolvedType
       }
@@ -2743,7 +2755,10 @@ namespace Skew.Resolving {
       for child = node.firstChild; child != null; child = child.nextSibling {
         _resolveAsParameterizedExpressionWithTypeContext(child, scope, child.nextSibling == null ? context : null)
       }
-      node.resolvedType = node.lastChild.resolvedType
+
+      if node.hasChildren {
+        node.resolvedType = node.lastChild.resolvedType
+      }
     }
 
     def _resolveStringInterpolation(node Node, scope Scope) {
@@ -2808,6 +2823,17 @@ namespace Skew.Resolving {
       }
     }
 
+    def _resolveXMLAfterError(node Node, scope Scope) {
+      var attributes = node.xmlAttributes
+      _resolveChildrenAsParameterizedExpressionsWithDynamicTypeContext(attributes, scope)
+
+      for child = attributes.nextSibling; child != null; child = child.nextSibling {
+        _resolveAsParameterizedExpression(child, scope)
+      }
+
+      attributes.resolvedType = .DYNAMIC
+    }
+
     def _resolveXML(node Node, scope Scope) {
       var tag = node.xmlTag
       var attributes = node.xmlAttributes
@@ -2817,12 +2843,14 @@ namespace Skew.Resolving {
       # Make sure there's a constructor to call
       if _findMember(tag.resolvedType, "new") == null {
         _log.semanticErrorXMLTypeInferenceFailed(node.range)
+        _resolveXMLAfterError(node, scope)
         return
       }
 
       # Make sure there's an append function to call if needed
       if firstChild != null && _findMember(tag.resolvedType, "<>...</>") == null {
         _log.semanticErrorXMLMissingAppend(firstChild.range, tag.resolvedType)
+        _resolveXMLAfterError(node, scope)
         return
       }
 
@@ -3111,7 +3139,7 @@ namespace Skew.Resolving {
         if symbol != null {
           extracted = _extractExpressionForAssignment(target, scope)
           if kind == .PREFIX_INCREMENT || kind == .PREFIX_DECREMENT || kind == .POSTFIX_INCREMENT || kind == .POSTFIX_DECREMENT {
-            node.appendChild(Node.createInt(1).withType(_cache.intType).withRange(node.internalRangeOrRange))
+            node.appendChild(_cache.createInt(1).withRange(node.internalRangeOrRange))
           }
           wasUnaryPostfix = kind.isUnaryPostfix && _isExpressionUsed(node)
           kind = info.assignKind
@@ -3181,7 +3209,7 @@ namespace Skew.Resolving {
         if isComparison {
           var call = Node.new(.CALL).appendChildrenFrom(node).withRange(node.range)
           node.appendChild(call)
-          node.appendChild(Node.createInt(0).withType(_cache.intType))
+          node.appendChild(_cache.createInt(0))
           node.resolvedType = _cache.boolType
           _resolveFunctionCall(call, scope, symbolType)
         }
@@ -3206,7 +3234,7 @@ namespace Skew.Resolving {
         # Handle custom unary postfix operators
         if wasUnaryPostfix {
           node.become(Node.createBinary(kind, node.cloneAndStealChildren,
-            Node.createInt(-1).withType(_cache.intType).withRange(node.internalRangeOrRange)))
+            _cache.createInt(-1).withRange(node.internalRangeOrRange)))
           _resolveAsParameterizedExpression(node, scope)
         }
       }

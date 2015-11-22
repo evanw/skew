@@ -92,13 +92,8 @@ namespace Skew {
   }
 
   namespace Type {
-    var DYNAMIC Type = null
-    var NULL Type = null
-
-    def initialize {
-      DYNAMIC ?= Type.new(.SPECIAL, null)
-      NULL ?= Type.new(.SPECIAL, null)
-    }
+    var DYNAMIC = Type.new(.SPECIAL, null)
+    var NULL = Type.new(.SPECIAL, null)
 
     def _createID int {
       return ++_nextID

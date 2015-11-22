@@ -393,7 +393,7 @@ namespace Skew {
 
           # Only check when the inputs are constants
           if firstArgument.kind == .INITIALIZER_MAP && (secondArgument.isInt || secondArgument.isString) {
-            node.become(firstArgument.remove.appendChild(Node.createPair(secondArgument.remove, thirdArgument.remove)))
+            node.become(firstArgument.remove.appendChild(Node.createPair(secondArgument.remove, thirdArgument.remove).withType(.DYNAMIC)))
             mapInserts[i] = null
             changed = true
           }
@@ -1538,7 +1538,7 @@ namespace Skew {
           _unionVariableWithFunction(this, function)
           if block != null {
             this.kind = .VARIABLE_LOCAL
-            this.value = Node.createName("this")
+            this.value = Node.createName("this").withType(.DYNAMIC)
             var variable = Node.createVariable(this)
             var merged = false
 
@@ -1589,14 +1589,6 @@ namespace Skew {
       }
     }
 
-    def _createInt(value int) Node {
-      return Node.createInt(value).withType(_cache.intType)
-    }
-
-    def _createDouble(value double) Node {
-      return Node.createDouble(value).withType(_cache.doubleType)
-    }
-
     def _createIntBinary(kind NodeKind, left Node, right Node) Node {
       if kind == .MULTIPLY {
         return Node.createSymbolCall(_specialVariable(.MULTIPLY)).appendChild(left).appendChild(right)
@@ -1609,7 +1601,7 @@ namespace Skew {
     }
 
     def _wrapWithIntCast(node Node) Node {
-      return Node.createBinary(.BITWISE_OR, node, _createInt(0)).withType(_cache.intType).withRange(node.range)
+      return Node.createBinary(.BITWISE_OR, node, _cache.createInt(0)).withType(_cache.intType).withRange(node.range)
     }
 
     def _patchUnaryArithmetic(node Node) {
@@ -1760,7 +1752,7 @@ namespace Skew {
     def _peepholeMangleConstant(node Node) {
       switch node.content.kind {
         case .BOOL {
-          node.become(Node.createUnary(.NOT, _createInt(node.asBool ? 0 : 1)))
+          node.become(_wrapWithNot(_cache.createInt(node.asBool ? 0 : 1).withRange(node.range)))
         }
 
         case .DOUBLE {
@@ -1775,7 +1767,7 @@ namespace Skew {
           #
           for i in 1..10 {
             if reciprocal * i == ((reciprocal * i) as int) && value.toString.count >= 10 {
-              node.become(Node.createBinary(.DIVIDE, _createDouble(i), _createDouble(reciprocal * i)).withType(_cache.doubleType))
+              node.become(Node.createBinary(.DIVIDE, _cache.createDouble(i), _cache.createDouble(reciprocal * i)).withType(_cache.doubleType))
               break
             }
           }
@@ -1866,6 +1858,7 @@ namespace Skew {
         var firstCatch = finallyBlock != null ? finallyBlock.previousSibling : node.lastChild
         var variable = VariableSymbol.new(.VARIABLE_LOCAL, firstCatch.kind == .CATCH && firstCatch.symbol != null ?
           firstCatch.symbol.name : _enclosingFunction.scope.generateName("e"))
+        variable.resolvedType = .DYNAMIC
         var block = Node.createBlock.appendChild(Node.createThrow(Node.createSymbolReference(variable)))
 
         # Iterate backwards over the catch blocks
@@ -1879,10 +1872,10 @@ namespace Skew {
 
           # Build up the chain of tests in reverse
           if child.symbol != null && child.symbol.resolvedType != .DYNAMIC {
-            var test = Node.createTypeCheck(Node.createSymbolReference(variable), Node.createType(child.symbol.resolvedType))
+            var test = Node.createTypeCheck(Node.createSymbolReference(variable), Node.createType(child.symbol.resolvedType)).withType(_cache.boolType)
             block = Node.createBlock.appendChild(catchBlock.hasChildren
               ? Node.createIf(test, catchBlock, block)
-              : Node.createIf(Node.createUnary(.NOT, test), block, null))
+              : Node.createIf(_wrapWithNot(test), block, null))
           } else {
             block = catchBlock
           }
@@ -1942,7 +1935,7 @@ namespace Skew {
       # "(a, b) || c" => "a, b || c"
       # "(a, b) && c" => "a, b && c"
       if (kind == .LOGICAL_OR || kind == .LOGICAL_AND) && left.kind == .SEQUENCE {
-        var binary = Node.createBinary(kind, left.lastChild.cloneAndStealChildren, right.remove)
+        var binary = Node.createBinary(kind, left.lastChild.cloneAndStealChildren, right.remove).withType(.DYNAMIC)
         _peepholeMangleBinary(binary)
         left.lastChild.replaceWith(binary)
         node.become(left.remove)
@@ -2011,7 +2004,7 @@ namespace Skew {
           if left.resolvedType != null && !_cache.isEquivalentToDouble(left.resolvedType) && !_cache.isEquivalentToString(left.resolvedType) &&
               right.resolvedType != null && !_cache.isEquivalentToDouble(right.resolvedType) && !_cache.isEquivalentToString(right.resolvedType) {
             replacement.remove
-            node.become(kind == .EQUAL ? Node.createUnary(.NOT, replacement) : replacement)
+            node.become(kind == .EQUAL ? _wrapWithNot(replacement) : replacement)
           }
         }
 
@@ -2020,13 +2013,13 @@ namespace Skew {
           # "if (a != -1) c;" => "if (~a) c;"
           # "if (a == -1) c; else d;" => "if (~a) d; else c;"
           if right.isInt && right.asInt == -1 {
-            node.become(Node.createUnary(.COMPLEMENT, left.remove))
+            node.become(Node.createUnary(.COMPLEMENT, left.remove).withType(_cache.intType))
           }
 
           # "if (-1 != b) c;" => "if (~b) c;"
           # "if (-1 == b) c; else d;" => "if (~b) d; else c;"
           else if left.isInt && left.asInt == -1 {
-            node.become(Node.createUnary(.COMPLEMENT, right.remove))
+            node.become(Node.createUnary(.COMPLEMENT, right.remove).withType(_cache.intType))
           }
 
           # "if (a != b) c;" => "if (a ^ b) c;"
@@ -2086,7 +2079,7 @@ namespace Skew {
 
           # "if (a) b; else c;" => "a ? b : c;"
           if trueStatement.kind == .EXPRESSION && falseStatement.kind == .EXPRESSION {
-            var hook = Node.createHook(test.remove, trueStatement.expressionValue.remove, falseStatement.expressionValue.remove)
+            var hook = Node.createHook(test.remove, trueStatement.expressionValue.remove, falseStatement.expressionValue.remove).withType(.DYNAMIC)
             _peepholeMangleHook(hook)
             node.become(Node.createExpression(hook))
           }
@@ -2096,7 +2089,7 @@ namespace Skew {
             var trueValue = trueStatement.returnValue
             var falseValue = falseStatement.returnValue
             if trueValue != null && falseValue != null {
-              var hook = Node.createHook(test.remove, trueValue.remove, falseValue.remove)
+              var hook = Node.createHook(test.remove, trueValue.remove, falseValue.remove).withType(.DYNAMIC)
               _peepholeMangleHook(hook)
               node.become(Node.createReturn(hook))
             }
@@ -2107,7 +2100,7 @@ namespace Skew {
       # "if (a) b;" => "a && b;"
       # "if (!a) b;" => "a || b;"
       else if trueStatement != null && trueStatement.kind == .EXPRESSION {
-        var binary = Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.remove, trueStatement.expressionValue.remove)
+        var binary = Node.createBinary(swapped == .SWAP ? .LOGICAL_OR : .LOGICAL_AND, test.remove, trueStatement.expressionValue.remove).withType(.DYNAMIC)
         _peepholeMangleBinary(binary)
         node.become(Node.createExpression(binary))
       }
@@ -2117,7 +2110,7 @@ namespace Skew {
         var singleIf = _singleIf(trueBlock)
         if singleIf != null && singleIf.ifFalse == null {
           var block = singleIf.ifTrue
-          test.replaceWith(Node.createBinary(.LOGICAL_AND, test.cloneAndStealChildren, singleIf.ifTest.remove))
+          test.replaceWith(Node.createBinary(.LOGICAL_AND, test.cloneAndStealChildren, singleIf.ifTest.remove).withType(.DYNAMIC))
           trueBlock.replaceWith(block.remove)
         }
       }
@@ -2129,7 +2122,7 @@ namespace Skew {
       _peepholeMangleBoolean(test.remove, .NO_SWAP)
 
       # "while (a) {}" => "for (; a;) {}"
-      var loop = Node.createFor(Node.createSequence, test, Node.createSequence, block.remove).withRange(node.range)
+      var loop = Node.createFor(Node.createSequence.withType(.DYNAMIC), test, Node.createSequence.withType(.DYNAMIC), block.remove).withRange(node.range)
       _peepholeMangleFor(loop)
       node.become(loop)
     }
@@ -2140,7 +2133,7 @@ namespace Skew {
 
       # "for (; true;) {}" => "for (;;) {}"
       if test.kind == .NOT && test.unaryValue.isInt && test.unaryValue.asInt == 0 {
-        var empty = Node.createSequence
+        var empty = Node.createSequence.withType(.DYNAMIC)
         test.replaceWith(empty)
         test = empty
       }
@@ -2156,7 +2149,7 @@ namespace Skew {
             if test.isEmptySequence {
               test.replaceWith(condition)
             } else {
-              condition = Node.createBinary(.LOGICAL_AND, test.cloneAndStealChildren, condition)
+              condition = Node.createBinary(.LOGICAL_AND, test.cloneAndStealChildren, condition).withType(.DYNAMIC)
               _peepholeMangleBinary(condition)
               test.become(condition)
             }
@@ -2181,7 +2174,7 @@ namespace Skew {
 
       # "a.b ? c : null" => "a.b && c"
       if falseValue.kind == .CAST && falseValue.castValue.kind == .NULL && test.resolvedType != null && test.resolvedType != .DYNAMIC && test.resolvedType.isReference {
-        node.become(Node.createBinary(.LOGICAL_AND, test.remove, trueValue.remove))
+        node.become(Node.createBinary(.LOGICAL_AND, test.remove, trueValue.remove).withType(node.resolvedType))
         return
       }
 
@@ -2189,19 +2182,19 @@ namespace Skew {
       # "a = b ? a : c" => "(a = b) || c"
       if test.looksTheSameAs(trueValue) && test.hasNoSideEffects ||
           test.kind.isBinaryAssign && test.binaryLeft.looksTheSameAs(trueValue) && test.binaryLeft.hasNoSideEffects {
-        node.become(Node.createBinary(.LOGICAL_OR, test.remove, falseValue.remove))
+        node.become(Node.createBinary(.LOGICAL_OR, test.remove, falseValue.remove).withType(node.resolvedType))
         return
       }
 
       # "a ? b : a" => "a && b"
       if test.looksTheSameAs(falseValue) && test.hasNoSideEffects {
-        node.become(Node.createBinary(.LOGICAL_AND, test.remove, trueValue.remove))
+        node.become(Node.createBinary(.LOGICAL_AND, test.remove, trueValue.remove).withType(node.resolvedType))
         return
       }
 
       # "a ? b : b" => "a, b"
       if trueValue.looksTheSameAs(falseValue) {
-        node.become(test.hasNoSideEffects ? trueValue.remove : Node.createSequence.appendChild(test.remove).appendChild(trueValue.remove))
+        node.become(test.hasNoSideEffects ? trueValue.remove : Node.createSequence(test.remove, trueValue.remove))
         return
       }
 
@@ -2214,7 +2207,7 @@ namespace Skew {
         # "a ? b : c ? b : d" => "a || c ? b : d"
         # "a ? b : c || d ? b : e" => "a || c || d ? b : e"
         if trueValue.looksTheSameAs(falseTrueValue) {
-          var both = Node.createBinary(.LOGICAL_OR, test.cloneAndStealChildren, falseTest.remove)
+          var both = Node.createBinary(.LOGICAL_OR, test.cloneAndStealChildren, falseTest.remove).withType(.DYNAMIC)
           _peepholeMangleBinary(both)
           test.replaceWith(both)
           falseValue.replaceWith(falseFalseValue.remove)
@@ -2232,16 +2225,16 @@ namespace Skew {
 
         # "a ? b = c : b = d;" => "b = a ? c : d;"
         if trueLeft.looksTheSameAs(falseLeft) {
-          var hook = Node.createHook(test.remove, trueRight.remove, falseRight.remove)
+          var hook = Node.createHook(test.remove, trueRight.remove, falseRight.remove).withType(.DYNAMIC)
           _peepholeMangleHook(hook)
-          node.become(Node.createBinary(trueValue.kind, trueLeft.remove, hook))
+          node.become(Node.createBinary(trueValue.kind, trueLeft.remove, hook).withType(node.resolvedType))
         }
 
         # "a ? b + 100 : c + 100;" => "(a ? b + c) + 100;"
         else if trueRight.looksTheSameAs(falseRight) && !trueValue.kind.isBinaryAssign {
-          var hook = Node.createHook(test.remove, trueLeft.remove, falseLeft.remove)
+          var hook = Node.createHook(test.remove, trueLeft.remove, falseLeft.remove).withType(.DYNAMIC)
           _peepholeMangleHook(hook)
-          node.become(Node.createBinary(trueValue.kind, hook, trueRight.remove))
+          node.become(Node.createBinary(trueValue.kind, hook, trueRight.remove).withType(node.resolvedType))
         }
       }
 
@@ -2259,8 +2252,9 @@ namespace Skew {
       var right = node.assignIndexRight
 
       if _isIdentifierString(center) {
-        node.become(Node.createBinary(.ASSIGN, Node.createDot(left.remove, center.asString).withRange(
-          Range.span(left.range, center.range)), right.remove).withRange(node.range))
+        node.become(Node.createBinary(.ASSIGN, Node.createDot(left.remove, center.asString)
+            .withRange(Range.span(left.range, center.range)).withType(.DYNAMIC), right.remove)
+          .withRange(node.range).withType(node.resolvedType))
       }
     }
 
@@ -2303,7 +2297,7 @@ namespace Skew {
               if child.returnValue != null && previous.kind == .IF && previous.ifFalse == null {
                 var statement = previous.ifTrue.blockStatement
                 if statement != null && statement.kind == .RETURN && statement.returnValue != null {
-                  var hook = Node.createHook(previous.remove.ifTest.remove, statement.returnValue.remove, child.returnValue.remove)
+                  var hook = Node.createHook(previous.remove.ifTest.remove, statement.returnValue.remove, child.returnValue.remove).withType(.DYNAMIC)
                   _peepholeMangleHook(hook)
                   child.become(Node.createReturn(hook))
                 } else {
@@ -2330,7 +2324,7 @@ namespace Skew {
             while previous != null {
               # "if (a) b; if (c) b;" => "if (a || c) b;"
               if child.ifFalse == null && previous.kind == .IF && previous.ifFalse == null && previous.ifTrue.looksTheSameAs(child.ifTrue) {
-                child.ifTest.replaceWith(Node.createBinary(.LOGICAL_OR, previous.remove.ifTest.remove, child.ifTest.cloneAndStealChildren))
+                child.ifTest.replaceWith(Node.createBinary(.LOGICAL_OR, previous.remove.ifTest.remove, child.ifTest.cloneAndStealChildren).withType(.DYNAMIC))
               }
 
               # "a; if (b) c;" => "if (a, b) c;"
@@ -2444,7 +2438,7 @@ namespace Skew {
               var singleCase = child.lastChild
               if singleCase.hasTwoChildren {
                 var value = singleCase.firstChild
-                next = Node.createIf(Node.createBinary(.EQUAL, switchValue.remove, value.remove), singleCase.caseBlock.remove, null)
+                next = Node.createIf(Node.createBinary(.EQUAL, switchValue.remove, value.remove).withType(_cache.boolType), singleCase.caseBlock.remove, null)
                 _peepholeMangleIf(next)
                 child.replaceWith(next)
                 continue
@@ -2457,7 +2451,7 @@ namespace Skew {
               var secondCase = child.lastChild
               if firstCase.hasTwoChildren && secondCase.hasOneChild {
                 var value = firstCase.firstChild
-                next = Node.createIf(Node.createBinary(.EQUAL, switchValue.remove, value.remove), firstCase.caseBlock.remove, secondCase.caseBlock.remove)
+                next = Node.createIf(Node.createBinary(.EQUAL, switchValue.remove, value.remove).withType(_cache.boolType), firstCase.caseBlock.remove, secondCase.caseBlock.remove)
                 _peepholeMangleIf(next)
                 child.replaceWith(next)
                 continue
@@ -2522,14 +2516,14 @@ namespace Skew {
       }
 
       var block = Node.createBlock.appendChild(Node.createReturn(
-        sharedDelta > 0 ? _createIntBinary(.ADD, switchValue.remove, _createInt(sharedDelta)) :
-        sharedDelta < 0 ? _createIntBinary(.SUBTRACT, switchValue.remove, _createInt(-sharedDelta)) :
+        sharedDelta > 0 ? _createIntBinary(.ADD, switchValue.remove, _cache.createInt(sharedDelta)) :
+        sharedDelta < 0 ? _createIntBinary(.SUBTRACT, switchValue.remove, _cache.createInt(-sharedDelta)) :
         switchValue.remove))
 
       # Replace the large "switch" statement with a smaller "if" statement if the entire range is covered
       if max - min == count - 1 {
-        var lower = Node.createBinary(.GREATER_THAN_OR_EQUAL, switchValue.clone, _createInt(min)).withType(_cache.boolType)
-        var upper = Node.createBinary(.LESS_THAN_OR_EQUAL, switchValue.clone, _createInt(max)).withType(_cache.boolType)
+        var lower = Node.createBinary(.GREATER_THAN_OR_EQUAL, switchValue.clone, _cache.createInt(min)).withType(_cache.boolType)
+        var upper = Node.createBinary(.LESS_THAN_OR_EQUAL, switchValue.clone, _cache.createInt(max)).withType(_cache.boolType)
 
         # Convert ">=" and "<=" to ">" and "<" where possible
         _peepholeMangleBinary(lower)
@@ -2584,7 +2578,7 @@ namespace Skew {
       # Cast to string
       else if type == _cache.stringType {
         if valueType != _cache.stringType && valueType != .NULL {
-          node.become(Node.createBinary(.ADD, value.remove, Node.createString("").withType(_cache.stringType)).withType(_cache.stringType).withRange(node.range))
+          node.become(Node.createBinary(.ADD, value.remove, _cache.createString("")).withType(_cache.stringType).withRange(node.range))
         }
       }
     }
