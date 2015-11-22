@@ -103,6 +103,13 @@ namespace Skew {
       return self >= ASSIGN && self <= WHILE
     }
 
+    def isBitOperation bool {
+      return
+        self == COMPLEMENT ||
+        self >= BITWISE_AND && self <= BITWISE_XOR ||
+        self >= ASSIGN_BITWISE_AND && self <= ASSIGN_BITWISE_XOR
+    }
+
     def isLoop bool {
       return self == FOR || self == FOREACH || self == WHILE
     }
@@ -149,6 +156,10 @@ namespace Skew {
       return self >= GREATER_THAN && self <= LESS_THAN_OR_EQUAL
     }
 
+    def isShift bool {
+      return self == SHIFT_LEFT || self == SHIFT_RIGHT || self == UNSIGNED_SHIFT_RIGHT
+    }
+
     def isJump bool {
       return self == BREAK || self == CONTINUE || self == RETURN
     }
@@ -163,7 +174,7 @@ namespace Skew {
     # An implicit return is a return statement inside an expression lambda. For
     # example, the lambda "x => x" is compiled into "x => { return x }" where
     # the return statement has this flag set.
-    const IS_IMPLICIT_RETURN = 1 << 0
+    const IS_IMPLICIT_RETURN = 1
 
     # This flag marks nodes that were wrapped in parentheses in the original
     # source code. It's used for warnings about C-style syntax in conditional

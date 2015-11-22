@@ -5048,284 +5048,317 @@ enum Bar {}
 
 def foo(foo Foo, bar Bar) List<bool> {
   return [
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
 
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
 
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
 
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
   ]
 }
 ", "
 <stdin>:6:5: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
     ~~~~~~~
 <stdin>:6:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
              ~~~~~~~
 <stdin>:6:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                       ~~~~~~~
 <stdin>:6:32: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                                ~~~~~~~
 <stdin>:6:41: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                                         ~~~~~~~
 <stdin>:6:50: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                                                  ~~~~~~~
 <stdin>:6:59: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                                                           ~~~~~~~
 <stdin>:6:68: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                                                                    ~~~~~~~
-<stdin>:6:77: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+<stdin>:6:77: warning: Shifting an integer by zero doesn't do anything, is this a bug?
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                                                                             ~~~~~~~~
-<stdin>:6:87: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+<stdin>:6:77: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
+                                                                            ~~~~~~~~
+<stdin>:6:87: warning: Shifting an integer by zero doesn't do anything, is this a bug?
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                                                                                       ~~~~~~~~
-<stdin>:6:97: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo <=> 0,
+<stdin>:6:87: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
+                                                                                      ~~~~~~~~
+<stdin>:6:97: warning: Shifting an integer by zero doesn't do anything, is this a bug?
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
                                                                                                 ~~~~~~~~~
+<stdin>:6:97: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
+                                                                                                ~~~~~~~~~
+<stdin>:6:108: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    foo + 0, foo - 0, foo * 0, foo / 0, foo % 0, foo & 0, foo | 0, foo ^ 0, foo << 0, foo >> 0, foo >>> 0, foo <=> 0,
+                                                                                                           ~~~~~~~~~
 <stdin>:7:5: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
     ~~~~~~~
 <stdin>:7:14: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
              ~~~~~~~
 <stdin>:7:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                       ~~~~~~~
 <stdin>:7:32: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                                ~~~~~~~
 <stdin>:7:41: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                                         ~~~~~~~
 <stdin>:7:50: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                                                  ~~~~~~~
 <stdin>:7:59: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                                                           ~~~~~~~
 <stdin>:7:68: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                                                                    ~~~~~~~
 <stdin>:7:77: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                                                                             ~~~~~~~~
 <stdin>:7:87: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                                                                                       ~~~~~~~~
 <stdin>:7:97: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 <=> foo,
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
                                                                                                 ~~~~~~~~~
+<stdin>:7:108: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    0 + foo, 0 - foo, 0 * foo, 0 / foo, 0 % foo, 0 & foo, 0 | foo, 0 ^ foo, 0 << foo, 0 >> foo, 0 >>> foo, 0 <=> foo,
+                                                                                                           ~~~~~~~~~
 <stdin>:9:5: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
     ~~~~~~~~~
 <stdin>:9:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                ~~~~~~~~~
 <stdin>:9:27: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                           ~~~~~~~~~
 <stdin>:9:38: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                                      ~~~~~~~~~
 <stdin>:9:53: error: \"%\" is not declared on type \"double\"
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                                                     ^
 <stdin>:9:64: error: \"&\" is not declared on type \"double\"
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                                                                ^
 <stdin>:9:75: error: \"|\" is not declared on type \"double\"
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                                                                           ^
 <stdin>:9:86: error: \"^\" is not declared on type \"double\"
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                                                                                      ^
 <stdin>:9:97: error: \"<<\" is not declared on type \"double\"
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                                                                                                 ~~
 <stdin>:9:109: error: \">>\" is not declared on type \"double\"
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
                                                                                                             ~~
-<stdin>:9:117: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo <=> 0.0,
-                                                                                                                    ~~~~~~~~~~~
+<stdin>:9:121: error: \">>>\" is not declared on type \"double\"
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
+                                                                                                                        ~~~
+<stdin>:9:130: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    foo + 0.0, foo - 0.0, foo * 0.0, foo / 0.0, foo % 0.0, foo & 0.0, foo | 0.0, foo ^ 0.0, foo << 0.0, foo >> 0.0, foo >>> 0.0, foo <=> 0.0,
+                                                                                                                                 ~~~~~~~~~~~
 <stdin>:10:5: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
     ~~~~~~~~~
 <stdin>:10:16: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                ~~~~~~~~~
 <stdin>:10:27: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                           ~~~~~~~~~
 <stdin>:10:38: error: Cannot convert from type \"double\" to type \"bool\" without a cast
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                                      ~~~~~~~~~
 <stdin>:10:53: error: \"%\" is not declared on type \"double\"
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                                                     ^
 <stdin>:10:64: error: \"&\" is not declared on type \"double\"
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                                                                ^
 <stdin>:10:75: error: \"|\" is not declared on type \"double\"
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                                                                           ^
 <stdin>:10:86: error: \"^\" is not declared on type \"double\"
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                                                                                      ^
 <stdin>:10:97: error: \"<<\" is not declared on type \"double\"
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                                                                                                 ~~
 <stdin>:10:109: error: \">>\" is not declared on type \"double\"
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
                                                                                                             ~~
-<stdin>:10:117: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 <=> foo,
-                                                                                                                    ~~~~~~~~~~~
+<stdin>:10:121: error: \">>>\" is not declared on type \"double\"
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
+                                                                                                                        ~~~
+<stdin>:10:130: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    0.0 + foo, 0.0 - foo, 0.0 * foo, 0.0 / foo, 0.0 % foo, 0.0 & foo, 0.0 | foo, 0.0 ^ foo, 0.0 << foo, 0.0 >> foo, 0.0 >>> foo, 0.0 <=> foo,
+                                                                                                                                 ~~~~~~~~~~~
 <stdin>:12:5: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
     ~~~~~~~~~
 <stdin>:12:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                ~~~~~~~~~
 <stdin>:12:27: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                           ~~~~~~~~~
 <stdin>:12:38: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                      ~~~~~~~~~
 <stdin>:12:49: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                 ~~~~~~~~~
 <stdin>:12:60: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                            ~~~~~~~~~
 <stdin>:12:71: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                       ~~~~~~~~~
 <stdin>:12:82: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                                  ~~~~~~~~~
 <stdin>:12:93: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                                             ~~~~~~~~~~
 <stdin>:12:105: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                                                         ~~~~~~~~~~
 <stdin>:12:117: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                                                                     ~~~~~~~~~~~
+<stdin>:12:130: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
+                                                                                                                                 ~~~~~~~~~~~
 <stdin>:13:5: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
     ~~~~~~~~~
 <stdin>:13:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                ~~~~~~~~~
 <stdin>:13:27: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                           ~~~~~~~~~
 <stdin>:13:38: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                      ~~~~~~~~~
 <stdin>:13:49: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                 ~~~~~~~~~
 <stdin>:13:60: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                            ~~~~~~~~~
 <stdin>:13:71: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                       ~~~~~~~~~
 <stdin>:13:82: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                                  ~~~~~~~~~
 <stdin>:13:93: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                                             ~~~~~~~~~~
 <stdin>:13:105: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                                                         ~~~~~~~~~~
 <stdin>:13:117: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo <=> foo,
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
                                                                                                                     ~~~~~~~~~~~
+<stdin>:13:130: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    foo + foo, foo - foo, foo * foo, foo / foo, foo % foo, foo & foo, foo | foo, foo ^ foo, foo << foo, foo >> foo, foo >>> foo, foo <=> foo,
+                                                                                                                                 ~~~~~~~~~~~
 <stdin>:15:5: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
     ~~~~~~~~~
 <stdin>:15:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                ~~~~~~~~~
 <stdin>:15:27: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                           ~~~~~~~~~
 <stdin>:15:38: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                                      ~~~~~~~~~
 <stdin>:15:49: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                                                 ~~~~~~~~~
 <stdin>:15:60: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                                                            ~~~~~~~~~
 <stdin>:15:71: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                                                                       ~~~~~~~~~
 <stdin>:15:82: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                                                                                  ~~~~~~~~~
 <stdin>:15:93: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                                                                                             ~~~~~~~~~~
 <stdin>:15:105: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                                                                                                         ~~~~~~~~~~
 <stdin>:15:117: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo <=> bar,
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
                                                                                                                     ~~~~~~~~~~~
+<stdin>:15:130: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    foo + bar, foo - bar, foo * bar, foo / bar, foo % bar, foo & bar, foo | bar, foo ^ bar, foo << bar, foo >> bar, foo >>> bar, foo <=> bar,
+                                                                                                                                 ~~~~~~~~~~~
 <stdin>:16:5: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
     ~~~~~~~~~
 <stdin>:16:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                ~~~~~~~~~
 <stdin>:16:27: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                           ~~~~~~~~~
 <stdin>:16:38: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                                      ~~~~~~~~~
 <stdin>:16:49: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                                                 ~~~~~~~~~
 <stdin>:16:60: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                                                            ~~~~~~~~~
 <stdin>:16:71: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                                                                       ~~~~~~~~~
 <stdin>:16:82: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                                                                                  ~~~~~~~~~
 <stdin>:16:93: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                                                                                             ~~~~~~~~~~
 <stdin>:16:105: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                                                                                                         ~~~~~~~~~~
 <stdin>:16:117: error: Cannot convert from type \"int\" to type \"bool\" without a cast
-    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar <=> foo,
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
                                                                                                                     ~~~~~~~~~~~
+<stdin>:16:130: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    bar + foo, bar - foo, bar * foo, bar / foo, bar % foo, bar & foo, bar | foo, bar ^ foo, bar << foo, bar >> foo, bar >>> foo, bar <=> foo,
+                                                                                                                                 ~~~~~~~~~~~
 ")
 
 # Test for recursive propagation of dynamic type context for list literals
@@ -5484,19 +5517,6 @@ def main int {
 <stdin>:10:13: warning: Both sides of \":\" are identical, is this a bug?
     (true ? dynamic.bar() : dynamic.bar())
             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-")
-
-# Check warnings for no-op shifts, which potentially don't behave the same on int types as they do on dynamic types
-test("
-def main(i int, y dynamic) int {
-  return
-    i << 0 | i >> 0 | i >>> 0 |
-    y << 0 | y >> 0 | y >>> 0
-}
-", "
-<stdin>:3:23: warning: Shifting an integer by zero doesn't do anything, is this a bug?
-    i << 0 | i >> 0 | i >>> 0 |
-                      ~~~~~~~
 ")
 
 # Make sure redundant inherited import/export annotations have appropriate warnings
@@ -6773,31 +6793,38 @@ var foo = <Foo
 />
 
 def bar {
-  var class = 0
-  var def = 0
-  var enum = 0
-  var interface = 0
-  var namespace = 0
-  var over = 0
+  var class = 2
+  var def = 2
+  var enum = 2
+  var interface = 2
+  var namespace = 2
+  var over = 2
+
+  class = 3
+  def = 3
+  enum = 3
+  interface = 3
+  namespace = 3
+  over = 3
 }
 ", "
 <stdin>:20:7: warning: Local variable \"class\" is never read
-  var class = 0
+  var class = 2
       ~~~~~
 <stdin>:21:7: warning: Local variable \"def\" is never read
-  var def = 0
+  var def = 2
       ~~~
 <stdin>:22:7: warning: Local variable \"enum\" is never read
-  var enum = 0
+  var enum = 2
       ~~~~
 <stdin>:23:7: warning: Local variable \"interface\" is never read
-  var interface = 0
+  var interface = 2
       ~~~~~~~~~
 <stdin>:24:7: warning: Local variable \"namespace\" is never read
-  var namespace = 0
+  var namespace = 2
       ~~~~~~~~~
 <stdin>:25:7: warning: Local variable \"over\" is never read
-  var over = 0
+  var over = 2
       ~~~~
 ")
 
@@ -6817,6 +6844,305 @@ var const = 0
 <stdin>:1:5: error: Expected identifier but found \"const\"
 var const = 0
     ~~~~~
+")
+
+# Check for flags overflow
+test("
+flags Foo {
+  X0
+  X1
+  X2
+  X3
+  X4
+  X5
+  X6
+  X7
+  X8
+  X9
+
+  X10
+  X11
+  X12
+  X13
+  X14
+  X15
+  X16
+  X17
+  X18
+  X19
+
+  X20
+  X21
+  X22
+  X23
+  X24
+  X25
+  X26
+  X27
+  X28
+  X29
+
+  X30
+  X31
+  X32
+  X33
+}
+
+flags Bar {
+  X0
+  X1
+  X2
+  X3
+  X4
+  X5
+  X6
+  X7
+  X8
+  X9
+}
+
+flags Bar {
+  X10
+  X11
+  X12
+  X13
+  X14
+  X15
+  X16
+  X17
+  X18
+  X19
+}
+
+flags Bar {
+  X20
+  X21
+  X22
+  X23
+  X24
+  X25
+  X26
+  X27
+  X28
+  X29
+}
+
+flags Bar {
+  X30
+  X31
+  X32
+  X33
+}
+", "
+<stdin>:37:3: error: The type \"Foo\" cannot have more than 32 flags
+  X32
+  ~~~
+<stdin>:38:3: error: The type \"Foo\" cannot have more than 32 flags
+  X33
+  ~~~
+<stdin>:83:3: error: The type \"Bar\" cannot have more than 32 flags
+  X32
+  ~~~
+<stdin>:84:3: error: The type \"Bar\" cannot have more than 32 flags
+  X33
+  ~~~
+")
+
+# Check for flags type conversions
+test("
+flags Foo {
+  FOO
+  BAR
+}
+
+@export
+def test List<Foo> {
+  var foo = Foo.FOO
+  foo |= 0
+  foo |= ~0
+  foo |= 1
+  foo |= .FOO
+  foo |= ~.FOO
+  foo &= ~.FOO
+  foo ^= ~.FOO
+  foo += ~.FOO
+  return [
+    0,
+    ~0,
+    1,
+    -1,
+    ~.FOO,
+    .FOO in Foo.BAR,
+    .FOO & .BAR,
+    .FOO | .BAR,
+    .FOO ^ .BAR,
+    foo |= ~.FOO,
+    foo &= ~.FOO,
+    foo ^= ~.FOO,
+    foo += ~.FOO,
+  ]
+}
+", "
+<stdin>:16:7: error: \"+=\" is not declared on type \"Foo\"
+  foo += ~.FOO
+      ~~
+<stdin>:16:11: error: Cannot access \"FOO\" without type context
+  foo += ~.FOO
+          ~~~~
+<stdin>:20:5: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
+    1,
+    ^
+<stdin>:21:5: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
+    -1,
+    ~~
+<stdin>:23:5: error: Cannot convert from type \"bool\" to type \"Foo\"
+    .FOO in Foo.BAR,
+    ~~~~~~~~~~~~~~~
+<stdin>:30:9: error: \"+=\" is not declared on type \"Foo\"
+    foo += ~.FOO,
+        ~~
+<stdin>:30:13: error: Cannot access \"FOO\" without type context
+    foo += ~.FOO,
+            ~~~~
+")
+
+# Check for flags-style enum type conversions
+test("
+enum Foo {
+  FOO
+  BAR
+}
+
+@export
+def test List<Foo> {
+  var foo = Foo.FOO
+  foo |= 0
+  foo |= ~0
+  foo |= 1
+  foo |= .FOO
+  foo |= ~.FOO
+  foo &= ~.FOO
+  foo ^= ~.FOO
+  foo += ~.FOO
+  return [
+    0,
+    ~0,
+    1,
+    -1,
+    ~.FOO,
+    .FOO in Foo.BAR,
+    .FOO & .BAR,
+    .FOO | .BAR,
+    .FOO ^ .BAR,
+    foo |= ~.FOO,
+    foo &= ~.FOO,
+    foo ^= ~.FOO,
+    foo += ~.FOO,
+  ]
+}
+", "
+<stdin>:9:7: error: \"|=\" is not declared on type \"Foo\"
+  foo |= 0
+      ~~
+<stdin>:10:7: error: \"|=\" is not declared on type \"Foo\"
+  foo |= ~0
+      ~~
+<stdin>:11:7: error: \"|=\" is not declared on type \"Foo\"
+  foo |= 1
+      ~~
+<stdin>:12:7: error: \"|=\" is not declared on type \"Foo\"
+  foo |= .FOO
+      ~~
+<stdin>:12:10: error: Cannot access \"FOO\" without type context
+  foo |= .FOO
+         ~~~~
+<stdin>:13:7: error: \"|=\" is not declared on type \"Foo\"
+  foo |= ~.FOO
+      ~~
+<stdin>:13:11: error: Cannot access \"FOO\" without type context
+  foo |= ~.FOO
+          ~~~~
+<stdin>:14:7: error: \"&=\" is not declared on type \"Foo\"
+  foo &= ~.FOO
+      ~~
+<stdin>:14:11: error: Cannot access \"FOO\" without type context
+  foo &= ~.FOO
+          ~~~~
+<stdin>:15:7: error: \"^=\" is not declared on type \"Foo\"
+  foo ^= ~.FOO
+      ~~
+<stdin>:15:11: error: Cannot access \"FOO\" without type context
+  foo ^= ~.FOO
+          ~~~~
+<stdin>:16:7: error: \"+=\" is not declared on type \"Foo\"
+  foo += ~.FOO
+      ~~
+<stdin>:16:11: error: Cannot access \"FOO\" without type context
+  foo += ~.FOO
+          ~~~~
+<stdin>:18:5: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
+    0,
+    ^
+<stdin>:19:5: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
+    ~0,
+    ~~
+<stdin>:20:5: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
+    1,
+    ^
+<stdin>:21:5: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
+    -1,
+    ~~
+<stdin>:22:6: error: Cannot access \"FOO\" without type context
+    ~.FOO,
+     ~~~~
+<stdin>:23:5: error: Cannot access \"FOO\" without type context
+    .FOO in Foo.BAR,
+    ~~~~
+<stdin>:23:10: error: \"in\" is not declared on type \"Foo\"
+    .FOO in Foo.BAR,
+         ~~
+<stdin>:24:5: error: Cannot access \"FOO\" without type context
+    .FOO & .BAR,
+    ~~~~
+<stdin>:24:12: error: Cannot access \"BAR\" without type context
+    .FOO & .BAR,
+           ~~~~
+<stdin>:25:5: error: Cannot access \"FOO\" without type context
+    .FOO | .BAR,
+    ~~~~
+<stdin>:25:12: error: Cannot access \"BAR\" without type context
+    .FOO | .BAR,
+           ~~~~
+<stdin>:26:5: error: Cannot access \"FOO\" without type context
+    .FOO ^ .BAR,
+    ~~~~
+<stdin>:26:12: error: Cannot access \"BAR\" without type context
+    .FOO ^ .BAR,
+           ~~~~
+<stdin>:27:9: error: \"|=\" is not declared on type \"Foo\"
+    foo |= ~.FOO,
+        ~~
+<stdin>:27:13: error: Cannot access \"FOO\" without type context
+    foo |= ~.FOO,
+            ~~~~
+<stdin>:28:9: error: \"&=\" is not declared on type \"Foo\"
+    foo &= ~.FOO,
+        ~~
+<stdin>:28:13: error: Cannot access \"FOO\" without type context
+    foo &= ~.FOO,
+            ~~~~
+<stdin>:29:9: error: \"^=\" is not declared on type \"Foo\"
+    foo ^= ~.FOO,
+        ~~
+<stdin>:29:13: error: Cannot access \"FOO\" without type context
+    foo ^= ~.FOO,
+            ~~~~
+<stdin>:30:9: error: \"+=\" is not declared on type \"Foo\"
+    foo += ~.FOO,
+        ~~
+<stdin>:30:13: error: Cannot access \"FOO\" without type context
+    foo += ~.FOO,
+            ~~~~
 ")
 
   }

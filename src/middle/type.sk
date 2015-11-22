@@ -43,6 +43,10 @@ namespace Skew {
       return symbol != null && symbol.kind == .OBJECT_ENUM
     }
 
+    def isEnumFlags bool {
+      return isEnum && symbol.isFlags
+    }
+
     def isParameter bool {
       return symbol != null && symbol.kind.isParameter
     }

@@ -8580,6 +8580,10 @@
     return (this.flags & Skew.Symbol.IS_CONST) != 0;
   };
 
+  Skew.Symbol.prototype.isFlags = function() {
+    return (this.flags & Skew.Symbol.IS_FLAGS) != 0;
+  };
+
   Skew.Symbol.prototype.isGetter = function() {
     return (this.flags & Skew.Symbol.IS_GETTER) != 0;
   };
@@ -9609,6 +9613,10 @@
 
   Skew.Log.prototype.semanticErrorMissingSuper = function(range) {
     this.error(range, 'Constructors for derived types must start with a call to "super"');
+  };
+
+  Skew.Log.prototype.semanticErrorTooManyFlags = function(range, name) {
+    this.error(range, 'The type "' + name + '" cannot have more than 32 flags');
   };
 
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
@@ -10787,6 +10795,10 @@
           var object = new Skew.ObjectSymbol(kind, name);
           object.range = range;
           object.parent = parent;
+
+          if (text == 'flags') {
+            object.flags |= Skew.Symbol.IS_FLAGS;
+          }
 
           if (kind != Skew.SymbolKind.OBJECT_NAMESPACE && context.eat(Skew.TokenKind.PARAMETER_LIST_START)) {
             object.parameters = Skew.Parsing.parseTypeParameters(context, Skew.SymbolKind.PARAMETER_OBJECT);
@@ -15399,7 +15411,12 @@
         var variable = list2[i3];
 
         if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
-          variable.value = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent((nextEnumValue = nextEnumValue + 1 | 0) + -1 | 0)).withType(symbol.resolvedType).withRange(variable.range);
+          if (nextEnumValue >= 32 && symbol.isFlags()) {
+            this._log.semanticErrorTooManyFlags(variable.range, symbol.name);
+          }
+
+          variable.value = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(symbol.isFlags() ? 1 << nextEnumValue : nextEnumValue)).withType(symbol.resolvedType).withRange(variable.range);
+          nextEnumValue = nextEnumValue + 1 | 0;
         }
       }
 
@@ -15447,7 +15464,7 @@
     }
 
     // Create a default toString if one doesn't exist
-    if (kind == Skew.SymbolKind.OBJECT_ENUM && !symbol.isImported() && !('toString' in symbol.members)) {
+    if (kind == Skew.SymbolKind.OBJECT_ENUM && !symbol.isImported() && !symbol.isFlags() && !('toString' in symbol.members)) {
       var generated1 = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_INSTANCE, 'toString');
       generated1.scope = new Skew.FunctionScope(symbol.scope, generated1);
       generated1.flags |= Skew.Symbol.IS_AUTOMATICALLY_GENERATED;
@@ -16471,7 +16488,7 @@
       }
 
       case Skew.NodeKind.ASSIGN_INDEX: {
-        this._resolveOperatorOverload(node, scope);
+        this._resolveOperatorOverload(node, scope, context);
         break;
       }
 
@@ -16493,12 +16510,12 @@
       case Skew.NodeKind.POSTFIX_INCREMENT:
       case Skew.NodeKind.PREFIX_DECREMENT:
       case Skew.NodeKind.PREFIX_INCREMENT: {
-        this._resolveOperatorOverload(node, scope);
+        this._resolveOperatorOverload(node, scope, context);
         break;
       }
 
       case Skew.NodeKind.CONSTANT: {
-        this._resolveConstant(node, scope);
+        this._resolveConstant(node, scope, context);
         break;
       }
 
@@ -16513,7 +16530,7 @@
       }
 
       case Skew.NodeKind.INDEX: {
-        this._resolveOperatorOverload(node, scope);
+        this._resolveOperatorOverload(node, scope, context);
         break;
       }
 
@@ -16775,7 +16792,7 @@
       return;
     }
 
-    // The implicit conversion must be valid
+    // The implicit conversion must be valid.
     if (kind == Skew.Resolving.ConversionKind.IMPLICIT && !this._cache.canImplicitlyConvert(from, to) || kind == Skew.Resolving.ConversionKind.EXPLICIT && !this._cache.canExplicitlyConvert(from, to)) {
       this._log.semanticErrorIncompatibleTypes(node.range, from, to, this._cache.canExplicitlyConvert(from, to));
       node.resolvedType = Skew.Type.DYNAMIC;
@@ -17606,7 +17623,7 @@
     }
   };
 
-  Skew.Resolving.Resolver.prototype._resolveConstant = function(node, scope) {
+  Skew.Resolving.Resolver.prototype._resolveConstant = function(node, scope, context) {
     switch (node.content.kind()) {
       case Skew.ContentKind.BOOL: {
         node.resolvedType = this._cache.boolType;
@@ -17618,13 +17635,13 @@
         break;
       }
 
-      case Skew.ContentKind.INT: {
-        node.resolvedType = this._cache.intType;
+      case Skew.ContentKind.STRING: {
+        node.resolvedType = this._cache.stringType;
         break;
       }
 
-      case Skew.ContentKind.STRING: {
-        node.resolvedType = this._cache.stringType;
+      case Skew.ContentKind.INT: {
+        node.resolvedType = context != null && context.isEnumFlags() && node.asInt() == 0 ? context : this._cache.intType;
         break;
       }
 
@@ -18502,7 +18519,7 @@
       return;
     }
 
-    this._resolveOperatorOverload(node, scope);
+    this._resolveOperatorOverload(node, scope, context);
   };
 
   Skew.Resolving.Resolver.prototype._generateReference = function(scope, type) {
@@ -18588,7 +18605,7 @@
     return this._extractExpression(node, scope);
   };
 
-  Skew.Resolving.Resolver.prototype._resolveOperatorOverload = function(node, scope) {
+  Skew.Resolving.Resolver.prototype._resolveOperatorOverload = function(node, scope, context) {
     // The order of operands are reversed for the "in" operator
     var kind = node.kind;
     var reverseBinaryOrder = kind == Skew.NodeKind.IN;
@@ -18596,6 +18613,8 @@
     var second = first.nextSibling();
     var target = reverseBinaryOrder ? second : first;
     var other = Skew.in_NodeKind.isBinary(kind) ? reverseBinaryOrder ? first : second : null;
+    var isBitOperation = Skew.in_NodeKind.isBitOperation(kind);
+    var bitContext = isBitOperation && context != null && context.isEnumFlags() ? context : null;
 
     // Allow "foo in [.FOO, .BAR]"
     if (kind == Skew.NodeKind.IN && target.kind == Skew.NodeKind.INITIALIZER_LIST && !Skew.Resolving.Resolver._needsTypeContext(other)) {
@@ -18605,12 +18624,12 @@
 
     // Resolve just the target since the other arguments may need type context from overload resolution
     else {
-      this._resolveAsParameterizedExpression(target, scope);
+      this._resolveAsParameterizedExpressionWithTypeContext(target, scope, bitContext);
     }
 
     // Warn about shifting by 0 in the original source code, since that doesn't
     // do anything when the arguments are integers and so is likely a mistake
-    if (kind == Skew.NodeKind.UNSIGNED_SHIFT_RIGHT && this._cache.isEquivalentToInt(target.resolvedType) && other.isInt() && other.asInt() == 0) {
+    if (Skew.in_NodeKind.isShift(kind) && this._cache.isEquivalentToInt(target.resolvedType) && other.isInt() && other.asInt() == 0) {
       this._log.semanticWarningShiftByZero(node.range);
     }
 
@@ -18635,32 +18654,63 @@
       return;
     }
 
-    // Auto-convert int to double and enum to int when it appears as the target
-    if (other != null && !Skew.in_NodeKind.isBinaryAssign(kind)) {
-      if (type == this._cache.intType) {
-        this._resolveAsParameterizedExpression(other, scope);
+    // Numeric conversions
+    var enumFlagsType = null;
 
-        if (other.resolvedType == this._cache.doubleType) {
-          this._checkConversion(target, this._cache.doubleType, Skew.Resolving.ConversionKind.IMPLICIT);
-          type = this._cache.doubleType;
-        }
-      }
+    // Binary operations
+    if (other != null) {
+      // Assignment operations aren't symmetric
+      if (!Skew.in_NodeKind.isBinaryAssign(kind)) {
+        if (type == this._cache.intType) {
+          this._resolveAsParameterizedExpression(other, scope);
 
-      else if (type.isEnum()) {
-        this._resolveAsParameterizedExpression(other, scope);
-
-        if (this._cache.isNumeric(other.resolvedType)) {
-          type = this._cache.commonImplicitType(type, other.resolvedType);
-          assert(type != null);
-
-          if (type.isEnum()) {
-            type = this._cache.intType;
+          // Auto-convert doubles to ints
+          if (other.resolvedType == this._cache.doubleType) {
+            this._checkConversion(target, this._cache.doubleType, Skew.Resolving.ConversionKind.IMPLICIT);
+            type = this._cache.doubleType;
           }
+        }
 
-          this._checkConversion(other, type, Skew.Resolving.ConversionKind.IMPLICIT);
-          this._checkConversion(target, type, Skew.Resolving.ConversionKind.IMPLICIT);
+        // Check if the target is an enum
+        else if (type.isEnum()) {
+          this._resolveAsParameterizedExpressionWithTypeContext(other, scope, bitContext != null ? bitContext : (isBitOperation || kind == Skew.NodeKind.IN) && type.isEnumFlags() ? type : null);
+
+          // Auto-convert enums to ints when both operands can be converted
+          if (this._cache.isNumeric(other.resolvedType)) {
+            type = this._cache.commonImplicitType(type, other.resolvedType);
+            assert(type != null);
+
+            if (type.isEnum()) {
+              if (type.isEnumFlags()) {
+                enumFlagsType = type;
+              }
+
+              type = this._cache.intType;
+            }
+
+            this._checkConversion(target, type, Skew.Resolving.ConversionKind.IMPLICIT);
+            this._checkConversion(other, type, Skew.Resolving.ConversionKind.IMPLICIT);
+          }
         }
       }
+
+      // Allow certain operations on "flags" types
+      else if (isBitOperation && type.isEnumFlags()) {
+        this._resolveAsParameterizedExpressionWithTypeContext(other, scope, type);
+        enumFlagsType = type;
+        type = this._cache.intType;
+        this._checkConversion(other, type, Skew.Resolving.ConversionKind.IMPLICIT);
+      }
+    }
+
+    // Allow "~x" on "flags" types
+    else if (kind == Skew.NodeKind.COMPLEMENT && type.isEnum()) {
+      if (type.isEnumFlags()) {
+        enumFlagsType = type;
+      }
+
+      type = this._cache.intType;
+      this._checkConversion(target, type, Skew.Resolving.ConversionKind.IMPLICIT);
     }
 
     // Find the operator method
@@ -18670,6 +18720,7 @@
     var extracted = null;
     var wasUnaryPostfix = false;
 
+    // Convert operators like "+=" to a "+" inside a "="
     if (symbol == null && info.assignKind != Skew.NodeKind.NULL) {
       symbol = this._findMember(type, Skew.operatorInfo[info.assignKind].text);
 
@@ -18686,6 +18737,14 @@
       }
     }
 
+    // Special-case the "in" operator on "flags" types
+    if (symbol == null && kind == Skew.NodeKind.IN && enumFlagsType != null) {
+      node.become(Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, Skew.Node.createBinary(Skew.NodeKind.BITWISE_AND, other.remove(), target.remove()).withRange(node.range), this._cache.createInt(0)).withRange(node.range));
+      this._resolveAsParameterizedExpression(node, scope);
+      return;
+    }
+
+    // Fail if the operator wasn't found
     if (symbol == null) {
       this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, type);
       this._resolveChildrenAsParameterizedExpressions(node, scope);
@@ -18742,6 +18801,11 @@
 
       if (reverseBinaryOrder) {
         first.swapWith(second);
+      }
+
+      // Handle "flags" types
+      if (isBitOperation && enumFlagsType != null) {
+        node.resolvedType = enumFlagsType;
       }
     }
 
@@ -19522,6 +19586,10 @@
 
   Skew.Type.prototype.isEnum = function() {
     return this.symbol != null && this.symbol.kind == Skew.SymbolKind.OBJECT_ENUM;
+  };
+
+  Skew.Type.prototype.isEnumFlags = function() {
+    return this.isEnum() && this.symbol.isFlags();
   };
 
   Skew.Type.prototype.isParameter = function() {
@@ -20521,6 +20589,10 @@
 
   Skew.in_NodeKind = {};
 
+  Skew.in_NodeKind.isBitOperation = function(self) {
+    return self == Skew.NodeKind.COMPLEMENT || self >= Skew.NodeKind.BITWISE_AND && self <= Skew.NodeKind.BITWISE_XOR || self >= Skew.NodeKind.ASSIGN_BITWISE_AND && self <= Skew.NodeKind.ASSIGN_BITWISE_XOR;
+  };
+
   Skew.in_NodeKind.isLoop = function(self) {
     return self == Skew.NodeKind.FOR || self == Skew.NodeKind.FOREACH || self == Skew.NodeKind.WHILE;
   };
@@ -20570,6 +20642,10 @@
 
   Skew.in_NodeKind.isBinaryComparison = function(self) {
     return self >= Skew.NodeKind.GREATER_THAN && self <= Skew.NodeKind.LESS_THAN_OR_EQUAL;
+  };
+
+  Skew.in_NodeKind.isShift = function(self) {
+    return self == Skew.NodeKind.SHIFT_LEFT || self == Skew.NodeKind.SHIFT_RIGHT || self == Skew.NodeKind.UNSIGNED_SHIFT_RIGHT;
   };
 
   Skew.in_NodeKind.isJump = function(self) {
@@ -20946,7 +21022,7 @@
   // An implicit return is a return statement inside an expression lambda. For
   // example, the lambda "x => x" is compiled into "x => { return x }" where
   // the return statement has this flag set.
-  Skew.Node.IS_IMPLICIT_RETURN = 1 << 0;
+  Skew.Node.IS_IMPLICIT_RETURN = 1;
 
   // This flag marks nodes that were wrapped in parentheses in the original
   // source code. It's used for warnings about C-style syntax in conditional
@@ -20969,37 +21045,38 @@
   Skew.Node._nextID = 0;
 
   // Flags
-  Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1 << 0;
+  Skew.Symbol.IS_AUTOMATICALLY_GENERATED = 1;
   Skew.Symbol.IS_CONST = 1 << 1;
-  Skew.Symbol.IS_GETTER = 1 << 2;
-  Skew.Symbol.IS_LOOP_VARIABLE = 1 << 3;
-  Skew.Symbol.IS_OVER = 1 << 4;
-  Skew.Symbol.IS_SETTER = 1 << 5;
-  Skew.Symbol.IS_VALUE_TYPE = 1 << 6;
-  Skew.Symbol.SHOULD_INFER_RETURN_TYPE = 1 << 7;
+  Skew.Symbol.IS_FLAGS = 1 << 2;
+  Skew.Symbol.IS_GETTER = 1 << 3;
+  Skew.Symbol.IS_LOOP_VARIABLE = 1 << 4;
+  Skew.Symbol.IS_OVER = 1 << 5;
+  Skew.Symbol.IS_SETTER = 1 << 6;
+  Skew.Symbol.IS_VALUE_TYPE = 1 << 7;
+  Skew.Symbol.SHOULD_INFER_RETURN_TYPE = 1 << 8;
 
   // Modifiers
-  Skew.Symbol.IS_DEPRECATED = 1 << 8;
-  Skew.Symbol.IS_ENTRY_POINT = 1 << 9;
-  Skew.Symbol.IS_EXPORTED = 1 << 10;
-  Skew.Symbol.IS_IMPORTED = 1 << 11;
-  Skew.Symbol.IS_INLINING_FORCED = 1 << 12;
-  Skew.Symbol.IS_INLINING_PREVENTED = 1 << 13;
-  Skew.Symbol.IS_PREFERRED = 1 << 14;
-  Skew.Symbol.IS_PROTECTED = 1 << 15;
-  Skew.Symbol.IS_RENAMED = 1 << 16;
-  Skew.Symbol.IS_SKIPPED = 1 << 17;
-  Skew.Symbol.SHOULD_SPREAD = 1 << 18;
+  Skew.Symbol.IS_DEPRECATED = 1 << 9;
+  Skew.Symbol.IS_ENTRY_POINT = 1 << 10;
+  Skew.Symbol.IS_EXPORTED = 1 << 11;
+  Skew.Symbol.IS_IMPORTED = 1 << 12;
+  Skew.Symbol.IS_INLINING_FORCED = 1 << 13;
+  Skew.Symbol.IS_INLINING_PREVENTED = 1 << 14;
+  Skew.Symbol.IS_PREFERRED = 1 << 15;
+  Skew.Symbol.IS_PROTECTED = 1 << 16;
+  Skew.Symbol.IS_RENAMED = 1 << 17;
+  Skew.Symbol.IS_SKIPPED = 1 << 18;
+  Skew.Symbol.SHOULD_SPREAD = 1 << 19;
 
   // Pass-specific flags
-  Skew.Symbol.IS_OBSOLETE = 1 << 19;
-  Skew.Symbol.IS_PRIMARY_CONSTRUCTOR = 1 << 20;
-  Skew.Symbol.IS_VIRTUAL = 1 << 21;
-  Skew.Symbol.IS_DYNAMIC_LAMBDA = 1 << 22;
+  Skew.Symbol.IS_OBSOLETE = 1 << 20;
+  Skew.Symbol.IS_PRIMARY_CONSTRUCTOR = 1 << 21;
+  Skew.Symbol.IS_VIRTUAL = 1 << 22;
+  Skew.Symbol.IS_DYNAMIC_LAMBDA = 1 << 23;
   Skew.Symbol._nextID = 0;
   Skew.Parsing.expressionParser = null;
   Skew.Parsing.typeParser = null;
-  Skew.Parsing.identifierToSymbolKind = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'class', Skew.SymbolKind.OBJECT_CLASS), 'def', Skew.SymbolKind.FUNCTION_GLOBAL), 'enum', Skew.SymbolKind.OBJECT_ENUM), 'interface', Skew.SymbolKind.OBJECT_INTERFACE), 'namespace', Skew.SymbolKind.OBJECT_NAMESPACE), 'over', Skew.SymbolKind.FUNCTION_GLOBAL), 'type', Skew.SymbolKind.OBJECT_WRAPPED);
+  Skew.Parsing.identifierToSymbolKind = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'class', Skew.SymbolKind.OBJECT_CLASS), 'def', Skew.SymbolKind.FUNCTION_GLOBAL), 'enum', Skew.SymbolKind.OBJECT_ENUM), 'flags', Skew.SymbolKind.OBJECT_ENUM), 'interface', Skew.SymbolKind.OBJECT_INTERFACE), 'namespace', Skew.SymbolKind.OBJECT_NAMESPACE), 'over', Skew.SymbolKind.FUNCTION_GLOBAL), 'type', Skew.SymbolKind.OBJECT_WRAPPED);
   Skew.Parsing.customOperators = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_INDEX, 0), Skew.TokenKind.ASSIGN_MINUS, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_POWER, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.COMPARE, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.IN, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INDEX, 0), Skew.TokenKind.LIST, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.POWER, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SET, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.TILDE, 0), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, 0), Skew.TokenKind.XML_CHILD, 0);
   Skew.Parsing.forbiddenCustomOperators = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.ASSIGN, Skew.Parsing.ForbiddenGroup.ASSIGN), Skew.TokenKind.EQUAL, Skew.Parsing.ForbiddenGroup.EQUAL), Skew.TokenKind.GREATER_THAN, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.GREATER_THAN_OR_EQUAL, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LESS_THAN, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LESS_THAN_OR_EQUAL, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LOGICAL_AND, Skew.Parsing.ForbiddenGroup.LOGICAL), Skew.TokenKind.LOGICAL_OR, Skew.Parsing.ForbiddenGroup.LOGICAL), Skew.TokenKind.NOT_EQUAL, Skew.Parsing.ForbiddenGroup.EQUAL);
 

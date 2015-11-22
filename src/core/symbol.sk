@@ -90,33 +90,34 @@ namespace Skew {
 
   namespace Symbol {
     # Flags
-    const IS_AUTOMATICALLY_GENERATED = 1 << 0
+    const IS_AUTOMATICALLY_GENERATED = 1
     const IS_CONST = 1 << 1
-    const IS_GETTER = 1 << 2
-    const IS_LOOP_VARIABLE = 1 << 3
-    const IS_OVER = 1 << 4
-    const IS_SETTER = 1 << 5
-    const IS_VALUE_TYPE = 1 << 6
-    const SHOULD_INFER_RETURN_TYPE = 1 << 7
+    const IS_FLAGS = 1 << 2
+    const IS_GETTER = 1 << 3
+    const IS_LOOP_VARIABLE = 1 << 4
+    const IS_OVER = 1 << 5
+    const IS_SETTER = 1 << 6
+    const IS_VALUE_TYPE = 1 << 7
+    const SHOULD_INFER_RETURN_TYPE = 1 << 8
 
     # Modifiers
-    const IS_DEPRECATED = 1 << 8
-    const IS_ENTRY_POINT = 1 << 9
-    const IS_EXPORTED = 1 << 10
-    const IS_IMPORTED = 1 << 11
-    const IS_INLINING_FORCED = 1 << 12
-    const IS_INLINING_PREVENTED = 1 << 13
-    const IS_PREFERRED = 1 << 14
-    const IS_PROTECTED = 1 << 15
-    const IS_RENAMED = 1 << 16
-    const IS_SKIPPED = 1 << 17
-    const SHOULD_SPREAD = 1 << 18
+    const IS_DEPRECATED = 1 << 9
+    const IS_ENTRY_POINT = 1 << 10
+    const IS_EXPORTED = 1 << 11
+    const IS_IMPORTED = 1 << 12
+    const IS_INLINING_FORCED = 1 << 13
+    const IS_INLINING_PREVENTED = 1 << 14
+    const IS_PREFERRED = 1 << 15
+    const IS_PROTECTED = 1 << 16
+    const IS_RENAMED = 1 << 17
+    const IS_SKIPPED = 1 << 18
+    const SHOULD_SPREAD = 1 << 19
 
     # Pass-specific flags
-    const IS_OBSOLETE = 1 << 19
-    const IS_PRIMARY_CONSTRUCTOR = 1 << 20
-    const IS_VIRTUAL = 1 << 21
-    const IS_DYNAMIC_LAMBDA = 1 << 22
+    const IS_OBSOLETE = 1 << 20
+    const IS_PRIMARY_CONSTRUCTOR = 1 << 21
+    const IS_VIRTUAL = 1 << 22
+    const IS_DYNAMIC_LAMBDA = 1 << 23
   }
 
   class Symbol {
@@ -145,6 +146,7 @@ namespace Skew {
     # Flags
     def isAutomaticallyGenerated bool { return (flags & IS_AUTOMATICALLY_GENERATED) != 0 }
     def isConst bool                  { return (flags & IS_CONST) != 0 }
+    def isFlags bool                  { return (flags & IS_FLAGS) != 0 }
     def isGetter bool                 { return (flags & IS_GETTER) != 0 }
     def isLoopVariable bool           { return (flags & IS_LOOP_VARIABLE) != 0 }
     def isOver bool                   { return (flags & IS_OVER) != 0 }

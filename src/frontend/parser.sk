@@ -713,6 +713,7 @@ namespace Skew.Parsing {
     "class": .OBJECT_CLASS,
     "def": .FUNCTION_GLOBAL,
     "enum": .OBJECT_ENUM,
+    "flags": .OBJECT_ENUM,
     "interface": .OBJECT_INTERFACE,
     "namespace": .OBJECT_NAMESPACE,
     "over": .FUNCTION_GLOBAL,
@@ -1041,6 +1042,10 @@ namespace Skew.Parsing {
           var object = ObjectSymbol.new(kind, name)
           object.range = range
           object.parent = parent
+
+          if text == "flags" {
+            object.flags |= Symbol.IS_FLAGS
+          }
 
           if kind != .OBJECT_NAMESPACE && context.eat(.PARAMETER_LIST_START) {
             object.parameters = parseTypeParameters(context, .PARAMETER_OBJECT)

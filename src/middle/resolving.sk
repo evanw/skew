@@ -349,7 +349,11 @@ namespace Skew.Resolving {
         var nextEnumValue = 0
         for variable in symbol.variables {
           if variable.kind == .VARIABLE_ENUM {
-            variable.value = Node.createInt(nextEnumValue++).withType(symbol.resolvedType).withRange(variable.range)
+            if nextEnumValue >= 32 && symbol.isFlags {
+              _log.semanticErrorTooManyFlags(variable.range, symbol.name)
+            }
+            variable.value = Node.createInt(symbol.isFlags ? 1 << nextEnumValue : nextEnumValue).withType(symbol.resolvedType).withRange(variable.range)
+            nextEnumValue++
           }
         }
         symbol.flags |= Symbol.IS_VALUE_TYPE
@@ -390,7 +394,7 @@ namespace Skew.Resolving {
       }
 
       # Create a default toString if one doesn't exist
-      if kind == .OBJECT_ENUM && !symbol.isImported && !("toString" in symbol.members) {
+      if kind == .OBJECT_ENUM && !symbol.isImported && !symbol.isFlags && !("toString" in symbol.members) {
         var generated = FunctionSymbol.new(.FUNCTION_INSTANCE, "toString")
         generated.scope = FunctionScope.new(symbol.scope, generated)
         generated.flags |= Symbol.IS_AUTOMATICALLY_GENERATED
@@ -1263,16 +1267,16 @@ namespace Skew.Resolving {
         case .WHILE { _resolveWhile(node, scope) }
 
         # Expressions
-        case .ASSIGN_INDEX { _resolveOperatorOverload(node, scope) }
+        case .ASSIGN_INDEX { _resolveOperatorOverload(node, scope, context) }
         case .CALL { _resolveCall(node, scope, context) }
         case .CAST { _resolveCast(node, scope, context) }
         case .COMPLEMENT, .NEGATIVE, .NOT, .POSITIVE, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT, .PREFIX_DECREMENT, .PREFIX_INCREMENT {
-          _resolveOperatorOverload(node, scope)
+          _resolveOperatorOverload(node, scope, context)
         }
-        case .CONSTANT { _resolveConstant(node, scope) }
+        case .CONSTANT { _resolveConstant(node, scope, context) }
         case .DOT { _resolveDot(node, scope, context) }
         case .HOOK { _resolveHook(node, scope, context) }
-        case .INDEX { _resolveOperatorOverload(node, scope) }
+        case .INDEX { _resolveOperatorOverload(node, scope, context) }
         case .INITIALIZER_LIST, .INITIALIZER_MAP { _resolveInitializer(node, scope, context) }
         case .LAMBDA { _resolveLambda(node, scope, context) }
         case .LAMBDA_TYPE { _resolveLambdaType(node, scope) }
@@ -1454,7 +1458,7 @@ namespace Skew.Resolving {
         return
       }
 
-      # The implicit conversion must be valid
+      # The implicit conversion must be valid.
       if kind == .IMPLICIT && !_cache.canImplicitlyConvert(from, to) ||
           kind == .EXPLICIT && !_cache.canExplicitlyConvert(from, to) {
         _log.semanticErrorIncompatibleTypes(node.range, from, to, _cache.canExplicitlyConvert(from, to))
@@ -2196,12 +2200,15 @@ namespace Skew.Resolving {
       }
     }
 
-    def _resolveConstant(node Node, scope Scope) {
+    def _resolveConstant(node Node, scope Scope, context Type) {
       switch node.content.kind {
         case .BOOL { node.resolvedType = _cache.boolType }
         case .DOUBLE { node.resolvedType = _cache.doubleType }
-        case .INT { node.resolvedType = _cache.intType }
         case .STRING { node.resolvedType = _cache.stringType }
+
+        # The literal "0" represents the empty set for "flags" types
+        case .INT { node.resolvedType = context != null && context.isEnumFlags && node.asInt == 0 ? context : _cache.intType }
+
         default { assert(false) }
       }
     }
@@ -2979,7 +2986,7 @@ namespace Skew.Resolving {
         return
       }
 
-      _resolveOperatorOverload(node, scope)
+      _resolveOperatorOverload(node, scope, context)
     }
 
     def _generateReference(scope Scope, type Type) Node {
@@ -3064,7 +3071,7 @@ namespace Skew.Resolving {
       return _extractExpression(node, scope)
     }
 
-    def _resolveOperatorOverload(node Node, scope Scope) {
+    def _resolveOperatorOverload(node Node, scope Scope, context Type) {
       # The order of operands are reversed for the "in" operator
       var kind = node.kind
       var reverseBinaryOrder = kind == .IN
@@ -3072,6 +3079,8 @@ namespace Skew.Resolving {
       var second = first.nextSibling
       var target = reverseBinaryOrder ? second : first
       var other = kind.isBinary ? reverseBinaryOrder ? first : second : null
+      var isBitOperation = kind.isBitOperation
+      var bitContext = isBitOperation && context != null && context.isEnumFlags ? context : null
 
       # Allow "foo in [.FOO, .BAR]"
       if kind == .IN && target.kind == .INITIALIZER_LIST && !_needsTypeContext(other) {
@@ -3081,12 +3090,12 @@ namespace Skew.Resolving {
 
       # Resolve just the target since the other arguments may need type context from overload resolution
       else {
-        _resolveAsParameterizedExpression(target, scope)
+        _resolveAsParameterizedExpressionWithTypeContext(target, scope, bitContext)
       }
 
       # Warn about shifting by 0 in the original source code, since that doesn't
       # do anything when the arguments are integers and so is likely a mistake
-      if kind == .UNSIGNED_SHIFT_RIGHT && _cache.isEquivalentToInt(target.resolvedType) && other.isInt && other.asInt == 0 {
+      if kind.isShift && _cache.isEquivalentToInt(target.resolvedType) && other.isInt && other.asInt == 0 {
         _log.semanticWarningShiftByZero(node.range)
       }
 
@@ -3108,24 +3117,59 @@ namespace Skew.Resolving {
         return
       }
 
-      # Auto-convert int to double and enum to int when it appears as the target
-      if other != null && !kind.isBinaryAssign {
-        if type == _cache.intType {
-          _resolveAsParameterizedExpression(other, scope)
-          if other.resolvedType == _cache.doubleType {
-            _checkConversion(target, _cache.doubleType, .IMPLICIT)
-            type = _cache.doubleType
+      # Numeric conversions
+      var enumFlagsType Type = null
+
+      # Binary operations
+      if other != null {
+        # Assignment operations aren't symmetric
+        if !kind.isBinaryAssign {
+          if type == _cache.intType {
+            _resolveAsParameterizedExpression(other, scope)
+
+            # Auto-convert doubles to ints
+            if other.resolvedType == _cache.doubleType {
+              _checkConversion(target, _cache.doubleType, .IMPLICIT)
+              type = _cache.doubleType
+            }
           }
-        } else if type.isEnum {
-          _resolveAsParameterizedExpression(other, scope)
-          if _cache.isNumeric(other.resolvedType) {
-            type = _cache.commonImplicitType(type, other.resolvedType)
-            assert(type != null)
-            if type.isEnum { type = _cache.intType }
-            _checkConversion(other, type, .IMPLICIT)
-            _checkConversion(target, type, .IMPLICIT)
+
+          # Check if the target is an enum
+          else if type.isEnum {
+            _resolveAsParameterizedExpressionWithTypeContext(other, scope, bitContext ?? ((isBitOperation || kind == .IN) && type.isEnumFlags ? type : null))
+
+            # Auto-convert enums to ints when both operands can be converted
+            if _cache.isNumeric(other.resolvedType) {
+              type = _cache.commonImplicitType(type, other.resolvedType)
+              assert(type != null)
+              if type.isEnum {
+                if type.isEnumFlags {
+                  enumFlagsType = type
+                }
+                type = _cache.intType
+              }
+              _checkConversion(target, type, .IMPLICIT)
+              _checkConversion(other, type, .IMPLICIT)
+            }
           }
         }
+
+        # Allow certain operations on "flags" types
+        else if isBitOperation && type.isEnumFlags {
+          _resolveAsParameterizedExpressionWithTypeContext(other, scope, type)
+          enumFlagsType = type
+          type = _cache.intType
+          _checkConversion(other, type, .IMPLICIT)
+        }
+      }
+
+      # Allow "~x" on "flags" types
+      else if kind == .COMPLEMENT && type.isEnum {
+        if type.isEnumFlags {
+          enumFlagsType = type
+        }
+        type = _cache.intType
+        _checkConversion(target, type, .IMPLICIT)
       }
 
       # Find the operator method
@@ -3134,6 +3178,8 @@ namespace Skew.Resolving {
       var symbol = _findMember(type, name)
       var extracted Node = null
       var wasUnaryPostfix = false
+
+      # Convert operators like "+=" to a "+" inside a "="
       if symbol == null && info.assignKind != .NULL {
         symbol = _findMember(type, operatorInfo[info.assignKind].text)
         if symbol != null {
@@ -3146,6 +3192,15 @@ namespace Skew.Resolving {
           node.kind = kind
         }
       }
+
+      # Special-case the "in" operator on "flags" types
+      if symbol == null && kind == .IN && enumFlagsType != null {
+        node.become(Node.createBinary(.NOT_EQUAL, Node.createBinary(.BITWISE_AND, other.remove, target.remove).withRange(node.range), _cache.createInt(0)).withRange(node.range))
+        _resolveAsParameterizedExpression(node, scope)
+        return
+      }
+
+      # Fail if the operator wasn't found
       if symbol == null {
         _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, type)
         _resolveChildrenAsParameterizedExpressions(node, scope)
@@ -3195,6 +3250,11 @@ namespace Skew.Resolving {
         }
         if reverseBinaryOrder {
           first.swapWith(second)
+        }
+
+        # Handle "flags" types
+        if isBitOperation && enumFlagsType != null {
+          node.resolvedType = enumFlagsType
         }
       }
 
