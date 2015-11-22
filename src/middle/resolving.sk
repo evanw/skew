@@ -1556,23 +1556,6 @@ namespace Skew.Resolving {
 
       for child = node.firstChild, next Node = null; child != null; child = next {
         next = child.nextSibling
-
-        # There is a well-known ambiguity in languages like JavaScript where
-        # a return statement followed by a newline and a value can either be
-        # parsed as a single return statement with a value or as two
-        # statements, a return statement without a value and an expression
-        # statement. Luckily, we're better off than JavaScript since we know
-        # the type of the function. Parse a single statement in a non-void
-        # function but two statements in a void function.
-        if child.kind == .RETURN && next != null && child.returnValue == null && next.kind == .EXPRESSION {
-          var function = scope.findEnclosingFunctionOrLambda.symbol
-          if function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null {
-            child.appendChild(next.remove.expressionValue.remove)
-            next = child.nextSibling
-            assert(child.returnValue != null)
-          }
-        }
-
         _resolveNode(child, scope, null)
 
         # Stop now if the child was removed

@@ -6686,6 +6686,7 @@ enum Bar {
   ~~~~
 ")
 
+# Check that comments are allowed in different places in a call expression
 test("
 def main {
   foo(
@@ -6702,6 +6703,37 @@ def main {
 <stdin>:2:3: error: \"foo\" is not declared
   foo(
   ~~~
+")
+
+# Check return statements with a newline between the keyword and the value
+test("
+def foo int {
+  return
+  false
+}
+
+def foo2 int {
+  return
+}
+
+def bar {
+  return
+  false
+}
+
+def bar2 {
+  return
+}
+", "
+<stdin>:3:3: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  false
+  ~~~~~
+<stdin>:7:3: error: Must return a value of type \"int\"
+  return
+  ~~~~~~
+<stdin>:12:3: error: Cannot return a value inside a function without a return type
+  false
+  ~~~~~
 ")
 
   }
