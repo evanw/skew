@@ -72,7 +72,7 @@ namespace Skew.IDE {
         }
 
         case .OBJECT_ENUM {
-          text += "enum \(symbol.name)"
+          text += "\(symbol.isFlags ? "flags" : "enum") \(symbol.name)"
         }
 
         case .OBJECT_INTERFACE {
