@@ -2,7 +2,6 @@ namespace Skew {
   enum NodeKind {
     # Other
     ANNOTATION
-    ATTRIBUTE
     BLOCK
     CASE
     CATCH
@@ -832,11 +831,6 @@ namespace Skew {
       return new(.ANNOTATION).appendChild(value).appendChild(test)
     }
 
-    def createAttribute(name string, value Node) Node {
-      assert(value.kind.isExpression)
-      return new(.ATTRIBUTE).withContent(StringContent.new(name)).appendChild(value)
-    }
-
     def createBlock Node {
       return new(.BLOCK)
     }
@@ -1119,7 +1113,7 @@ namespace Skew {
     }
 
     def asString string {
-      assert(kind == .NAME || kind == .DOT || kind == .CONSTANT || kind == .NULL_DOT || kind == .ATTRIBUTE)
+      assert(kind == .NAME || kind == .DOT || kind == .CONSTANT || kind == .NULL_DOT)
       return content.asString
     }
 
@@ -1161,13 +1155,6 @@ namespace Skew {
       assert(childCount == 1 || childCount == 2)
       assert(_firstChild._nextSibling == null || _firstChild._nextSibling.kind.isExpression)
       return _firstChild._nextSibling
-    }
-
-    def attributeValue Node {
-      assert(kind == .ATTRIBUTE)
-      assert(childCount == 1)
-      assert(_firstChild.kind.isExpression)
-      return _firstChild
     }
 
     def caseBlock Node {

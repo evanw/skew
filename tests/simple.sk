@@ -6722,6 +6722,27 @@ enum Bar {
   ~~~~
 ")
 
+# Test complex XML-like attributes
+test("
+var foo = <Foo
+  foo.bar=100
+  baz+=false
+/>
+
+class Foo {
+  var foo Foo = null
+  var bar Foo = null
+  var baz = 0
+}
+", "
+<stdin>:2:11: error: Cannot convert from type \"int\" to type \"Foo\"
+  foo.bar=100
+          ~~~
+<stdin>:3:8: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+  baz+=false
+       ~~~~~
+")
+
 # Check that comments are allowed in different places in a call expression
 test("
 def main {

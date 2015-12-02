@@ -789,6 +789,22 @@ namespace Skew.Parsing {
     return context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE)
   }
 
+  const assignmentOperators IntMap<NodeKind> = {
+    TokenKind.ASSIGN: .ASSIGN,
+    TokenKind.ASSIGN_BITWISE_AND: .ASSIGN_BITWISE_AND,
+    TokenKind.ASSIGN_BITWISE_OR: .ASSIGN_BITWISE_OR,
+    TokenKind.ASSIGN_BITWISE_XOR: .ASSIGN_BITWISE_XOR,
+    TokenKind.ASSIGN_DIVIDE: .ASSIGN_DIVIDE,
+    TokenKind.ASSIGN_MINUS: .ASSIGN_SUBTRACT,
+    TokenKind.ASSIGN_MULTIPLY: .ASSIGN_MULTIPLY,
+    TokenKind.ASSIGN_PLUS: .ASSIGN_ADD,
+    TokenKind.ASSIGN_POWER: .ASSIGN_POWER,
+    TokenKind.ASSIGN_REMAINDER: .ASSIGN_REMAINDER,
+    TokenKind.ASSIGN_SHIFT_LEFT: .ASSIGN_SHIFT_LEFT,
+    TokenKind.ASSIGN_SHIFT_RIGHT: .ASSIGN_SHIFT_RIGHT,
+    TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT: .ASSIGN_UNSIGNED_SHIFT_RIGHT,
+  }
+
   def recursiveParseGuard(context ParserContext, parent ObjectSymbol, annotations List<Node>) Guard {
     var test Node = null
     if context.eat(.IF) {
@@ -1613,15 +1629,19 @@ namespace Skew.Parsing {
       # Parse attributes
       context.skipWhitespace
       while context.peek(.IDENTIFIER) {
-        var name = context.next.range
-        if !context.expect(.ASSIGN) {
+        var name = parseDotChain(context)
+        var assignment = context.current
+        var kind = assignmentOperators.get(assignment.kind, .NULL)
+        if kind == .NULL {
+          context.expect(.ASSIGN)
           return null
         }
+        context.next
         var value = expressionParser.parse(context, (Precedence.UNARY_PREFIX - 1) as Precedence)
         if value == null {
           return null
         }
-        attributes.appendChild(Node.createAttribute(name.toString, value).withRange(context.spanSince(name)).withInternalRange(name))
+        attributes.appendChild(Node.createBinary(kind, name, value).withRange(context.spanSince(name.range)).withInternalRange(assignment.range))
         context.skipWhitespace
       }
 

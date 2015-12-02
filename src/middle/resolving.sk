@@ -2870,10 +2870,15 @@ namespace Skew.Resolving {
       # Assign to attributes if necessary
       if needsSequence {
         result = Node.createSequence.withRange(node.range).appendChild(_extractExpression(chain, scope))
-        for child = attributes.firstChild; child != null; child = child.nextSibling {
-          result.appendChild(Node.createBinary(.ASSIGN,
-            Node.createDot(chain.clone, child.asString).withRange(child.internalRange),
-            child.attributeValue.remove).withRange(child.range))
+        while attributes.hasChildren {
+          var child = attributes.firstChild.remove
+          var name = child.binaryLeft
+          while name.kind == .DOT {
+            name = name.dotTarget
+          }
+          assert(name.kind == .NAME)
+          name.replaceWith(Node.createDot(chain.clone, name.asString).withRange(name.range))
+          result.appendChild(child)
         }
       }
 
