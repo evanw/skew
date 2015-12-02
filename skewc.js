@@ -5669,9 +5669,31 @@
         break;
       }
 
+      case Skew.ContentKind.INT: {
+        var value = node.asInt();
+
+        // "-2147483648" => "1 << 31"
+        if (value != 0) {
+          var count = value.toString().length;
+          var shift = 0;
+
+          // Count zero bits
+          while ((value & 1) == 0) {
+            value >>>= 1;
+            shift = shift + 1 | 0;
+          }
+
+          // Do the substitution if it makes sense
+          if (shift != 0 && ((value.toString().length + 2 | 0) + shift.toString().length | 0) < count) {
+            node.become(Skew.Node.createBinary(Skew.NodeKind.SHIFT_LEFT, this._cache.createInt(value), this._cache.createInt(shift)).withType(this._cache.intType).withRange(node.range));
+          }
+        }
+        break;
+      }
+
       case Skew.ContentKind.DOUBLE: {
-        var value = node.asDouble();
-        var reciprocal = 1 / value;
+        var value1 = node.asDouble();
+        var reciprocal = 1 / value1;
 
         // Shorten long reciprocals (don't replace multiplication with division
         // because that's not numerically identical). These should be constant-
@@ -5680,8 +5702,8 @@
         //   "x * 0.3333333333333333" => "x * (1 / 3)"
         //
         for (var i = 1; i < 10; i = i + 1 | 0) {
-          if (reciprocal * i == (reciprocal * i | 0) && value.toString().length >= 10) {
-            node.become(Skew.Node.createBinary(Skew.NodeKind.DIVIDE, this._cache.createDouble(i), this._cache.createDouble(reciprocal * i)).withType(this._cache.doubleType));
+          if (reciprocal * i == (reciprocal * i | 0) && value1.toString().length >= 10) {
+            node.become(Skew.Node.createBinary(Skew.NodeKind.DIVIDE, this._cache.createDouble(i), this._cache.createDouble(reciprocal * i)).withType(this._cache.doubleType).withRange(node.range));
             break;
           }
         }

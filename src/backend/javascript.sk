@@ -1755,6 +1755,27 @@ namespace Skew {
           node.become(_wrapWithNot(_cache.createInt(node.asBool ? 0 : 1).withRange(node.range)))
         }
 
+        case .INT {
+          var value = node.asInt
+
+          # "-2147483648" => "1 << 31"
+          if value != 0 {
+            var count = value.toString.count
+            var shift = 0
+
+            # Count zero bits
+            while (value & 1) == 0 {
+              value >>>= 1
+              shift++
+            }
+
+            # Do the substitution if it makes sense
+            if shift != 0 && value.toString.count + 2 + shift.toString.count < count {
+              node.become(Node.createBinary(.SHIFT_LEFT, _cache.createInt(value), _cache.createInt(shift)).withType(_cache.intType).withRange(node.range))
+            }
+          }
+        }
+
         case .DOUBLE {
           var value = node.asDouble
           var reciprocal = 1 / value
@@ -1767,7 +1788,7 @@ namespace Skew {
           #
           for i in 1..10 {
             if reciprocal * i == ((reciprocal * i) as int) && value.toString.count >= 10 {
-              node.become(Node.createBinary(.DIVIDE, _cache.createDouble(i), _cache.createDouble(reciprocal * i)).withType(_cache.doubleType))
+              node.become(Node.createBinary(.DIVIDE, _cache.createDouble(i), _cache.createDouble(reciprocal * i)).withType(_cache.doubleType).withRange(node.range))
               break
             }
           }
