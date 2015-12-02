@@ -116,7 +116,15 @@ namespace Skew {
     }
 
     def isNameUsed(name string) bool {
-      return find(name, .NORMAL) != null || used != null && name in used
+      if find(name, .NORMAL) != null {
+        return true
+      }
+      for scope = self; scope != null; scope = scope.parent {
+        if scope.used != null && name in scope.used {
+          return true
+        }
+      }
+      return false
     }
   }
 

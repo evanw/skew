@@ -2830,68 +2830,130 @@ namespace Skew.Resolving {
       }
     }
 
-    def _resolveXMLAfterError(node Node, scope Scope) {
-      var attributes = node.xmlAttributes
-      _resolveChildrenAsParameterizedExpressionsWithDynamicTypeContext(attributes, scope)
-
-      for child = attributes.nextSibling; child != null; child = child.nextSibling {
-        _resolveAsParameterizedExpression(child, scope)
-      }
-
-      attributes.resolvedType = .DYNAMIC
-    }
-
     def _resolveXML(node Node, scope Scope) {
       var tag = node.xmlTag
       var attributes = node.xmlAttributes
-      var firstChild = attributes.nextSibling
+      var children = node.xmlChildren
       _resolveAsParameterizedType(tag, scope)
 
       # Make sure there's a constructor to call
       if _findMember(tag.resolvedType, "new") == null {
-        _log.semanticErrorXMLTypeInferenceFailed(node.range)
-        _resolveXMLAfterError(node, scope)
-        return
-      }
-
-      # Make sure there's an append function to call if needed
-      if firstChild != null && _findMember(tag.resolvedType, "<>...</>") == null {
-        _log.semanticErrorXMLMissingAppend(firstChild.range, tag.resolvedType)
-        _resolveXMLAfterError(node, scope)
+        _log.semanticErrorXMLCannotConstruct(node.range, tag.resolvedType)
+        attributes.removeChildren
+        children.removeChildren
+        attributes.resolvedType = .DYNAMIC
         return
       }
 
       # Call the constructor
-      var chain = Node.createDot(tag.remove, "new").withRange(node.range)
-      var needsSequence = attributes.hasChildren
-      var result = chain
-      _resolveAsParameterizedExpression(chain, scope)
+      var value = Node.createDot(tag.clone, "new").withRange(node.range)
+      var needsSequence = attributes.hasChildren || children.hasChildren
+      var result = value
+      _resolveAsParameterizedExpression(value, scope)
+      if needsSequence {
+        result = Node.createSequence.withRange(node.range).appendChild(_extractExpression(value, scope))
+      }
 
       # Assign to attributes if necessary
-      if needsSequence {
-        result = Node.createSequence.withRange(node.range).appendChild(_extractExpression(chain, scope))
-        while attributes.hasChildren {
-          var child = attributes.firstChild.remove
-          var name = child.binaryLeft
-          while name.kind == .DOT {
-            name = name.dotTarget
+      while attributes.hasChildren {
+        var child = attributes.firstChild.remove
+        var name = child.binaryLeft
+        while name.kind == .DOT {
+          name = name.dotTarget
+        }
+        assert(name.kind == .NAME)
+        name.replaceWith(Node.createDot(value.clone, name.asString).withRange(name.range))
+        result.appendChild(child)
+      }
+
+      # Make sure there's an append function to call if needed
+      if children.hasChildren && _findMember(tag.resolvedType, "<>...</>") == null {
+        _log.semanticErrorXMLMissingAppend(children.firstChild.range, tag.resolvedType)
+        children.removeChildren
+      }
+
+      # Append children
+      else {
+        # Don't need a closure if all children are expressions
+        var isJustExpressions = true
+        for child = children.firstChild; child != null; child = child.nextSibling {
+          if child.kind != .EXPRESSION {
+            isJustExpressions = false
+            break
           }
-          assert(name.kind == .NAME)
-          name.replaceWith(Node.createDot(chain.clone, name.asString).withRange(name.range))
-          result.appendChild(child)
+        }
+
+        # All expression statements get passed as arguments to "<>...</>"
+        _recursivelyReplaceExpressionsInXML(children, value)
+
+        # Add to the sequence
+        if isJustExpressions {
+          for child = children.firstChild; child != null; child = child.nextSibling {
+            result.appendChild(child.expressionValue.remove)
+          }
+        }
+
+        # Wrap in a closure
+        else {
+          var symbol = FunctionSymbol.new(.FUNCTION_LOCAL, "<lambda>")
+          symbol.range = children.range
+          symbol.block = children.remove
+          result.appendChild(Node.createCall(Node.createLambda(symbol).withRange(symbol.range)).withRange(symbol.range))
         }
       }
 
-      # Chain children off the constructor
-      while firstChild != null {
-        var next = firstChild.nextSibling
-        chain = Node.createCall(Node.createDot(chain, "<>...</>").withRange(firstChild.range)).appendChild(firstChild.remove).withRange(firstChild.range)
-        firstChild = next
-      }
-
-      # Resolve the chain
-      node.become(needsSequence ? result.appendChild(chain) : chain)
+      # Resolve the value
+      node.become(needsSequence ? result.appendChild(value) : value)
       _resolveAsParameterizedExpression(node, scope)
+    }
+
+    def _recursivelyReplaceExpressionsInXML(node Node, reference Node) {
+      assert(node.kind == .BLOCK)
+
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        switch child.kind {
+          case .EXPRESSION {
+            child.appendChild(Node.createCall(Node.createDot(reference.clone, "<>...</>").withRange(child.range)).appendChild(child.expressionValue.remove).withRange(child.range))
+          }
+
+          case .FOR {
+            _recursivelyReplaceExpressionsInXML(child.forBlock, reference)
+          }
+
+          case .FOREACH {
+            _recursivelyReplaceExpressionsInXML(child.foreachBlock, reference)
+          }
+
+          case .IF {
+            _recursivelyReplaceExpressionsInXML(child.ifTrue, reference)
+            if child.ifFalse != null {
+              _recursivelyReplaceExpressionsInXML(child.ifFalse, reference)
+            }
+          }
+
+          case .SWITCH {
+            for nested = child.switchValue.nextSibling; nested != null; nested = nested.nextSibling {
+              _recursivelyReplaceExpressionsInXML(nested.caseBlock, reference)
+            }
+          }
+
+          case .TRY {
+            var tryBlock = child.tryBlock
+            var finallyBlock = child.finallyBlock
+            _recursivelyReplaceExpressionsInXML(tryBlock, reference)
+            for nested = tryBlock.nextSibling; nested != finallyBlock; nested = nested.nextSibling {
+              _recursivelyReplaceExpressionsInXML(nested.catchBlock, reference)
+            }
+            if finallyBlock != null {
+              _recursivelyReplaceExpressionsInXML(finallyBlock, reference)
+            }
+          }
+
+          case .WHILE {
+            _recursivelyReplaceExpressionsInXML(child.whileBlock, reference)
+          }
+        }
+      }
     }
 
     def _resolveBinary(node Node, scope Scope, context Type) {
@@ -3299,7 +3361,7 @@ namespace Skew.Resolving {
         # Handle custom unary postfix operators
         if wasUnaryPostfix {
           node.become(Node.createBinary(kind, node.cloneAndStealChildren,
-            _cache.createInt(-1).withRange(node.internalRangeOrRange)))
+            _cache.createInt(-1).withRange(node.internalRangeOrRange)).withRange(node.range))
           _resolveAsParameterizedExpression(node, scope)
         }
       }
@@ -3314,8 +3376,9 @@ namespace Skew.Resolving {
           _promoteToAssignment(node, target)
           node.become(Node.createSequence
             .appendChild(Node.createBinary(.ASSIGN, reference.clone, original).withRange(node.range))
-            .appendChild(node.cloneAndStealChildren).withRange(node.range)
-            .appendChild(reference.clone))
+            .appendChild(node.cloneAndStealChildren)
+            .appendChild(reference.clone)
+            .withRange(node.range))
           _resolveAsParameterizedExpression(node, scope)
         }
 
@@ -3335,7 +3398,7 @@ namespace Skew.Resolving {
         extracted.appendChild(node.cloneAndStealChildren)
         node.become(extracted)
       } else {
-        node.become(Node.createBinary(.ASSIGN, extracted, node.cloneAndStealChildren))
+        node.become(Node.createBinary(.ASSIGN, extracted, node.cloneAndStealChildren).withRange(node.range))
       }
     }
 

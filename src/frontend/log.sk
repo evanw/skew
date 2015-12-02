@@ -448,8 +448,8 @@ namespace Skew {
       }
     }
 
-    def semanticErrorXMLTypeInferenceFailed(range Range) {
-      error(range, "Cannot infer a type for this literal")
+    def semanticErrorXMLCannotConstruct(range Range, type Type) {
+      error(range, "Cannot construct type \"\(type)\"")
     }
 
     def semanticErrorDuplicateOverload(range Range, name string, previous Range) {

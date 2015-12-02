@@ -6488,16 +6488,16 @@ class Foo {
 <stdin>:5:16: error: \"Baz\" is not declared on type \"Foo\"
 var baz = <Foo.Baz/>
                ~~~
-<stdin>:5:11: error: Cannot infer a type for this literal
+<stdin>:5:11: error: Cannot construct type \"dynamic\"
 var baz = <Foo.Baz/>
           ~~~~~~~~~~
 <stdin>:6:17: error: \"Baz\" is not declared on type \"Foo\"
 var baz2 = <Foo.Baz></Foo.Baz>
                 ~~~
-<stdin>:6:12: error: Cannot infer a type for this literal
+<stdin>:6:12: error: Cannot construct type \"dynamic\"
 var baz2 = <Foo.Baz></Foo.Baz>
            ~~~~~~~~~~~~~~~~~~~
-<stdin>:7:9: error: Cannot infer a type for this literal
+<stdin>:7:9: error: Cannot construct type \"int\"
 var i = <int/>
         ~~~~~~
 ")
@@ -6513,7 +6513,7 @@ class Foo {
 }
 
 class Bar {
-  def <>...</>(x int) Bar { return self }
+  def <>...</>(x int) {}
 }
 ", "
 <stdin>:2:17: error: Implement a function called \"<>...</>\" on type \"Foo\" to add support for child elements
@@ -6529,9 +6529,7 @@ var foo3 = <Foo><Foo/></Foo>.foo
 var foo4 = <Foo foo=1/>.foo
 
 class Foo {
-  def <>...</>(x Foo) Foo {
-    return self
-  }
+  def <>...</>(x Foo) {}
 }
 ", "
 <stdin>:1:18: error: \"foo\" is not declared on type \"Foo\"
@@ -6597,7 +6595,7 @@ var foo =
   </Foo>
 
 class Foo {
-  def <>...</>(x Foo) Foo { return self }
+  def <>...</>(x Foo) {}
 }
 ", "
 ")
@@ -6612,7 +6610,7 @@ var foo =
 <stdin>:2:4: error: \"Foo\" is not declared
   <Foo>
    ~~~
-<stdin>:2:3: error: Cannot infer a type for this literal
+<stdin>:2:3: error: Cannot construct type \"dynamic\"
   <Foo>
   ~~~~~
 ")
@@ -6628,7 +6626,7 @@ var foo =
 <stdin>:2:4: error: \"Foo\" is not declared
   <Foo>
    ~~~
-<stdin>:2:3: error: Cannot infer a type for this literal
+<stdin>:2:3: error: Cannot construct type \"dynamic\"
   <Foo>
   ~~~~~
 ")
@@ -6644,7 +6642,7 @@ var foo =
 <stdin>:2:4: error: \"Foo\" is not declared
   <Foo>
    ~~~
-<stdin>:2:3: error: Cannot infer a type for this literal
+<stdin>:2:3: error: Cannot construct type \"dynamic\"
   <Foo>
   ~~~~~
 ")
@@ -6657,17 +6655,131 @@ var foo =
     <Foo>bar.bar</Foo>
     <Foo>++bar</Foo>
     <Foo>bar++</Foo>
+    <Foo>bar + bar</Foo>
     <Foo>(bar + bar)</Foo>
     <Foo>
       bar
       +bar # This is the second of two expressions, not a single expression
     </Foo>
-    <Foo>bar + bar</Foo>
+    <Foo>if true { bar + bar }</Foo>
   </Foo>
+var bar = 0
+
+class Foo {
+  def <>...</>(x Foo) {}
+}
 ", "
-<stdin>:12:14: error: Expected \"</\" but found \"+\"
+<stdin>:8:10: warning: Unnecessary parentheses
+    <Foo>(bar + bar)</Foo>
+         ~~~~~~~~~~~
+<stdin>:3:10: error: Cannot convert from type \"int\" to type \"Foo\"
+    <Foo>bar</Foo>
+         ~~~
+<stdin>:4:14: error: \"bar\" is not declared on type \"int\"
+    <Foo>bar.bar</Foo>
+             ~~~
+<stdin>:5:10: error: Cannot convert from type \"int\" to type \"Foo\"
+    <Foo>++bar</Foo>
+         ~~~~~
+<stdin>:6:10: error: Cannot convert from type \"int\" to type \"Foo\"
+    <Foo>bar++</Foo>
+         ~~~~~
+<stdin>:7:10: error: Cannot convert from type \"int\" to type \"Foo\"
     <Foo>bar + bar</Foo>
-             ^
+         ~~~~~~~~~
+<stdin>:8:10: error: Cannot convert from type \"int\" to type \"Foo\"
+    <Foo>(bar + bar)</Foo>
+         ~~~~~~~~~~~
+<stdin>:10:7: error: Cannot convert from type \"int\" to type \"Foo\"
+      bar
+      ~~~
+<stdin>:11:7: error: Cannot convert from type \"int\" to type \"Foo\"
+      +bar # This is the second of two expressions, not a single expression
+      ~~~~
+<stdin>:13:20: error: Cannot convert from type \"int\" to type \"Foo\"
+    <Foo>if true { bar + bar }</Foo>
+                   ~~~~~~~~~
+")
+
+# Test XML nested children
+test("
+var foo =
+  <Foo>
+    if true { 0 }
+    else if true { 1 }
+    else { 2 }
+    for i = 0; i < 5; i++ {
+      i
+    }
+    for i in [0, 1, 2, 3, 4] {
+      i
+    }
+    for i in 0..5 {
+      i
+    }
+    while Math.random < 0.5 {
+      0
+    }
+    switch (Math.random * 3) as int {
+      case 0 { 0 }
+      case 1, 2 { 1 }
+      default { 2 }
+    }
+    try { 0 }
+    catch e dynamic { 1 }
+    finally { 2 }
+    (=> { 0 })()
+  </Foo>
+
+class Foo {
+  def <>...</>(x bool) {}
+}
+", "
+<stdin>:3:15: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    if true { 0 }
+              ^
+<stdin>:4:20: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    else if true { 1 }
+                   ^
+<stdin>:5:12: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    else { 2 }
+           ^
+<stdin>:7:7: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+      i
+      ^
+<stdin>:10:7: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+      i
+      ^
+<stdin>:13:7: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+      i
+      ^
+<stdin>:16:7: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+      0
+      ^
+<stdin>:19:16: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+      case 0 { 0 }
+               ^
+<stdin>:20:19: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+      case 1, 2 { 1 }
+                  ^
+<stdin>:21:17: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+      default { 2 }
+                ^
+<stdin>:23:11: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    try { 0 }
+          ^
+<stdin>:24:23: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    catch e dynamic { 1 }
+                      ^
+<stdin>:25:15: error: Cannot convert from type \"int\" to type \"bool\" without a cast
+    finally { 2 }
+              ^
+<stdin>:26:11: warning: Unused expression
+    (=> { 0 })()
+          ^
+<stdin>:26:6: error: All control paths for \"<lambda>\" must return a value of type \"bool\"
+    (=> { 0 })()
+     ~~~~~~~~
 ")
 
 # Test XML attribute precedence

@@ -2969,9 +2969,42 @@ class Foo {
   var ref;
   var ref1;
   var ref2;
-  foo = (ref = new Foo(), ref.foo = 0, ref.setBar((ref1 = new Foo(), ref1.setBar(new Foo()), ref1.foo = 1, ref1.append((ref2 = new Foo(), ref2.foo = 2, ref2)))), ref);
+  foo = (ref = new Foo(), ref.foo = 0, ref.setBar((ref1 = new Foo(), ref1.setBar(new Foo()), ref1.foo = 1, ref1.append((ref2 = new Foo(), ref2.foo = 2, ref2)), ref1)), ref);
 })();
-").js.inlineAllFunctions
+").js
+
+# Check correct XML literal output for generated closures
+test("
+@export
+var foo = <Foo>
+  for i in 0..5 {
+    <Foo foo=i/>
+  }
+</Foo>
+
+class Foo {
+  var foo = 0
+  def <>...</>(x Foo) {}
+}
+", "
+(function() {
+  function Foo() {
+    this.foo = 0;
+  }
+
+  Foo.prototype.append = function(x) {
+  };
+
+  var ref;
+  foo = (ref = new Foo(), (function() {
+    var ref1;
+
+    for (var i = 0; i < 5; i = i + 1 | 0) {
+      ref.append((ref1 = new Foo(), ref1.foo = i, ref1));
+    }
+  })(), ref);
+})();
+").js
 
 # Unused interface implementations should not be emitted
 test("

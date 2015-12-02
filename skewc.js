@@ -8003,10 +8003,11 @@
     return new Skew.Node(Skew.NodeKind.TYPE_CHECK).appendChild(value).appendChild(type);
   };
 
-  Skew.Node.createXML = function(tag, attributes) {
+  Skew.Node.createXML = function(tag, attributes, children) {
     assert(Skew.in_NodeKind.isExpression(tag.kind));
     assert(attributes.kind == Skew.NodeKind.SEQUENCE);
-    return new Skew.Node(Skew.NodeKind.XML).appendChild(tag).appendChild(attributes);
+    assert(children.kind == Skew.NodeKind.BLOCK);
+    return new Skew.Node(Skew.NodeKind.XML).appendChild(tag).appendChild(attributes).appendChild(children);
   };
 
   Skew.Node.createUnary = function(kind, value) {
@@ -8204,16 +8205,23 @@
 
   Skew.Node.prototype.xmlTag = function() {
     assert(this.kind == Skew.NodeKind.XML);
-    assert(this.childCount() >= 2);
+    assert(this.childCount() == 3);
     assert(Skew.in_NodeKind.isExpression(this._firstChild.kind));
     return this._firstChild;
   };
 
   Skew.Node.prototype.xmlAttributes = function() {
     assert(this.kind == Skew.NodeKind.XML);
-    assert(this.childCount() >= 2);
+    assert(this.childCount() == 3);
     assert(this._firstChild._nextSibling.kind == Skew.NodeKind.SEQUENCE);
     return this._firstChild._nextSibling;
+  };
+
+  Skew.Node.prototype.xmlChildren = function() {
+    assert(this.kind == Skew.NodeKind.XML);
+    assert(this.childCount() == 3);
+    assert(this._lastChild.kind == Skew.NodeKind.BLOCK);
+    return this._lastChild;
   };
 
   Skew.Node.prototype.unaryValue = function() {
@@ -9529,8 +9537,8 @@
     }
   };
 
-  Skew.Log.prototype.semanticErrorXMLTypeInferenceFailed = function(range) {
-    this.error(range, 'Cannot infer a type for this literal');
+  Skew.Log.prototype.semanticErrorXMLCannotConstruct = function(range, type) {
+    this.error(range, 'Cannot construct type "' + type.toString() + '"');
   };
 
   Skew.Log.prototype.semanticErrorDuplicateOverload = function(range, name, previous) {
@@ -10318,11 +10326,11 @@
     var previous = null;
     context.eat(Skew.TokenKind.NEWLINE);
 
-    while (!context.peek(Skew.TokenKind.RIGHT_BRACE)) {
+    while (!context.peek(Skew.TokenKind.RIGHT_BRACE) && !context.peek(Skew.TokenKind.XML_START_CLOSE)) {
       var comments = Skew.Parsing.parseLeadingComments(context);
 
       // Ignore trailing comments
-      if (context.peek(Skew.TokenKind.RIGHT_BRACE) || context.peek(Skew.TokenKind.END_OF_FILE)) {
+      if (context.peek(Skew.TokenKind.RIGHT_BRACE) || context.peek(Skew.TokenKind.XML_START_CLOSE) || context.peek(Skew.TokenKind.END_OF_FILE)) {
         break;
       }
 
@@ -10435,7 +10443,7 @@
         context.eat(Skew.TokenKind.NEWLINE);
       }
 
-      else if (context.peek(Skew.TokenKind.RIGHT_BRACE) || !context.peek(Skew.TokenKind.ELSE) && !context.peek(Skew.TokenKind.CATCH) && !context.peek(Skew.TokenKind.FINALLY) && !context.expect(Skew.TokenKind.NEWLINE)) {
+      else if (context.peek(Skew.TokenKind.RIGHT_BRACE) || context.peek(Skew.TokenKind.XML_START_CLOSE) || !context.peek(Skew.TokenKind.ELSE) && !context.peek(Skew.TokenKind.CATCH) && !context.peek(Skew.TokenKind.FINALLY) && !context.expect(Skew.TokenKind.NEWLINE)) {
         break;
       }
     }
@@ -11446,55 +11454,44 @@
       }
 
       // Parse end of tag
-      var xml = Skew.Node.createXML(tag, attributes);
+      var block = new Skew.Node(Skew.NodeKind.BLOCK);
       context.skipWhitespace();
 
-      if (context.eat(Skew.TokenKind.XML_END_EMPTY)) {
-        return xml.withRange(context.spanSince(token.range));
-      }
-
-      if (!context.expect(Skew.TokenKind.XML_END)) {
-        return null;
-      }
-
-      // Parse children
-      context.skipWhitespace();
-
-      while (!context.eat(Skew.TokenKind.XML_START_CLOSE)) {
-        var value1 = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.UNARY_PREFIX - 1 | 0);
-
-        if (value1 == null) {
+      // Check for children
+      if (!context.eat(Skew.TokenKind.XML_END_EMPTY)) {
+        if (!context.expect(Skew.TokenKind.XML_END)) {
           return null;
         }
 
-        xml.appendChild(value1);
+        // Parse children
+        context.skipWhitespace();
 
-        if (!context.eat(Skew.TokenKind.NEWLINE) && !context.eat(Skew.TokenKind.COMMENT) && !context.peek(Skew.TokenKind.XML_START_CLOSE) && !context.expect(Skew.TokenKind.XML_START_CLOSE)) {
+        if (!Skew.Parsing.parseStatements(context, block) || !context.expect(Skew.TokenKind.XML_START_CLOSE)) {
+          return null;
+        }
+
+        block.withRange(context.spanSince(token.range));
+
+        // Parse closing tag
+        var closingTag = Skew.Parsing.parseDotChain(context);
+
+        if (closingTag == null) {
           return null;
         }
 
         context.skipWhitespace();
+
+        if (!context.expect(Skew.TokenKind.XML_END)) {
+          return null;
+        }
+
+        // Validate closing tag (not a fatal error)
+        if (!tag.looksTheSameAs(closingTag)) {
+          context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, Skew.Parsing.dotChainToString(closingTag), Skew.Parsing.dotChainToString(tag), tag.range);
+        }
       }
 
-      // Parse closing tag
-      var closingTag = Skew.Parsing.parseDotChain(context);
-
-      if (closingTag == null) {
-        return null;
-      }
-
-      context.skipWhitespace();
-
-      if (!context.expect(Skew.TokenKind.XML_END)) {
-        return null;
-      }
-
-      // Validate closing tag (not a fatal error)
-      if (!tag.looksTheSameAs(closingTag)) {
-        context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, Skew.Parsing.dotChainToString(closingTag), Skew.Parsing.dotChainToString(tag), tag.range);
-      }
-
-      return xml.withRange(context.spanSince(token.range));
+      return Skew.Node.createXML(tag, attributes, block).withRange(context.spanSince(token.range));
     };
     return pratt;
   };
@@ -18430,71 +18427,144 @@
     }
   };
 
-  Skew.Resolving.Resolver.prototype._resolveXMLAfterError = function(node, scope) {
-    var attributes = node.xmlAttributes();
-    this._resolveChildrenAsParameterizedExpressionsWithDynamicTypeContext(attributes, scope);
-
-    for (var child = attributes.nextSibling(); child != null; child = child.nextSibling()) {
-      this._resolveAsParameterizedExpression(child, scope);
-    }
-
-    attributes.resolvedType = Skew.Type.DYNAMIC;
-  };
-
   Skew.Resolving.Resolver.prototype._resolveXML = function(node, scope) {
     var tag = node.xmlTag();
     var attributes = node.xmlAttributes();
-    var firstChild = attributes.nextSibling();
+    var children = node.xmlChildren();
     this._resolveAsParameterizedType(tag, scope);
 
     // Make sure there's a constructor to call
     if (this._findMember(tag.resolvedType, 'new') == null) {
-      this._log.semanticErrorXMLTypeInferenceFailed(node.range);
-      this._resolveXMLAfterError(node, scope);
-      return;
-    }
-
-    // Make sure there's an append function to call if needed
-    if (firstChild != null && this._findMember(tag.resolvedType, '<>...</>') == null) {
-      this._log.semanticErrorXMLMissingAppend(firstChild.range, tag.resolvedType);
-      this._resolveXMLAfterError(node, scope);
+      this._log.semanticErrorXMLCannotConstruct(node.range, tag.resolvedType);
+      attributes.removeChildren();
+      children.removeChildren();
+      attributes.resolvedType = Skew.Type.DYNAMIC;
       return;
     }
 
     // Call the constructor
-    var chain = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('new')).appendChild(tag.remove()).withRange(node.range);
-    var needsSequence = attributes.hasChildren();
-    var result = chain;
-    this._resolveAsParameterizedExpression(chain, scope);
+    var value = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('new')).appendChild(tag.clone()).withRange(node.range);
+    var needsSequence = attributes.hasChildren() || children.hasChildren();
+    var result = value;
+    this._resolveAsParameterizedExpression(value, scope);
+
+    if (needsSequence) {
+      result = new Skew.Node(Skew.NodeKind.SEQUENCE).withRange(node.range).appendChild(this._extractExpression(value, scope));
+    }
 
     // Assign to attributes if necessary
-    if (needsSequence) {
-      result = new Skew.Node(Skew.NodeKind.SEQUENCE).withRange(node.range).appendChild(this._extractExpression(chain, scope));
+    while (attributes.hasChildren()) {
+      var child = attributes.firstChild().remove();
+      var name = child.binaryLeft();
 
-      while (attributes.hasChildren()) {
-        var child = attributes.firstChild().remove();
-        var name = child.binaryLeft();
+      while (name.kind == Skew.NodeKind.DOT) {
+        name = name.dotTarget();
+      }
 
-        while (name.kind == Skew.NodeKind.DOT) {
-          name = name.dotTarget();
+      assert(name.kind == Skew.NodeKind.NAME);
+      name.replaceWith(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name.asString())).appendChild(value.clone()).withRange(name.range));
+      result.appendChild(child);
+    }
+
+    // Make sure there's an append function to call if needed
+    if (children.hasChildren() && this._findMember(tag.resolvedType, '<>...</>') == null) {
+      this._log.semanticErrorXMLMissingAppend(children.firstChild().range, tag.resolvedType);
+      children.removeChildren();
+    }
+
+    // Append children
+    else {
+      // Don't need a closure if all children are expressions
+      var isJustExpressions = true;
+
+      for (var child1 = children.firstChild(); child1 != null; child1 = child1.nextSibling()) {
+        if (child1.kind != Skew.NodeKind.EXPRESSION) {
+          isJustExpressions = false;
+          break;
         }
+      }
 
-        assert(name.kind == Skew.NodeKind.NAME);
-        name.replaceWith(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name.asString())).appendChild(chain.clone()).withRange(name.range));
-        result.appendChild(child);
+      // All expression statements get passed as arguments to "<>...</>"
+      this._recursivelyReplaceExpressionsInXML(children, value);
+
+      // Add to the sequence
+      if (isJustExpressions) {
+        for (var child2 = children.firstChild(); child2 != null; child2 = child2.nextSibling()) {
+          result.appendChild(child2.expressionValue().remove());
+        }
+      }
+
+      // Wrap in a closure
+      else {
+        var symbol = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_LOCAL, '<lambda>');
+        symbol.range = children.range;
+        symbol.block = children.remove();
+        result.appendChild(Skew.Node.createCall(Skew.Node.createLambda(symbol).withRange(symbol.range)).withRange(symbol.range));
       }
     }
 
-    // Chain children off the constructor
-    while (firstChild != null) {
-      var next = firstChild.nextSibling();
-      chain = Skew.Node.createCall(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('<>...</>')).appendChild(chain).withRange(firstChild.range)).appendChild(firstChild.remove()).withRange(firstChild.range);
-      firstChild = next;
-    }
-
-    // Resolve the chain
-    node.become(needsSequence ? result.appendChild(chain) : chain);
+    // Resolve the value
+    node.become(needsSequence ? result.appendChild(value) : value);
     this._resolveAsParameterizedExpression(node, scope);
+  };
+
+  Skew.Resolving.Resolver.prototype._recursivelyReplaceExpressionsInXML = function(node, reference) {
+    assert(node.kind == Skew.NodeKind.BLOCK);
+
+    for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+      switch (child.kind) {
+        case Skew.NodeKind.EXPRESSION: {
+          child.appendChild(Skew.Node.createCall(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('<>...</>')).appendChild(reference.clone()).withRange(child.range)).appendChild(child.expressionValue().remove()).withRange(child.range));
+          break;
+        }
+
+        case Skew.NodeKind.FOR: {
+          this._recursivelyReplaceExpressionsInXML(child.forBlock(), reference);
+          break;
+        }
+
+        case Skew.NodeKind.FOREACH: {
+          this._recursivelyReplaceExpressionsInXML(child.foreachBlock(), reference);
+          break;
+        }
+
+        case Skew.NodeKind.IF: {
+          this._recursivelyReplaceExpressionsInXML(child.ifTrue(), reference);
+
+          if (child.ifFalse() != null) {
+            this._recursivelyReplaceExpressionsInXML(child.ifFalse(), reference);
+          }
+          break;
+        }
+
+        case Skew.NodeKind.SWITCH: {
+          for (var nested = child.switchValue().nextSibling(); nested != null; nested = nested.nextSibling()) {
+            this._recursivelyReplaceExpressionsInXML(nested.caseBlock(), reference);
+          }
+          break;
+        }
+
+        case Skew.NodeKind.TRY: {
+          var tryBlock = child.tryBlock();
+          var finallyBlock = child.finallyBlock();
+          this._recursivelyReplaceExpressionsInXML(tryBlock, reference);
+
+          for (var nested1 = tryBlock.nextSibling(); nested1 != finallyBlock; nested1 = nested1.nextSibling()) {
+            this._recursivelyReplaceExpressionsInXML(nested1.catchBlock(), reference);
+          }
+
+          if (finallyBlock != null) {
+            this._recursivelyReplaceExpressionsInXML(finallyBlock, reference);
+          }
+          break;
+        }
+
+        case Skew.NodeKind.WHILE: {
+          this._recursivelyReplaceExpressionsInXML(child.whileBlock(), reference);
+          break;
+        }
+      }
+    }
   };
 
   Skew.Resolving.Resolver.prototype._resolveBinary = function(node, scope, context) {
@@ -18927,7 +18997,7 @@
 
       // Handle custom unary postfix operators
       if (wasUnaryPostfix) {
-        node.become(Skew.Node.createBinary(kind, node.cloneAndStealChildren(), this._cache.createInt(-1).withRange(node.internalRangeOrRange())));
+        node.become(Skew.Node.createBinary(kind, node.cloneAndStealChildren(), this._cache.createInt(-1).withRange(node.internalRangeOrRange())).withRange(node.range));
         this._resolveAsParameterizedExpression(node, scope);
       }
     }
@@ -18940,7 +19010,7 @@
         var original = this._extractExpressionForAssignment(target, scope);
         target.replaceWith(reference);
         this._promoteToAssignment(node, target);
-        node.become(new Skew.Node(Skew.NodeKind.SEQUENCE).appendChild(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, reference.clone(), original).withRange(node.range)).appendChild(node.cloneAndStealChildren()).withRange(node.range).appendChild(reference.clone()));
+        node.become(new Skew.Node(Skew.NodeKind.SEQUENCE).appendChild(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, reference.clone(), original).withRange(node.range)).appendChild(node.cloneAndStealChildren()).appendChild(reference.clone()).withRange(node.range));
         this._resolveAsParameterizedExpression(node, scope);
       }
 
@@ -18962,7 +19032,7 @@
     }
 
     else {
-      node.become(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, extracted, node.cloneAndStealChildren()));
+      node.become(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, extracted, node.cloneAndStealChildren()).withRange(node.range));
     }
   };
 
@@ -19244,7 +19314,17 @@
   };
 
   Skew.Scope.prototype.isNameUsed = function(name) {
-    return this.find(name, Skew.ScopeSearch.NORMAL) != null || this.used != null && name in this.used;
+    if (this.find(name, Skew.ScopeSearch.NORMAL) != null) {
+      return true;
+    }
+
+    for (var scope = this; scope != null; scope = scope.parent) {
+      if (scope.used != null && name in scope.used) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   Skew.ObjectScope = function(parent, symbol) {

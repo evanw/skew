@@ -486,11 +486,11 @@ namespace Skew.Parsing {
     var previous Node = null
     context.eat(.NEWLINE)
 
-    while !context.peek(.RIGHT_BRACE) {
+    while !context.peek(.RIGHT_BRACE) && !context.peek(.XML_START_CLOSE) {
       var comments = parseLeadingComments(context)
 
       # Ignore trailing comments
-      if context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE) {
+      if context.peek(.RIGHT_BRACE) || context.peek(.XML_START_CLOSE) || context.peek(.END_OF_FILE) {
         break
       }
 
@@ -590,7 +590,8 @@ namespace Skew.Parsing {
           previous.comments = comments
         }
         context.eat(.NEWLINE)
-      } else if context.peek(.RIGHT_BRACE) || !context.peek(.ELSE) && !context.peek(.CATCH) && !context.peek(.FINALLY) && !context.expect(.NEWLINE) {
+      } else if context.peek(.RIGHT_BRACE) || context.peek(.XML_START_CLOSE) ||
+          !context.peek(.ELSE) && !context.peek(.CATCH) && !context.peek(.FINALLY) && !context.expect(.NEWLINE) {
         break
       }
     }
@@ -1646,45 +1647,39 @@ namespace Skew.Parsing {
       }
 
       # Parse end of tag
-      var xml = Node.createXML(tag, attributes)
+      var block = Node.createBlock
       context.skipWhitespace
-      if context.eat(.XML_END_EMPTY) {
-        return xml.withRange(context.spanSince(token.range))
-      }
-      if !context.expect(.XML_END) {
-        return null
-      }
 
-      # Parse children
-      context.skipWhitespace
-      while !context.eat(.XML_START_CLOSE) {
-        var value = expressionParser.parse(context, (Precedence.UNARY_PREFIX - 1) as Precedence)
-        if value == null {
+      # Check for children
+      if !context.eat(.XML_END_EMPTY) {
+        if !context.expect(.XML_END) {
           return null
         }
-        xml.appendChild(value)
-        if !context.eat(.NEWLINE) && !context.eat(.COMMENT) && !context.peek(.XML_START_CLOSE) && !context.expect(.XML_START_CLOSE) {
+
+        # Parse children
+        context.skipWhitespace
+        if !parseStatements(context, block) || !context.expect(.XML_START_CLOSE) {
+          return null
+        }
+        block.withRange(context.spanSince(token.range))
+
+        # Parse closing tag
+        var closingTag = parseDotChain(context)
+        if closingTag == null {
           return null
         }
         context.skipWhitespace
+        if !context.expect(.XML_END) {
+          return null
+        }
+
+        # Validate closing tag (not a fatal error)
+        if !tag.looksTheSameAs(closingTag) {
+          context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, dotChainToString(closingTag), dotChainToString(tag), tag.range)
+        }
       }
 
-      # Parse closing tag
-      var closingTag = parseDotChain(context)
-      if closingTag == null {
-        return null
-      }
-      context.skipWhitespace
-      if !context.expect(.XML_END) {
-        return null
-      }
-
-      # Validate closing tag (not a fatal error)
-      if !tag.looksTheSameAs(closingTag) {
-        context.log.syntaxErrorXMLClosingTagMismatch(closingTag.range, dotChainToString(closingTag), dotChainToString(tag), tag.range)
-      }
-
-      return xml.withRange(context.spanSince(token.range))
+      return Node.createXML(tag, attributes, block).withRange(context.spanSince(token.range))
     }
 
     return pratt
