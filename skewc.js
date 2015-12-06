@@ -17213,6 +17213,11 @@
     // Check the type of the returned value
     if (returnType != null) {
       this._resolveAsParameterizedExpressionWithConversion(value, scope, returnType);
+
+      if ($function.shouldInferReturnType() && Skew.Resolving.Resolver._isCallReturningVoid(value)) {
+        node.kind = Skew.NodeKind.EXPRESSION;
+      }
+
       return;
     }
 
@@ -17226,7 +17231,7 @@
     }
 
     // Check for a return value of type "void"
-    if (!$function.shouldInferReturnType() || value.kind == Skew.NodeKind.CALL && value.symbol != null && value.symbol.resolvedType.returnType == null) {
+    if (!$function.shouldInferReturnType() || Skew.Resolving.Resolver._isCallReturningVoid(value)) {
       this._checkUnusedExpression(value);
       node.kind = Skew.NodeKind.EXPRESSION;
       return;
@@ -19188,6 +19193,10 @@
   Skew.Resolving.Resolver._isCallValue = function(node) {
     var parent = node.parent();
     return parent != null && parent.kind == Skew.NodeKind.CALL && node == parent.callValue();
+  };
+
+  Skew.Resolving.Resolver._isCallReturningVoid = function(node) {
+    return node.kind == Skew.NodeKind.CALL && (node.symbol != null && node.symbol.resolvedType.returnType == null || node.callValue().resolvedType.kind == Skew.TypeKind.LAMBDA && node.callValue().resolvedType.returnType == null);
   };
 
   Skew.Resolving.Resolver._needsTypeContext = function(node) {

@@ -3163,5 +3163,32 @@ def test {
 })();
 ").js
 
+# Make sure lambda functions with dynamic type context don't return values that are known to be undefined
+test("
+@export
+def test {
+  var a = => {}
+  var b = => a()
+  var c dynamic = => b()
+  var d dynamic = => c()
+}
+", "
+(function() {
+  test = function() {
+    var a = function() {
+    };
+    var b = function() {
+      a();
+    };
+    var c = function() {
+      b();
+    };
+    var d = function() {
+      return c();
+    };
+  };
+})();
+").js
+
   }
 }

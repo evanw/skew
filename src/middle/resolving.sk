@@ -1741,6 +1741,9 @@ namespace Skew.Resolving {
       # Check the type of the returned value
       if returnType != null {
         _resolveAsParameterizedExpressionWithConversion(value, scope, returnType)
+        if function.shouldInferReturnType && _isCallReturningVoid(value) {
+          node.kind = .EXPRESSION
+        }
         return
       }
 
@@ -1754,7 +1757,7 @@ namespace Skew.Resolving {
       }
 
       # Check for a return value of type "void"
-      if !function.shouldInferReturnType || value.kind == .CALL && value.symbol != null && value.symbol.resolvedType.returnType == null {
+      if !function.shouldInferReturnType || _isCallReturningVoid(value) {
         _checkUnusedExpression(value)
         node.kind = .EXPRESSION
         return
@@ -3535,6 +3538,12 @@ namespace Skew.Resolving {
     def _isCallValue(node Node) bool {
       var parent = node.parent
       return parent != null && parent.kind == .CALL && node == parent.callValue
+    }
+
+    def _isCallReturningVoid(node Node) bool {
+      return node.kind == .CALL && (
+        node.symbol != null && node.symbol.resolvedType.returnType == null ||
+        node.callValue.resolvedType.kind == .LAMBDA && node.callValue.resolvedType.returnType == null)
     }
 
     def _needsTypeContext(node Node) bool {
