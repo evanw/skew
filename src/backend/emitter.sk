@@ -113,6 +113,12 @@ namespace Skew {
           function.overridden.flags |= .IS_VIRTUAL
           function.flags |= .IS_VIRTUAL
         }
+        if function.implementations != null {
+          for other in function.implementations {
+            other.flags |= .IS_VIRTUAL
+            function.flags |= .IS_VIRTUAL
+          }
+        }
       }
     }
 

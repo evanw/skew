@@ -157,15 +157,15 @@ interface Baz {
 ", "
 public class Foo : Bar, Baz
 {
-    public void instanceMethod()
+    public virtual void instanceMethod()
     {
     }
 
-    public void instanceMethod(int x)
+    public virtual void instanceMethod(int x)
     {
     }
 
-    public void instanceMethod2()
+    public virtual void instanceMethod2()
     {
     }
 
@@ -215,7 +215,7 @@ def test {
 ", "
 public class Foo : Bar, Baz
 {
-    public void instanceMethod1()
+    public virtual void instanceMethod1()
     {
     }
 
