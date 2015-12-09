@@ -487,6 +487,89 @@ public class Globals
 }
 ").csharp
 
+# Check different integer types
+test("
+enum Foo {
+  A, B
+
+  def foo {}
+}
+
+flags Bar {
+  C, D
+
+  def foo {}
+}
+
+type Baz : int {
+  def foo {}
+}
+
+namespace Baz {
+  const X = 0 as Baz
+}
+
+@export
+def test int {
+  var a = Foo.A
+  var c = Bar.C
+  var x = 0 as Baz
+  a.foo
+  c.foo
+  x.foo
+  return a + c + x as int + Foo.B + Bar.D + Baz.X as int
+}
+", "
+public enum Foo
+{
+    A = 0,
+    B = 1,
+}
+
+public static class Bar
+{
+    public const int C = 1;
+    public const int D = 2;
+}
+
+public static class Baz
+{
+    public static int X = 0;
+
+    public static void foo(int self)
+    {
+    }
+}
+
+public class in_Foo
+{
+    public static void foo(Foo self)
+    {
+    }
+}
+
+public class in_Bar
+{
+    public static void foo(int self)
+    {
+    }
+}
+
+public class Globals
+{
+    public static int test()
+    {
+        Foo a = Foo.A;
+        int c = Bar.C;
+        int x = 0;
+        in_Foo.foo(a);
+        in_Bar.foo(c);
+        Baz.foo(x);
+        return (int)a + c + x + (int)Foo.B + Bar.D + Baz.X;
+    }
+}
+").csharp
+
 # Check code generation for flags types
 test("
 flags Foo {
@@ -556,6 +639,144 @@ public class Globals
             x = Foo.X1 | Foo.X2;
             x &= ~Foo.X3;
         }
+    }
+}
+").csharp
+
+# Check dynamic types
+test("
+@export
+def test(foo dynamic.Foo) dynamic.Bar {
+  return foo as dynamic.Bar + 0 as dynamic.Int + 0 as dynamic
+}
+", "
+public class Globals
+{
+    public static Bar test(Foo foo)
+    {
+        return (Bar)foo + (Int)0 + 0;
+    }
+}
+").csharp
+
+# Check bit shifts
+test("
+@export
+def test(x int) {
+  x = x << x
+  x = x >> x
+  x = x >>> x
+  x <<= x
+  x >>= x
+  x >>>= x
+}
+", "
+public class in_int
+{
+    public static int unsignedRightShift(int self, int x)
+    {
+        return (int)unchecked((uint)self >> x);
+    }
+}
+
+public class Globals
+{
+    public static void test(int x)
+    {
+        x = x << x;
+        x = x >> x;
+        x = in_int.unsignedRightShift(x, x);
+        x <<= x;
+        x >>= x;
+        x = in_int.unsignedRightShift(x, x);
+    }
+}
+").csharp
+
+# Test lambda code generation
+test("
+@export
+def test {
+  var a = => {}
+  var b = (x int) => {}
+  var c = (x int, y int) => x == y
+  a()
+  b(1)
+  c(2, 3)
+}
+", "
+public class Globals
+{
+    public static void test()
+    {
+        System.Action a = () =>
+        {
+        };
+        System.Action<int> b = (int x) =>
+        {
+        };
+        System.Func<int, int, bool> c = (int x, int y) =>
+        {
+            return x == y;
+        };
+        a();
+        b(1);
+        c(2, 3);
+    }
+}
+").csharp
+
+# Test lambda creation with simple capture
+test("
+@entry
+def test int {
+  var count = 0
+  var add = => ++count
+  add()
+  add()
+  add()
+  return count
+}
+", "
+public class Globals
+{
+    public static int Main()
+    {
+        int count = 0;
+        System.Func<int> add = () =>
+        {
+            return ++count;
+        };
+        add();
+        add();
+        add();
+        return count;
+    }
+}
+").csharp
+
+# Test lambda creation with currying
+test("
+@entry
+def test int {
+  var adder = (x int) => (y int) => x + y
+  var addOne = adder(1)
+  return addOne(2)
+}
+", "
+public class Globals
+{
+    public static int Main()
+    {
+        System.Func<int, System.Func<int, int>> adder = (int x) =>
+        {
+            return (int y) =>
+            {
+                return x + y;
+            };
+        };
+        System.Func<int, int> addOne = adder(1);
+        return addOne(2);
     }
 }
 ").csharp

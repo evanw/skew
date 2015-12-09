@@ -19,6 +19,11 @@ namespace Skew.Tests {
       expectString(trimNewlines(_expected), trimNewlines(output))
     }
 
+    def cpp CompilerTest {
+      _options.target = CPlusPlusTarget.new
+      return self
+    }
+
     def csharp CompilerTest {
       _options.target = CSharpTarget.new
       return self
@@ -266,6 +271,7 @@ namespace Skew.Tests {
     fixRuntime
 
     # End-to-end tests
+    testCPlusPlus
     testCSharp
     testIDE
     testJavaScript

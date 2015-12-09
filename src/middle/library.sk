@@ -109,7 +109,7 @@ class int {
   def |=(x int) int
   def ^=(x int) int
 
-  if TARGET != .CSHARP {
+  if TARGET != .CSHARP && TARGET != .CPLUSPLUS {
     def >>>=(x int)
   }
 

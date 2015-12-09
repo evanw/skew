@@ -25,9 +25,9 @@ namespace Skew {
       # Avoid emitting unnecessary stuff
       shakingPass(global, _cache.entryPointSymbol, .USE_TYPES)
       _markVirtualFunctions(global)
-      var sorted = _sortedObjects(global)
 
       # Nested types in C++ can't be forward declared
+      var sorted = _sortedObjects(global)
       for symbol in sorted {
         _moveNestedObjectToEnclosingNamespace(symbol)
       }
@@ -96,7 +96,7 @@ namespace Skew {
       # Get the namespace chain for this symbol
       var symbols List<Symbol> = []
       while symbol != null && symbol.kind != .OBJECT_GLOBAL {
-        if symbol.kind == .OBJECT_NAMESPACE {
+        if symbol.kind == .OBJECT_NAMESPACE || symbol.kind == .OBJECT_WRAPPED {
           symbols.prepend(symbol)
         }
         symbol = symbol.parent
@@ -155,12 +155,22 @@ namespace Skew {
         case .OBJECT_ENUM, .OBJECT_FLAGS {
           _adjustNamespace(symbol)
           _emitNewlineBeforeSymbol(symbol, .DECLARE)
-          _emit(_indent + "enum struct " + _mangleName(symbol) + " {\n")
+          if symbol.kind == .OBJECT_FLAGS {
+            _emit(_indent + "struct " + _mangleName(symbol) + " {\n")
+            _increaseIndent
+            _emit(_indent + "enum {\n")
+          } else {
+            _emit(_indent + "enum struct " + _mangleName(symbol) + " {\n")
+          }
           _increaseIndent
           for variable in symbol.variables {
             _emitVariable(variable, .DECLARE)
           }
           _decreaseIndent
+          if symbol.kind == .OBJECT_FLAGS {
+            _emit(_indent + "};\n")
+            _decreaseIndent
+          }
           _emit(_indent + "};\n")
           _emitNewlineAfterSymbol(symbol)
         }
@@ -190,14 +200,14 @@ namespace Skew {
           if symbol.extends != null || symbol.implements != null {
             _emit(" : ")
             if symbol.extends != null {
-              _emitExpressionOrType(symbol.extends, symbol.baseType)
+              _emitExpressionOrType(symbol.extends, symbol.baseType, .BARE)
             }
             if symbol.implements != null {
               for node in symbol.implements {
                 if node != symbol.implements.first || symbol.extends != null {
                   _emit(", ")
                 }
-                _emitExpressionOrType(node, node.resolvedType)
+                _emitExpressionOrType(node, node.resolvedType, .BARE)
               }
             }
           }
@@ -214,7 +224,7 @@ namespace Skew {
           _emitNewlineAfterSymbol(symbol)
         }
 
-        case .OBJECT_NAMESPACE {
+        case .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
           _adjustNamespace(symbol)
           for function in symbol.functions {
             _emitFunction(function, .DEFINE)
@@ -251,7 +261,7 @@ namespace Skew {
         if mode == .DEFINE && (symbol.isVirtual || block == null) {
           _emit("virtual ")
         }
-        _emitType(symbol.resolvedType.returnType, .DECLARATION)
+        _emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType, .DECLARATION)
       }
       if mode == .IMPLEMENT && parent.kind != .OBJECT_GLOBAL {
         _emit(_fullName(parent))
@@ -320,7 +330,7 @@ namespace Skew {
         if argument != symbol.arguments.first {
           _emit(", ")
         }
-        _emitType(argument.resolvedType, .DECLARATION)
+        _emitExpressionOrType(argument.type, argument.resolvedType, .DECLARATION)
         _emit(_mangleName(argument))
       }
       _emit(")")
@@ -339,7 +349,7 @@ namespace Skew {
 
       _emitNewlineBeforeSymbol(symbol, mode)
       if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
-        _emit(_indent + _mangleName(symbol) + ",\n")
+        _emit(_indent + _mangleName(symbol) + " = \(symbol.value.asInt),\n")
       } else {
         _emit(_indent)
         if mode == .DEFINE && symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
@@ -593,7 +603,17 @@ namespace Skew {
       switch content.kind {
         case .BOOL { _emit(content.asBool.toString) }
         case .INT { _emit(content.asInt.toString) }
-        case .DOUBLE { _emit(doubleToStringWithDot(content.asDouble)) }
+        case .DOUBLE {
+          var value = content.asDouble
+          if !value.isFinite {
+            _includeNames["<math.h>"] = 0
+          }
+          _emit(
+            value.isNaN ? "NAN" :
+            value == Math.INFINITY ? "INFINITY" :
+            value == -Math.INFINITY ? "-INFINITY" :
+            doubleToStringWithDot(value))
+        }
         case .STRING { _emit(quoteString(content.asString, .DOUBLE, .OCTAL_WORKAROUND) + "_s") }
       }
     }
@@ -681,22 +701,40 @@ namespace Skew {
         }
 
         case .CAST {
+          var resolvedType = node.resolvedType
+          var type = node.castType
           var value = node.castValue
+
           if value.kind == .NULL && node.resolvedType == _cache.stringType {
             _emit("string()")
-          } else if node.castType.resolvedType == .DYNAMIC {
+          }
+
+          else if type.kind == .TYPE && type.resolvedType == .DYNAMIC {
             _emitExpression(value, precedence)
-          } else {
+          }
+
+          # Automatically promote integer literals to doubles instead of using a cast
+          else if _cache.isEquivalentToDouble(resolvedType) && value.isInt {
+            _emitExpression(_cache.createDouble(value.asInt), precedence)
+          }
+
+          # Only emit a cast if the underlying types are different
+          else if _unwrappedType(value.resolvedType) != _unwrappedType(type.resolvedType) || type.resolvedType == .DYNAMIC {
             if Precedence.UNARY_POSTFIX < precedence {
               _emit("(")
             }
             _emit("(")
-            _emitType(node.resolvedType, .NORMAL)
+            _emitExpressionOrType(type, resolvedType, .NORMAL)
             _emit(")")
             _emitExpression(value, .UNARY_POSTFIX)
             if Precedence.UNARY_POSTFIX < precedence {
               _emit(")")
             }
+          }
+
+          # Otherwise, pretend the cast isn't there
+          else {
+            _emitExpression(value, precedence)
           }
         }
 
@@ -776,15 +814,6 @@ namespace Skew {
           }
         }
 
-        case .LAMBDA {
-          var lambda = symbol.asFunctionSymbol
-          _emit("[=]")
-          _emitArgumentList(lambda)
-          _emit(" -> ")
-          _emitType(lambda.resolvedType.returnType, .NORMAL)
-          _emitBlock(lambda.block)
-        }
-
         case .INITIALIZER_LIST, .INITIALIZER_MAP {
           _emit("new ")
           _emitType(node.resolvedType, .BARE)
@@ -851,65 +880,81 @@ namespace Skew {
       }
     }
 
-    enum CppEmitType {
+    enum CppEmitMode {
       BARE
       NORMAL
       DECLARATION
     }
 
-    def _emitExpressionOrType(node Node, type Type) {
+    def _emitExpressionOrType(node Node, type Type, mode CppEmitMode) {
       if node != null && (type == null || type == .DYNAMIC) {
         _emitExpression(node, .LOWEST)
+        if mode == .DECLARATION {
+          _emit(" ")
+        }
       } else {
-        _emitType(type, .BARE)
+        _emitType(type, mode)
       }
     }
 
-    def _emitType(type Type, mode CppEmitType) {
+    def _emitType(type Type, mode CppEmitMode) {
       if type == null {
-        _emit(mode == .DECLARATION ? "void " : "void")
-      }
-
-      else if type == .DYNAMIC {
-        _emit("void *")
-      }
-
-      else if type.kind == .LAMBDA {
-        _includeNames["<functional>"] = 0
-        _emit("std::function<")
-        _emitType(type.returnType, .DECLARATION)
-        _emit("(")
-        for i in 0..type.argumentTypes.count {
-          if i != 0 {
-            _emit(", ")
-          }
-          _emitType(type.argumentTypes[i], .NORMAL)
-        }
-        _emit(mode == .DECLARATION ? ")> " : ")>")
+        _emit("void")
       }
 
       else {
-        assert(type.kind == .SYMBOL)
-        _handleSymbol(type.symbol)
-        _emit(_fullName(type.symbol))
+        type = _unwrappedType(type)
 
-        if type.isParameterized {
-          _emit("<")
-          for i in 0..type.substitutions.count {
-            if i != 0 {
-              _emit(", ")
-            }
-            _emitType(type.substitutions[i], .NORMAL)
-          }
-          _emit(">")
+        if type == .DYNAMIC {
+          _emit("void")
         }
 
-        if _isReferenceType(type) && mode != .BARE {
-          _emit(" *")
-        } else if mode == .DECLARATION {
-          _emit(" ")
+        else if type.kind == .LAMBDA {
+          var hasReturnType = type.returnType != null
+          var argumentCount = type.argumentTypes.count
+          _emit((hasReturnType ? "Fn" : "FnVoid") + "\(argumentCount)")
+          if hasReturnType || argumentCount != 0 {
+            _emit("<")
+            if hasReturnType {
+              _emitType(type.returnType, .NORMAL)
+            }
+            for i in 0..argumentCount {
+              if i != 0 || hasReturnType {
+                _emit(", ")
+              }
+              _emitType(type.argumentTypes[i], .NORMAL)
+            }
+            _emit(">")
+          }
+        }
+
+        else {
+          assert(type.kind == .SYMBOL)
+          _handleSymbol(type.symbol)
+          _emit(_fullName(type.symbol))
+
+          if type.isParameterized {
+            _emit("<")
+            for i in 0..type.substitutions.count {
+              if i != 0 {
+                _emit(", ")
+              }
+              _emitType(type.substitutions[i], .NORMAL)
+            }
+            _emit(">")
+          }
         }
       }
+
+      if type != null && _isReferenceType(type) && mode != .BARE {
+        _emit(" *")
+      } else if mode == .DECLARATION {
+        _emit(" ")
+      }
+    }
+
+    def _unwrappedType(type Type) Type {
+      return type.isFlags ? _cache.intType : _cache.unwrappedType(type)
     }
 
     def _isReferenceType(type Type) bool {

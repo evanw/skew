@@ -1,3 +1,6 @@
+#include <dirent.h>
+#include <sys/stat.h>
+
 string::string() : _isNull(true) {
 }
 
@@ -285,8 +288,10 @@ void List<T>::removeFirst() {
 }
 
 template <typename T>
-void List<T>::removeIf(const std::function<bool (T)> &x) {
-  std::remove_if(_data.begin(), _data.end(), x);
+void List<T>::removeIf(Fn1<bool, T> *x) {
+  std::remove_if(_data.begin(), _data.end(), [&](const T &y) {
+    return x->run(y);
+  });
 }
 
 template <typename T>
@@ -375,9 +380,9 @@ int List<T>::lastIndexOf(const T &x) const {
 }
 
 template <typename T>
-bool List<T>::all(const std::function<bool (T)> &x) const {
+bool List<T>::all(Fn1<bool, T> *x) const {
   for (const auto &it : _data) {
-    if (!x(it)) {
+    if (!x->run(it)) {
       return false;
     }
   }
@@ -385,9 +390,9 @@ bool List<T>::all(const std::function<bool (T)> &x) const {
 }
 
 template <typename T>
-bool List<T>::any(const std::function<bool (T)> &x) const {
+bool List<T>::any(Fn1<bool, T> *x) const {
   for (const auto &it : _data) {
-    if (x(it)) {
+    if (x->run(it)) {
       return true;
     }
   }
@@ -402,9 +407,9 @@ List<T> *List<T>::clone() const {
 }
 
 template <typename T>
-void List<T>::each(const std::function<void (T)> &x) const {
+void List<T>::each(FnVoid1<T> *x) const {
   for (const auto &it : _data) {
-    x(it);
+    x->run(it);
   }
 }
 
@@ -422,10 +427,10 @@ bool List<T>::equals(const List<T> *x) const {
 }
 
 template <typename T>
-List<T> *List<T>::filter(const std::function<bool (T)> &x) const {
+List<T> *List<T>::filter(Fn1<bool, T> *x) const {
   auto result = new List<T>;
   for (const auto &it : _data) {
-    if (x(it)) {
+    if (x->run(it)) {
       result->append(it);
     }
   }
@@ -434,10 +439,10 @@ List<T> *List<T>::filter(const std::function<bool (T)> &x) const {
 
 template <typename T>
 template <typename R>
-List<R> *List<T>::map(const std::function<R (T)> &x) const {
+List<R> *List<T>::map(Fn1<R, T> *x) const {
   auto result = new List<T>;
   for (const auto &it : _data) {
-    result->append(x(it));
+    result->append(x->run(it));
   }
   return result;
 }
@@ -466,9 +471,9 @@ List<T> *List<T>::slice(int start, int end) const {
 }
 
 template <typename T>
-void List<T>::sort(const std::function<int (T, T)> &x) {
+void List<T>::sort(Fn2<int, T, T> *x) {
   std::sort(_data.begin(), _data.end(), [&x](const T &a, const T &b) {
-    return x(a, b) < 0;
+    return x->run(a, b) < 0;
   });
 }
 
@@ -537,9 +542,9 @@ StringMap<T> *StringMap<T>::clone() const {
 }
 
 template <typename T>
-void StringMap<T>::each(const std::function<void (int, T)> &x) const {
+void StringMap<T>::each(FnVoid2<string, T> *x) const {
   for (const auto &it : _data) {
-    x(it.first, it.second);
+    x->run(it.first, it.second);
   }
 }
 
@@ -619,9 +624,9 @@ IntMap<T> *IntMap<T>::clone() const {
 }
 
 template <typename T>
-void IntMap<T>::each(const std::function<void (int, T)> &x) const {
+void IntMap<T>::each(FnVoid2<int, T> *x) const {
   for (const auto &it : _data) {
-    x(it.first, it.second);
+    x->run(it.first, it.second);
   }
 }
 
@@ -673,6 +678,22 @@ bool IO::writeFile(const string &path, const string &contents) {
   if (!file) return false;
   file << contents.c_str();
   return true;
+}
+
+bool IO::isDirectory(const string &path) {
+  struct stat info;
+  return stat(path.c_str(), &info) == 0 && info.st_mode & S_IFDIR;
+}
+
+List<string> *IO::readDirectory(const string &path) {
+  if (auto dir = opendir(path.c_str())) {
+    auto entries = new List<string>();
+    while (auto entry = readdir(dir)) {
+      entries->append(entry->d_name);
+    }
+    return entries;
+  }
+  return nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

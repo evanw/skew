@@ -45,7 +45,7 @@ class int {
   }
 
   def >>>(x int) int {
-    return (self as dynamic.unsigned >> x) as dynamic.signed
+    return (self as dynamic.unsigned >> x) as int
   }
 }
 

@@ -557,6 +557,16 @@ namespace Skew {
         _parent._lastChild = node
       }
 
+      if _parent.kind == .LAMBDA {
+        assert(self == _parent.symbol.asFunctionSymbol.block)
+        _parent.symbol.asFunctionSymbol.block = node
+      }
+
+      else if _parent.kind == .VARIABLE {
+        assert(self == _parent.symbol.asVariableSymbol.value)
+        _parent.symbol.asVariableSymbol.value = node
+      }
+
       _parent = null
       _previousSibling = null
       _nextSibling = null

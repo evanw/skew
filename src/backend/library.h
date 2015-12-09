@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <fstream>
-#include <functional>
 #include <initializer_list>
 #include <iostream>
 #include <sstream>
@@ -8,6 +7,115 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+struct FnVoid0 {
+  virtual void run() = 0;
+};
+
+template <typename R>
+struct Fn0 {
+  virtual R run() = 0;
+};
+
+template <typename A1>
+struct FnVoid1 {
+  virtual void run(A1 a1) = 0;
+};
+
+template <typename R, typename A1>
+struct Fn1 {
+  virtual R run(A1 a1) = 0;
+};
+
+template <typename A1, typename A2>
+struct FnVoid2 {
+  virtual void run(A1 a1, A2 a2) = 0;
+};
+
+template <typename R, typename A1, typename A2>
+struct Fn2 {
+  virtual R run(A1 a1, A2 a2) = 0;
+};
+
+template <typename A1, typename A2, typename A3>
+struct FnVoid3 {
+  virtual void run(A1 a1, A2 a2, A3 a3) = 0;
+};
+
+template <typename R, typename A1, typename A2, typename A3>
+struct Fn3 {
+  virtual R run(A1 a1, A2 a2, A3 a3) = 0;
+};
+
+template <typename A1, typename A2, typename A3, typename A4>
+struct FnVoid4 {
+  virtual void run(A1 a1, A2 a2, A3 a3, A4 a4) = 0;
+};
+
+template <typename R, typename A1, typename A2, typename A3, typename A4>
+struct Fn4 {
+  virtual R run(A1 a1, A2 a2, A3 a3, A4 a4) = 0;
+};
+
+template <typename A1, typename A2, typename A3, typename A4, typename A5>
+struct FnVoid5 {
+  virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5) = 0;
+};
+
+template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5>
+struct Fn5 {
+  virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5) = 0;
+};
+
+template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+struct FnVoid6 {
+  virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6) = 0;
+};
+
+template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+struct Fn6 {
+  virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6) = 0;
+};
+
+template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
+struct FnVoid7 {
+  virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7) = 0;
+};
+
+template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
+struct Fn7 {
+  virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7) = 0;
+};
+
+template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
+struct FnVoid8 {
+  virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8) = 0;
+};
+
+template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
+struct Fn8 {
+  virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8) = 0;
+};
+
+template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
+struct FnVoid9 {
+  virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9) = 0;
+};
+
+template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
+struct Fn9 {
+  virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9) = 0;
+};
+
+template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
+struct FnVoid10 {
+  virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10) = 0;
+};
+
+template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
+struct Fn10 {
+  virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10) = 0;
+};
 
 template <typename T>
 struct List;
@@ -127,7 +235,7 @@ struct List {
   void removeAt(int x);
   void removeDuplicates();
   void removeFirst();
-  void removeIf(const std::function<bool (T)> &x);
+  void removeIf(Fn1<bool, T> *x);
   void removeLast();
   void removeOne(const T &x);
   void removeRange(int start, int end);
@@ -146,19 +254,19 @@ struct List {
   int indexOf(const T &x) const;
   int lastIndexOf(const T &x) const;
 
-  bool all(const std::function<bool (T)> &x) const;
-  bool any(const std::function<bool (T)> &x) const;
+  bool all(Fn1<bool, T> *x) const;
+  bool any(Fn1<bool, T> *x) const;
   List<T> *clone() const;
-  void each(const std::function<void (T)> &x) const;
+  void each(FnVoid1<T> *x) const;
   bool equals(const List<T> *x) const;
-  List<T> *filter(const std::function<bool (T)> &x) const;
+  List<T> *filter(Fn1<bool, T> *x) const;
   template <typename R>
-  List<R> *map(const std::function<R (T)> &x) const;
+  List<R> *map(Fn1<R, T> *x) const;
   void reverse();
   void shuffle();
   List<T> *slice(int start) const;
   List<T> *slice(int start, int end) const;
-  void sort(const std::function<int (T, T)> &x);
+  void sort(Fn2<int, T, T> *x);
   void swap(int x, int y);
 
 private:
@@ -179,7 +287,7 @@ struct StringMap {
   List<T> *values() const;
 
   StringMap<T> *clone() const;
-  void each(const std::function<void (int, T)> &x) const;
+  void each(FnVoid2<string, T> *x) const;
   T get(const string &key, const T &defaultValue) const;
   bool contains(const string &key) const;
   void remove(const string &key);
@@ -202,7 +310,7 @@ struct IntMap {
   List<T> *values() const;
 
   IntMap<T> *clone() const;
-  void each(const std::function<void (int, T)> &x) const;
+  void each(FnVoid2<int, T> *x) const;
   T get(int key, const T &defaultValue) const;
   bool contains(int key) const;
   void remove(int key);
@@ -221,6 +329,8 @@ namespace Math {
 namespace IO {
   string readFile(const string &path);
   bool writeFile(const string &path, const string &contents);
+  bool isDirectory(const string &path);
+  List<string> *readDirectory(const string &path);
 }
 
 namespace Terminal {

@@ -1,0 +1,676 @@
+namespace Skew.Tests {
+  def testCPlusPlus {
+
+# Test entry point
+test("
+@entry
+def main {}
+", "
+void main() {
+}
+").cpp
+
+# Test entry point
+test("
+@entry
+def main int {
+  return 0
+}
+", "
+int main() {
+  return 0;
+}
+").cpp
+
+# Test entry point
+test("
+@entry
+def main(x List<string>) {
+}
+", "
+void main(List<string> *x) {
+}
+").cpp
+
+# Test entry point
+test("
+@entry
+def main(x List<string>) int {
+  return x.count
+}
+", "
+int main(List<string> *x) {
+  return x->count();
+}
+").cpp
+
+# Basic class hierarchy
+test("
+@export
+class Foo {
+  const instanceVariable1 int
+  const instanceVariable2 = 0
+  def instanceMethod {}
+  def instanceMethod2 {}
+}
+
+namespace Foo {
+  const staticVariable = 0
+}
+
+@export
+class Bar : Foo {
+  const instanceVariable3 int
+  const instanceVariable4 = 0
+  over instanceMethod { super }
+  def instanceMethod3 {}
+}
+
+namespace Bar {
+  const staticVariable2 = 0
+}
+", "
+struct Foo;
+struct Bar;
+
+struct Foo {
+  virtual void instanceMethod();
+  void instanceMethod2();
+  Foo(int instanceVariable1);
+
+  int instanceVariable1;
+  int instanceVariable2;
+  static int staticVariable;
+};
+
+struct Bar : Foo {
+  virtual void instanceMethod() override;
+  void instanceMethod3();
+  Bar(int instanceVariable1, int instanceVariable3);
+
+  int instanceVariable3;
+  int instanceVariable4;
+  static int staticVariable2;
+};
+
+int Foo::staticVariable = 0;
+int Bar::staticVariable2 = 0;
+
+void Foo::instanceMethod() {
+}
+
+void Foo::instanceMethod2() {
+}
+
+Foo::Foo(int instanceVariable1) {
+  this->instanceVariable1 = instanceVariable1;
+  this->instanceVariable2 = 0;
+}
+
+void Bar::instanceMethod() {
+  Foo::instanceMethod();
+}
+
+void Bar::instanceMethod3() {
+}
+
+Bar::Bar(int instanceVariable1, int instanceVariable3) : Foo::Foo(instanceVariable1) {
+  this->instanceVariable3 = instanceVariable3;
+  this->instanceVariable4 = 0;
+}
+").cpp
+
+# Basic interface usage
+test("
+@export
+class Foo :: Bar, Baz {
+  def instanceMethod {}
+  def instanceMethod(x int) {}
+  def instanceMethod2 {}
+}
+
+interface Bar {
+  def instanceMethod
+  def instanceMethod(x int)
+}
+
+interface Baz {
+  def instanceMethod
+  def instanceMethod2
+}
+", "
+struct Bar;
+
+struct Baz;
+
+struct Foo;
+
+struct Bar {
+  virtual void instanceMethod() = 0;
+  virtual void instanceMethod(int x) = 0;
+};
+
+struct Baz {
+  virtual void instanceMethod() = 0;
+  virtual void instanceMethod2() = 0;
+};
+
+struct Foo : Bar, Baz {
+  virtual void instanceMethod();
+  virtual void instanceMethod(int x);
+  virtual void instanceMethod2();
+  Foo();
+};
+
+void Foo::instanceMethod() {
+}
+
+void Foo::instanceMethod(int x) {
+}
+
+void Foo::instanceMethod2() {
+}
+
+Foo::Foo() {
+}
+").cpp
+
+# Interface usage with tree shaking
+test("
+class Foo :: Bar, Baz {
+  def instanceMethod {}
+  def instanceMethod(x int) {}
+  def instanceMethod2 {}
+}
+
+interface Bar {
+  def instanceMethod
+  def instanceMethod(x int)
+}
+
+interface Baz {
+  def instanceMethod
+  def instanceMethod2
+}
+
+@export
+def test {
+  var foo = Foo.new
+  foo.instanceMethod
+}
+", "
+struct Bar;
+
+struct Baz;
+
+struct Foo;
+
+struct Bar {
+  virtual void instanceMethod1() = 0;
+};
+
+struct Baz {
+  virtual void instanceMethod1() = 0;
+};
+
+struct Foo : Bar, Baz {
+  virtual void instanceMethod1();
+  Foo();
+};
+
+void test() {
+  Foo *foo = new Foo();
+  foo->instanceMethod1();
+}
+
+void Foo::instanceMethod1() {
+}
+
+Foo::Foo() {
+}
+").cpp
+
+# Type wrapping
+test("
+type Foo : double {
+  def scaleBy(scale Foo) Foo {
+    return ((self as double) * (scale as double)) as Foo
+  }
+}
+
+namespace Foo {
+  const FOO = 0.5 as Foo
+}
+
+@export
+def test(x double) Foo {
+  return (x as Foo).scaleBy(Foo.FOO)
+}
+", "
+namespace Foo {
+  double scaleBy(double self, double scale);
+}
+
+namespace Foo {
+  double FOO = 0.5;
+}
+
+double test(double x) {
+  return Foo::scaleBy(x, Foo::FOO);
+}
+
+double Foo::scaleBy(double self, double scale) {
+  return self * scale;
+}
+").cpp
+
+# Casting between enums and integers must be explicit
+test("
+enum Foo {
+  FOO
+}
+
+@export
+def test Foo {
+  var x = Foo.FOO
+  return ((x as int) * 1) as Foo
+}
+", "
+enum struct Foo {
+  FOO = 0,
+};
+
+Foo test() {
+  Foo x = Foo::FOO;
+  return (Foo)((int)x * 1);
+}
+").cpp
+
+# Lists and maps
+test("
+@export
+def foo {
+  var x = [1, 2, 3]
+  var y = {1: 2, 3: 4}
+  var z = {\"1\": 2, \"3\": 4}
+}
+", "
+#include <utility>
+
+void foo() {
+  List<int> *x = new List<int>({1, 2, 3});
+  IntMap<int> *y = new IntMap<int>({std::make_pair(1, 2), std::make_pair(3, 4)});
+  StringMap<int> *z = new StringMap<int>({std::make_pair(\"1\"_s, 2), std::make_pair(\"3\"_s, 4)});
+}
+").cpp
+
+# Test math constants
+test("
+@export
+def main {
+  dynamic.foo(Math.NAN, Math.INFINITY, -Math.INFINITY)
+  dynamic.foo(Math.NAN.toString, Math.INFINITY.toString, (-Math.INFINITY).toString)
+}
+", "
+void main() {
+  foo(0.0 / 0.0, 1.0 / 0.0, -(1.0 / 0.0));
+  foo(doubleToString(0.0 / 0.0), doubleToString(1.0 / 0.0), doubleToString(-(1.0 / 0.0)));
+}
+").cpp.inlineAllFunctions
+
+# Test math constants
+test("
+@export
+def main {
+  dynamic.foo(Math.NAN, Math.INFINITY, -Math.INFINITY)
+  dynamic.foo(Math.NAN.toString, Math.INFINITY.toString, (-Math.INFINITY).toString)
+}
+", "
+#include <math.h>
+
+void main() {
+  foo(NAN, INFINITY, -INFINITY);
+  foo(doubleToString(NAN), doubleToString(INFINITY), doubleToString(-INFINITY));
+}
+").cpp.inlineAllFunctions.foldAllConstants
+
+# Test math toString
+test("
+@export
+def main {
+  dynamic.foo(0.toString, 1.0.toString, (-1.0).toString, 0.5.toString, (-0.5).toString)
+}
+", "
+void main() {
+  foo(intToString(0), doubleToString(1.0), doubleToString(-1.0), doubleToString(0.5), doubleToString(-0.5));
+}
+").cpp.inlineAllFunctions
+
+# Double literals must be emitted with a decimal point
+test("
+@export
+def main(x double) {
+  x = 1.0 / 2.0
+  x = 1e100 / 2e100
+  x = 1e-100 / 2e-100
+  x = 1.5 / 2.5
+  x = 1.5e100 / 2.5e100
+  x = 1.5e-100 / 2.5e-100
+}
+", "
+void main(double x) {
+  x = 1.0 / 2.0;
+  x = 1.0e+100 / 2.0e+100;
+  x = 1.0e-100 / 2.0e-100;
+  x = 1.5 / 2.5;
+  x = 1.5e+100 / 2.5e+100;
+  x = 1.5e-100 / 2.5e-100;
+}
+").cpp
+
+# Check for a crash when converting switch statements to if chains
+test("
+@export
+def main {
+  switch \"a\" {
+    case \"b\" {}
+    case \"c\" {}
+    default {}
+  }
+}
+", "
+void main() {
+  string value = \"a\"_s;
+
+  if (value == \"b\"_s) {
+  }
+
+  else if (value == \"c\"_s) {
+  }
+
+  else {
+  }
+}
+").cpp
+
+# Check different integer types
+test("
+enum Foo {
+  A, B
+
+  def foo {}
+}
+
+flags Bar {
+  C, D
+
+  def foo {}
+}
+
+type Baz : int {
+  def foo {}
+}
+
+namespace Baz {
+  const X = 0 as Baz
+}
+
+@export
+def test int {
+  var a = Foo.A
+  var c = Bar.C
+  var x = 0 as Baz
+  a.foo
+  c.foo
+  x.foo
+  return a + c + x as int + Foo.B + Bar.D + Baz.X as int
+}
+", "
+enum struct Foo {
+  A = 0,
+  B = 1,
+};
+
+struct Bar {
+  enum {
+    C = 1,
+    D = 2,
+  };
+};
+
+namespace Baz {
+  void foo(int self);
+}
+
+namespace in_Foo {
+  void foo(Foo self);
+}
+
+namespace in_Bar {
+  void foo(int self);
+}
+
+namespace Baz {
+  int X = 0;
+}
+
+int test() {
+  Foo a = Foo::A;
+  int c = Bar::C;
+  int x = 0;
+  in_Foo::foo(a);
+  in_Bar::foo(c);
+  Baz::foo(x);
+  return (int)a + c + x + (int)Foo::B + Bar::D + Baz::X;
+}
+
+void Baz::foo(int self) {
+}
+
+void in_Foo::foo(Foo self) {
+}
+
+void in_Bar::foo(int self) {
+}
+").cpp
+
+# Check code generation for flags types
+test("
+flags Foo {
+  X0
+  X1
+  X2
+  X3
+  X4
+  X5
+  X6
+  X7
+  X8
+  X9
+
+  X10
+  X11
+  X12
+  X13
+  X14
+  X15
+  X16
+  X17
+  X18
+  X19
+
+  X20
+  X21
+  X22
+  X23
+  X24
+  X25
+  X26
+  X27
+  X28
+  X29
+
+  X30
+  X31
+}
+
+@export
+def test {
+  if !((.X0 | .X1) in (Foo.X30 | .X31)) {
+    var x = Foo.X0
+    x = .X1 | .X2
+    x &= ~.X3
+  }
+}
+", "
+struct Foo {
+  enum {
+    X0 = 1,
+    X1 = 2,
+    X2 = 4,
+    X3 = 8,
+    X30 = 1073741824,
+    X31 = -2147483648,
+  };
+};
+
+void test() {
+  if (!(((Foo::X0 | Foo::X1) & (Foo::X30 | Foo::X31)) != 0)) {
+    int x = Foo::X0;
+    x = Foo::X1 | Foo::X2;
+    x &= ~Foo::X3;
+  }
+}
+").cpp
+
+# Check dynamic types
+test("
+@export
+def test(foo dynamic.Foo) dynamic.Bar {
+  return foo as dynamic.Bar + 0 as dynamic.Int + 0 as dynamic
+}
+", "
+Bar test(Foo foo) {
+  return (Bar)foo + (Int)0 + 0;
+}
+").cpp
+
+# Check bit shifts
+test("
+@export
+def test(x int) {
+  x = x << x
+  x = x >> x
+  x = x >>> x
+  x <<= x
+  x >>= x
+  x >>>= x
+}
+", "
+namespace in_int {
+  int unsignedRightShift(int self, int x);
+}
+
+void test(int x) {
+  x = x << x;
+  x = x >> x;
+  x = in_int::unsignedRightShift(x, x);
+  x <<= x;
+  x >>= x;
+  x = in_int::unsignedRightShift(x, x);
+}
+
+int in_int::unsignedRightShift(int self, int x) {
+  return (int)((unsigned)self >> x);
+}
+").cpp
+
+# Test lambda code generation
+test("
+@export
+def test {
+  var a = => {}
+  var b = (x int) => {}
+  var c = (x int, y int) => x == y
+  a()
+  b(1)
+  c(2, 3)
+}
+", "
+struct Fn_test;
+struct Fn_test1;
+struct Fn_test2;
+
+struct Fn_test : FnVoid0 {
+  Fn_test();
+  virtual void run();
+};
+
+struct Fn_test1 : FnVoid1<int> {
+  Fn_test1();
+  virtual void run(int x);
+};
+
+struct Fn_test2 : Fn2<bool, int, int> {
+  Fn_test2();
+  virtual bool run(int x, int y);
+};
+
+void test() {
+  FnVoid0 *a = new Fn_test();
+  FnVoid1<int> *b = new Fn_test1();
+  Fn2<bool, int, int> *c = new Fn_test2();
+  a->run();
+  b->run(1);
+  c->run(2, 3);
+}
+
+Fn_test::Fn_test() {
+}
+
+void Fn_test::run() {
+}
+
+Fn_test1::Fn_test1() {
+}
+
+void Fn_test1::run(int x) {
+}
+
+Fn_test2::Fn_test2() {
+}
+
+bool Fn_test2::run(int x, int y) {
+  return x == y;
+}
+").cpp
+
+# Test lambda creation with simple capture
+test("
+@entry
+def test int {
+  var count = 0
+  var add = => ++count
+  add()
+  add()
+  add()
+  return count
+}
+", "
+TODO
+").cpp
+
+# Test lambda creation with currying
+test("
+@entry
+def test int {
+  var adder = (x int) => (y int) => x + y
+  var addOne = adder(1)
+  return addOne(2)
+}
+", "
+TODO
+").cpp
+
+  }
+}

@@ -142,16 +142,11 @@ namespace Skew {
     }
 
     def _objectComesBefore(before ObjectSymbol, after ObjectSymbol) bool {
-      if after.hasBaseClass(before) {
-        return true
-      }
-      if _isContainedBy(after, before) {
-        return true
-      }
-      if after.forwardTo == before {
-        return true
-      }
-      return false
+      return
+        after.hasBaseClass(before) ||
+        after.hasInterface(before) ||
+        _isContainedBy(after, before) ||
+        after.forwardTo == before
     }
   }
 

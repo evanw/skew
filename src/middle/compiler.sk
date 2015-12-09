@@ -41,7 +41,7 @@ namespace Skew {
         ParsingPass.new,
         MergingPass.new,
         ResolvingPass.new,
-        # TODO: LambdaLiftingPass.new.onlyRunWhen(=> _continueAfterResolve && target.needsLambdaLifting),
+        LambdaConversionPass.new.onlyRunWhen(=> _continueAfterResolve && target.needsLambdaLifting),
         InterfaceRemovalPass.new.onlyRunWhen(=> _continueAfterResolve && target.removeSingletonInterfaces && globalizeAllFunctions),
 
         # The call graph is used as a shortcut so the tree only needs to be scanned once for all call-based optimizations

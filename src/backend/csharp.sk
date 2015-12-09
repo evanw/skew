@@ -903,7 +903,7 @@ namespace Skew {
           }
 
           # Only emit a cast if the underlying types are different
-          else if _cache.unwrappedType(value.resolvedType) != _cache.unwrappedType(type.resolvedType) {
+          else if _cache.unwrappedType(value.resolvedType) != _cache.unwrappedType(type.resolvedType) || type.resolvedType == .DYNAMIC {
             if Precedence.UNARY_POSTFIX < precedence {
               _emit("(")
             }

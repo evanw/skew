@@ -323,6 +323,10 @@ namespace Skew {
       return baseClass != null && (baseClass == symbol || baseClass.hasBaseClass(symbol))
     }
 
+    def hasInterface(symbol Symbol) bool {
+      return interfaceTypes != null && interfaceTypes.any(type => type.symbol == symbol)
+    }
+
     def isSameOrHasBaseClass(symbol Symbol) bool {
       return self == symbol || hasBaseClass(symbol)
     }
