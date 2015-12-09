@@ -481,8 +481,13 @@ namespace Skew {
       }
     }
 
-    def semanticErrorBadInterfaceImplementationReturnType(range Range, name string, interfaceType Type, reason Range) {
-      error(range, "Function \"\(name)\" has a different return type than the function with the same name and argument types from interface \"\(interfaceType)\"")
+    def semanticErrorBadInterfaceImplementationReturnType(range Range, name string, found Type, expected Type, interfaceType Type, reason Range) {
+      if found != null && expected != null {
+        error(range, "Function \"\(name)\" has unexpected return type \"\(found)\", expected return type \"\(expected)\" " +
+          "to match the function with the same name and argument types from interface \"\(interfaceType)\"")
+      } else {
+        error(range, "Expected the return type of function \"\(name)\" to match the function with the same name and argument types from interface \"\(interfaceType)\"")
+      }
       if reason != null {
         note(reason, "The function declaration is here")
       }

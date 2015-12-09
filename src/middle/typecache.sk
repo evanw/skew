@@ -403,20 +403,40 @@ namespace Skew {
       return substituted
     }
 
+    # Substitute the type parameters from one function into the other
+    def substituteFunctionParameters(type Type, from FunctionSymbol, to FunctionSymbol) Type {
+      if from.parameters != null && to.parameters != null && from.parameters.count == to.parameters.count {
+        var substitutions List<Type> = []
+        for parameter in from.parameters {
+          substitutions.append(parameter.resolvedType)
+        }
+        type = substitute(type, createEnvironment(to.parameters, substitutions))
+      }
+      return type
+    }
+
     enum Equivalence {
       EQUIVALENT
       EQUIVALENT_EXCEPT_RETURN_TYPE
       NOT_EQUIVALENT
     }
 
-    def areFunctionSymbolsEquivalent(left FunctionSymbol, right FunctionSymbol) Equivalence {
+    def areFunctionSymbolsEquivalent(left FunctionSymbol, leftEnvironment Environment, right FunctionSymbol, rightEnvironment Environment) Equivalence {
       var leftType = left.resolvedType
       var rightType = right.resolvedType
       var leftReturn = leftType.returnType
       var rightReturn = rightType.returnType
 
+      # Account for return types of functions from generic base types
+      if leftReturn != null {
+        leftReturn = substitute(leftReturn, leftEnvironment)
+      }
+      if rightReturn != null {
+        rightReturn = substitute(rightReturn, rightEnvironment)
+      }
+
       # Overloading by return type is not allowed, so only compare argument types
-      if left.argumentOnlyType == right.argumentOnlyType {
+      if substitute(left.argumentOnlyType, leftEnvironment) == substitute(right.argumentOnlyType, rightEnvironment) {
         return leftReturn == rightReturn ? .EQUIVALENT : .EQUIVALENT_EXCEPT_RETURN_TYPE
       }
 
@@ -443,19 +463,22 @@ namespace Skew {
 
           # Substitute the same type parameters into both functions
           var parameters = _parameters.count == parameterCount ? _parameters : _parameters.slice(0, parameterCount)
-          var leftEnvironment = createEnvironment(left.parameters, parameters)
-          var rightEnvironment = createEnvironment(right.parameters, parameters)
+          var leftParametersEnvironment = createEnvironment(left.parameters, parameters)
+          var rightParametersEnvironment = createEnvironment(right.parameters, parameters)
 
           # Compare each argument
           for i in 0..argumentCount {
-            if substitute(leftArguments[i], leftEnvironment) != substitute(rightArguments[i], rightEnvironment) {
+            if substitute(substitute(leftArguments[i], leftEnvironment), leftParametersEnvironment) !=
+                substitute(substitute(rightArguments[i], rightEnvironment), rightParametersEnvironment) {
               return .NOT_EQUIVALENT
             }
           }
 
           return
             leftReturn == null && rightReturn == null ||
-            leftReturn != null && rightReturn != null && substitute(leftReturn, leftEnvironment) == substitute(rightReturn, rightEnvironment)
+            leftReturn != null && rightReturn != null &&
+            substitute(leftReturn, leftParametersEnvironment) ==
+            substitute(rightReturn, rightParametersEnvironment)
             ? .EQUIVALENT
             : .EQUIVALENT_EXCEPT_RETURN_TYPE
         }

@@ -9595,8 +9595,14 @@
     }
   };
 
-  Skew.Log.prototype.semanticErrorBadInterfaceImplementationReturnType = function(range, name, interfaceType, reason) {
-    this.error(range, 'Function "' + name + '" has a different return type than the function with the same name and argument types from interface "' + interfaceType.toString() + '"');
+  Skew.Log.prototype.semanticErrorBadInterfaceImplementationReturnType = function(range, name, found, expected, interfaceType, reason) {
+    if (found != null && expected != null) {
+      this.error(range, 'Function "' + name + '" has unexpected return type "' + found.toString() + '", expected return type "' + expected.toString() + '" ' + ('to match the function with the same name and argument types from interface "' + interfaceType.toString() + '"'));
+    }
+
+    else {
+      this.error(range, 'Expected the return type of function "' + name + '" to match the function with the same name and argument types from interface "' + interfaceType.toString() + '"');
+    }
 
     if (reason != null) {
       this.note(reason, 'The function declaration is here');
@@ -15623,14 +15629,16 @@
           this._initializeSymbol(function1);
           var member1 = in_StringMap.get(symbol.members, function1.name, null);
           var match = null;
+          var equivalence = Skew.TypeCache.Equivalence.NOT_EQUIVALENT;
 
           // Search for a matching function
           if (member1 != null) {
             if (member1.kind == Skew.SymbolKind.OVERLOADED_INSTANCE) {
               for (var i2 = 0, list2 = member1.asOverloadedFunctionSymbol().symbols, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
                 var other = list2[i2];
+                equivalence = this._cache.areFunctionSymbolsEquivalent(function1, interfaceType.environment, other, null);
 
-                if (other.argumentOnlyType == function1.argumentOnlyType) {
+                if (equivalence != Skew.TypeCache.Equivalence.NOT_EQUIVALENT) {
                   match = other;
                   break;
                 }
@@ -15638,7 +15646,9 @@
             }
 
             else if (member1.kind == Skew.SymbolKind.FUNCTION_INSTANCE) {
-              if (member1.asFunctionSymbol().argumentOnlyType == function1.argumentOnlyType) {
+              equivalence = this._cache.areFunctionSymbolsEquivalent(function1, interfaceType.environment, member1.asFunctionSymbol(), null);
+
+              if (equivalence != Skew.TypeCache.Equivalence.NOT_EQUIVALENT) {
                 match = member1.asFunctionSymbol();
               }
             }
@@ -15649,8 +15659,14 @@
             this._log.semanticErrorBadInterfaceImplementation(symbol.range, symbol.resolvedType, interfaceType, function1.name, function1.range);
           }
 
-          else if (function1.resolvedType.returnType != match.resolvedType.returnType) {
-            this._log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function1.range);
+          else if (equivalence == Skew.TypeCache.Equivalence.EQUIVALENT_EXCEPT_RETURN_TYPE) {
+            var returnType = function1.resolvedType.returnType;
+
+            if (returnType != null) {
+              returnType = this._cache.substitute(returnType, interfaceType.environment);
+            }
+
+            this._log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, match.resolvedType.returnType, this._cache.substituteFunctionParameters(returnType, match, function1), interfaceType, function1.range);
           }
 
           else {
@@ -16428,7 +16444,7 @@
       var index = -1;
 
       for (var j = 0, count = i; j < count; j = j + 1 | 0) {
-        equivalence = this._cache.areFunctionSymbolsEquivalent($function, symbols[j]);
+        equivalence = this._cache.areFunctionSymbolsEquivalent($function, null, symbols[j], null);
 
         if (equivalence != Skew.TypeCache.Equivalence.NOT_EQUIVALENT) {
           index = j;
@@ -20336,14 +20352,39 @@
     return substituted;
   };
 
-  Skew.TypeCache.prototype.areFunctionSymbolsEquivalent = function(left, right) {
+  // Substitute the type parameters from one function into the other
+  Skew.TypeCache.prototype.substituteFunctionParameters = function(type, from, to) {
+    if (from.parameters != null && to.parameters != null && from.parameters.length == to.parameters.length) {
+      var substitutions = [];
+
+      for (var i = 0, list = from.parameters, count = list.length; i < count; i = i + 1 | 0) {
+        var parameter = list[i];
+        substitutions.push(parameter.resolvedType);
+      }
+
+      type = this.substitute(type, this.createEnvironment(to.parameters, substitutions));
+    }
+
+    return type;
+  };
+
+  Skew.TypeCache.prototype.areFunctionSymbolsEquivalent = function(left, leftEnvironment, right, rightEnvironment) {
     var leftType = left.resolvedType;
     var rightType = right.resolvedType;
     var leftReturn = leftType.returnType;
     var rightReturn = rightType.returnType;
 
+    // Account for return types of functions from generic base types
+    if (leftReturn != null) {
+      leftReturn = this.substitute(leftReturn, leftEnvironment);
+    }
+
+    if (rightReturn != null) {
+      rightReturn = this.substitute(rightReturn, rightEnvironment);
+    }
+
     // Overloading by return type is not allowed, so only compare argument types
-    if (left.argumentOnlyType == right.argumentOnlyType) {
+    if (this.substitute(left.argumentOnlyType, leftEnvironment) == this.substitute(right.argumentOnlyType, rightEnvironment)) {
       return leftReturn == rightReturn ? Skew.TypeCache.Equivalence.EQUIVALENT : Skew.TypeCache.Equivalence.EQUIVALENT_EXCEPT_RETURN_TYPE;
     }
 
@@ -20370,17 +20411,17 @@
 
         // Substitute the same type parameters into both functions
         var parameters = this._parameters.length == parameterCount ? this._parameters : this._parameters.slice(0, parameterCount);
-        var leftEnvironment = this.createEnvironment(left.parameters, parameters);
-        var rightEnvironment = this.createEnvironment(right.parameters, parameters);
+        var leftParametersEnvironment = this.createEnvironment(left.parameters, parameters);
+        var rightParametersEnvironment = this.createEnvironment(right.parameters, parameters);
 
         // Compare each argument
         for (var i1 = 0, count1 = argumentCount; i1 < count1; i1 = i1 + 1 | 0) {
-          if (this.substitute(leftArguments[i1], leftEnvironment) != this.substitute(rightArguments[i1], rightEnvironment)) {
+          if (this.substitute(this.substitute(leftArguments[i1], leftEnvironment), leftParametersEnvironment) != this.substitute(this.substitute(rightArguments[i1], rightEnvironment), rightParametersEnvironment)) {
             return Skew.TypeCache.Equivalence.NOT_EQUIVALENT;
           }
         }
 
-        return leftReturn == null && rightReturn == null || leftReturn != null && rightReturn != null && this.substitute(leftReturn, leftEnvironment) == this.substitute(rightReturn, rightEnvironment) ? Skew.TypeCache.Equivalence.EQUIVALENT : Skew.TypeCache.Equivalence.EQUIVALENT_EXCEPT_RETURN_TYPE;
+        return leftReturn == null && rightReturn == null || leftReturn != null && rightReturn != null && this.substitute(leftReturn, leftParametersEnvironment) == this.substitute(rightReturn, rightParametersEnvironment) ? Skew.TypeCache.Equivalence.EQUIVALENT : Skew.TypeCache.Equivalence.EQUIVALENT_EXCEPT_RETURN_TYPE;
       }
     }
 

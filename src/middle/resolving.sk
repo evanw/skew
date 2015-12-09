@@ -450,18 +450,21 @@ namespace Skew.Resolving {
 
             var member = symbol.members.get(function.name, null)
             var match FunctionSymbol = null
+            var equivalence = TypeCache.Equivalence.NOT_EQUIVALENT
 
             # Search for a matching function
             if member != null {
               if member.kind == .OVERLOADED_INSTANCE {
                 for other in member.asOverloadedFunctionSymbol.symbols {
-                  if other.argumentOnlyType == function.argumentOnlyType {
+                  equivalence = _cache.areFunctionSymbolsEquivalent(function, interfaceType.environment, other, null)
+                  if equivalence != .NOT_EQUIVALENT {
                     match = other
                     break
                   }
                 }
               } else if member.kind == .FUNCTION_INSTANCE {
-                if member.asFunctionSymbol.argumentOnlyType == function.argumentOnlyType {
+                equivalence = _cache.areFunctionSymbolsEquivalent(function, interfaceType.environment, member.asFunctionSymbol, null)
+                if equivalence != .NOT_EQUIVALENT {
                   match = member.asFunctionSymbol
                 }
               }
@@ -470,8 +473,13 @@ namespace Skew.Resolving {
             # Validate use of the interface
             if match == null {
               _log.semanticErrorBadInterfaceImplementation(symbol.range, symbol.resolvedType, interfaceType, function.name, function.range)
-            } else if function.resolvedType.returnType != match.resolvedType.returnType {
-              _log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, interfaceType, function.range)
+            } else if equivalence == .EQUIVALENT_EXCEPT_RETURN_TYPE {
+              var returnType = function.resolvedType.returnType
+              if returnType != null {
+                returnType = _cache.substitute(returnType, interfaceType.environment)
+              }
+              _log.semanticErrorBadInterfaceImplementationReturnType(match.range, match.name, match.resolvedType.returnType,
+                _cache.substituteFunctionParameters(returnType, match, function), interfaceType, function.range)
             } else {
               function.implementations ?= []
               function.implementations.append(match)
@@ -1175,7 +1183,7 @@ namespace Skew.Resolving {
         var equivalence TypeCache.Equivalence = .NOT_EQUIVALENT
         var index = -1
         for j in 0..i {
-          equivalence = _cache.areFunctionSymbolsEquivalent(function, symbols[j])
+          equivalence = _cache.areFunctionSymbolsEquivalent(function, null, symbols[j], null)
           if equivalence != .NOT_EQUIVALENT {
             index = j
             break

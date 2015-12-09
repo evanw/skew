@@ -2251,6 +2251,68 @@ class Bar : Foo<int> {
 ")
 
 test("
+interface Foo<A, B> {
+  def foo(x A) B
+}
+
+class Bar :: Foo<int, double> {
+  def foo(x int) double {
+    return 0
+  }
+}
+
+class Bar2 :: Foo<int, double> {
+  def foo(x double) int {
+    return 0
+  }
+}
+", "
+<stdin>:11:7: error: Type \"Bar2\" is missing an implementation of function \"foo\" from interface \"Foo<int, double>\"
+class Bar2 :: Foo<int, double> {
+      ~~~~
+<stdin>:2:7: note: The function declaration is here
+  def foo(x A) B
+      ~~~
+")
+
+test("
+interface Foo<A> {
+  def foo<B>(x A, y B) B
+}
+
+class Bar :: Foo<int> {
+  def foo<T>(x int, y T) T {
+    return y
+  }
+}
+
+class Bar2 :: Foo<int> {
+  def foo<T>(x double, y T) int {
+    return 0
+  }
+}
+
+class Bar3 :: Foo<int> {
+  def foo<T>(x int, y T) int {
+    return 0
+  }
+}
+", "
+<stdin>:11:7: error: Type \"Bar2\" is missing an implementation of function \"foo\" from interface \"Foo<int>\"
+class Bar2 :: Foo<int> {
+      ~~~~
+<stdin>:2:7: note: The function declaration is here
+  def foo<B>(x A, y B) B
+      ~~~
+<stdin>:18:7: error: Function \"foo\" has unexpected return type \"int\", expected return type \"T\" to match the function with the same name and argument types from interface \"Foo<int>\"
+  def foo<T>(x int, y T) int {
+      ~~~
+<stdin>:2:7: note: The function declaration is here
+  def foo<B>(x A, y B) B
+      ~~~
+")
+
+test("
 var x = super
 def foo { super }
 
@@ -4806,11 +4868,35 @@ test("
 class Foo :: IFoo { def foo int }
 interface IFoo { def foo bool }
 ", "
-<stdin>:1:25: error: Function \"foo\" has a different return type than the function with the same name and argument types from interface \"IFoo\"
+<stdin>:1:25: error: Function \"foo\" has unexpected return type \"int\", expected return type \"bool\" to match the function with the same name and argument types from interface \"IFoo\"
 class Foo :: IFoo { def foo int }
                         ~~~
 <stdin>:2:22: note: The function declaration is here
 interface IFoo { def foo bool }
+                     ~~~
+")
+
+test("
+class Foo :: IFoo { def foo }
+interface IFoo { def foo bool }
+", "
+<stdin>:1:25: error: Expected the return type of function \"foo\" to match the function with the same name and argument types from interface \"IFoo\"
+class Foo :: IFoo { def foo }
+                        ~~~
+<stdin>:2:22: note: The function declaration is here
+interface IFoo { def foo bool }
+                     ~~~
+")
+
+test("
+class Foo :: IFoo { def foo int }
+interface IFoo { def foo }
+", "
+<stdin>:1:25: error: Expected the return type of function \"foo\" to match the function with the same name and argument types from interface \"IFoo\"
+class Foo :: IFoo { def foo int }
+                        ~~~
+<stdin>:2:22: note: The function declaration is here
+interface IFoo { def foo }
                      ~~~
 ")
 
