@@ -139,19 +139,23 @@ public class Bar : Foo
 # Basic interface usage
 test("
 @export
-class Foo :: Bar {
+class Foo :: Bar, Baz {
   def instanceMethod {}
   def instanceMethod(x int) {}
   def instanceMethod2 {}
 }
 
-@export
 interface Bar {
   def instanceMethod
   def instanceMethod(x int)
 }
+
+interface Baz {
+  def instanceMethod
+  def instanceMethod2
+}
 ", "
-public class Foo : Bar
+public class Foo : Bar, Baz
 {
     public void instanceMethod()
     {
@@ -175,6 +179,68 @@ public interface Bar
     void instanceMethod();
 
     void instanceMethod(int x);
+}
+
+public interface Baz
+{
+    void instanceMethod();
+
+    void instanceMethod2();
+}
+").csharp
+
+# Interface usage with tree shaking
+test("
+class Foo :: Bar, Baz {
+  def instanceMethod {}
+  def instanceMethod(x int) {}
+  def instanceMethod2 {}
+}
+
+interface Bar {
+  def instanceMethod
+  def instanceMethod(x int)
+}
+
+interface Baz {
+  def instanceMethod
+  def instanceMethod2
+}
+
+@export
+def test {
+  var foo = Foo.new
+  foo.instanceMethod
+}
+", "
+public class Foo : Bar, Baz
+{
+    public void instanceMethod1()
+    {
+    }
+
+    public Foo()
+    {
+    }
+}
+
+public interface Bar
+{
+    void instanceMethod1();
+}
+
+public interface Baz
+{
+    void instanceMethod1();
+}
+
+public class Globals
+{
+    public static void test()
+    {
+        Foo foo = new Foo();
+        foo.instanceMethod1();
+    }
 }
 ").csharp
 

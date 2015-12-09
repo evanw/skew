@@ -19484,6 +19484,7 @@
     this._currentUsages = null;
     this._overridesForSymbol = {};
     this._usages = {};
+    this._allSymbols = {};
     this._mode = mode;
     this._visitObject(global);
     this._changeContext(null);
@@ -19566,6 +19567,7 @@
     this._currentUsages = {};
 
     if (symbol != null) {
+      this._includeSymbol(symbol);
       this._currentUsages[symbol.id] = symbol;
     }
 
@@ -19584,26 +19586,40 @@
   };
 
   Skew.UsageGraph.prototype._recordUsage = function(symbol) {
+    this._includeSymbol(symbol);
+
     if (!Skew.in_SymbolKind.isLocal(symbol.kind)) {
       this._currentUsages[symbol.id] = symbol;
     }
   };
 
   Skew.UsageGraph.prototype._visitObject = function(symbol) {
-    for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+    for (var i1 = 0, list1 = symbol.objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+      var object = list1[i1];
       this._changeContext(object);
       this._recordUsage(symbol);
 
+      // Always pull the base class in
       if (object.baseClass != null) {
         this._recordUsage(object.baseClass);
+      }
+
+      // Only pull interfaces in for typed targets (interfaces disappear entirely for untyped targets)
+      if (this._mode != Skew.ShakingMode.IGNORE_TYPES && object.interfaceTypes != null) {
+        for (var i = 0, list = object.interfaceTypes, count = list.length; i < count; i = i + 1 | 0) {
+          var type = list[i];
+
+          if (type.symbol != null) {
+            this._recordUsage(type.symbol);
+          }
+        }
       }
 
       this._visitObject(object);
     }
 
-    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
+      var $function = list2[i2];
       this._changeContext($function);
 
       // Instance functions shouldn't cause their instance type to be emitted for dynamically-typed targets
@@ -19612,15 +19628,10 @@
       }
 
       this._visitFunction($function);
-
-      // Remember which functions are overridden for later
-      if ($function.overridden != null) {
-        this._recordOverride($function.overridden, $function);
-      }
     }
 
-    for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+    for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
+      var variable = list3[i3];
       this._changeContext(variable);
 
       // Instance variables shouldn't require the class to be present because
@@ -19643,10 +19654,16 @@
     this._visitNode(symbol.block);
 
     // Remember which functions are overridden for later
+    if (symbol.overridden != null) {
+      this._recordOverride(symbol.overridden, symbol);
+    }
+
+    // Remember which functions are overridden for later
     if (symbol.implementations != null) {
       for (var i1 = 0, list1 = symbol.implementations, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
         var $function = list1[i1];
         this._recordOverride(symbol, $function);
+        this._recordOverride($function, symbol);
       }
     }
   };
@@ -19708,6 +19725,10 @@
         }
       }
     }
+  };
+
+  Skew.UsageGraph.prototype._includeSymbol = function(symbol) {
+    this._allSymbols[symbol.id] = symbol;
   };
 
   Skew.Shaking = {};

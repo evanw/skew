@@ -105,6 +105,7 @@ namespace Skew {
       }
       _currentUsages = {}
       if symbol != null {
+        _includeSymbol(symbol)
         _currentUsages[symbol.id] = symbol
       }
       context = symbol
@@ -120,6 +121,7 @@ namespace Skew {
     }
 
     def _recordUsage(symbol Symbol) {
+      _includeSymbol(symbol)
       if !symbol.kind.isLocal {
         _currentUsages[symbol.id] = symbol
       }
@@ -129,9 +131,21 @@ namespace Skew {
       for object in symbol.objects {
         _changeContext(object)
         _recordUsage(symbol)
+
+        # Always pull the base class in
         if object.baseClass != null {
           _recordUsage(object.baseClass)
         }
+
+        # Only pull interfaces in for typed targets (interfaces disappear entirely for untyped targets)
+        if _mode != .IGNORE_TYPES && object.interfaceTypes != null {
+          for type in object.interfaceTypes {
+            if type.symbol != null {
+              _recordUsage(type.symbol)
+            }
+          }
+        }
+
         _visitObject(object)
       }
 
@@ -144,11 +158,6 @@ namespace Skew {
         }
 
         _visitFunction(function)
-
-        # Remember which functions are overridden for later
-        if function.overridden != null {
-          _recordOverride(function.overridden, function)
-        }
       }
 
       for variable in symbol.variables {
@@ -173,9 +182,15 @@ namespace Skew {
       _visitNode(symbol.block)
 
       # Remember which functions are overridden for later
+      if symbol.overridden != null {
+        _recordOverride(symbol.overridden, symbol)
+      }
+
+      # Remember which functions are overridden for later
       if symbol.implementations != null {
         for function in symbol.implementations {
           _recordOverride(symbol, function)
+          _recordOverride(function, symbol)
         }
       }
     }
@@ -264,6 +279,36 @@ namespace Skew.Shaking {
 
     for object in symbol.objects {
       removeUnusedSymbols(object, usages)
+    }
+  }
+}
+
+# Only enable toString in debug mode because of tracking overhead
+if !RELEASE {
+  class Skew.UsageGraph {
+    var _allSymbols IntMap<Symbol> = {}
+
+    def _includeSymbol(symbol Symbol) {
+      _allSymbols[symbol.id] = symbol
+    }
+
+    def toString string {
+      var symbols = _allSymbols.values
+      symbols.sort((a, b) => a.id <=> b.id)
+      var text = ""
+      for symbol in symbols {
+        var implies = _usages.get(symbol.id, null)
+        if text != "" { text += "\n" }
+        text += symbol.fullName + " => [" + (implies != null ? ", ".join(implies.map<string>(s => s.fullName)) : "") + "]"
+      }
+      return text
+    }
+  }
+}
+
+else {
+  class Skew.UsageGraph {
+    def _includeSymbol(symbol Symbol) {
     }
   }
 }
