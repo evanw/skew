@@ -100,10 +100,10 @@ namespace base {
 
       // Enter the new namespace
       while (namespaceStack.size() < symbols.size()) {
-        var symbol = symbols[namespaceStack.size()]
+        var symbol2 = symbols[namespaceStack.size()]
         emitExtraNewlineBefore(.NAMESPACE)
-        enterNamespace(symbol)
-        namespaceStack.push(symbol)
+        enterNamespace(symbol2)
+        namespaceStack.push(symbol2)
       }
     }
 

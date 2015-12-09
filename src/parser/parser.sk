@@ -613,8 +613,8 @@ Node parseFor(ParserContext context) {
           if (body == null) return null
           var variables = setup.clusterVariables()
           if (variables.size() > 1) syntaxErrorBadForEach(context.log, setup.range)
-          var name = variables[0].declarationName().remove()
-          var value = Node.createVariable(name, setup.clusterType().remove(), null).withRange(name.range)
+          var name2 = variables[0].declarationName().remove()
+          var value = Node.createVariable(name2, setup.clusterType().remove(), null).withRange(name2.range)
           return Node.createForEach(value, values, body).withRange(context.spanSince(token.range))
         }
       } else if (!context.peek(.SEMICOLON)) {

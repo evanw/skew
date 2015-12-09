@@ -290,9 +290,9 @@ class Resolver {
         // Avoid shadowing inside functions
         if (enclosingFunction != null && enclosingFunction != scope) {
           for (var s = scope.lexicalParent; s != null; s = s.lexicalParent) {
-            var member = s.findLocal(name)
-            if (member != null) {
-              semanticErrorShadowedLocal(log, declarationName.range, name, member.symbol.node.declarationName().range)
+            var member2 = s.findLocal(name)
+            if (member2 != null) {
+              semanticErrorShadowedLocal(log, declarationName.range, name, member2.symbol.node.declarationName().range)
               break
             }
             if (s == enclosingFunction) {
@@ -4219,8 +4219,8 @@ class Resolver {
 
       // Wrap comparisons with a relational operator
       if (kind == .COMPARE) {
-        var children = node.removeChildren()
-        var clone = node.clone().withChildren(children)
+        var children2 = node.removeChildren()
+        var clone = node.clone().withChildren(children2)
         node.become(Node.createBinary(originalKind, clone, Node.createInt(0).withType(cache.intType)).withType(cache.boolType))
       }
     }
