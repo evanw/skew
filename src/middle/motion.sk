@@ -77,6 +77,8 @@ namespace Skew.Motion {
     if namespace == null {
       var common = parent.parent.asObjectSymbol
       object = ObjectSymbol.new(.OBJECT_NAMESPACE, "in_" + parent.name)
+      object.resolvedType = Type.new(.SYMBOL, object)
+      object.state = .INITIALIZED
       object.scope = ObjectScope.new(common.scope, object)
       object.parent = common
       namespace = Namespace.new(common, object)

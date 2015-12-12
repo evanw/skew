@@ -112,6 +112,8 @@ namespace Skew {
       var lazilyCreateGlobals = => {
         if globals == null {
           globals = ObjectSymbol.new(.OBJECT_CLASS, symbol.scope.generateName(symbol.kind == .OBJECT_NAMESPACE ? symbol.name + "Globals" : "Globals"))
+          globals.resolvedType = Type.new(.SYMBOL, globals)
+          globals.state = .INITIALIZED
           globals.parent = symbol
           symbol.objects.append(globals)
         }

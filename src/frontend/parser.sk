@@ -818,6 +818,7 @@ namespace Skew.Parsing {
       return null
     }
     var contents = ObjectSymbol.new(parent.kind, "<conditional>")
+    contents.flags |= .IS_GUARD_CONDITIONAL
     contents.parent = parent
     parseSymbols(context, contents, annotations)
     if !context.expect(.RIGHT_BRACE) || !context.peek(.ELSE) && !parseAfterBlock(context) {

@@ -262,12 +262,17 @@ namespace Skew.Resolving {
       if extends != null {
         _resolveAsParameterizedType(extends, symbol.scope)
         var baseType = extends.resolvedType
+
         if kind == .OBJECT_WRAPPED {
           symbol.wrappedType = baseType
           symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
-        } else if kind != .OBJECT_CLASS || (baseType != .DYNAMIC && (!baseType.isClass || baseType.symbol.isValueType)) {
+        }
+
+        else if kind != .OBJECT_CLASS || (baseType != .DYNAMIC && (!baseType.isClass || baseType.symbol.isValueType)) {
           _log.semanticErrorInvalidExtends(extends.range, baseType)
-        } else if baseType != .DYNAMIC {
+        }
+
+        else if baseType != .DYNAMIC {
           symbol.baseType = baseType
           symbol.baseClass = baseType.symbol.asObjectSymbol
           symbol.resolvedType.environment = baseType.environment # Don't lose the type parameters from the base type
@@ -303,6 +308,7 @@ namespace Skew.Resolving {
               }
             }
           }
+
           Merging.mergeFunctions(_log, symbol, functions, .INTO_DERIVED_CLASS)
         }
       }
@@ -682,9 +688,8 @@ namespace Skew.Resolving {
           # Otherwise, save the iteration limit in case it changes during iteration
           else {
             var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("count"))
-            count.resolvedType = _cache.intType
+            count.initializeWithType(_cache.intType)
             count.value = second.remove
-            count.state = .INITIALIZED
             setup.appendChild(Node.createVariable(count))
             test = Node.createBinary(.LESS_THAN, symbolName.clone, Node.createSymbolReference(count))
           }
@@ -700,9 +705,8 @@ namespace Skew.Resolving {
         else if _cache.isList(value.resolvedType) && !_options.target.supportsListForeach {
           # Create the index variable
           var index = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("i"))
-          index.resolvedType = _cache.intType
+          index.initializeWithType(_cache.intType)
           index.value = _cache.createInt(0)
-          index.state = .INITIALIZED
           var setup = Node.createVariables.appendChild(Node.createVariable(index))
           var indexName = Node.createSymbolReference(index)
 
@@ -712,18 +716,16 @@ namespace Skew.Resolving {
             list = value.symbol.asVariableSymbol
           } else {
             list = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("list"))
-            list.resolvedType = value.resolvedType
+            list.initializeWithType(value.resolvedType)
             list.value = value.remove
-            list.state = .INITIALIZED
             setup.appendChild(Node.createVariable(list))
           }
           var listName = Node.createSymbolReference(list)
 
           # Create the count variable
           var count = VariableSymbol.new(.VARIABLE_LOCAL, scope.generateName("count"))
-          count.resolvedType = _cache.intType
+          count.initializeWithType(_cache.intType)
           count.value = Node.createDot(listName, "count")
-          count.state = .INITIALIZED
           setup.appendChild(Node.createVariable(count))
           var countName = Node.createSymbolReference(count)
 
@@ -800,10 +802,10 @@ namespace Skew.Resolving {
       # Referencing a normal variable instead of a special node kind for "this"
       # makes many things much easier including lambda capture and devirtualization
       if symbol.kind == .FUNCTION_INSTANCE || symbol.kind == .FUNCTION_CONSTRUCTOR {
-        symbol.this = VariableSymbol.new(.VARIABLE_ARGUMENT, "self")
-        symbol.this.flags |= .IS_CONST
-        symbol.this.resolvedType = _cache.parameterize(symbol.parent.resolvedType)
-        symbol.this.state = .INITIALIZED
+        var this = VariableSymbol.new(.VARIABLE_ARGUMENT, "self")
+        this.initializeWithType(_cache.parameterize(symbol.parent.resolvedType))
+        this.flags |= .IS_CONST
+        symbol.this = this
       }
 
       # Lazily-initialize automatically generated functions
@@ -906,8 +908,7 @@ namespace Skew.Resolving {
           var call = Node.createCall(base)
           for variable in arguments {
             var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
-            argument.resolvedType = variable.resolvedType
-            argument.state = .INITIALIZED
+            argument.initializeWithType(variable.resolvedType)
             symbol.arguments.append(argument)
             call.appendChild(Node.createSymbolReference(argument))
           }
@@ -923,8 +924,7 @@ namespace Skew.Resolving {
           _initializeSymbol(variable)
           if variable.value == null {
             var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
-            argument.resolvedType = variable.resolvedType
-            argument.state = .INITIALIZED
+            argument.initializeWithType(variable.resolvedType)
             argument.range = variable.range
             symbol.arguments.append(argument)
             block.appendChild(Node.createExpression(Node.createBinary(.ASSIGN,
@@ -957,12 +957,11 @@ namespace Skew.Resolving {
       }
 
       var strings = VariableSymbol.new(.VARIABLE_GLOBAL, parent.scope.generateName("_strings"))
+      strings.initializeWithType(_cache.createListType(_cache.stringType))
       strings.value = names
       strings.flags |= .IS_PROTECTED | .IS_CONST
-      strings.state = .INITIALIZED
       strings.parent = parent
       strings.scope = parent.scope
-      strings.resolvedType = _cache.createListType(_cache.stringType)
       parent.variables.append(strings)
       _resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType)
 
@@ -1118,6 +1117,9 @@ namespace Skew.Resolving {
         _log.semanticErrorVarMissingValue(symbol.range, symbol.name)
         symbol.resolvedType = .DYNAMIC
       }
+
+      # Make sure the symbol has a type node
+      symbol.type ?= Node.createType(symbol.resolvedType)
 
       _resolveDefines(symbol)
       _resolveAnnotations(symbol)
@@ -1466,7 +1468,7 @@ namespace Skew.Resolving {
         return
       }
 
-      # The implicit conversion must be valid.
+      # The implicit conversion must be valid
       if kind == .IMPLICIT && !_cache.canImplicitlyConvert(from, to) ||
           kind == .EXPLICIT && !_cache.canExplicitlyConvert(from, to) {
         _log.semanticErrorIncompatibleTypes(node.range, from, to, _cache.canExplicitlyConvert(from, to))
@@ -1713,9 +1715,8 @@ namespace Skew.Resolving {
       var symbol = node.symbol.asVariableSymbol
       scope.asLocalScope.define(symbol, _log)
       _localVariableStatistics[symbol.id] = LocalVariableStatistics.new(symbol)
-      symbol.resolvedType = type
+      symbol.initializeWithType(type)
       symbol.flags |= .IS_CONST | .IS_LOOP_VARIABLE
-      symbol.state = .INITIALIZED
 
       _resolveBlock(node.foreachBlock, scope)
 
@@ -1781,6 +1782,7 @@ namespace Skew.Resolving {
 
       # Mutate the return type to the type from the returned value
       function.returnType = Node.createType(type)
+      function.resolvedType.returnType = type
     }
 
     def _resolveSwitch(node Node, scope Scope) {
@@ -3094,9 +3096,7 @@ namespace Skew.Resolving {
       }
 
       # Force-initialize the symbol
-      symbol.type = Node.createType(type)
-      symbol.resolvedType = type
-      symbol.state = .INITIALIZED
+      symbol.initializeWithType(type)
       return Node.createSymbolReference(symbol)
     }
 
@@ -3478,9 +3478,8 @@ namespace Skew.Resolving {
       var block Node = null
 
       # Stash the variable being switched over so it's only evaluated once
-      variable.resolvedType = value.resolvedType
+      variable.initializeWithType(value.resolvedType)
       variable.value = value
-      variable.state = .INITIALIZED
       node.parent.insertChildBefore(node, Node.createVariables.appendChild(Node.createVariable(variable)))
 
       # Build the chain in reverse starting with the last case

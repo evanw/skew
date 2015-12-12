@@ -116,6 +116,7 @@ namespace Skew {
     # Pass-specific
     IS_CSHARP_CONST
     IS_DYNAMIC_LAMBDA
+    IS_GUARD_CONDITIONAL
     IS_OBSOLETE
     IS_PRIMARY_CONSTRUCTOR
     IS_VIRTUAL
@@ -171,6 +172,7 @@ namespace Skew {
     # Pass-specific flags
     def isCSharpConst bool        { return .IS_CSHARP_CONST in flags }
     def isDynamicLambda bool      { return .IS_DYNAMIC_LAMBDA in flags }
+    def isGuardConditional bool   { return .IS_GUARD_CONDITIONAL in flags }
     def isObsolete bool           { return .IS_OBSOLETE in flags }
     def isPrimaryConstructor bool { return .IS_PRIMARY_CONSTRUCTOR in flags }
     def isVirtual bool            { return .IS_VIRTUAL in flags }
@@ -326,9 +328,15 @@ namespace Skew {
     def clone FunctionSymbol {
       var clone = new(kind, name)
       var symbols IntMap<Symbol> = {}
+
       clone._cloneFrom(self)
-      clone.resolvedType = Type.new(.SYMBOL, clone)
-      clone.argumentOnlyType = argumentOnlyType
+
+      if state == .INITIALIZED {
+        clone.resolvedType = Type.new(.SYMBOL, clone)
+        clone.resolvedType.returnType = resolvedType.returnType
+        clone.resolvedType.argumentTypes = resolvedType.argumentTypes.clone
+        clone.argumentOnlyType = argumentOnlyType
+      }
 
       if parameters != null {
         clone.parameters = []
@@ -382,6 +390,16 @@ namespace Skew {
       }
 
       return clone
+    }
+
+    def initializeWithType(target Type) {
+      assert(state == .UNINITIALIZED)
+      assert(type == null)
+      assert(resolvedType == null)
+
+      state = .INITIALIZED
+      resolvedType = target
+      type = Node.createType(target)
     }
   }
 

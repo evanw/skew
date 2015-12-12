@@ -987,12 +987,20 @@
       this._markVirtualFunctions(object);
     }
 
-    for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
+      var $function = list2[i2];
 
       if ($function.overridden != null) {
         $function.overridden.flags |= Skew.SymbolFlags.IS_VIRTUAL;
         $function.flags |= Skew.SymbolFlags.IS_VIRTUAL;
+      }
+
+      if ($function.implementations != null) {
+        for (var i1 = 0, list1 = $function.implementations, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+          var other = list1[i1];
+          other.flags |= Skew.SymbolFlags.IS_VIRTUAL;
+          $function.flags |= Skew.SymbolFlags.IS_VIRTUAL;
+        }
       }
     }
   };
@@ -1143,6 +1151,8 @@
     var lazilyCreateGlobals = function() {
       if (globals == null) {
         globals = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_CLASS, symbol.scope.generateName(symbol.kind == Skew.SymbolKind.OBJECT_NAMESPACE ? symbol.name + 'Globals' : 'Globals'));
+        globals.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, globals);
+        globals.state = Skew.SymbolState.INITIALIZED;
         globals.parent = symbol;
         symbol.objects.push(globals);
       }
@@ -8637,9 +8647,10 @@
     // Pass-specific
     IS_CSHARP_CONST: 1048576,
     IS_DYNAMIC_LAMBDA: 2097152,
-    IS_OBSOLETE: 4194304,
-    IS_PRIMARY_CONSTRUCTOR: 8388608,
-    IS_VIRTUAL: 16777216
+    IS_GUARD_CONDITIONAL: 4194304,
+    IS_OBSOLETE: 8388608,
+    IS_PRIMARY_CONSTRUCTOR: 16777216,
+    IS_VIRTUAL: 33554432
   };
 
   Skew.Symbol = function(kind, name) {
@@ -8755,6 +8766,10 @@
 
   Skew.Symbol.prototype.isDynamicLambda = function() {
     return (Skew.SymbolFlags.IS_DYNAMIC_LAMBDA & this.flags) != 0;
+  };
+
+  Skew.Symbol.prototype.isGuardConditional = function() {
+    return (Skew.SymbolFlags.IS_GUARD_CONDITIONAL & this.flags) != 0;
   };
 
   Skew.Symbol.prototype.isObsolete = function() {
@@ -8941,8 +8956,13 @@
     var clone = new Skew.FunctionSymbol(this.kind, this.name);
     var symbols = {};
     clone._cloneFrom(this);
-    clone.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, clone);
-    clone.argumentOnlyType = this.argumentOnlyType;
+
+    if (this.state == Skew.SymbolState.INITIALIZED) {
+      clone.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, clone);
+      clone.resolvedType.returnType = this.resolvedType.returnType;
+      clone.resolvedType.argumentTypes = this.resolvedType.argumentTypes.slice();
+      clone.argumentOnlyType = this.argumentOnlyType;
+    }
 
     if (this.parameters != null) {
       clone.parameters = [];
@@ -9002,6 +9022,15 @@
     }
 
     return clone;
+  };
+
+  Skew.VariableSymbol.prototype.initializeWithType = function(target) {
+    assert(this.state == Skew.SymbolState.UNINITIALIZED);
+    assert(this.type == null);
+    assert(this.resolvedType == null);
+    this.state = Skew.SymbolState.INITIALIZED;
+    this.resolvedType = target;
+    this.type = new Skew.Node(Skew.NodeKind.TYPE).withType(target);
   };
 
   Skew.OverloadedFunctionSymbol = function(kind, name, symbols) {
@@ -10628,6 +10657,7 @@
     }
 
     var contents = new Skew.ObjectSymbol(parent.kind, '<conditional>');
+    contents.flags |= Skew.SymbolFlags.IS_GUARD_CONDITIONAL;
     contents.parent = parent;
     Skew.Parsing.parseSymbols(context, contents, annotations);
 
@@ -12347,7 +12377,54 @@
     this._verifyHierarchy1(this.global);
   };
 
+  Skew.PassContext.prototype._verifySymbol = function(symbol) {
+    var ref;
+
+    if (!this.isResolvePassComplete) {
+      return;
+    }
+
+    // Special-case nested guards that aren't initialized when the outer guard has errors
+    if (symbol.state != Skew.SymbolState.INITIALIZED) {
+      assert(Skew.in_SymbolKind.isObject(symbol.kind));
+      assert(symbol.isGuardConditional());
+      assert(this.log.errorCount > 0);
+      return;
+    }
+
+    assert(symbol.state == Skew.SymbolState.INITIALIZED);
+    assert(symbol.resolvedType != null);
+
+    if (Skew.in_SymbolKind.isObject(symbol.kind) || Skew.in_SymbolKind.isFunction(symbol.kind) || Skew.in_SymbolKind.isParameter(symbol.kind)) {
+      if (symbol.resolvedType == Skew.Type.DYNAMIC) {
+        // Ignore errors due to cyclic declarations
+        assert(this.log.errorCount > 0);
+      }
+
+      else {
+        assert(symbol.resolvedType.kind == Skew.TypeKind.SYMBOL);
+        assert(symbol.resolvedType.symbol == symbol);
+      }
+    }
+
+    if (Skew.in_SymbolKind.isFunction(symbol.kind) && symbol.resolvedType.kind == Skew.TypeKind.SYMBOL) {
+      var $function = symbol.asFunctionSymbol();
+      assert(symbol.resolvedType.returnType == ((ref = $function.returnType) != null ? ref.resolvedType : null));
+      assert(symbol.resolvedType.argumentTypes.length == $function.$arguments.length);
+
+      for (var i = 0, count = $function.$arguments.length; i < count; i = i + 1 | 0) {
+        assert(symbol.resolvedType.argumentTypes[i] == $function.$arguments[i].resolvedType);
+      }
+    }
+
+    if (Skew.in_SymbolKind.isVariable(symbol.kind)) {
+      assert(symbol.resolvedType == symbol.asVariableSymbol().type.resolvedType);
+    }
+  };
+
   Skew.PassContext.prototype._verifyHierarchy1 = function(symbol) {
+    this._verifySymbol(symbol);
+
     for (var i1 = 0, list1 = symbol.objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
       var object = list1[i1];
       assert(object.parent == symbol);
@@ -12368,6 +12445,7 @@
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
       var $function = list2[i2];
       assert($function.parent == symbol);
+      this._verifySymbol(symbol);
 
       if ($function.block != null) {
         this._verifyHierarchy2($function.block, null);
@@ -12377,6 +12455,7 @@
     for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
       var variable = list3[i3];
       assert(variable.parent == symbol);
+      this._verifySymbol(symbol);
 
       if (variable.value != null) {
         this._verifyHierarchy2(variable.value, null);
@@ -12403,12 +12482,14 @@
       assert(node.symbol != null);
       assert(node.symbol.kind == Skew.SymbolKind.VARIABLE_LOCAL);
       assert(node.symbol.asVariableSymbol().value == node.variableValue());
+      this._verifySymbol(node.symbol);
     }
 
     else if (node.kind == Skew.NodeKind.LAMBDA) {
       assert(node.symbol != null);
       assert(node.symbol.kind == Skew.SymbolKind.FUNCTION_LOCAL);
       assert(node.symbol.asFunctionSymbol().block == node.lambdaBlock());
+      this._verifySymbol(node.symbol);
     }
 
     for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
@@ -14842,6 +14923,8 @@
     if (namespace == null) {
       var common = parent.parent.asObjectSymbol();
       object = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_NAMESPACE, 'in_' + parent.name);
+      object.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, object);
+      object.state = Skew.SymbolState.INITIALIZED;
       object.scope = new Skew.ObjectScope(common.scope, object);
       object.parent = common;
       namespace = new Skew.Motion.Namespace(common, object);
@@ -15890,9 +15973,8 @@
         // Otherwise, save the iteration limit in case it changes during iteration
         else {
           var count = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('count'));
-          count.resolvedType = this._cache.intType;
+          count.initializeWithType(this._cache.intType);
           count.value = second.remove();
-          count.state = Skew.SymbolState.INITIALIZED;
           setup.appendChild(Skew.Node.createVariable(count));
           test = Skew.Node.createBinary(Skew.NodeKind.LESS_THAN, symbolName.clone(), Skew.Node.createSymbolReference(count));
         }
@@ -15908,9 +15990,8 @@
       else if (this._cache.isList(value.resolvedType) && !this._options.target.supportsListForeach()) {
         // Create the index variable
         var index = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('i'));
-        index.resolvedType = this._cache.intType;
+        index.initializeWithType(this._cache.intType);
         index.value = this._cache.createInt(0);
-        index.state = Skew.SymbolState.INITIALIZED;
         var setup1 = new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(index));
         var indexName = Skew.Node.createSymbolReference(index);
 
@@ -15923,9 +16004,8 @@
 
         else {
           list = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('list'));
-          list.resolvedType = value.resolvedType;
+          list.initializeWithType(value.resolvedType);
           list.value = value.remove();
-          list.state = Skew.SymbolState.INITIALIZED;
           setup1.appendChild(Skew.Node.createVariable(list));
         }
 
@@ -15933,9 +16013,8 @@
 
         // Create the count variable
         var count1 = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, scope.generateName('count'));
-        count1.resolvedType = this._cache.intType;
+        count1.initializeWithType(this._cache.intType);
         count1.value = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('count')).appendChild(listName);
-        count1.state = Skew.SymbolState.INITIALIZED;
         setup1.appendChild(Skew.Node.createVariable(count1));
         var countName = Skew.Node.createSymbolReference(count1);
 
@@ -16021,10 +16100,10 @@
     // Referencing a normal variable instead of a special node kind for "this"
     // makes many things much easier including lambda capture and devirtualization
     if (symbol.kind == Skew.SymbolKind.FUNCTION_INSTANCE || symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
-      symbol.$this = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, 'self');
-      symbol.$this.flags |= Skew.SymbolFlags.IS_CONST;
-      symbol.$this.resolvedType = this._cache.parameterize(symbol.parent.resolvedType);
-      symbol.$this.state = Skew.SymbolState.INITIALIZED;
+      var $this = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, 'self');
+      $this.initializeWithType(this._cache.parameterize(symbol.parent.resolvedType));
+      $this.flags |= Skew.SymbolFlags.IS_CONST;
+      symbol.$this = $this;
     }
 
     // Lazily-initialize automatically generated functions
@@ -16145,8 +16224,7 @@
         for (var i = 0, list = $arguments, count = list.length; i < count; i = i + 1 | 0) {
           var variable = list[i];
           var argument = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, variable.name);
-          argument.resolvedType = variable.resolvedType;
-          argument.state = Skew.SymbolState.INITIALIZED;
+          argument.initializeWithType(variable.resolvedType);
           symbol.$arguments.push(argument);
           call.appendChild(Skew.Node.createSymbolReference(argument));
         }
@@ -16167,8 +16245,7 @@
 
         if (variable1.value == null) {
           var argument1 = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, variable1.name);
-          argument1.resolvedType = variable1.resolvedType;
-          argument1.state = Skew.SymbolState.INITIALIZED;
+          argument1.initializeWithType(variable1.resolvedType);
           argument1.range = variable1.range;
           symbol.$arguments.push(argument1);
           block.appendChild(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(symbol.$this), variable1), Skew.Node.createSymbolReference(argument1)).withRange(variable1.range)));
@@ -16201,12 +16278,11 @@
     }
 
     var strings = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_GLOBAL, parent.scope.generateName('_strings'));
+    strings.initializeWithType(this._cache.createListType(this._cache.stringType));
     strings.value = names;
     strings.flags |= Skew.SymbolFlags.IS_PROTECTED | Skew.SymbolFlags.IS_CONST;
-    strings.state = Skew.SymbolState.INITIALIZED;
     strings.parent = parent;
     strings.scope = parent.scope;
-    strings.resolvedType = this._cache.createListType(this._cache.stringType);
     parent.variables.push(strings);
     this._resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType);
     symbol.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(this._cache.stringType);
@@ -16374,6 +16450,11 @@
     else {
       this._log.semanticErrorVarMissingValue(symbol.range, symbol.name);
       symbol.resolvedType = Skew.Type.DYNAMIC;
+    }
+
+    // Make sure the symbol has a type node
+    if (symbol.type == null) {
+      symbol.type = new Skew.Node(Skew.NodeKind.TYPE).withType(symbol.resolvedType);
     }
 
     this._resolveDefines(symbol);
@@ -16900,7 +16981,7 @@
       return;
     }
 
-    // The implicit conversion must be valid.
+    // The implicit conversion must be valid
     if (kind == Skew.Resolving.ConversionKind.IMPLICIT && !this._cache.canImplicitlyConvert(from, to) || kind == Skew.Resolving.ConversionKind.EXPLICIT && !this._cache.canExplicitlyConvert(from, to)) {
       this._log.semanticErrorIncompatibleTypes(node.range, from, to, this._cache.canExplicitlyConvert(from, to));
       node.resolvedType = Skew.Type.DYNAMIC;
@@ -17192,9 +17273,8 @@
     var symbol = node.symbol.asVariableSymbol();
     scope.asLocalScope().define(symbol, this._log);
     this._localVariableStatistics[symbol.id] = new Skew.Resolving.LocalVariableStatistics(symbol);
-    symbol.resolvedType = type;
+    symbol.initializeWithType(type);
     symbol.flags |= Skew.SymbolFlags.IS_CONST | Skew.SymbolFlags.IS_LOOP_VARIABLE;
-    symbol.state = Skew.SymbolState.INITIALIZED;
     this._resolveBlock(node.foreachBlock(), scope);
 
     // Collect foreach loops and convert them in another pass
@@ -17264,6 +17344,7 @@
 
     // Mutate the return type to the type from the returned value
     $function.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(type);
+    $function.resolvedType.returnType = type;
   };
 
   Skew.Resolving.Resolver.prototype._resolveSwitch = function(node, scope) {
@@ -18745,9 +18826,7 @@
     }
 
     // Force-initialize the symbol
-    symbol.type = new Skew.Node(Skew.NodeKind.TYPE).withType(type);
-    symbol.resolvedType = type;
-    symbol.state = Skew.SymbolState.INITIALIZED;
+    symbol.initializeWithType(type);
     return Skew.Node.createSymbolReference(symbol);
   };
 
@@ -19158,9 +19237,8 @@
     var block = null;
 
     // Stash the variable being switched over so it's only evaluated once
-    variable.resolvedType = value.resolvedType;
+    variable.initializeWithType(value.resolvedType);
     variable.value = value;
-    variable.state = Skew.SymbolState.INITIALIZED;
     node.parent().insertChildBefore(node, new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(variable)));
 
     // Build the chain in reverse starting with the last case

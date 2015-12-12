@@ -199,7 +199,48 @@ namespace Skew {
       _verifyHierarchy(global)
     }
 
+    def _verifySymbol(symbol Symbol) {
+      if !isResolvePassComplete {
+        return
+      }
+
+      # Special-case nested guards that aren't initialized when the outer guard has errors
+      if symbol.state != .INITIALIZED {
+        assert(symbol.kind.isObject)
+        assert(symbol.isGuardConditional)
+        assert(log.errorCount > 0)
+        return
+      }
+
+      assert(symbol.state == .INITIALIZED)
+      assert(symbol.resolvedType != null)
+
+      if symbol.kind.isObject || symbol.kind.isFunction || symbol.kind.isParameter {
+        if symbol.resolvedType == .DYNAMIC {
+          assert(log.errorCount > 0) # Ignore errors due to cyclic declarations
+        } else {
+          assert(symbol.resolvedType.kind == .SYMBOL)
+          assert(symbol.resolvedType.symbol == symbol)
+        }
+      }
+
+      if symbol.kind.isFunction && symbol.resolvedType.kind == .SYMBOL {
+        var function = symbol.asFunctionSymbol
+        assert(symbol.resolvedType.returnType == function.returnType?.resolvedType)
+        assert(symbol.resolvedType.argumentTypes.count == function.arguments.count)
+        for i in 0..function.arguments.count {
+          assert(symbol.resolvedType.argumentTypes[i] == function.arguments[i].resolvedType)
+        }
+      }
+
+      if symbol.kind.isVariable {
+        assert(symbol.resolvedType == symbol.asVariableSymbol.type.resolvedType)
+      }
+    }
+
     def _verifyHierarchy(symbol ObjectSymbol) {
+      _verifySymbol(symbol)
+
       for object in symbol.objects {
         assert(object.parent == symbol)
         _verifyHierarchy(object)
@@ -217,6 +258,7 @@ namespace Skew {
 
       for function in symbol.functions {
         assert(function.parent == symbol)
+        _verifySymbol(symbol)
 
         if function.block != null {
           _verifyHierarchy(function.block, null)
@@ -225,6 +267,7 @@ namespace Skew {
 
       for variable in symbol.variables {
         assert(variable.parent == symbol)
+        _verifySymbol(symbol)
 
         if variable.value != null {
           _verifyHierarchy(variable.value, null)
@@ -250,12 +293,14 @@ namespace Skew {
         assert(node.symbol != null)
         assert(node.symbol.kind == .VARIABLE_LOCAL)
         assert(node.symbol.asVariableSymbol.value == node.variableValue)
+        _verifySymbol(node.symbol)
       }
 
       else if node.kind == .LAMBDA {
         assert(node.symbol != null)
         assert(node.symbol.kind == .FUNCTION_LOCAL)
         assert(node.symbol.asFunctionSymbol.block == node.lambdaBlock)
+        _verifySymbol(node.symbol)
       }
 
       for child = node.firstChild; child != null; child = child.nextSibling {
