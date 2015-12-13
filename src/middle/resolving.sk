@@ -2059,6 +2059,7 @@ namespace Skew.Resolving {
       }
       if function != null && value.symbol != null && value.symbol.kind.isOverloadedFunction && function in value.symbol.asOverloadedFunctionSymbol.symbols {
         value.symbol = function
+        value.resolvedType = type
       }
 
       return true

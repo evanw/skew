@@ -55,8 +55,13 @@ namespace Skew.Merging {
 
       # Can only merge with another of the same kind or with a namespace
       if other.kind == .OBJECT_NAMESPACE {
+        var swap = other.range
+        other.range = child.range
+        child.range = swap
         other.kind = child.kind
-      } else if child.kind != .OBJECT_NAMESPACE && child.kind != other.kind {
+      } else if child.kind == .OBJECT_NAMESPACE {
+        child.kind = other.kind
+      } else if child.kind != other.kind {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range)
         return true
       }

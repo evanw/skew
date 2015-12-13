@@ -8700,6 +8700,7 @@
     this.comments = null;
     this.forwardTo = null;
     this.flags = 0;
+    this.nextMergedSymbol = null;
   };
 
   Skew.Symbol.prototype._cloneFrom = function(symbol) {
@@ -8886,6 +8887,16 @@
   };
 
   Skew.Symbol.prototype.mergeInformationFrom = function(symbol) {
+    // Link merged symbols together
+    var link = this;
+
+    while (link.nextMergedSymbol != null) {
+      link = link.nextMergedSymbol;
+    }
+
+    link.nextMergedSymbol = symbol;
+
+    // Combine annotations
     if (this.annotations == null) {
       this.annotations = symbol.annotations;
     }
@@ -8894,6 +8905,7 @@
       in_List.append1(this.annotations, symbol.annotations);
     }
 
+    // Combine comments
     if (this.comments == null) {
       this.comments = symbol.comments;
     }
@@ -10001,7 +10013,7 @@
 
     var text = range.source.contents.slice(range.start + 1 | 0, range.end);
 
-    if (text.charCodeAt(text.length - 1 | 0) != 10) {
+    if (!in_string.endsWith(text, '\n')) {
       text += '\n';
     }
 
@@ -14691,10 +14703,17 @@
 
       // Can only merge with another of the same kind or with a namespace
       if (other.kind == Skew.SymbolKind.OBJECT_NAMESPACE) {
+        var swap = other.range;
+        other.range = child.range;
+        child.range = swap;
         other.kind = child.kind;
       }
 
-      else if (child.kind != Skew.SymbolKind.OBJECT_NAMESPACE && child.kind != other.kind) {
+      else if (child.kind == Skew.SymbolKind.OBJECT_NAMESPACE) {
+        child.kind = other.kind;
+      }
+
+      else if (child.kind != other.kind) {
         log.semanticErrorDuplicateSymbol(child.range, child.name, other.range);
         return true;
       }
@@ -17679,6 +17698,7 @@
 
     if ($function != null && value.symbol != null && Skew.in_SymbolKind.isOverloadedFunction(value.symbol.kind) && value.symbol.asOverloadedFunctionSymbol().symbols.indexOf($function) != -1) {
       value.symbol = $function;
+      value.resolvedType = type;
     }
 
     return true;

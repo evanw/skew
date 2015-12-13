@@ -51,6 +51,42 @@ namespace Skew.Tests {
     }
   }
 
+  class IDETest : Unit.Test {
+    var _input string
+    var _callback fn(IDETest, fn(string, string))
+    var _source Source = null
+    var _result CompilerResult = null
+
+    over run {
+      rename(compactWhitespace(_input))
+      var log = Log.new
+      var options = CompilerOptions.new
+      options.stopAfterResolve = true
+      _source = Source.new("<stdin>", _input)
+      _result = compile(log, options, [_source])
+      expectString("", log.toString)
+      _callback(self, (a, b) => expectString(a, b))
+    }
+
+    def tooltipQuery(line int, column int) string {
+      var query = IDE.SymbolQuery.new(_source, _source.lineColumnToIndex(line, column))
+      query.run(_result.global)
+      if query.symbol != null {
+        return query.generateTooltip
+      }
+      return ""
+    }
+
+    def definitionQuery(line int, column int) string {
+      var query = IDE.SymbolQuery.new(_source, _source.lineColumnToIndex(line, column))
+      query.run(_result.global)
+      if query.symbol != null {
+        return query.symbol.range.locationString
+      }
+      return ""
+    }
+  }
+
   class FormatTest : Unit.Test {
     over run {
       rename(compactWhitespace(_input))
@@ -108,6 +144,10 @@ namespace Skew.Tests {
 
   def testFormat(input string, expected string, start int, end int, maxLength int) FormatTest {
     return FormatTest.new(trimNewlines(input), expected, start, end, maxLength)
+  }
+
+  def testIDE(input string, callback fn(IDETest, fn(string, string))) IDETest {
+    return IDETest.new(trimNewlines(input), callback)
   }
 
   def test(name string, callback fn(fn(string, string))) SimpleTest {
@@ -211,6 +251,7 @@ namespace Skew.Tests {
 
     # End-to-end tests
     testCSharp
+    testIDE
     testJavaScript
     testJavaScriptMangle
     testJavaScriptMinify

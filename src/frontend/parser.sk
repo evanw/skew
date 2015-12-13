@@ -135,7 +135,7 @@ namespace Skew.Parsing {
     var range = context.next.range
     comments ?= []
     var text = range.source.contents.slice(range.start + 1, range.end)
-    if text[text.count - 1] != '\n' {
+    if !text.endsWith("\n") {
       text += "\n"
     }
     comments.append(text)

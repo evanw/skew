@@ -1,0 +1,319 @@
+namespace Skew.Tests {
+  def testIDE {
+
+# Tooltips: basic test of globals and formatting
+testIDE("
+def @annotation ( x int ) # Comment for annotation
+def globalFunction ( x int ) bool { return false } # Comment for globalFunction
+# Comment for globalVariable
+var globalVariable = 0 # Comment 2 for globalVariable
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(0, 3))
+  expect("# Comment for annotation\ndef @annotation(x int)", ide.tooltipQuery(0, 4))
+  expect("# Comment for annotation\ndef @annotation(x int)", ide.tooltipQuery(0, 15))
+  expect("", ide.tooltipQuery(0, 16))
+
+  expect("", ide.tooltipQuery(1, 3))
+  expect("# Comment for globalFunction\ndef globalFunction(x int) bool", ide.tooltipQuery(1, 4))
+  expect("# Comment for globalFunction\ndef globalFunction(x int) bool", ide.tooltipQuery(1, 18))
+  expect("", ide.tooltipQuery(1, 19))
+
+  expect("", ide.tooltipQuery(1, 20))
+  expect("var x int", ide.tooltipQuery(1, 21))
+  expect("var x int", ide.tooltipQuery(1, 22))
+  expect("class int", ide.tooltipQuery(1, 23))
+  expect("class int", ide.tooltipQuery(1, 26))
+  expect("", ide.tooltipQuery(1, 27))
+
+  expect("", ide.tooltipQuery(1, 28))
+  expect("class bool", ide.tooltipQuery(1, 29))
+  expect("class bool", ide.tooltipQuery(1, 33))
+  expect("", ide.tooltipQuery(1, 34))
+
+  expect("", ide.tooltipQuery(3, 3))
+  expect("# Comment for globalVariable\n# Comment 2 for globalVariable\nvar globalVariable int", ide.tooltipQuery(3, 4))
+  expect("# Comment for globalVariable\n# Comment 2 for globalVariable\nvar globalVariable int", ide.tooltipQuery(3, 18))
+  expect("", ide.tooltipQuery(3, 19))
+})
+
+# Tooltips: test object types
+testIDE("
+class Derived : Base :: I {
+  const foo Foo = .FOO # Comment for foo
+  over instanceFunction {}
+}
+
+class Base {
+  def instanceFunction {}
+}
+
+interface I {
+}
+
+enum Foo {
+  FOO # Comment for FOO
+}
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(0, 5))
+  expect("class Derived : Base :: I", ide.tooltipQuery(0, 6))
+  expect("class Derived : Base :: I", ide.tooltipQuery(0, 13))
+  expect("", ide.tooltipQuery(0, 14))
+
+  expect("", ide.tooltipQuery(0, 15))
+  expect("class Base", ide.tooltipQuery(0, 16))
+  expect("class Base", ide.tooltipQuery(0, 20))
+  expect("", ide.tooltipQuery(0, 21))
+
+  expect("", ide.tooltipQuery(0, 23))
+  expect("interface I", ide.tooltipQuery(0, 24))
+  expect("interface I", ide.tooltipQuery(0, 25))
+  expect("", ide.tooltipQuery(0, 26))
+
+  expect("", ide.tooltipQuery(1, 7))
+  expect("# Comment for foo\nconst foo Foo", ide.tooltipQuery(1, 8))
+  expect("# Comment for foo\nconst foo Foo", ide.tooltipQuery(1, 11))
+  expect("enum Foo", ide.tooltipQuery(1, 12))
+  expect("enum Foo", ide.tooltipQuery(1, 15))
+  expect("", ide.tooltipQuery(1, 16))
+
+  expect("", ide.tooltipQuery(1, 18))
+  expect("# Comment for FOO\nconst FOO Foo = 0", ide.tooltipQuery(1, 19))
+  expect("# Comment for FOO\nconst FOO Foo = 0", ide.tooltipQuery(1, 22))
+  expect("", ide.tooltipQuery(1, 23))
+
+  expect("", ide.tooltipQuery(2, 6))
+  expect("over instanceFunction", ide.tooltipQuery(2, 7))
+  expect("over instanceFunction", ide.tooltipQuery(2, 23))
+  expect("", ide.tooltipQuery(2, 24))
+
+  expect("", ide.tooltipQuery(6, 5))
+  expect("def instanceFunction", ide.tooltipQuery(6, 6))
+  expect("def instanceFunction", ide.tooltipQuery(6, 22))
+  expect("", ide.tooltipQuery(6, 23))
+
+  expect("", ide.tooltipQuery(13, 1))
+  expect("# Comment for FOO\nconst FOO Foo = 0", ide.tooltipQuery(13, 2))
+  expect("# Comment for FOO\nconst FOO Foo = 0", ide.tooltipQuery(13, 5))
+  expect("", ide.tooltipQuery(13, 6))
+})
+
+# Tooltips: test flags
+testIDE("
+flags Flags {
+  FOO # FOO
+}
+
+var f Flags = .FOO | .FOO # f
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(0, 5))
+  expect("flags Flags", ide.tooltipQuery(0, 6))
+  expect("flags Flags", ide.tooltipQuery(0, 11))
+  expect("", ide.tooltipQuery(0, 12))
+
+  expect("", ide.tooltipQuery(1, 1))
+  expect("# FOO\nconst FOO Flags = 1", ide.tooltipQuery(1, 2))
+  expect("# FOO\nconst FOO Flags = 1", ide.tooltipQuery(1, 5))
+  expect("", ide.tooltipQuery(1, 6))
+
+  expect("", ide.tooltipQuery(4, 3))
+  expect("# f\nvar f Flags", ide.tooltipQuery(4, 4))
+  expect("# f\nvar f Flags", ide.tooltipQuery(4, 5))
+  expect("flags Flags", ide.tooltipQuery(4, 6))
+  expect("flags Flags", ide.tooltipQuery(4, 11))
+  expect("", ide.tooltipQuery(4, 12))
+
+  expect("", ide.tooltipQuery(4, 14))
+  expect("# FOO\nconst FOO Flags = 1", ide.tooltipQuery(4, 15))
+  expect("# FOO\nconst FOO Flags = 1", ide.tooltipQuery(4, 18))
+  expect("def |(x int) int", ide.tooltipQuery(4, 19))
+  expect("def |(x int) int", ide.tooltipQuery(4, 20))
+  expect("", ide.tooltipQuery(4, 21))
+  expect("# FOO\nconst FOO Flags = 1", ide.tooltipQuery(4, 22))
+  expect("# FOO\nconst FOO Flags = 1", ide.tooltipQuery(4, 25))
+  expect("", ide.tooltipQuery(4, 26))
+})
+
+# Tooltips: test generics
+testIDE("
+def test<X>(foo List<Foo<X>>, bar X) X {
+  foo.append(null)
+  return null in foo ? foo.first.bar : bar
+}
+
+class Foo<Y> {
+  var bar Y
+}
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(0, 3))
+  expect("def test<X>(foo List<Foo<X>>, bar X) X", ide.tooltipQuery(0, 4))
+  expect("def test<X>(foo List<Foo<X>>, bar X) X", ide.tooltipQuery(0, 8))
+  expect("X", ide.tooltipQuery(0, 9))
+  expect("X", ide.tooltipQuery(0, 10))
+  expect("", ide.tooltipQuery(0, 11))
+  expect("var foo List<Foo<X>>", ide.tooltipQuery(0, 12))
+  expect("var foo List<Foo<X>>", ide.tooltipQuery(0, 15))
+  expect("class List<T>", ide.tooltipQuery(0, 16))
+  expect("class List<T>", ide.tooltipQuery(0, 20))
+  expect("class Foo<Y>", ide.tooltipQuery(0, 21))
+  expect("class Foo<Y>", ide.tooltipQuery(0, 24))
+  expect("X", ide.tooltipQuery(0, 25))
+  expect("X", ide.tooltipQuery(0, 26))
+  expect("", ide.tooltipQuery(0, 27))
+
+  expect("", ide.tooltipQuery(1, 1))
+  expect("var foo List<Foo<X>>", ide.tooltipQuery(1, 2))
+  expect("var foo List<Foo<X>>", ide.tooltipQuery(1, 5))
+  expect("def append(x Foo<X>)", ide.tooltipQuery(1, 6))
+  expect("def append(x Foo<X>)", ide.tooltipQuery(1, 12))
+  expect("", ide.tooltipQuery(1, 13))
+
+  expect("", ide.tooltipQuery(2, 13))
+  expect("def in(x T) bool", ide.tooltipQuery(2, 14))
+  expect("def in(x T) bool", ide.tooltipQuery(2, 16))
+  expect("var foo List<Foo<X>>", ide.tooltipQuery(2, 17))
+  expect("var foo List<Foo<X>>", ide.tooltipQuery(2, 20))
+  expect("", ide.tooltipQuery(2, 21))
+
+  expect("", ide.tooltipQuery(2, 22))
+  expect("var foo List<Foo<X>>", ide.tooltipQuery(2, 23))
+  expect("var foo List<Foo<X>>", ide.tooltipQuery(2, 26))
+  expect("def first Foo<X>", ide.tooltipQuery(2, 27))
+  expect("def first Foo<X>", ide.tooltipQuery(2, 32))
+  expect("var bar X", ide.tooltipQuery(2, 33))
+  expect("var bar X", ide.tooltipQuery(2, 36))
+  expect("", ide.tooltipQuery(2, 37))
+
+  expect("", ide.tooltipQuery(5, 5))
+  expect("class Foo<Y>", ide.tooltipQuery(5, 6))
+  expect("class Foo<Y>", ide.tooltipQuery(5, 9))
+  expect("Y", ide.tooltipQuery(5, 10))
+  expect("Y", ide.tooltipQuery(5, 11))
+  expect("", ide.tooltipQuery(5, 12))
+})
+
+# Tooltips: test wrapped types, casts, and self
+testIDE("
+type Foo : int {
+  def foo Foo {
+    return self as int as Foo #
+  }
+}
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(0, 4))
+  expect("type Foo = int", ide.tooltipQuery(0, 5))
+  expect("type Foo = int", ide.tooltipQuery(0, 8))
+  expect("", ide.tooltipQuery(0, 9))
+
+  expect("", ide.tooltipQuery(0, 10))
+  expect("class int", ide.tooltipQuery(0, 11))
+  expect("class int", ide.tooltipQuery(0, 14))
+  expect("", ide.tooltipQuery(0, 15))
+
+  expect("", ide.tooltipQuery(1, 5))
+  expect("def foo Foo", ide.tooltipQuery(1, 6))
+  expect("def foo Foo", ide.tooltipQuery(1, 9))
+  expect("type Foo = int", ide.tooltipQuery(1, 10))
+  expect("type Foo = int", ide.tooltipQuery(1, 13))
+  expect("", ide.tooltipQuery(1, 14))
+
+  expect("", ide.tooltipQuery(2, 10))
+  expect("const self Foo", ide.tooltipQuery(2, 11))
+  expect("const self Foo", ide.tooltipQuery(2, 15))
+  expect("", ide.tooltipQuery(2, 16))
+
+  expect("", ide.tooltipQuery(2, 18))
+  expect("class int", ide.tooltipQuery(2, 19))
+  expect("class int", ide.tooltipQuery(2, 22))
+  expect("", ide.tooltipQuery(2, 23))
+
+  expect("", ide.tooltipQuery(2, 25))
+  expect("type Foo = int", ide.tooltipQuery(2, 26))
+  expect("type Foo = int", ide.tooltipQuery(2, 29))
+  expect("", ide.tooltipQuery(2, 30))
+})
+
+# Tooltips: test function merging
+testIDE("
+def foo #
+def foo {}
+def bar {}
+def bar #
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(0, 3))
+  expect("#\ndef foo", ide.tooltipQuery(0, 4))
+  expect("#\ndef foo", ide.tooltipQuery(0, 7))
+  expect("", ide.tooltipQuery(0, 8))
+
+  expect("", ide.tooltipQuery(1, 3))
+  expect("#\ndef foo", ide.tooltipQuery(1, 4))
+  expect("#\ndef foo", ide.tooltipQuery(1, 7))
+  expect("", ide.tooltipQuery(1, 8))
+
+  expect("", ide.tooltipQuery(2, 3))
+  expect("#\ndef bar", ide.tooltipQuery(2, 4))
+  expect("#\ndef bar", ide.tooltipQuery(2, 7))
+  expect("", ide.tooltipQuery(2, 8))
+
+  expect("", ide.tooltipQuery(3, 3))
+  expect("#\ndef bar", ide.tooltipQuery(3, 4))
+  expect("#\ndef bar", ide.tooltipQuery(3, 7))
+  expect("", ide.tooltipQuery(3, 8))
+})
+
+# Tooltips: test object merging
+testIDE("
+namespace Foo {}
+class Foo {}
+class Bar {}
+namespace Bar {}
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(0, 9))
+  expect("class Foo", ide.tooltipQuery(0, 10))
+  expect("class Foo", ide.tooltipQuery(0, 13))
+  expect("", ide.tooltipQuery(0, 14))
+
+  expect("", ide.tooltipQuery(1, 5))
+  expect("class Foo", ide.tooltipQuery(1, 6))
+  expect("class Foo", ide.tooltipQuery(1, 9))
+  expect("", ide.tooltipQuery(1, 10))
+
+  expect("", ide.tooltipQuery(2, 5))
+  expect("class Bar", ide.tooltipQuery(2, 6))
+  expect("class Bar", ide.tooltipQuery(2, 9))
+  expect("", ide.tooltipQuery(2, 10))
+
+  expect("", ide.tooltipQuery(3, 9))
+  expect("class Bar", ide.tooltipQuery(3, 10))
+  expect("class Bar", ide.tooltipQuery(3, 13))
+  expect("", ide.tooltipQuery(3, 14))
+})
+
+# Definitions: test object merging
+testIDE("
+namespace Foo {}
+class Foo {}
+class Bar {}
+namespace Bar {}
+def test(foo Foo, bar Bar) {}
+", (ide, expect) => {
+  expect("<stdin>:2:7", ide.definitionQuery(4, 13))
+  expect("<stdin>:3:7", ide.definitionQuery(4, 22))
+})
+
+# Definitions: test function merging
+testIDE("
+def foo
+def foo {}
+def bar {}
+def bar
+def test {
+  foo
+  bar
+}
+", (ide, expect) => {
+  expect("<stdin>:2:5", ide.definitionQuery(5, 2))
+  expect("<stdin>:3:5", ide.definitionQuery(6, 2))
+})
+
+  }
+}
