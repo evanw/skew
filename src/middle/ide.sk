@@ -22,24 +22,29 @@ namespace Skew.IDE {
         case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
           var arguments = symbol.asFunctionSymbol.arguments
           text += "def \(symbol.name)"
-          if !arguments.isEmpty {
-            text += "("
-            for i in 0..arguments.count {
-              if i != 0 {
-                text += ", "
+          if symbol.resolvedType != null {
+            if !arguments.isEmpty {
+              text += "("
+              for i in 0..arguments.count {
+                if i != 0 {
+                  text += ", "
+                }
+                text += "\(arguments[i].name) \(symbol.resolvedType.argumentTypes[i])"
               }
-              text += "\(arguments[i].name) \(symbol.resolvedType.argumentTypes[i])"
+              text += ")"
             }
-            text += ")"
-          }
-          if symbol.resolvedType.returnType != null {
-            text += " \(symbol.resolvedType.returnType)"
+            if symbol.resolvedType.returnType != null {
+              text += " \(symbol.resolvedType.returnType)"
+            }
+          } else {
+            text += " dynamic"
           }
         }
 
         case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
           var value = symbol.asVariableSymbol.value
-          text += "\(symbol.isConst ? "const" : "var") \(symbol.name) \(symbol.resolvedType)"
+          text += "\(symbol.isConst ? "const" : "var") \(symbol.name)"
+          text += symbol.resolvedType != null ? " \(symbol.resolvedType)" : "dynamic"
           if symbol.isConst && !symbol.isLoopVariable && value != null && value.kind == .CONSTANT {
             text += " = "
             switch value.content.kind {
