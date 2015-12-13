@@ -38,6 +38,7 @@ namespace Skew {
     NULL_DOT
     PAIR
     PARAMETERIZE
+    PARSE_ERROR
     SEQUENCE
     STRING_INTERPOLATION
     SUPER
@@ -1001,6 +1002,10 @@ namespace Skew {
     def createParameterize(value Node) Node {
       assert(value.kind.isExpression)
       return new(.PARAMETERIZE).appendChild(value)
+    }
+
+    def createParseError Node {
+      return new(.PARSE_ERROR)
     }
 
     def createSequence Node {

@@ -94,6 +94,10 @@ namespace Skew {
         _previousSyntaxError = token
       }
     }
+
+    def createParseError Node {
+      return Node.createParseError.withRange(current.range)
+    }
   }
 
   class Parselet {
@@ -129,22 +133,22 @@ namespace Skew {
       var parselet = _table.get(token.kind, null)
       if parselet == null || parselet.prefix == null {
         context.unexpectedToken
-        return null
+        return context.createParseError
       }
       var node = resume(context, precedence, parselet.prefix(context))
-      assert(node == null || node.range != null) # Parselets must set the range of every node
+      assert(node != null && node.range != null) # Parselets must set the range of every node
       return node
     }
 
     def resume(context ParserContext, precedence Precedence, left Node) Node {
-      while left != null {
+      while true {
         var kind = context.current.kind
         var parselet = _table.get(kind, null)
         if parselet == null || parselet.infix == null || parselet.precedence <= precedence {
           break
         }
         left = parselet.infix(context, left)
-        assert(left == null || left.range != null) # Parselets must set the range of every node
+        assert(left != null && left.range != null) # Parselets must set the range of every node
       }
       return left
     }
@@ -156,8 +160,7 @@ namespace Skew {
     def prefix(kind TokenKind, precedence Precedence, callback fn(ParserContext, Token, Node) Node) {
       parselet(kind, .LOWEST).prefix = context => {
         var token = context.next
-        var value = parse(context, precedence)
-        return value != null ? callback(context, token, value) : null
+        return callback(context, token, parse(context, precedence))
       }
     }
 
@@ -168,16 +171,14 @@ namespace Skew {
     def infix(kind TokenKind, precedence Precedence, callback fn(ParserContext, Node, Token, Node) Node) {
       parselet(kind, precedence).infix = (context, left) => {
         var token = context.next
-        var right = parse(context, precedence)
-        return right != null ? callback(context, left, token, right) : null
+        return callback(context, left, token, parse(context, precedence))
       }
     }
 
     def infixRight(kind TokenKind, precedence Precedence, callback fn(ParserContext, Node, Token, Node) Node) {
       parselet(kind, precedence).infix = (context, left) => {
         var token = context.next
-        var right = parse(context, (precedence as int - 1) as Precedence) # Subtract 1 for right-associativity
-        return right != null ? callback(context, left, token, right) : null
+        return callback(context, left, token, parse(context, (precedence as int - 1) as Precedence)) # Subtract 1 for right-associativity
       }
     }
   }

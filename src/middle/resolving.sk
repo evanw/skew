@@ -1292,6 +1292,7 @@ namespace Skew.Resolving {
         case .NULL { node.resolvedType = .NULL }
         case .NULL_DOT { _resolveNullDot(node, scope) }
         case .PARAMETERIZE { _resolveParameterize(node, scope) }
+        case .PARSE_ERROR { node.resolvedType = .DYNAMIC }
         case .SEQUENCE { _resolveSequence(node, scope, context) }
         case .STRING_INTERPOLATION { _resolveStringInterpolation(node, scope) }
         case .SUPER { _resolveSuper(node, scope) }

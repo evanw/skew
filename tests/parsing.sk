@@ -89,6 +89,9 @@ def main {
 <stdin>:2:20: error: Expected \".\" but found \"\\n\"
   var foo = dynamic
                    ^
+<stdin>:2:7: warning: Local variable \"foo\" is never read
+  var foo = dynamic
+      ~~~
 ")
 
 # Test splitting the ">>" token
@@ -234,9 +237,9 @@ var foo = <Foo
 test("
 def test {
   foo(
-  var x
+  var x = 0
   foo(
-  const x
+  const y = 0
   foo(
   while true {}
   foo(
@@ -251,13 +254,19 @@ def test {
   break
   foo(
   continue
+  foo(
+  try {}
+  foo(
+  catch e dynamic {}
+  foo(
+  finally {}
 }
 ", "
 <stdin>:3:3: error: Unexpected \"var\"
-  var x
+  var x = 0
   ~~~
 <stdin>:5:3: error: Unexpected \"const\"
-  const x
+  const y = 0
   ~~~~~
 <stdin>:7:3: error: Unexpected \"while\"
   while true {}
@@ -280,12 +289,18 @@ def test {
 <stdin>:19:3: error: Unexpected \"continue\"
   continue
   ~~~~~~~~
+<stdin>:21:3: error: Unexpected \"try\"
+  try {}
+  ~~~
+<stdin>:23:3: error: Unexpected \"catch\"
+  catch e dynamic {}
+  ~~~~~
+<stdin>:25:3: error: Unexpected \"finally\"
+  finally {}
+  ~~~~~~~
 <stdin>:2:3: error: \"foo\" is not declared
   foo(
   ~~~
-<stdin>:3:7: error: The implicitly typed variable \"x\" must be initialized
-  var x
-      ^
 <stdin>:4:3: error: \"foo\" is not declared
   foo(
   ~~~
@@ -319,9 +334,21 @@ def test {
 <stdin>:19:3: error: Cannot use \"continue\" outside a loop
   continue
   ~~~~~~~~
+<stdin>:20:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:22:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:24:3: error: \"foo\" is not declared
+  foo(
+  ~~~
 <stdin>:3:7: warning: Local variable \"x\" is never read
-  var x
+  var x = 0
       ^
+<stdin>:5:9: warning: Local variable \"y\" is never read
+  const y = 0
+        ^
 ")
 
 # Test parsing recovery after "var" and "const"
@@ -345,6 +372,22 @@ def test {
 <stdin>:5:9: warning: Local variable \"y\" is never read
   const y = 0
         ^
+")
+
+# Test partial statement presence during parsing recovery
+test("
+@export
+def test {
+  var x = [
+  var y = x # This should not be a reference error about \"x\"
+}
+", "
+<stdin>:4:3: error: Unexpected \"var\"
+  var y = x # This should not be a reference error about \"x\"
+  ~~~
+<stdin>:4:7: warning: Local variable \"y\" is never read
+  var y = x # This should not be a reference error about \"x\"
+      ^
 ")
 
   }

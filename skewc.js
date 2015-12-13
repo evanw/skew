@@ -7117,65 +7117,66 @@
     NULL_DOT: 30,
     PAIR: 31,
     PARAMETERIZE: 32,
-    SEQUENCE: 33,
-    STRING_INTERPOLATION: 34,
-    SUPER: 35,
-    TYPE: 36,
-    TYPE_CHECK: 37,
-    XML: 38,
+    PARSE_ERROR: 33,
+    SEQUENCE: 34,
+    STRING_INTERPOLATION: 35,
+    SUPER: 36,
+    TYPE: 37,
+    TYPE_CHECK: 38,
+    XML: 39,
 
     // Unary operators
-    COMPLEMENT: 39,
-    NEGATIVE: 40,
-    NOT: 41,
-    POSITIVE: 42,
-    POSTFIX_DECREMENT: 43,
-    POSTFIX_INCREMENT: 44,
-    PREFIX_DECREMENT: 45,
-    PREFIX_INCREMENT: 46,
+    COMPLEMENT: 40,
+    NEGATIVE: 41,
+    NOT: 42,
+    POSITIVE: 43,
+    POSTFIX_DECREMENT: 44,
+    POSTFIX_INCREMENT: 45,
+    PREFIX_DECREMENT: 46,
+    PREFIX_INCREMENT: 47,
 
     // Binary operators
-    ADD: 47,
-    BITWISE_AND: 48,
-    BITWISE_OR: 49,
-    BITWISE_XOR: 50,
-    COMPARE: 51,
-    DIVIDE: 52,
-    EQUAL: 53,
-    IN: 54,
-    LOGICAL_AND: 55,
-    LOGICAL_OR: 56,
-    MULTIPLY: 57,
-    NOT_EQUAL: 58,
-    NULL_JOIN: 59,
-    POWER: 60,
-    REMAINDER: 61,
-    SHIFT_LEFT: 62,
-    SHIFT_RIGHT: 63,
-    SUBTRACT: 64,
-    UNSIGNED_SHIFT_RIGHT: 65,
+    ADD: 48,
+    BITWISE_AND: 49,
+    BITWISE_OR: 50,
+    BITWISE_XOR: 51,
+    COMPARE: 52,
+    DIVIDE: 53,
+    EQUAL: 54,
+    IN: 55,
+    LOGICAL_AND: 56,
+    LOGICAL_OR: 57,
+    MULTIPLY: 58,
+    NOT_EQUAL: 59,
+    NULL_JOIN: 60,
+    POWER: 61,
+    REMAINDER: 62,
+    SHIFT_LEFT: 63,
+    SHIFT_RIGHT: 64,
+    SUBTRACT: 65,
+    UNSIGNED_SHIFT_RIGHT: 66,
 
     // Binary comparison operators
-    GREATER_THAN: 66,
-    GREATER_THAN_OR_EQUAL: 67,
-    LESS_THAN: 68,
-    LESS_THAN_OR_EQUAL: 69,
+    GREATER_THAN: 67,
+    GREATER_THAN_OR_EQUAL: 68,
+    LESS_THAN: 69,
+    LESS_THAN_OR_EQUAL: 70,
 
     // Binary assigment operators
-    ASSIGN: 70,
-    ASSIGN_ADD: 71,
-    ASSIGN_BITWISE_AND: 72,
-    ASSIGN_BITWISE_OR: 73,
-    ASSIGN_BITWISE_XOR: 74,
-    ASSIGN_DIVIDE: 75,
-    ASSIGN_MULTIPLY: 76,
-    ASSIGN_NULL: 77,
-    ASSIGN_POWER: 78,
-    ASSIGN_REMAINDER: 79,
-    ASSIGN_SHIFT_LEFT: 80,
-    ASSIGN_SHIFT_RIGHT: 81,
-    ASSIGN_SUBTRACT: 82,
-    ASSIGN_UNSIGNED_SHIFT_RIGHT: 83
+    ASSIGN: 71,
+    ASSIGN_ADD: 72,
+    ASSIGN_BITWISE_AND: 73,
+    ASSIGN_BITWISE_OR: 74,
+    ASSIGN_BITWISE_XOR: 75,
+    ASSIGN_DIVIDE: 76,
+    ASSIGN_MULTIPLY: 77,
+    ASSIGN_NULL: 78,
+    ASSIGN_POWER: 79,
+    ASSIGN_REMAINDER: 80,
+    ASSIGN_SHIFT_LEFT: 81,
+    ASSIGN_SHIFT_RIGHT: 82,
+    ASSIGN_SUBTRACT: 83,
+    ASSIGN_UNSIGNED_SHIFT_RIGHT: 84
   };
 
   Skew.NodeFlags = {
@@ -9852,12 +9853,12 @@
   Skew.Parsing = {};
 
   // Parser recovery is done by skipping to the next closing token after an error
-  Skew.Parsing.scanForToken = function(context, kind, scan) {
+  Skew.Parsing.scanForToken = function(context, kind) {
     if (context.expect(kind)) {
       return;
     }
 
-    // Scan until the next closing token
+    // Scan forward for the token
     while (!context.peek(Skew.TokenKind.END_OF_FILE)) {
       if (context.eat(kind)) {
         return;
@@ -9870,25 +9871,19 @@
           return;
         }
 
-        case Skew.TokenKind.NEWLINE: {
-          if (scan == Skew.Parsing.TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
-            return;
-          }
-          break;
-        }
-
         case Skew.TokenKind.BREAK:
+        case Skew.TokenKind.CATCH:
+        case Skew.TokenKind.CONST:
         case Skew.TokenKind.CONTINUE:
         case Skew.TokenKind.ELSE:
+        case Skew.TokenKind.FINALLY:
         case Skew.TokenKind.FOR:
         case Skew.TokenKind.IF:
         case Skew.TokenKind.RETURN:
+        case Skew.TokenKind.TRY:
         case Skew.TokenKind.VAR:
         case Skew.TokenKind.WHILE: {
-          if (scan == Skew.Parsing.TokenScan.STOP_BEFORE_NEXT_STATEMENT) {
-            return;
-          }
-          break;
+          return;
         }
       }
 
@@ -10028,7 +10023,7 @@
           var name = context.current().range;
 
           if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
-            return null;
+            break;
           }
 
           value = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name.toString())).appendChild(value).withRange(context.spanSince(range)).withInternalRange(name);
@@ -10051,15 +10046,11 @@
 
       if (context.eat(Skew.TokenKind.IF)) {
         test = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (test == null) {
-          return null;
-        }
       }
 
       // All annotations must end in a newline to avoid confusion with the trailing if
       if (!context.peek(Skew.TokenKind.LEFT_BRACE) && !context.expect(Skew.TokenKind.NEWLINE)) {
-        return null;
+        Skew.Parsing.scanForToken(context, Skew.TokenKind.NEWLINE);
       }
 
       annotations.push(Skew.Node.createAnnotation(value, test).withRange(context.spanSince(range)));
@@ -10088,18 +10079,10 @@
 
       if (Skew.Parsing.peekType(context)) {
         symbol.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (symbol.type == null) {
-          return null;
-        }
       }
 
       if (context.eat(Skew.TokenKind.ASSIGN)) {
         symbol.value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (symbol.value == null) {
-          return null;
-        }
       }
 
       variables.appendChild(Skew.Node.createVariable(symbol).withRange(context.spanSince(range)));
@@ -10123,11 +10106,6 @@
 
     if (!context.peek(Skew.TokenKind.NEWLINE) && !context.peek(Skew.TokenKind.COMMENT) && !context.peek(Skew.TokenKind.RIGHT_BRACE)) {
       value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-      if (value == null) {
-        return null;
-      }
-
       Skew.Parsing.checkExtraParentheses(context, value);
     }
 
@@ -10137,11 +10115,6 @@
   Skew.Parsing.parseSwitch = function(context) {
     var token = context.next();
     var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-    if (value == null) {
-      return null;
-    }
-
     Skew.Parsing.checkExtraParentheses(context, value);
     var node = Skew.Node.createSwitch(value);
 
@@ -10166,11 +10139,6 @@
       if (context.eat(Skew.TokenKind.CASE)) {
         while (true) {
           var constant = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-          if (constant == null) {
-            return null;
-          }
-
           Skew.Parsing.checkExtraParentheses(context, constant);
           child.appendChild(constant);
 
@@ -10231,17 +10199,8 @@
       symbol.range = range;
       var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
 
-      if (value == null) {
-        return null;
-      }
-
       if (context.eat(Skew.TokenKind.DOT_DOT)) {
         var second = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (second == null) {
-          return null;
-        }
-
         value = Skew.Node.createPair(value, second).withRange(Skew.Range.span(value.range, second.range));
       }
 
@@ -10271,19 +10230,10 @@
 
       if (Skew.Parsing.peekType(context)) {
         symbol1.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (symbol1.type == null) {
-          return null;
-        }
       }
 
       if (context.eat(Skew.TokenKind.ASSIGN)) {
         symbol1.value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (symbol1.value == null) {
-          return null;
-        }
-
         Skew.Parsing.checkExtraParentheses(context, symbol1.value);
       }
 
@@ -10302,19 +10252,11 @@
 
     var test = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
 
-    if (test == null) {
-      return null;
-    }
-
     if (!context.expect(Skew.TokenKind.SEMICOLON)) {
       return null;
     }
 
     var update = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-    if (update == null) {
-      return null;
-    }
 
     // This is the one place in the grammar that sequence expressions are allowed
     if (context.eat(Skew.TokenKind.COMMA)) {
@@ -10322,11 +10264,6 @@
 
       while (true) {
         var value1 = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (value1 == null) {
-          return null;
-        }
-
         update.appendChild(value1);
 
         if (!context.eat(Skew.TokenKind.COMMA)) {
@@ -10347,11 +10284,6 @@
   Skew.Parsing.parseIf = function(context) {
     var token = context.next();
     var test = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-    if (test == null) {
-      return null;
-    }
-
     Skew.Parsing.checkExtraParentheses(context, test);
     var trueBlock = Skew.Parsing.parseBlock(context);
 
@@ -10365,11 +10297,6 @@
   Skew.Parsing.parseThrow = function(context) {
     var token = context.next();
     var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-    if (value == null) {
-      return null;
-    }
-
     Skew.Parsing.checkExtraParentheses(context, value);
     return Skew.Node.createThrow(value).withRange(context.spanSince(token.range));
   };
@@ -10388,11 +10315,6 @@
   Skew.Parsing.parseWhile = function(context) {
     var token = context.next();
     var test = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-    if (test == null) {
-      return null;
-    }
-
     Skew.Parsing.checkExtraParentheses(context, test);
     var block = Skew.Parsing.parseBlock(context);
 
@@ -10447,11 +10369,6 @@
     }
 
     var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-    if (value == null) {
-      return null;
-    }
-
     Skew.Parsing.checkExtraParentheses(context, value);
     return Skew.Node.createExpression(value).withRange(value.range);
   };
@@ -10486,6 +10403,7 @@
             return false;
           }
 
+          // Append to the if statement
           var falseBlock = new Skew.Node(Skew.NodeKind.BLOCK).withRange(statement.range).appendChild(statement);
           falseBlock.comments = comments;
 
@@ -10507,6 +10425,7 @@
             return false;
           }
 
+          // Append to the if statement
           falseBlock1.comments = comments;
 
           if (isValid) {
@@ -10521,7 +10440,13 @@
       }
 
       // Merge "catch" statements with the previous "try"
-      else if (context.peek(Skew.TokenKind.CATCH) && previous != null && previous.kind == Skew.NodeKind.TRY && previous.finallyBlock() == null) {
+      else if (context.peek(Skew.TokenKind.CATCH)) {
+        var isValid1 = previous != null && previous.kind == Skew.NodeKind.TRY && previous.finallyBlock() == null;
+
+        if (!isValid1) {
+          context.unexpectedToken();
+        }
+
         var catchToken = context.next();
         var symbol = null;
         var nameRange = context.current().range;
@@ -10531,35 +10456,55 @@
           symbol = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, nameRange.toString());
           symbol.range = nameRange;
           symbol.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-          if (symbol.type == null) {
-            return false;
-          }
         }
 
-        // Manditory catch block
+        // Parse the block
         var catchBlock = Skew.Parsing.parseBlock(context);
 
         if (catchBlock == null) {
           return false;
         }
 
+        // Append to the try statement
         var child = Skew.Node.createCatch(symbol, catchBlock).withRange(context.spanSince(catchToken.range));
         child.comments = comments;
-        previous.appendChild(child);
+
+        if (isValid1) {
+          previous.appendChild(child);
+        }
+
+        else {
+          previous = null;
+        }
       }
 
       // Merge "finally" statements with the previous "try"
-      else if (context.peek(Skew.TokenKind.FINALLY) && previous != null && previous.kind == Skew.NodeKind.TRY && previous.finallyBlock() == null) {
+      else if (context.peek(Skew.TokenKind.FINALLY)) {
+        var isValid2 = previous != null && previous.kind == Skew.NodeKind.TRY && previous.finallyBlock() == null;
+
+        if (!isValid2) {
+          context.unexpectedToken();
+        }
+
         context.next();
+
+        // Parse the block
         var finallyBlock = Skew.Parsing.parseBlock(context);
 
         if (finallyBlock == null) {
           return false;
         }
 
+        // Append to the try statement
         finallyBlock.comments = comments;
-        previous.appendChild(finallyBlock);
+
+        if (isValid2) {
+          previous.appendChild(finallyBlock);
+        }
+
+        else {
+          previous = null;
+        }
       }
 
       // Parse a new statement
@@ -10567,7 +10512,7 @@
         var statement1 = Skew.Parsing.parseStatement(context);
 
         if (statement1 == null) {
-          Skew.Parsing.scanForToken(context, Skew.TokenKind.NEWLINE, Skew.Parsing.TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+          Skew.Parsing.scanForToken(context, Skew.TokenKind.NEWLINE);
           continue;
         }
 
@@ -10648,11 +10593,6 @@
 
       else {
         var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (value == null) {
-          return false;
-        }
-
         symbol.block = new Skew.Node(Skew.NodeKind.BLOCK).withRange(value.range).appendChild(Skew.Node.createReturn(value).withRange(value.range).withFlags(Skew.NodeFlags.IS_IMPLICIT_RETURN));
       }
     }
@@ -10690,11 +10630,6 @@
       // Parse argument type
       if (symbol.kind != Skew.SymbolKind.FUNCTION_LOCAL || (symbol.$arguments.length == 0 ? Skew.Parsing.peekType(context) : usingTypes)) {
         arg.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (arg.type == null) {
-          return false;
-        }
-
         usingTypes = true;
       }
 
@@ -10702,12 +10637,7 @@
       var assign = context.current().range;
 
       if (context.eat(Skew.TokenKind.ASSIGN)) {
-        var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (value == null) {
-          return false;
-        }
-
+        Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
         context.log.syntaxErrorOptionalArgument(context.spanSince(assign));
       }
 
@@ -10761,10 +10691,6 @@
 
     if (context.eat(Skew.TokenKind.IF)) {
       test = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-      if (test == null) {
-        return null;
-      }
     }
 
     if (!context.expect(Skew.TokenKind.LEFT_BRACE)) {
@@ -10959,19 +10885,10 @@
 
           if (Skew.Parsing.peekType(context)) {
             variable1.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-            if (variable1.type == null) {
-              return false;
-            }
           }
 
           if (context.eat(Skew.TokenKind.ASSIGN)) {
             variable1.value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-            if (variable1.value == null) {
-              return false;
-            }
-
             Skew.Parsing.checkExtraParentheses(context, variable1.value);
           }
 
@@ -11084,11 +11001,6 @@
 
               while (true) {
                 var type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-                if (type == null) {
-                  return false;
-                }
-
                 object.$implements.push(type);
 
                 if (!context.eat(Skew.TokenKind.COMMA)) {
@@ -11098,7 +11010,7 @@
             }
 
             if (!context.expect(Skew.TokenKind.LEFT_BRACE)) {
-              return false;
+              Skew.Parsing.scanForToken(context, Skew.TokenKind.LEFT_BRACE);
             }
 
             Skew.Parsing.parseSymbols(context, object, null);
@@ -11157,17 +11069,11 @@
 
     while (!context.eat(stop)) {
       if (!isFirst && !context.expect(Skew.TokenKind.COMMA)) {
-        Skew.Parsing.scanForToken(context, stop, Skew.Parsing.TokenScan.STOP_BEFORE_NEXT_STATEMENT);
+        Skew.Parsing.scanForToken(context, stop);
         break;
       }
 
       var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-      if (value == null) {
-        Skew.Parsing.scanForToken(context, stop, Skew.Parsing.TokenScan.STOP_BEFORE_NEXT_STATEMENT);
-        break;
-      }
-
       parent.appendChild(value);
       context.skipWhitespace();
       isFirst = false;
@@ -11392,17 +11298,12 @@
 
       while (true) {
         var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (value == null) {
-          return null;
-        }
-
         node.appendChild(value);
         context.skipWhitespace();
         token = context.current();
 
         if (!context.eat(Skew.TokenKind.STRING_INTERPOLATION_CONTINUE) && !context.expect(Skew.TokenKind.STRING_INTERPOLATION_END)) {
-          return null;
+          return context.createParseError();
         }
 
         node.appendChild(Skew.Parsing.createStringNode(context.log, token.range));
@@ -11421,7 +11322,7 @@
       var range = context.current().range;
 
       if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
-        return null;
+        return context.createParseError();
       }
 
       return new Skew.Node(Skew.NodeKind.NULL_DOT).withContent(new Skew.StringContent(range.toString())).appendChild(left).withRange(context.spanSince(left.range)).withInternalRange(range);
@@ -11433,7 +11334,7 @@
       var symbol = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_LOCAL, '<lambda>');
 
       if (!Skew.Parsing.parseFunctionBlock(context, symbol)) {
-        return null;
+        return context.createParseError();
       }
 
       symbol.range = context.spanSince(token.range);
@@ -11444,11 +11345,6 @@
     pratt.parselet(Skew.TokenKind.AS, Skew.Precedence.UNARY_PREFIX).infix = function(context, left) {
       var token = context.next();
       var type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-      if (type == null) {
-        return null;
-      }
-
       return Skew.Node.createCast(left, type).withRange(context.spanSince(left.range)).withInternalRange(token.range);
     };
 
@@ -11458,7 +11354,7 @@
       var range = context.current().range;
 
       if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
-        return null;
+        return context.createParseError();
       }
 
       return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(range.toString())).appendChild(null).withRange(context.spanSince(token.range)).withInternalRange(range);
@@ -11469,13 +11365,13 @@
       var token = context.next();
 
       if (!context.expect(Skew.TokenKind.DOT)) {
-        return null;
+        return context.createParseError();
       }
 
       var range = context.current().range;
 
       if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
-        return null;
+        return context.createParseError();
       }
 
       return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(range.toString())).appendChild(new Skew.Node(Skew.NodeKind.TYPE).withType(Skew.Type.DYNAMIC)).withRange(context.spanSince(token.range)).withInternalRange(range);
@@ -11493,7 +11389,7 @@
         symbol.$arguments.push(argument);
 
         if (!Skew.Parsing.parseFunctionBlock(context, symbol)) {
-          return null;
+          return context.createParseError();
         }
 
         symbol.range = context.spanSince(range);
@@ -11507,11 +11403,6 @@
     pratt.parselet(Skew.TokenKind.IS, Skew.Precedence.COMPARE).infix = function(context, left) {
       var token = context.next();
       var type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-      if (type == null) {
-        return null;
-      }
-
       return Skew.Node.createTypeCheck(left, type).withRange(context.spanSince(left.range)).withInternalRange(token.range);
     };
 
@@ -11519,11 +11410,7 @@
     pratt.parselet(Skew.TokenKind.LEFT_BRACKET, Skew.Precedence.MEMBER).infix = function(context, left) {
       var token = context.next();
       var right = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-      if (right == null || !context.expect(Skew.TokenKind.RIGHT_BRACKET)) {
-        return null;
-      }
-
+      Skew.Parsing.scanForToken(context, Skew.TokenKind.RIGHT_BRACKET);
       return Skew.Node.createIndex(left, right).withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range));
     };
 
@@ -11534,10 +11421,6 @@
       // Try to parse a group
       if (!context.peek(Skew.TokenKind.RIGHT_PARENTHESIS)) {
         var value = pratt.parse(context, Skew.Precedence.LOWEST);
-
-        if (value == null) {
-          return null;
-        }
 
         if ((value.kind != Skew.NodeKind.NAME || !Skew.Parsing.peekType(context)) && context.eat(Skew.TokenKind.RIGHT_PARENTHESIS)) {
           if (value.kind != Skew.NodeKind.NAME || !context.peek(Skew.TokenKind.ARROW)) {
@@ -11554,7 +11437,7 @@
       var symbol = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_LOCAL, '<lambda>');
 
       if (!Skew.Parsing.parseFunctionArguments(context, symbol) || !Skew.Parsing.parseFunctionReturnTypeAndBlock(context, symbol)) {
-        return null;
+        return context.createParseError();
       }
 
       symbol.range = context.spanSince(token.range);
@@ -11574,16 +11457,11 @@
       context.next();
       var middle = pratt.parse(context, Skew.Precedence.ASSIGN - 1 | 0);
 
-      if (middle == null || !context.expect(Skew.TokenKind.COLON)) {
-        return null;
+      if (!context.expect(Skew.TokenKind.COLON)) {
+        return context.createParseError();
       }
 
       var right = pratt.parse(context, Skew.Precedence.ASSIGN - 1 | 0);
-
-      if (right == null) {
-        return null;
-      }
-
       return Skew.Node.createHook(left, middle, right).withRange(context.spanSince(left.range));
     };
 
@@ -11593,7 +11471,8 @@
       var tag = Skew.Parsing.parseDotChain(context);
 
       if (tag == null) {
-        return null;
+        Skew.Parsing.scanForToken(context, Skew.TokenKind.XML_END);
+        return context.createParseError();
       }
 
       var attributes = new Skew.Node(Skew.NodeKind.SEQUENCE);
@@ -11608,16 +11487,12 @@
 
         if (kind == Skew.NodeKind.NULL) {
           context.expect(Skew.TokenKind.ASSIGN);
-          return null;
+          Skew.Parsing.scanForToken(context, Skew.TokenKind.XML_END);
+          return context.createParseError();
         }
 
         context.next();
         var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.UNARY_PREFIX - 1 | 0);
-
-        if (value == null) {
-          return null;
-        }
-
         attributes.appendChild(Skew.Node.createBinary(kind, name, value).withRange(context.spanSince(name.range)).withInternalRange(assignment.range));
         context.skipWhitespace();
       }
@@ -11629,14 +11504,15 @@
       // Check for children
       if (!context.eat(Skew.TokenKind.XML_END_EMPTY)) {
         if (!context.expect(Skew.TokenKind.XML_END)) {
-          return null;
+          Skew.Parsing.scanForToken(context, Skew.TokenKind.XML_END);
+          return context.createParseError();
         }
 
         // Parse children
         context.skipWhitespace();
 
         if (!Skew.Parsing.parseStatements(context, block) || !context.expect(Skew.TokenKind.XML_START_CLOSE)) {
-          return null;
+          return context.createParseError();
         }
 
         block.withRange(context.spanSince(token.range));
@@ -11645,13 +11521,15 @@
         var closingTag = Skew.Parsing.parseDotChain(context);
 
         if (closingTag == null) {
-          return null;
+          Skew.Parsing.scanForToken(context, Skew.TokenKind.XML_END);
+          return context.createParseError();
         }
 
         context.skipWhitespace();
 
         if (!context.expect(Skew.TokenKind.XML_END)) {
-          return null;
+          Skew.Parsing.scanForToken(context, Skew.TokenKind.XML_END);
+          return context.createParseError();
         }
 
         // Validate closing tag (not a fatal error)
@@ -11720,28 +11598,17 @@
       // Parse argument types
       while (!context.eat(Skew.TokenKind.RIGHT_PARENTHESIS)) {
         if (!isFirst && !context.expect(Skew.TokenKind.COMMA)) {
-          return null;
+          Skew.Parsing.scanForToken(context, Skew.TokenKind.RIGHT_PARENTHESIS);
+          return context.createParseError();
         }
 
-        var type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (type == null) {
-          return null;
-        }
-
-        node.insertChildBefore(returnType, type);
+        node.insertChildBefore(returnType, Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST));
         isFirst = false;
       }
 
       // Parse return type if present
       if (Skew.Parsing.peekType(context)) {
-        var type1 = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (type1 == null) {
-          return null;
-        }
-
-        returnType.replaceWith(type1);
+        returnType.replaceWith(Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST));
       }
 
       return node.withRange(context.spanSince(token.range));
@@ -11769,10 +11636,6 @@
 
   Skew.Parsing.stringLiteral = function(context, token) {
     return Skew.Parsing.createStringNode(context.log, token.range);
-  };
-
-  Skew.Parsing.TokenScan = {
-    STOP_BEFORE_NEXT_STATEMENT: 1
   };
 
   Skew.Parsing.ForbiddenGroup = {
@@ -11857,6 +11720,10 @@
     }
   };
 
+  Skew.ParserContext.prototype.createParseError = function() {
+    return new Skew.Node(Skew.NodeKind.PARSE_ERROR).withRange(this.current().range);
+  };
+
   Skew.Parselet = function(precedence) {
     this.precedence = precedence;
     this.prefix = null;
@@ -11896,18 +11763,18 @@
 
     if (parselet == null || parselet.prefix == null) {
       context.unexpectedToken();
-      return null;
+      return context.createParseError();
     }
 
     var node = this.resume(context, precedence, parselet.prefix(context));
 
     // Parselets must set the range of every node
-    assert(node == null || node.range != null);
+    assert(node != null && node.range != null);
     return node;
   };
 
   Skew.Pratt.prototype.resume = function(context, precedence, left) {
-    while (left != null) {
+    while (true) {
       var kind = context.current().kind;
       var parselet = in_IntMap.get(this._table, kind, null);
 
@@ -11918,7 +11785,7 @@
       left = parselet.infix(context, left);
 
       // Parselets must set the range of every node
-      assert(left == null || left.range != null);
+      assert(left != null && left.range != null);
     }
 
     return left;
@@ -11934,8 +11801,7 @@
     var self = this;
     self.parselet(kind, Skew.Precedence.LOWEST).prefix = function(context) {
       var token = context.next();
-      var value = self.parse(context, precedence);
-      return value != null ? callback(context, token, value) : null;
+      return callback(context, token, self.parse(context, precedence));
     };
   };
 
@@ -11949,8 +11815,7 @@
     var self = this;
     self.parselet(kind, precedence).infix = function(context, left) {
       var token = context.next();
-      var right = self.parse(context, precedence);
-      return right != null ? callback(context, left, token, right) : null;
+      return callback(context, left, token, self.parse(context, precedence));
     };
   };
 
@@ -11960,8 +11825,7 @@
       var token = context.next();
 
       // Subtract 1 for right-associativity
-      var right = self.parse(context, precedence - 1 | 0);
-      return right != null ? callback(context, left, token, right) : null;
+      return callback(context, left, token, self.parse(context, precedence - 1 | 0));
     };
   };
 
@@ -12271,6 +12135,40 @@
     return null;
   };
 
+  Skew.CPlusPlusTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
+
+  Skew.CPlusPlusTarget.prototype.stopAfterResolve = function() {
+    return false;
+  };
+
+  Skew.CPlusPlusTarget.prototype.requiresIntegerSwitchStatements = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.supportsListForeach = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF8;
+  };
+
+  Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
+    options.define('TARGET', 'CPLUSPLUS');
+  };
+
+  Skew.CPlusPlusTarget.prototype.includeSources = function(sources) {
+    sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
+  };
+
+  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
+    return new Skew.CPlusPlusEmitter(context.options, context.cache);
+  };
+
   Skew.LispTreeTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -12351,40 +12249,6 @@
 
   Skew.CSharpTarget.prototype.createEmitter = function(context) {
     return new Skew.CSharpEmitter(context.options, context.cache);
-  };
-
-  Skew.CPlusPlusTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
-
-  Skew.CPlusPlusTarget.prototype.stopAfterResolve = function() {
-    return false;
-  };
-
-  Skew.CPlusPlusTarget.prototype.requiresIntegerSwitchStatements = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.supportsListForeach = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
-    return Unicode.Encoding.UTF8;
-  };
-
-  Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
-    options.define('TARGET', 'CPLUSPLUS');
-  };
-
-  Skew.CPlusPlusTarget.prototype.includeSources = function(sources) {
-    sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
-  };
-
-  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
-    return new Skew.CPlusPlusEmitter(context.options, context.cache);
   };
 
   Skew.Define = function(name, value) {
@@ -12675,20 +12539,20 @@
     return this;
   };
 
-  Skew.LexingPass = function() {
+  Skew.ParsingPass = function() {
     Skew.Pass.call(this);
   };
 
-  __extends(Skew.LexingPass, Skew.Pass);
+  __extends(Skew.ParsingPass, Skew.Pass);
 
-  Skew.LexingPass.prototype.kind = function() {
-    return Skew.PassKind.LEXING;
+  Skew.ParsingPass.prototype.kind = function() {
+    return Skew.PassKind.PARSING;
   };
 
-  Skew.LexingPass.prototype.run = function(context) {
-    for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
-      var source = list[i];
-      context.tokens.push(Skew.tokenize(context.log, source));
+  Skew.ParsingPass.prototype.run = function(context) {
+    for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
+      var tokens = list[i];
+      Skew.Parsing.parseFile(context.log, tokens, context.global);
     }
   };
 
@@ -12725,20 +12589,20 @@
     context.callGraph = new Skew.CallGraph(context.global);
   };
 
-  Skew.ParsingPass = function() {
+  Skew.LexingPass = function() {
     Skew.Pass.call(this);
   };
 
-  __extends(Skew.ParsingPass, Skew.Pass);
+  __extends(Skew.LexingPass, Skew.Pass);
 
-  Skew.ParsingPass.prototype.kind = function() {
-    return Skew.PassKind.PARSING;
+  Skew.LexingPass.prototype.kind = function() {
+    return Skew.PassKind.LEXING;
   };
 
-  Skew.ParsingPass.prototype.run = function(context) {
-    for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
-      var tokens = list[i];
-      Skew.Parsing.parseFile(context.log, tokens, context.global);
+  Skew.LexingPass.prototype.run = function(context) {
+    for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
+      var source = list[i];
+      context.tokens.push(Skew.tokenize(context.log, source));
     }
   };
 
@@ -16914,6 +16778,11 @@
 
       case Skew.NodeKind.PARAMETERIZE: {
         this._resolveParameterize(node, scope);
+        break;
+      }
+
+      case Skew.NodeKind.PARSE_ERROR: {
+        node.resolvedType = Skew.Type.DYNAMIC;
         break;
       }
 
@@ -21557,7 +21426,7 @@
     var range = context.current().range;
 
     if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
-      return null;
+      return context.createParseError();
     }
 
     return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(range.toString())).appendChild(left).withRange(context.spanSince(left.range)).withInternalRange(range);
@@ -21580,11 +21449,6 @@
         }
 
         var first = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-        if (first == null) {
-          return null;
-        }
-
         var colon = context.current();
 
         if (!expectColon) {
@@ -21593,15 +21457,10 @@
 
         else {
           if (!context.expect(Skew.TokenKind.COLON)) {
-            return null;
+            break;
           }
 
           var second = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-
-          if (second == null) {
-            return null;
-          }
-
           first = Skew.Node.createPair(first, second).withRange(Skew.Range.span(first.range, second.range)).withInternalRange(colon.range);
           node.appendChild(first);
         }
@@ -21614,10 +21473,7 @@
       }
 
       context.skipWhitespace();
-
-      if (!context.expect(end)) {
-        return null;
-      }
+      Skew.Parsing.scanForToken(context, end);
     }
 
     else if (token.kind == Skew.TokenKind.LIST_NEW || token.kind == Skew.TokenKind.SET_NEW) {
@@ -21632,11 +21488,6 @@
 
     while (true) {
       var type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-
-      if (type == null) {
-        return null;
-      }
-
       value.appendChild(type);
 
       if (!context.eat(Skew.TokenKind.COMMA)) {
@@ -21644,10 +21495,7 @@
       }
     }
 
-    if (!context.expect(Skew.TokenKind.PARAMETER_LIST_END)) {
-      return null;
-    }
-
+    Skew.Parsing.scanForToken(context, Skew.TokenKind.PARAMETER_LIST_END);
     return value.withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range));
   };
   Skew.Renaming.unaryPrefixes = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), '!', 'not'), '+', 'positive'), '++', 'increment'), '-', 'negative'), '--', 'decrement'), '~', 'complement');
@@ -21658,7 +21506,7 @@
   Skew.Type._nextID = 0;
   Skew.Environment._nextID = 0;
   Skew.in_PassKind._strings = ['EMITTING', 'PARSING', 'LEXING', 'CALL_GRAPH', 'FOLDING', 'GLOBALIZING', 'INLINING', 'INTERFACE_REMOVAL', 'LAMBDA_LIFTING', 'MERGING', 'MOTION', 'RENAMING', 'RESOLVING'];
-  Skew.in_NodeKind._strings = ['ANNOTATION', 'BLOCK', 'CASE', 'CATCH', 'VARIABLE', 'BREAK', 'CONTINUE', 'EXPRESSION', 'FOR', 'FOREACH', 'IF', 'RETURN', 'SWITCH', 'THROW', 'TRY', 'VARIABLES', 'WHILE', 'ASSIGN_INDEX', 'CALL', 'CAST', 'CONSTANT', 'DOT', 'HOOK', 'INDEX', 'INITIALIZER_LIST', 'INITIALIZER_MAP', 'LAMBDA', 'LAMBDA_TYPE', 'NAME', 'NULL', 'NULL_DOT', 'PAIR', 'PARAMETERIZE', 'SEQUENCE', 'STRING_INTERPOLATION', 'SUPER', 'TYPE', 'TYPE_CHECK', 'XML', 'COMPLEMENT', 'NEGATIVE', 'NOT', 'POSITIVE', 'POSTFIX_DECREMENT', 'POSTFIX_INCREMENT', 'PREFIX_DECREMENT', 'PREFIX_INCREMENT', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'IN', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'NULL_JOIN', 'POWER', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'UNSIGNED_SHIFT_RIGHT', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_NULL', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_SUBTRACT', 'ASSIGN_UNSIGNED_SHIFT_RIGHT'];
+  Skew.in_NodeKind._strings = ['ANNOTATION', 'BLOCK', 'CASE', 'CATCH', 'VARIABLE', 'BREAK', 'CONTINUE', 'EXPRESSION', 'FOR', 'FOREACH', 'IF', 'RETURN', 'SWITCH', 'THROW', 'TRY', 'VARIABLES', 'WHILE', 'ASSIGN_INDEX', 'CALL', 'CAST', 'CONSTANT', 'DOT', 'HOOK', 'INDEX', 'INITIALIZER_LIST', 'INITIALIZER_MAP', 'LAMBDA', 'LAMBDA_TYPE', 'NAME', 'NULL', 'NULL_DOT', 'PAIR', 'PARAMETERIZE', 'PARSE_ERROR', 'SEQUENCE', 'STRING_INTERPOLATION', 'SUPER', 'TYPE', 'TYPE_CHECK', 'XML', 'COMPLEMENT', 'NEGATIVE', 'NOT', 'POSITIVE', 'POSTFIX_DECREMENT', 'POSTFIX_INCREMENT', 'PREFIX_DECREMENT', 'PREFIX_INCREMENT', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'IN', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'NULL_JOIN', 'POWER', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'UNSIGNED_SHIFT_RIGHT', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_NULL', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_SUBTRACT', 'ASSIGN_UNSIGNED_SHIFT_RIGHT'];
   Skew.in_SymbolKind._strings = ['PARAMETER_FUNCTION', 'PARAMETER_OBJECT', 'OBJECT_CLASS', 'OBJECT_ENUM', 'OBJECT_GLOBAL', 'OBJECT_INTERFACE', 'OBJECT_NAMESPACE', 'OBJECT_WRAPPED', 'FUNCTION_ANNOTATION', 'FUNCTION_CONSTRUCTOR', 'FUNCTION_GLOBAL', 'FUNCTION_INSTANCE', 'FUNCTION_LOCAL', 'OVERLOADED_ANNOTATION', 'OVERLOADED_GLOBAL', 'OVERLOADED_INSTANCE', 'VARIABLE_ARGUMENT', 'VARIABLE_ENUM', 'VARIABLE_GLOBAL', 'VARIABLE_INSTANCE', 'VARIABLE_LOCAL'];
   Skew.in_TokenKind._toString = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.COMMENT, 'comment'), Skew.TokenKind.NEWLINE, '"\\n"'), Skew.TokenKind.WHITESPACE, 'whitespace'), Skew.TokenKind.AS, '"as"'), Skew.TokenKind.BREAK, '"break"'), Skew.TokenKind.CASE, '"case"'), Skew.TokenKind.CATCH, '"catch"'), Skew.TokenKind.CONST, '"const"'), Skew.TokenKind.CONTINUE, '"continue"'), Skew.TokenKind.DEFAULT, '"default"'), Skew.TokenKind.DYNAMIC, '"dynamic"'), Skew.TokenKind.ELSE, '"else"'), Skew.TokenKind.FALSE, '"false"'), Skew.TokenKind.FINALLY, '"finally"'), Skew.TokenKind.FOR, '"for"'), Skew.TokenKind.IF, '"if"'), Skew.TokenKind.IN, '"in"'), Skew.TokenKind.IS, '"is"'), Skew.TokenKind.NULL, '"null"'), Skew.TokenKind.RETURN, '"return"'), Skew.TokenKind.SUPER, '"super"'), Skew.TokenKind.SWITCH, '"switch"'), Skew.TokenKind.THROW, '"throw"'), Skew.TokenKind.TRUE, '"true"'), Skew.TokenKind.TRY, '"try"'), Skew.TokenKind.VAR, '"var"'), Skew.TokenKind.WHILE, '"while"'), Skew.TokenKind.ARROW, '"=>"'), Skew.TokenKind.ASSIGN, '"="'), Skew.TokenKind.ASSIGN_BITWISE_AND, '"&="'), Skew.TokenKind.ASSIGN_BITWISE_OR, '"|="'), Skew.TokenKind.ASSIGN_BITWISE_XOR, '"^="'), Skew.TokenKind.ASSIGN_DIVIDE, '"/="'), Skew.TokenKind.ASSIGN_INDEX, '"[]="'), Skew.TokenKind.ASSIGN_MINUS, '"-="'), Skew.TokenKind.ASSIGN_MULTIPLY, '"*="'), Skew.TokenKind.ASSIGN_PLUS, '"+="'), Skew.TokenKind.ASSIGN_POWER, '"**="'), Skew.TokenKind.ASSIGN_REMAINDER, '"%="'), Skew.TokenKind.ASSIGN_SHIFT_LEFT, '"<<="'), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, '">>="'), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, '">>>="'), Skew.TokenKind.BITWISE_AND, '"&"'), Skew.TokenKind.BITWISE_OR, '"|"'), Skew.TokenKind.BITWISE_XOR, '"^"'), Skew.TokenKind.COLON, '":"'), Skew.TokenKind.COMMA, '","'), Skew.TokenKind.COMPARE, '"<=>"'), Skew.TokenKind.DECREMENT, '"--"'), Skew.TokenKind.DIVIDE, '"/"'), Skew.TokenKind.DOT, '"."'), Skew.TokenKind.DOT_DOT, '".."'), Skew.TokenKind.DOUBLE_COLON, '"::"'), Skew.TokenKind.EQUAL, '"=="'), Skew.TokenKind.GREATER_THAN, '">"'), Skew.TokenKind.GREATER_THAN_OR_EQUAL, '">="'), Skew.TokenKind.INCREMENT, '"++"'), Skew.TokenKind.INDEX, '"[]"'), Skew.TokenKind.LEFT_BRACE, '"{"'), Skew.TokenKind.LEFT_BRACKET, '"["'), Skew.TokenKind.LEFT_PARENTHESIS, '"("'), Skew.TokenKind.LESS_THAN, '"<"'), Skew.TokenKind.LESS_THAN_OR_EQUAL, '"<="'), Skew.TokenKind.LIST, '"[...]"'), Skew.TokenKind.LIST_NEW, '"[new]"'), Skew.TokenKind.LOGICAL_AND, '"&&"'), Skew.TokenKind.LOGICAL_OR, '"||"'), Skew.TokenKind.MINUS, '"-"'), Skew.TokenKind.MULTIPLY, '"*"'), Skew.TokenKind.NOT, '"!"'), Skew.TokenKind.NOT_EQUAL, '"!="'), Skew.TokenKind.NULL_DOT, '"?."'), Skew.TokenKind.NULL_JOIN, '"??"'), Skew.TokenKind.PLUS, '"+"'), Skew.TokenKind.POWER, '"**"'), Skew.TokenKind.QUESTION_MARK, '"?"'), Skew.TokenKind.REMAINDER, '"%"'), Skew.TokenKind.RIGHT_BRACE, '"}"'), Skew.TokenKind.RIGHT_BRACKET, '"]"'), Skew.TokenKind.RIGHT_PARENTHESIS, '")"'), Skew.TokenKind.SEMICOLON, '";"'), Skew.TokenKind.SET, '"{...}"'), Skew.TokenKind.SET_NEW, '"{new}"'), Skew.TokenKind.SHIFT_LEFT, '"<<"'), Skew.TokenKind.SHIFT_RIGHT, '">>"'), Skew.TokenKind.TILDE, '"~"'), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, '">>>"'), Skew.TokenKind.ANNOTATION, 'annotation'), Skew.TokenKind.CHARACTER, 'character'), Skew.TokenKind.DOUBLE, 'double'), Skew.TokenKind.END_OF_FILE, 'end of input'), Skew.TokenKind.IDENTIFIER, 'identifier'), Skew.TokenKind.INT, 'integer'), Skew.TokenKind.INT_BINARY, 'integer'), Skew.TokenKind.INT_HEX, 'integer'), Skew.TokenKind.INT_OCTAL, 'integer'), Skew.TokenKind.STRING, 'string'), Skew.TokenKind.PARAMETER_LIST_END, '">"'), Skew.TokenKind.PARAMETER_LIST_START, '"<"'), Skew.TokenKind.XML_END, '">"'), Skew.TokenKind.XML_END_EMPTY, '"/>"'), Skew.TokenKind.XML_START, '"<"'), Skew.TokenKind.XML_START_CLOSE, '"</"'), Skew.TokenKind.STRING_INTERPOLATION_CONTINUE, 'string interpolation'), Skew.TokenKind.STRING_INTERPOLATION_END, 'string interpolation'), Skew.TokenKind.STRING_INTERPOLATION_START, 'string interpolation');
   Terminal.colorToEscapeCode = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Terminal.Color.DEFAULT, 0), Terminal.Color.BOLD, 1), Terminal.Color.GRAY, 90), Terminal.Color.RED, 91), Terminal.Color.GREEN, 92), Terminal.Color.YELLOW, 93), Terminal.Color.BLUE, 94), Terminal.Color.MAGENTA, 95), Terminal.Color.CYAN, 96);
