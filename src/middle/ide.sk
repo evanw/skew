@@ -191,4 +191,31 @@ namespace Skew.IDE {
       return false
     }
   }
+
+  class SymbolsQuery {
+    const source Source
+    const symbols List<Symbol> = []
+
+    def run(symbol ObjectSymbol) {
+      _collectSymbol(symbol)
+
+      for object in symbol.objects {
+        run(object)
+      }
+
+      for function in symbol.functions {
+        _collectSymbol(function)
+      }
+
+      for variable in symbol.variables {
+        _collectSymbol(variable)
+      }
+    }
+
+    def _collectSymbol(symbol Symbol) {
+      if symbol.range != null && symbol.range.source == source && !symbol.isAutomaticallyGenerated {
+        symbols.append(symbol)
+      }
+    }
+  }
 }

@@ -195,11 +195,45 @@ namespace Skew.API {
       }
     }
 
+    var handleSymbolsQuery = (message dynamic) dynamic => {
+      var name string = message.source + ""
+      var symbols List<dynamic> = null
+
+      if inputs != null {
+        for source in inputs {
+          if source.name == name {
+            if result != null && result.global != null {
+              var query = IDE.SymbolsQuery.new(source)
+              query.run(result.global)
+              symbols = query.symbols.map<dynamic>(symbol => {
+                return {
+                  "name": symbol.name,
+                  "kind": symbol.kind.toString,
+                  "parent": symbol.parent?.name,
+                  "fullName": symbol.fullName,
+                  "range": rangeToJSON(symbol.range),
+                }
+              })
+            }
+            break
+          }
+        }
+      }
+
+      return {
+        "type": "symbols-query",
+        "id": message.id,
+        "source": name,
+        "symbols": symbols,
+      }
+    }
+
     var handleMessage = (message dynamic) dynamic => {
       switch message.type {
         case "compile" { return handleCompile(message) }
         case "tooltip-query" { return handleTooltipQuery(message) }
         case "definition-query" { return handleDefinitionQuery(message) }
+        case "symbols-query" { return handleSymbolsQuery(message) }
         default { throw dynamic.Error.new("Unexpected message type '\(message.type)'") }
       }
     }
@@ -208,6 +242,7 @@ namespace Skew.API {
       "compile": handleCompile,
       "tooltipQuery": handleTooltipQuery,
       "definitionQuery": handleDefinitionQuery,
+      "symbolsQuery": handleSymbolsQuery,
       "message": handleMessage,
     }
   }
