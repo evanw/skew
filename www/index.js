@@ -29,6 +29,7 @@
   var STOP_AFTER_RESOLVE = 'STOP_AFTER_RESOLVE';
   var USE_WEB_WORKER = 'USE_WEB_WORKER';
 
+  var compiler = null;
   var start = null;
   var worker = null;
   var isBusy = false;
@@ -95,7 +96,10 @@
       }
     } else {
       start = now();
-      handleResult(Skew.compile(options));
+      if (compiler === null) {
+        compiler = Skew.create();
+      }
+      handleResult(compiler.compile(options));
     }
   }
 

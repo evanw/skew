@@ -1,112 +1,102 @@
-namespace Skew {
-  @entry
-  def main {
-    var api dynamic = null
-    if dynamic.typeof(dynamic.exports) != "undefined" {
-      api = dynamic.exports
-    } else {
-      api = {}
-      (=> dynamic.this)().Skew = api
+namespace Skew.API {
+  def sourcesToJSON(sources List<Source>) dynamic {
+    return sources.map<dynamic>(source => {
+      return {
+        "name": source.name,
+        "contents": source.contents,
+      }
+    })
+  }
+
+  def diagnosticsToJSON(diagnostics List<Diagnostic>) dynamic {
+    return diagnostics.map<dynamic>(diagnostic => {
+      return {
+        "kind": diagnostic.kind.toString.toLowerCase,
+        "range": rangeToJSON(diagnostic.range),
+        "text": diagnostic.text,
+      }
+    })
+  }
+
+  def rangeToJSON(range Range) dynamic {
+    if range == null {
+      return null
     }
 
+    var source = range.source
+    var start = source.indexToLineColumn(range.start)
+    var end = source.indexToLineColumn(range.end)
+
+    return {
+      "source": source.name,
+      "start": {
+        "line": start.line,
+        "column": start.column,
+      },
+      "end": {
+        "line": end.line,
+        "column": end.column,
+      },
+    }
+  }
+
+  def parseOptions (args dynamic, inputs List<Source>) CompilerOptions {
+    if !(args.inputs is List<dynamic>) {
+      throw dynamic.Error.new("Missing the required 'inputs' array")
+    }
+
+    var options = CompilerOptions.new
+    var release = !!args.release
+    options.foldAllConstants = !!args.foldAllConstants || release
+    options.globalizeAllFunctions = !!args.globalizeAllFunctions || release
+    options.inlineAllFunctions = !!args.inlineAllFunctions || release
+    options.jsMangle = !!args.jsMangle || release
+    options.jsMinify = !!args.jsMinify || release
+    options.jsSourceMap = !!args.jsSourceMap
+    options.outputDirectory = args.outputDirectory ? args.outputDirectory + "" : null
+    options.outputFile = args.outputFile ? args.outputFile + "" : null
+    options.stopAfterResolve = !!args.stopAfterResolve
+
+    if args.defines {
+      var defines = args.defines
+      for key in dynamic.Object.keys(defines) as List<string> {
+        options.define(key, defines[key] + "")
+      }
+    }
+
+    if release {
+      options.define("RELEASE", "true")
+    }
+
+    switch args.target {
+      case "c#" { options.target = CSharpTarget.new }
+      case "c++" { options.target = CPlusPlusTarget.new }
+      case "js" { options.target = JavaScriptTarget.new }
+      case "lisp-tree" { options.target = LispTreeTarget.new }
+      default {
+        if !options.createTargetFromExtension {
+          throw dynamic.Error.new("Invalid target '\(args.target)'")
+        }
+      }
+    }
+
+    for i in 0..args.inputs.length {
+      var input = args.inputs[i]
+      inputs.append(Source.new(input.name + "", input.contents + ""))
+    }
+
+    return options
+  }
+
+  var createCompilerInstance = () dynamic => {
     var result CompilerResult = null
     var inputs List<Source> = null
     var log Log = null
 
-    var parseOptions = (args dynamic, inputs List<Source>) CompilerOptions => {
-      if !(args.inputs is List<dynamic>) {
-        throw dynamic.Error.new("Missing the required 'inputs' array")
-      }
-
-      var options = CompilerOptions.new
-      var release = !!args.release
-      options.foldAllConstants = !!args.foldAllConstants || release
-      options.globalizeAllFunctions = !!args.globalizeAllFunctions || release
-      options.inlineAllFunctions = !!args.inlineAllFunctions || release
-      options.jsMangle = !!args.jsMangle || release
-      options.jsMinify = !!args.jsMinify || release
-      options.jsSourceMap = !!args.jsSourceMap
-      options.outputDirectory = args.outputDirectory ? args.outputDirectory + "" : null
-      options.outputFile = args.outputFile ? args.outputFile + "" : null
-      options.stopAfterResolve = !!args.stopAfterResolve
-
-      if args.defines {
-        var defines = args.defines
-        for key in dynamic.Object.keys(defines) as List<string> {
-          options.define(key, defines[key] + "")
-        }
-      }
-
-      if release {
-        options.define("RELEASE", "true")
-      }
-
-      switch args.target {
-        case "c#" { options.target = CSharpTarget.new }
-        case "c++" { options.target = CPlusPlusTarget.new }
-        case "js" { options.target = JavaScriptTarget.new }
-        case "lisp-tree" { options.target = LispTreeTarget.new }
-        default {
-          if !options.createTargetFromExtension {
-            throw dynamic.Error.new("Invalid target '\(args.target)'")
-          }
-        }
-      }
-
-      for i in 0..args.inputs.length {
-        var input = args.inputs[i]
-        inputs.append(Source.new(input.name + "", input.contents + ""))
-      }
-
-      return options
-    }
-
-    var rangeToJSON = (range Range) dynamic => {
-      if range == null {
-        return null
-      }
-
-      var source = range.source
-      var start = source.indexToLineColumn(range.start)
-      var end = source.indexToLineColumn(range.end)
-
-      return {
-        "source": source.name,
-        "start": {
-          "line": start.line,
-          "column": start.column,
-        },
-        "end": {
-          "line": end.line,
-          "column": end.column,
-        },
-      }
-    }
-
-    var diagnosticsToJSON = (diagnostics List<Diagnostic>) dynamic => {
-      return diagnostics.map<dynamic>(diagnostic => {
-        return {
-          "kind": diagnostic.kind.toString.toLowerCase,
-          "range": rangeToJSON(diagnostic.range),
-          "text": diagnostic.text,
-        }
-      })
-    }
-
-    var sourcesToJSON = (sources List<Source>) dynamic => {
-      return sources.map<dynamic>(source => {
-        return {
-          "name": source.name,
-          "contents": source.contents,
-        }
-      })
-    }
-
     var handleCompile = (message dynamic) dynamic => {
       inputs = []
       log = Log.new
-      var options = parseOptions(message, inputs)
-      result = compile(log, options, inputs)
+      result = compile(log, parseOptions(message, inputs), inputs)
 
       return {
         "type": "compile",
@@ -177,15 +167,31 @@ namespace Skew {
       }
     }
 
-    # JavaScript API
-    api.compile = handleCompile
-    api.tooltipQuery = handleTooltipQuery
-    api.message = handleMessage
+    return {
+      "compile": handleCompile,
+      "tooltipQuery": handleTooltipQuery,
+      "message": handleMessage,
+    }
+  }
 
+  @entry
+  def main {
     # Web Worker API
     if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && dynamic.self is dynamic.WorkerGlobalScope {
+      var instance = createCompilerInstance()
       dynamic.onmessage = (event dynamic) => {
-        dynamic.postMessage(handleMessage(event.data))
+        dynamic.postMessage(instance.handleMessage(event.data))
+      }
+    }
+
+    # JavaScript API
+    else {
+      if dynamic.typeof(dynamic.exports) != "undefined" {
+        dynamic.exports.create = createCompilerInstance
+      } else {
+        (=> dynamic.this)().Skew = {
+          "create": createCompilerInstance
+        }
       }
     }
   }
