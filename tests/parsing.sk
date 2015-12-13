@@ -1,0 +1,351 @@
+namespace Skew.Tests {
+  def testParsing {
+
+test("
+def main {
+  while true {} else {}
+}
+", "
+<stdin>:2:17: error: Unexpected \"else\"
+  while true {} else {}
+                ~~~~
+")
+
+test("
+var x = 0b2
+", "
+<stdin>:1:10: error: Expected \"\\n\" but found identifier
+var x = 0b2
+         ~~
+")
+
+test("
+var x = 0b02
+", "
+<stdin>:1:12: error: Expected \"\\n\" but found integer
+var x = 0b02
+           ^
+")
+
+test("
+var x = 0o8
+", "
+<stdin>:1:10: error: Expected \"\\n\" but found identifier
+var x = 0o8
+         ~~
+")
+
+test("
+var x = 0o08
+", "
+<stdin>:1:12: error: Expected \"\\n\" but found integer
+var x = 0o08
+           ^
+")
+
+test("
+var x = 0xG
+", "
+<stdin>:1:10: error: Expected \"\\n\" but found identifier
+var x = 0xG
+         ~~
+")
+
+test("
+var x = 0x0G
+", "
+<stdin>:1:12: error: Expected \"\\n\" but found identifier
+var x = 0x0G
+           ^
+")
+
+test("
+var ns.foo int
+", "
+<stdin>:1:7: error: Expected \"\\n\" but found \".\"
+var ns.foo int
+      ^
+<stdin>:1:5: error: The implicitly typed variable \"ns\" must be initialized
+var ns.foo int
+    ~~
+")
+
+test("
+def ns.foo int
+", "
+<stdin>:1:7: error: Expected \"\\n\" but found \".\"
+def ns.foo int
+      ^
+<stdin>:1:5: error: Non-imported function \"ns\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+def ns.foo int
+    ~~
+")
+
+test("
+def main {
+  var foo = dynamic
+}
+", "
+<stdin>:2:20: error: Expected \".\" but found \"\\n\"
+  var foo = dynamic
+                   ^
+")
+
+# Test splitting the ">>" token
+test("
+var x List<int>>
+", "
+<stdin>:1:16: error: Expected \"\\n\" but found \">\"
+var x List<int>>
+               ^
+")
+
+# Test splitting the ">=" token
+test("
+var x List<int>==
+", "
+<stdin>:1:17: error: Unexpected \"=\"
+var x List<int>==
+                ^
+")
+
+# Test splitting the ">>>" token
+test("
+var x List<int>>>
+", "
+<stdin>:1:16: error: Expected \"\\n\" but found \">>\"
+var x List<int>>>
+               ~~
+")
+
+# Test splitting the ">>=" token
+test("
+var x List<int>>=
+", "
+<stdin>:1:16: error: Expected \"\\n\" but found \">=\"
+var x List<int>>=
+               ~~
+")
+
+# Test splitting the ">>>=" token
+test("
+var x List<int>>>=
+", "
+<stdin>:1:16: error: Expected \"\\n\" but found \">>=\"
+var x List<int>>>=
+               ~~~
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\()\"
+", "
+<stdin>:1:12: error: Unexpected string interpolation
+var x = \"\\()\"
+           ~~
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\(1)\\()\"
+", "
+<stdin>:1:16: error: Unexpected string interpolation
+var x = \"\\(1)\\()\"
+               ~~
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\([)\\(])\"
+", "
+<stdin>:1:14: error: Syntax error \"\\\"
+var x = \"\\([)\\(])\"
+             ^
+<stdin>:1:13: error: Unexpected \")\"
+var x = \"\\([)\\(])\"
+            ^
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\({)\\(})\"
+", "
+<stdin>:1:14: error: Syntax error \"\\\"
+var x = \"\\({)\\(})\"
+             ^
+<stdin>:1:13: error: Unexpected \")\"
+var x = \"\\({)\\(})\"
+            ^
+")
+
+# Test a string interpolation error case
+test("
+var x = \"\\(()\\())\"
+", "
+<stdin>:1:14: error: Syntax error \"\\\"
+var x = \"\\(()\\())\"
+             ^
+<stdin>:1:15: error: Expected \"=>\" but found end of input
+var x = \"\\(()\\())\"
+              ^
+
+")
+
+# Test XML tag mismatch
+test("
+var foo = <Foo></Foo.Bar>
+", "
+<stdin>:1:18: error: Expected \"Foo\" but found \"Foo.Bar\" in XML literal
+var foo = <Foo></Foo.Bar>
+                 ~~~~~~~
+<stdin>:1:12: note: Attempted to match opening tag here
+var foo = <Foo></Foo.Bar>
+           ~~~
+<stdin>:1:12: error: \"Foo\" is not declared
+var foo = <Foo></Foo.Bar>
+           ~~~
+")
+
+# Test XML literals
+test("
+var foo = <dynamic.Foo/>
+", "
+<stdin>:1:12: error: Expected identifier but found \"dynamic\"
+var foo = <dynamic.Foo/>
+           ~~~~~~~
+")
+
+# Test XML attribute precedence
+test("
+var foo = <Foo
+  foo=bar
+  foo=++bar
+  foo=bar++
+  foo=(bar + bar)
+  foo=bar + bar
+/>
+", "
+<stdin>:6:11: error: Expected \">\" but found \"+\"
+  foo=bar + bar
+          ^
+")
+
+# Test parsing recovery at obvious statement boundaries
+test("
+def test {
+  foo(
+  var x
+  foo(
+  const x
+  foo(
+  while true {}
+  foo(
+  for i in 0..5 {}
+  foo(
+  if true {}
+  foo(
+  else {}
+  foo(
+  return
+  foo(
+  break
+  foo(
+  continue
+}
+", "
+<stdin>:3:3: error: Unexpected \"var\"
+  var x
+  ~~~
+<stdin>:5:3: error: Unexpected \"const\"
+  const x
+  ~~~~~
+<stdin>:7:3: error: Unexpected \"while\"
+  while true {}
+  ~~~~~
+<stdin>:9:3: error: Unexpected \"for\"
+  for i in 0..5 {}
+  ~~~
+<stdin>:11:3: error: Unexpected \"if\"
+  if true {}
+  ~~
+<stdin>:13:3: error: Unexpected \"else\"
+  else {}
+  ~~~~
+<stdin>:15:3: error: Unexpected \"return\"
+  return
+  ~~~~~~
+<stdin>:17:3: error: Unexpected \"break\"
+  break
+  ~~~~~
+<stdin>:19:3: error: Unexpected \"continue\"
+  continue
+  ~~~~~~~~
+<stdin>:2:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:3:7: error: The implicitly typed variable \"x\" must be initialized
+  var x
+      ^
+<stdin>:4:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:6:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:8:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:10:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:12:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:14:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:16:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:16:3: error: Cannot return a value inside a function without a return type
+  foo(
+  ~~~~
+<stdin>:17:3: error: Cannot use \"break\" outside a loop
+  break
+  ~~~~~
+<stdin>:18:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:19:3: error: Cannot use \"continue\" outside a loop
+  continue
+  ~~~~~~~~
+<stdin>:3:7: warning: Local variable \"x\" is never read
+  var x
+      ^
+")
+
+# Test parsing recovery after "var" and "const"
+test("
+def test {
+  var
+  var x = 0
+  const
+  const y = 0
+}
+", "
+<stdin>:2:6: error: Expected identifier but found \"\\n\"
+  var
+     ^
+<stdin>:4:8: error: Expected identifier but found \"\\n\"
+  const
+       ^
+<stdin>:3:7: warning: Local variable \"x\" is never read
+  var x = 0
+      ^
+<stdin>:5:9: warning: Local variable \"y\" is never read
+  const y = 0
+        ^
+")
+
+  }
+}

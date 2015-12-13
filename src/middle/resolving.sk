@@ -10,9 +10,7 @@ namespace Skew {
 
     over run(context PassContext) {
       context.cache.loadGlobals(context.log, context.global)
-      if !context.log.hasErrors {
-        Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log).resolve
-      }
+      Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log).resolve
       context.isResolvePassComplete = true
     }
   }
@@ -2847,14 +2845,19 @@ namespace Skew.Resolving {
       var tag = node.xmlTag
       var attributes = node.xmlAttributes
       var children = node.xmlChildren
+      var initialErrorCount = _log.errorCount
       _resolveAsParameterizedType(tag, scope)
 
       # Make sure there's a constructor to call
       if _findMember(tag.resolvedType, "new") == null {
-        _log.semanticErrorXMLCannotConstruct(node.range, tag.resolvedType)
         attributes.removeChildren
         children.removeChildren
         attributes.resolvedType = .DYNAMIC
+
+        # Only report an error if there isn't one already
+        if _log.errorCount == initialErrorCount {
+          _log.semanticErrorXMLCannotConstruct(node.range, tag.resolvedType)
+        }
         return
       }
 

@@ -214,6 +214,7 @@ namespace Skew.Tests {
     testJavaScript
     testJavaScriptMangle
     testJavaScriptMinify
+    testParsing
     testSimple
 
     # Unit tests

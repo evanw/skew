@@ -260,7 +260,7 @@ namespace Skew {
     }
 
     # Every token stream ends in END_OF_FILE
-    tokens.append(Token.new(Range.new(source, count, count), .END_OF_FILE))
+    tokens.append(Token.new(Range.new(source, yy_cp, yy_cp), .END_OF_FILE))
 
     # Also return preprocessor token presence so the preprocessor can be avoided
     return tokens

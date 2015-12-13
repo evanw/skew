@@ -20,6 +20,46 @@ namespace Skew.Parsing {
   var expressionParser Pratt
   var typeParser Pratt
 
+  enum TokenScan {
+    NORMAL
+    STOP_BEFORE_NEXT_STATEMENT
+  }
+
+  # Parser recovery is done by skipping to the next closing token after an error
+  def scanForToken(context ParserContext, kind TokenKind, scan TokenScan) {
+    if context.expect(kind) {
+      return
+    }
+
+    # Scan until the next closing token
+    while !context.peek(.END_OF_FILE) {
+      if context.eat(kind) {
+        return
+      }
+
+      switch context.current.kind {
+        case .RIGHT_PARENTHESIS, .RIGHT_BRACKET, .RIGHT_BRACE {
+          return
+        }
+
+        case .NEWLINE {
+          if scan == .STOP_BEFORE_NEXT_STATEMENT {
+            return
+          }
+        }
+
+        # Optionally recover parsing before the next statement if it's unambiguous
+        case .BREAK, .CONTINUE, .ELSE, .FOR, .IF, .RETURN, .VAR, .WHILE {
+          if scan == .STOP_BEFORE_NEXT_STATEMENT {
+            return
+          }
+        }
+      }
+
+      context.next
+    }
+  }
+
   def parseIntLiteral(log Log, range Range) Box<int> {
     var text = range.toString
     var isNegative = text.startsWith("-") # Parse negative signs for use with the "--define" flag
@@ -101,17 +141,17 @@ namespace Skew.Parsing {
   }
 
   def parseTrailingComment(context ParserContext, comments List<string>) List<string> {
-    if context.peek(.COMMENT) {
-      var range = context.next.range
-      comments ?= []
-      var text = range.source.contents.slice(range.start + 1, range.end)
-      if text[text.count - 1] != '\n' {
-        text += "\n"
-      }
-      comments.append(text)
-      return comments
+    if !context.peek(.COMMENT) {
+      return null
     }
-    return null
+    var range = context.next.range
+    comments ?= []
+    var text = range.source.contents.slice(range.start + 1, range.end)
+    if text[text.count - 1] != '\n' {
+      text += "\n"
+    }
+    comments.append(text)
+    return comments
   }
 
   def parseAnnotations(context ParserContext, annotations List<Node>) List<Node> {
@@ -137,9 +177,7 @@ namespace Skew.Parsing {
       var token = context.current
       if context.eat(.LEFT_PARENTHESIS) {
         var call = Node.createCall(value)
-        if !parseCommaSeparatedList(context, call, .RIGHT_PARENTHESIS) {
-          return null
-        }
+        parseCommaSeparatedList(context, call, .RIGHT_PARENTHESIS)
         value = call.withRange(context.spanSince(range)).withInternalRange(context.spanSince(token.range))
       }
 
@@ -495,7 +533,11 @@ namespace Skew.Parsing {
       }
 
       # Merge "else" statements with the previous "if"
-      if context.peek(.ELSE) && previous != null && previous.kind == .IF && previous.ifFalse == null {
+      if context.peek(.ELSE) {
+        var isValid = previous != null && previous.kind == .IF && previous.ifFalse == null
+        if !isValid {
+          context.unexpectedToken
+        }
         context.next
 
         # Match "else if"
@@ -506,8 +548,12 @@ namespace Skew.Parsing {
           }
           var falseBlock = Node.createBlock.withRange(statement.range).appendChild(statement)
           falseBlock.comments = comments
-          previous.appendChild(falseBlock)
-          previous = statement
+          if isValid {
+            previous.appendChild(falseBlock)
+            previous = statement
+          } else {
+            previous = null
+          }
         }
 
         # Match "else"
@@ -517,8 +563,12 @@ namespace Skew.Parsing {
             return false
           }
           falseBlock.comments = comments
-          previous.appendChild(falseBlock)
-          previous = falseBlock
+          if isValid {
+            previous.appendChild(falseBlock)
+            previous = falseBlock
+          } else {
+            previous = null
+          }
         }
       }
 
@@ -564,7 +614,8 @@ namespace Skew.Parsing {
       else {
         var statement = parseStatement(context)
         if statement == null {
-          break
+          scanForToken(context, .NEWLINE, .STOP_BEFORE_NEXT_STATEMENT)
+          continue
         }
 
         # There is a well-known bug in JavaScript where a return statement
@@ -590,9 +641,10 @@ namespace Skew.Parsing {
           previous.comments = comments
         }
         context.eat(.NEWLINE)
-      } else if context.peek(.RIGHT_BRACE) || context.peek(.XML_START_CLOSE) ||
-          !context.peek(.ELSE) && !context.peek(.CATCH) && !context.peek(.FINALLY) && !context.expect(.NEWLINE) {
+      } else if context.peek(.RIGHT_BRACE) || context.peek(.XML_START_CLOSE) {
         break
+      } else if !context.peek(.ELSE) && !context.peek(.CATCH) && !context.peek(.FINALLY) {
+        context.expect(.NEWLINE)
       }
     }
 
@@ -675,6 +727,16 @@ namespace Skew.Parsing {
           return false
         }
         usingTypes = true
+      }
+
+      # Optional arguments aren't supported yet
+      var assign = context.current.range
+      if context.eat(.ASSIGN) {
+        var value = expressionParser.parse(context, .LOWEST)
+        if value == null {
+          return false
+        }
+        context.log.syntaxErrorOptionalArgument(context.spanSince(assign))
       }
 
       symbol.arguments.append(arg)
@@ -1156,22 +1218,23 @@ namespace Skew.Parsing {
     }
   }
 
-  def parseCommaSeparatedList(context ParserContext, parent Node, stop TokenKind) bool {
+  def parseCommaSeparatedList(context ParserContext, parent Node, stop TokenKind) {
     var isFirst = true
     context.skipWhitespace
     while !context.eat(stop) {
       if !isFirst && !context.expect(.COMMA) {
-        return false
+        scanForToken(context, stop, .STOP_BEFORE_NEXT_STATEMENT)
+        break
       }
       var value = expressionParser.parse(context, .LOWEST)
       if value == null {
-        return false
+        scanForToken(context, stop, .STOP_BEFORE_NEXT_STATEMENT)
+        break
       }
       parent.appendChild(value)
       context.skipWhitespace
       isFirst = false
     }
-    return true
   }
 
   def parseHexCharacter(c int) int {
@@ -1599,9 +1662,7 @@ namespace Skew.Parsing {
     pratt.parselet(.LEFT_PARENTHESIS, .UNARY_POSTFIX).infix = (context, left) => {
       var node = Node.createCall(left)
       var token = context.next
-      if !parseCommaSeparatedList(context, node, .RIGHT_PARENTHESIS) {
-        return null
-      }
+      parseCommaSeparatedList(context, node, .RIGHT_PARENTHESIS)
       return node.withRange(context.spanSince(left.range)).withInternalRange(context.spanSince(token.range))
     }
 

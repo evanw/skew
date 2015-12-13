@@ -10,54 +10,6 @@ var foo Foo<dynamic> = null
 ")
 
 test("
-var x = 0b2
-", "
-<stdin>:1:10: error: Expected \"\\n\" but found identifier
-var x = 0b2
-         ~~
-")
-
-test("
-var x = 0b02
-", "
-<stdin>:1:12: error: Expected \"\\n\" but found integer
-var x = 0b02
-           ^
-")
-
-test("
-var x = 0o8
-", "
-<stdin>:1:10: error: Expected \"\\n\" but found identifier
-var x = 0o8
-         ~~
-")
-
-test("
-var x = 0o08
-", "
-<stdin>:1:12: error: Expected \"\\n\" but found integer
-var x = 0o08
-           ^
-")
-
-test("
-var x = 0xG
-", "
-<stdin>:1:10: error: Expected \"\\n\" but found identifier
-var x = 0xG
-         ~~
-")
-
-test("
-var x = 0x0G
-", "
-<stdin>:1:12: error: Expected \"\\n\" but found identifier
-var x = 0x0G
-           ^
-")
-
-test("
 def main List<double> {
   return [
     0,
@@ -675,22 +627,6 @@ var ns2 int
 <stdin>:4:7: note: The previous declaration is here
 class ns2.Foo {}
       ~~~
-")
-
-test("
-var ns.foo int
-", "
-<stdin>:1:7: error: Expected \"\\n\" but found \".\"
-var ns.foo int
-      ^
-")
-
-test("
-def ns.foo int
-", "
-<stdin>:1:7: error: Expected \"\\n\" but found \".\"
-def ns.foo int
-      ^
 ")
 
 test("
@@ -2541,6 +2477,18 @@ namespace Foo {
 <stdin>:4:3: error: Cannot use this declaration here
   def new
   ~~~~~~~
+<stdin>:4:7: error: Non-imported function \"new\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+  def new
+      ~~~
+<stdin>:9:7: error: Non-imported function \"bar2\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+  def bar2
+      ~~~~
+<stdin>:2:7: error: The implicitly typed variable \"foo\" must be initialized
+  var foo
+      ~~~
+<stdin>:8:7: error: The implicitly typed variable \"foo2\" must be initialized
+  var foo2
+      ~~~~
 ")
 
 test("
@@ -2626,16 +2574,6 @@ def main {
   else {} # CC
 }
 ", "
-")
-
-test("
-def main {
-  while true {} else {}
-}
-", "
-<stdin>:2:17: error: Unexpected \"else\"
-  while true {} else {}
-                ~~~~
 ")
 
 test("
@@ -3549,16 +3487,6 @@ def main {
 <stdin>:33:7: error: \"gfun\" is not declared on type \"Bar\"
   Bar.gfun
       ~~~~
-")
-
-test("
-def main {
-  var foo = dynamic
-}
-", "
-<stdin>:2:20: error: Expected \".\" but found \"\\n\"
-  var foo = dynamic
-                   ^
 ")
 
 test("
@@ -4543,6 +4471,18 @@ namespace Foo {
 <stdin>:4:3: error: Cannot use this declaration here
   def new
   ~~~~~~~
+<stdin>:4:7: error: Non-imported function \"new\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+  def new
+      ~~~
+<stdin>:9:7: error: Non-imported function \"bar2\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+  def bar2
+      ~~~~
+<stdin>:2:7: error: The implicitly typed variable \"foo\" must be initialized
+  var foo
+      ~~~
+<stdin>:8:7: error: The implicitly typed variable \"foo2\" must be initialized
+  var foo2
+      ~~~~
 ")
 
 test("
@@ -5934,18 +5874,18 @@ class Baz : Bar {
 test("
 def foo(x bool = true) {}
 ", "
-<stdin>:1:16: error: Expected \",\" but found \"=\"
+<stdin>:1:16: error: Optional arguments aren't supported yet
 def foo(x bool = true) {}
-               ^
+               ~~~~~~
 ")
 
 # Forbid default values in function arguments
 test("
 var foo = (x bool = true) => {}
 ", "
-<stdin>:1:19: error: Expected \",\" but found \"=\"
+<stdin>:1:19: error: Optional arguments aren't supported yet
 var foo = (x bool = true) => {}
-                  ^
+                  ~~~~~~
 ")
 
 # Check for bugs with symbol merging and generics
@@ -6366,51 +6306,6 @@ def main {
       ~~~
 ")
 
-# Test a string interpolation error case
-test("
-var x = \"\\()\"
-", "
-<stdin>:1:12: error: Unexpected string interpolation
-var x = \"\\()\"
-           ~~
-")
-
-# Test a string interpolation error case
-test("
-var x = \"\\(1)\\()\"
-", "
-<stdin>:1:16: error: Unexpected string interpolation
-var x = \"\\(1)\\()\"
-               ~~
-")
-
-# Test a string interpolation error case
-test("
-var x = \"\\([)\\(])\"
-", "
-<stdin>:1:14: error: Syntax error \"\\\"
-var x = \"\\([)\\(])\"
-             ^
-")
-
-# Test a string interpolation error case
-test("
-var x = \"\\({)\\(})\"
-", "
-<stdin>:1:14: error: Syntax error \"\\\"
-var x = \"\\({)\\(})\"
-             ^
-")
-
-# Test a string interpolation error case
-test("
-var x = \"\\(()\\())\"
-", "
-<stdin>:1:14: error: Syntax error \"\\\"
-var x = \"\\(()\\())\"
-             ^
-")
-
 # Test string interpolation on different types
 test("
 class NoToString {}
@@ -6427,51 +6322,6 @@ var x = \"\\(NoToString.new)\"
 <stdin>:6:12: error: Cannot convert from type \"NoToString\" to type \"string\"
 var y = \"\\(WrongToString.new)\"
            ~~~~~~~~~~~~~~~~~
-")
-
-# Test splitting the ">>" token
-test("
-var x y<x>>
-", "
-<stdin>:1:11: error: Expected \"\\n\" but found \">\"
-var x y<x>>
-          ^
-")
-
-# Test splitting the ">=" token
-test("
-var x y<x>==
-", "
-<stdin>:1:12: error: Unexpected \"=\"
-var x y<x>==
-           ^
-")
-
-# Test splitting the ">>>" token
-test("
-var x y<x>>>
-", "
-<stdin>:1:11: error: Expected \"\\n\" but found \">>\"
-var x y<x>>>
-          ~~
-")
-
-# Test splitting the ">>=" token
-test("
-var x y<x>>=
-", "
-<stdin>:1:11: error: Expected \"\\n\" but found \">=\"
-var x y<x>>=
-          ~~
-")
-
-# Test splitting the ">>>=" token
-test("
-var x y<x>>>=
-", "
-<stdin>:1:11: error: Expected \"\\n\" but found \">>=\"
-var x y<x>>>=
-          ~~~
 ")
 
 # Test error messages about forbidden operator customizations
@@ -6565,27 +6415,28 @@ var bar2 = <Foo.Bar></Foo.Bar>
 var baz = <Foo.Baz/>
 var baz2 = <Foo.Baz></Foo.Baz>
 var i = <int/>
+var nope = <Nope/>
 
 class Foo {
   class Bar {
   }
 }
+
+@import
+var Nope dynamic
 ", "
 <stdin>:5:16: error: \"Baz\" is not declared on type \"Foo\"
 var baz = <Foo.Baz/>
                ~~~
-<stdin>:5:11: error: Cannot construct type \"dynamic\"
-var baz = <Foo.Baz/>
-          ~~~~~~~~~~
 <stdin>:6:17: error: \"Baz\" is not declared on type \"Foo\"
 var baz2 = <Foo.Baz></Foo.Baz>
                 ~~~
-<stdin>:6:12: error: Cannot construct type \"dynamic\"
-var baz2 = <Foo.Baz></Foo.Baz>
-           ~~~~~~~~~~~~~~~~~~~
 <stdin>:7:9: error: Cannot construct type \"int\"
 var i = <int/>
         ~~~~~~
+<stdin>:8:12: error: Cannot construct type \"dynamic\"
+var nope = <Nope/>
+           ~~~~~~~
 ")
 
 # Test child element function error
@@ -6633,18 +6484,6 @@ var foo4 = <Foo foo=1/>.foo
 <stdin>:4:25: error: \"foo\" is not declared on type \"Foo\"
 var foo4 = <Foo foo=1/>.foo
                         ~~~
-")
-
-# Test XML tag mismatch
-test("
-var foo = <Foo></Foo.Bar>
-", "
-<stdin>:1:18: error: Expected \"Foo\" but found \"Foo.Bar\" in XML literal
-var foo = <Foo></Foo.Bar>
-                 ~~~~~~~
-<stdin>:1:12: note: Attempted to match opening tag here
-var foo = <Foo></Foo.Bar>
-           ~~~
 ")
 
 # Test multi-line XML literals
@@ -6696,9 +6535,6 @@ var foo =
 <stdin>:2:4: error: \"Foo\" is not declared
   <Foo>
    ~~~
-<stdin>:2:3: error: Cannot construct type \"dynamic\"
-  <Foo>
-  ~~~~~
 ")
 
 # Test XML literal with child comment
@@ -6712,9 +6548,6 @@ var foo =
 <stdin>:2:4: error: \"Foo\" is not declared
   <Foo>
    ~~~
-<stdin>:2:3: error: Cannot construct type \"dynamic\"
-  <Foo>
-  ~~~~~
 ")
 
 # Test XML literal with child comment
@@ -6728,9 +6561,6 @@ var foo =
 <stdin>:2:4: error: \"Foo\" is not declared
   <Foo>
    ~~~
-<stdin>:2:3: error: Cannot construct type \"dynamic\"
-  <Foo>
-  ~~~~~
 ")
 
 # Test XML children precedence
@@ -6866,21 +6696,6 @@ class Foo {
 <stdin>:26:6: error: All control paths for \"<lambda>\" must return a value of type \"bool\"
     (=> { 0 })()
      ~~~~~~~~
-")
-
-# Test XML attribute precedence
-test("
-var foo = <Foo
-  foo=bar
-  foo=++bar
-  foo=bar++
-  foo=(bar + bar)
-  foo=bar + bar
-/>
-", "
-<stdin>:6:11: error: Expected \">\" but found \"+\"
-  foo=bar + bar
-          ^
 ")
 
 # Test XML attribute type checking

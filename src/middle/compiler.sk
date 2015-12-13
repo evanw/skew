@@ -203,9 +203,9 @@ namespace Skew {
     var totalTimer = Timer.new
     totalTimer.start
 
-    # Run all passes, errors stop compilation
+    # Run all passes, stop compilation if there are errors after resolving (wait until then to make IDE mode better)
     for pass in options.passes {
-      if log.hasErrors {
+      if context.isResolvePassComplete && log.hasErrors {
         break
       }
       if pass.shouldRun {

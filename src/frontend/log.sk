@@ -116,8 +116,8 @@ namespace Skew {
       }
     }
 
-    def semanticErrorXMLMissingAppend(range Range, type Type) {
-      error(range, "Implement a function called \"<>...</>\" on type \"\(type)\" to add support for child elements")
+    def syntaxErrorOptionalArgument(range Range) {
+      error(range, "Optional arguments aren't supported yet")
     }
   }
 
@@ -157,6 +157,10 @@ namespace Skew {
 
     def semanticWarningUnusedExpression(range Range) {
       warning(range, "Unused expression")
+    }
+
+    def semanticErrorXMLMissingAppend(range Range, type Type) {
+      error(range, "Implement a function called \"<>...</>\" on type \"\(type)\" to add support for child elements")
     }
 
     def semanticErrorComparisonOperatorNotInt(range Range) {

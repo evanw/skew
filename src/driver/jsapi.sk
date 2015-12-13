@@ -40,7 +40,7 @@ namespace Skew.API {
     }
   }
 
-  def parseOptions (args dynamic, inputs List<Source>) CompilerOptions {
+  def parseOptions(args dynamic, inputs List<Source>) CompilerOptions {
     if !(args.inputs is List<dynamic>) {
       throw dynamic.Error.new("Missing the required 'inputs' array")
     }
@@ -88,7 +88,7 @@ namespace Skew.API {
     return options
   }
 
-  var createCompilerInstance = () dynamic => {
+  var createCompilerInstance fn() dynamic = => {
     var result CompilerResult = null
     var inputs List<Source> = null
     var log Log = null
