@@ -120,18 +120,18 @@ namespace Skew {
     var hasWarnings = log.hasWarnings
     var summary = ""
     if hasWarnings {
-      summary += "\(log.warningCount) warning\(PrettyPrint.plural(log.warningCount))"
+      summary += PrettyPrint.plural(log.warningCount, "warning")
       if hasErrors {
         summary += " and "
       }
     }
     if hasErrors {
-      summary += "\(log.errorCount) error\(PrettyPrint.plural(log.errorCount))"
+      summary += PrettyPrint.plural(log.errorCount, "error")
     }
     if hasWarnings || hasErrors {
       Terminal.write(summary + " generated")
       printWithColor(.GRAY, diagnosticCount >= log.diagnostics.count ? "\n" :
-        " (only showing \(diagnosticLimit) message\(PrettyPrint.plural(diagnosticLimit)), use \"--message-limit=0\" to see all)\n")
+        " (only showing \(PrettyPrint.plural(diagnosticLimit, "message")), use \"--message-limit=0\" to see all)\n")
     }
   }
 

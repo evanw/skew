@@ -88,6 +88,10 @@ namespace Skew {
 }
 
 namespace Skew.PrettyPrint {
+  def plural(value int, word string) string {
+    return "\(value) \(word)\(plural(value))"
+  }
+
   def plural(value int) string {
     return value == 1 ? "" : "s"
   }

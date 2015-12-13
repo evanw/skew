@@ -714,7 +714,7 @@
     var summary = '';
 
     if (hasWarnings) {
-      summary += log.warningCount.toString() + ' warning' + (log.warningCount == 1 ? '' : 's');
+      summary += Skew.PrettyPrint.plural1(log.warningCount, 'warning');
 
       if (hasErrors) {
         summary += ' and ';
@@ -722,12 +722,12 @@
     }
 
     if (hasErrors) {
-      summary += log.errorCount.toString() + ' error' + (log.errorCount == 1 ? '' : 's');
+      summary += Skew.PrettyPrint.plural1(log.errorCount, 'error');
     }
 
     if (hasWarnings || hasErrors) {
       process.stdout.write(summary + ' generated');
-      Skew.printWithColor(Terminal.Color.GRAY, diagnosticCount >= log.diagnostics.length ? '\n' : ' (only showing ' + diagnosticLimit.toString() + ' message' + (diagnosticLimit == 1 ? '' : 's') + ', use "--message-limit=0" to see all)\n');
+      Skew.printWithColor(Terminal.Color.GRAY, diagnosticCount >= log.diagnostics.length ? '\n' : ' (only showing ' + Skew.PrettyPrint.plural1(diagnosticLimit, 'message') + ', use "--message-limit=0" to see all)\n');
     }
   };
 
@@ -8527,6 +8527,10 @@
 
   Skew.PrettyPrint = {};
 
+  Skew.PrettyPrint.plural1 = function(value, word) {
+    return value.toString() + ' ' + word + (value == 1 ? '' : 's');
+  };
+
   Skew.PrettyPrint.joinQuoted = function(parts, trailing) {
     return Skew.PrettyPrint.join(parts.map(function(part) {
       return '"' + part + '"';
@@ -9279,7 +9283,7 @@
   };
 
   Skew.Log._expectedCountText = function(singular, expected, found) {
-    return 'Expected ' + expected.toString() + ' ' + singular + (expected == 1 ? '' : 's') + ' but found ' + found.toString() + ' ' + singular + (found == 1 ? '' : 's');
+    return 'Expected ' + Skew.PrettyPrint.plural1(expected, singular) + ' but found ' + Skew.PrettyPrint.plural1(found, singular);
   };
 
   Skew.Log._formatArgumentTypes = function(types) {
@@ -9454,11 +9458,11 @@
   };
 
   Skew.Log.prototype.semanticErrorNoMatchingOverload = function(range, name, count, types) {
-    this.error(range, 'No overload of "' + name + '" was found that takes ' + count.toString() + ' argument' + (count == 1 ? '' : 's') + Skew.Log._formatArgumentTypes(types));
+    this.error(range, 'No overload of "' + name + '" was found that takes ' + Skew.PrettyPrint.plural1(count, 'argument') + Skew.Log._formatArgumentTypes(types));
   };
 
   Skew.Log.prototype.semanticErrorAmbiguousOverload = function(range, name, count, types) {
-    this.error(range, 'Multiple matching overloads of "' + name + '" were found that can take ' + count.toString() + ' argument' + (count == 1 ? '' : 's') + Skew.Log._formatArgumentTypes(types));
+    this.error(range, 'Multiple matching overloads of "' + name + '" were found that can take ' + Skew.PrettyPrint.plural1(count, 'argument') + Skew.Log._formatArgumentTypes(types));
   };
 
   Skew.Log.prototype.semanticErrorUnexpectedExpression = function(range, type) {
@@ -9490,7 +9494,7 @@
   };
 
   Skew.Log.prototype.semanticErrorWrongArgumentCount = function(range, name, count) {
-    this.error(range, 'Expected "' + name + '" to take ' + count.toString() + ' argument' + (count == 1 ? '' : 's'));
+    this.error(range, 'Expected "' + name + '" to take ' + Skew.PrettyPrint.plural1(count, 'argument'));
   };
 
   Skew.Log.prototype.semanticErrorWrongArgumentCountRange = function(range, name, values) {
@@ -9517,7 +9521,7 @@
       // Assuming values are unique, this means all values form a continuous range
       if (((max - min | 0) + 1 | 0) == count) {
         if (min == 0) {
-          this.error(range, 'Expected "' + name + '" to take at most ' + max.toString() + ' argument' + (max == 1 ? '' : 's'));
+          this.error(range, 'Expected "' + name + '" to take at most ' + Skew.PrettyPrint.plural1(max, 'argument'));
         }
 
         else {
@@ -9704,7 +9708,7 @@
 
   Skew.Log.prototype.semanticErrorMustCallFunction = function(range, name, lower, upper) {
     if (lower == upper) {
-      this.error(range, 'The function "' + name + '" takes ' + lower.toString() + ' argument' + (lower == 1 ? '' : 's') + ' and must be called');
+      this.error(range, 'The function "' + name + '" takes ' + Skew.PrettyPrint.plural1(lower, 'argument') + ' and must be called');
     }
 
     else {
@@ -12689,13 +12693,13 @@
       }
     }
 
-    builder.append('output' + (this.outputs.length == 1 ? '' : 's') + ': ' + (this.outputs.length == 1 ? this.outputs[0].name : this.outputs.length.toString() + ' files') + (' (' + Skew.bytesToString(totalBytes)) + (kind == Skew.StatisticsKind.LONG ? ', ' + totalLines.toString() + ' line' + (totalLines == 1 ? '' : 's') : '') + ')');
+    builder.append('output' + (this.outputs.length == 1 ? '' : 's') + ': ' + (this.outputs.length == 1 ? this.outputs[0].name : this.outputs.length.toString() + ' files') + (' (' + Skew.bytesToString(totalBytes)) + (kind == Skew.StatisticsKind.LONG ? ', ' + Skew.PrettyPrint.plural1(totalLines, 'line') : '') + ')');
 
-    if (kind == Skew.StatisticsKind.LONG) {
+    if (kind == Skew.StatisticsKind.LONG && this.outputs.length != 1) {
       for (var i1 = 0, list1 = this.outputs, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
         var source1 = list1[i1];
         var lines = source1.lineCount();
-        builder.append('\n  ' + source1.name + ' (' + Skew.bytesToString(source1.contents.length) + ', ' + lines.toString() + ' line' + (lines == 1 ? '' : 's') + ')');
+        builder.append('\n  ' + source1.name + ' (' + Skew.bytesToString(source1.contents.length) + ', ' + Skew.PrettyPrint.plural1(lines, 'line') + ')');
       }
     }
 

@@ -172,11 +172,11 @@ namespace Skew {
       builder.append("output\(PrettyPrint.plural(outputs.count)): " +
         (outputs.count == 1 ? outputs.first.name : "\(outputs.count) files") +
         " (\(bytesToString(totalBytes))" +
-        (kind == .LONG ? ", \(totalLines) line\(PrettyPrint.plural(totalLines))" : "") + ")")
-      if kind == .LONG {
+        (kind == .LONG ? ", \(PrettyPrint.plural(totalLines, "line"))" : "") + ")")
+      if kind == .LONG && outputs.count != 1 {
         for source in outputs {
           var lines = source.lineCount
-          builder.append("\n  \(source.name) (\(bytesToString(source.contents.count)), \(lines) line\(PrettyPrint.plural(lines)))")
+          builder.append("\n  \(source.name) (\(bytesToString(source.contents.count)), \(PrettyPrint.plural(lines, "line")))")
         }
       }
 

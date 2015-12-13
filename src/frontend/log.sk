@@ -123,7 +123,7 @@ namespace Skew {
 
   namespace Log {
     def _expectedCountText(singular string, expected int, found int) string {
-      return "Expected \(expected) \(singular)\(PrettyPrint.plural(expected)) but found \(found) \(singular)\(PrettyPrint.plural(found))"
+      return "Expected \(PrettyPrint.plural(expected, singular)) but found \(PrettyPrint.plural(found, singular))"
     }
 
     def _formatArgumentTypes(types List<Type>) string {
@@ -289,11 +289,11 @@ namespace Skew {
     }
 
     def semanticErrorNoMatchingOverload(range Range, name string, count int, types List<Type>) {
-      error(range, "No overload of \"\(name)\" was found that takes \(count) argument\(PrettyPrint.plural(count))\(_formatArgumentTypes(types))")
+      error(range, "No overload of \"\(name)\" was found that takes \(PrettyPrint.plural(count, "argument"))\(_formatArgumentTypes(types))")
     }
 
     def semanticErrorAmbiguousOverload(range Range, name string, count int, types List<Type>) {
-      error(range, "Multiple matching overloads of \"\(name)\" were found that can take \(count) argument\(PrettyPrint.plural(count))\(_formatArgumentTypes(types))")
+      error(range, "Multiple matching overloads of \"\(name)\" were found that can take \(PrettyPrint.plural(count, "argument"))\(_formatArgumentTypes(types))")
     }
 
     def semanticErrorUnexpectedExpression(range Range, type Type) {
@@ -325,7 +325,7 @@ namespace Skew {
     }
 
     def semanticErrorWrongArgumentCount(range Range, name string, count int) {
-      error(range, "Expected \"\(name)\" to take \(count) argument\(PrettyPrint.plural(count))")
+      error(range, "Expected \"\(name)\" to take \(PrettyPrint.plural(count, "argument"))")
     }
 
     def semanticErrorWrongArgumentCountRange(range Range, name string, values List<int>) {
@@ -352,7 +352,7 @@ namespace Skew {
         # Assuming values are unique, this means all values form a continuous range
         if max - min + 1 == count {
           if min == 0 {
-            error(range, "Expected \"\(name)\" to take at most \(max) argument\(PrettyPrint.plural(max))")
+            error(range, "Expected \"\(name)\" to take at most \(PrettyPrint.plural(max, "argument"))")
           } else {
             error(range, "Expected \"\(name)\" to take between \(min) and \(max) arguments")
           }
@@ -528,7 +528,7 @@ namespace Skew {
 
     def semanticErrorMustCallFunction(range Range, name string, lower int, upper int) {
       if lower == upper {
-        error(range, "The function \"\(name)\" takes \(lower) argument\(PrettyPrint.plural(lower)) and must be called")
+        error(range, "The function \"\(name)\" takes \(PrettyPrint.plural(lower, "argument")) and must be called")
       } else {
         error(range, "The function \"\(name)\" takes between \(lower) and \(upper) arguments and must be called")
       }
