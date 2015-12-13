@@ -338,6 +338,23 @@ class Foo {
   expect("", ide.tooltipQuery(2, 28))
 })
 
+# Tooltips: test string interpolation
+testIDE("
+def test string {
+  return \"\\(test) + \\(test)\"
+}
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(1, 11))
+  expect("def test string", ide.tooltipQuery(1, 12))
+  expect("def test string", ide.tooltipQuery(1, 16))
+  expect("", ide.tooltipQuery(1, 17))
+
+  expect("", ide.tooltipQuery(1, 21))
+  expect("def test string", ide.tooltipQuery(1, 22))
+  expect("def test string", ide.tooltipQuery(1, 26))
+  expect("", ide.tooltipQuery(1, 27))
+})
+
 # Definitions: test object merging
 testIDE("
 namespace Foo {}

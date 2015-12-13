@@ -2792,10 +2792,10 @@ namespace Skew.Resolving {
         if child.isString && child.asString == "" {
           continue
         } else if child.resolvedType != .DYNAMIC && child.resolvedType != _cache.stringType {
-          child = Node.createDot(child, "toString").withRange(child.range)
+          child = Node.createDot(child, "toString").withRange(child.range).withFlags(.IS_IGNORED_BY_IDE)
           _resolveAsParameterizedExpressionWithConversion(child, scope, _cache.stringType)
         }
-        joined = joined != null ? Node.createBinary(.ADD, joined, child).withRange(Range.span(joined.range, child.range)) : child
+        joined = joined != null ? Node.createBinary(.ADD, joined, child).withRange(Range.span(joined.range, child.range)).withFlags(.IS_IGNORED_BY_IDE) : child
         _resolveAsParameterizedExpressionWithConversion(joined, scope, _cache.stringType)
       }
       node.become(joined != null ? joined : Node.createString(""))

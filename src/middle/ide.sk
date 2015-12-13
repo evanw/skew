@@ -161,7 +161,7 @@ namespace Skew.IDE {
       }
 
       findSymbolInNode = node => {
-        if node != null && !node.isIgnoredByIDE {
+        if node != null {
           var kind = node.kind
 
           if kind == .VARIABLE {
@@ -174,14 +174,16 @@ namespace Skew.IDE {
             }
           }
 
-          if kind == .NAME && _findSymbolInRange(node.range, node.symbol) {
-            resolvedType = node.resolvedType
-            return true
-          }
+          if !node.isIgnoredByIDE {
+            if kind == .NAME && _findSymbolInRange(node.range, node.symbol) {
+              resolvedType = node.resolvedType
+              return true
+            }
 
-          if (kind == .DOT || kind.isUnary || kind.isBinary) && _findSymbolInRange(node.internalRangeOrRange, node.symbol) {
-            resolvedType = kind == .DOT ? node.resolvedType : node.symbol?.resolvedType
-            return true
+            if (kind == .DOT || kind.isUnary || kind.isBinary) && _findSymbolInRange(node.internalRangeOrRange, node.symbol) {
+              resolvedType = kind == .DOT ? node.resolvedType : node.symbol?.resolvedType
+              return true
+            }
           }
 
           if kind == .LAMBDA {

@@ -18558,11 +18558,11 @@
       }
 
       else if (child.resolvedType != Skew.Type.DYNAMIC && child.resolvedType != this._cache.stringType) {
-        child = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('toString')).appendChild(child).withRange(child.range);
+        child = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('toString')).appendChild(child).withRange(child.range).withFlags(Skew.NodeFlags.IS_IGNORED_BY_IDE);
         this._resolveAsParameterizedExpressionWithConversion(child, scope, this._cache.stringType);
       }
 
-      joined = joined != null ? Skew.Node.createBinary(Skew.NodeKind.ADD, joined, child).withRange(Skew.Range.span(joined.range, child.range)) : child;
+      joined = joined != null ? Skew.Node.createBinary(Skew.NodeKind.ADD, joined, child).withRange(Skew.Range.span(joined.range, child.range)).withFlags(Skew.NodeFlags.IS_IGNORED_BY_IDE) : child;
       this._resolveAsParameterizedExpressionWithConversion(joined, scope, this._cache.stringType);
     }
 
