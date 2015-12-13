@@ -355,6 +355,41 @@ def test string {
   expect("", ide.tooltipQuery(1, 27))
 })
 
+# Tooltips: test XML literals
+testIDE("
+class Foo.Bar {
+  var foo Foo.Bar = <Foo.Bar foo=null><Foo.Bar foo=null/></Foo.Bar>
+  def <>...</>(x Foo.Bar) {}
+}
+", (ide, expect) => {
+  expect("", ide.tooltipQuery(1, 5))
+  expect("var foo Foo.Bar", ide.tooltipQuery(1, 6))
+  expect("var foo Foo.Bar", ide.tooltipQuery(1, 9))
+  expect("namespace Foo", ide.tooltipQuery(1, 10))
+  expect("namespace Foo", ide.tooltipQuery(1, 13))
+  expect("class Bar", ide.tooltipQuery(1, 14))
+  expect("class Bar", ide.tooltipQuery(1, 17))
+  expect("", ide.tooltipQuery(1, 18))
+
+  expect("", ide.tooltipQuery(1, 20))
+  expect("namespace Foo", ide.tooltipQuery(1, 21))
+  expect("namespace Foo", ide.tooltipQuery(1, 24))
+  expect("class Bar", ide.tooltipQuery(1, 25))
+  expect("class Bar", ide.tooltipQuery(1, 28))
+  expect("var foo Foo.Bar", ide.tooltipQuery(1, 29))
+  expect("var foo Foo.Bar", ide.tooltipQuery(1, 32))
+  expect("", ide.tooltipQuery(1, 33))
+
+  expect("", ide.tooltipQuery(1, 38))
+  expect("namespace Foo", ide.tooltipQuery(1, 39))
+  expect("namespace Foo", ide.tooltipQuery(1, 42))
+  expect("class Bar", ide.tooltipQuery(1, 43))
+  expect("class Bar", ide.tooltipQuery(1, 46))
+  expect("var foo Foo.Bar", ide.tooltipQuery(1, 47))
+  expect("var foo Foo.Bar", ide.tooltipQuery(1, 50))
+  expect("", ide.tooltipQuery(1, 51))
+})
+
 # Definitions: test object merging
 testIDE("
 namespace Foo {}

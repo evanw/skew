@@ -268,6 +268,39 @@ var foo = <Foo
           ^
 ")
 
+# Test parsing XML being typed
+test("
+class Foo {
+  var foo Foo = <Foo><</Foo>
+  def <>...</>(x Foo) {}
+}
+", "
+<stdin>:2:22: error: Unexpected \"<<\"
+  var foo Foo = <Foo><</Foo>
+                     ~~
+<stdin>:2:24: error: Expected \"\\n\" but found \"/\"
+  var foo Foo = <Foo><</Foo>
+                       ^
+<stdin>:2:25: error: Expected \"\\n\" but found identifier
+  var foo Foo = <Foo><</Foo>
+                        ~~~
+<stdin>:2:28: error: Expected \"\\n\" but found \">\"
+  var foo Foo = <Foo><</Foo>
+                           ^
+<stdin>:3:7: error: Expected \"\\n\" but found \"<>...</>\"
+  def <>...</>(x Foo) {}
+      ~~~~~~~~
+<stdin>:3:15: error: Expected \"\\n\" but found \"(\"
+  def <>...</>(x Foo) {}
+              ^
+<stdin>:3:23: error: Expected \"=>\" but found \"{\"
+  def <>...</>(x Foo) {}
+                      ^
+<stdin>:4:1: error: Expected \"</\" but found \"}\"
+}
+^
+")
+
 # Test parsing recovery at obvious statement boundaries
 test("
 def test {

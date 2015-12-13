@@ -2864,12 +2864,12 @@ namespace Skew.Resolving {
       }
 
       # Call the constructor
-      var value = Node.createDot(tag.clone, "new").withRange(node.range)
+      var value = Node.createDot(tag.clone, "new").withRange(node.range).withFlags(.IS_IGNORED_BY_IDE)
       var needsSequence = attributes.hasChildren || children.hasChildren
       var result = value
       _resolveAsParameterizedExpression(value, scope)
       if needsSequence {
-        result = Node.createSequence.withRange(node.range).appendChild(_extractExpression(value, scope))
+        result = Node.createSequence.withRange(node.range).appendChild(_extractExpression(value, scope).withFlags(.IS_IGNORED_BY_IDE))
       }
 
       # Assign to attributes if necessary
@@ -2931,7 +2931,8 @@ namespace Skew.Resolving {
       for child = node.firstChild; child != null; child = child.nextSibling {
         switch child.kind {
           case .EXPRESSION {
-            child.appendChild(Node.createCall(Node.createDot(reference.clone, "<>...</>").withRange(child.range)).appendChild(child.expressionValue.remove).withRange(child.range))
+            child.appendChild(Node.createCall(Node.createDot(reference.clone, "<>...</>").withRange(child.range).withFlags(.IS_IGNORED_BY_IDE))
+              .appendChild(child.expressionValue.remove).withRange(child.range))
           }
 
           case .FOR {

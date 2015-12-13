@@ -392,6 +392,7 @@ namespace Skew {
       PARAMETER_LIST_END: "\">\"",
       PARAMETER_LIST_START: "\"<\"",
 
+      XML_CHILD: "\"<>...</>\"",
       XML_END: "\">\"",
       XML_END_EMPTY: "\"/>\"",
       XML_START: "\"<\"",
