@@ -180,7 +180,7 @@ namespace Skew.API {
     if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && dynamic.self is dynamic.WorkerGlobalScope {
       var instance = createCompilerInstance()
       dynamic.onmessage = (event dynamic) => {
-        dynamic.postMessage(instance.handleMessage(event.data))
+        dynamic.postMessage(instance.message(event.data))
       }
     }
 
