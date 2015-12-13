@@ -1055,11 +1055,12 @@ namespace Skew {
       return new(.TYPE_CHECK).appendChild(value).appendChild(type)
     }
 
-    def createXML(tag Node, attributes Node, children Node) Node {
+    def createXML(tag Node, attributes Node, children Node, closingTag Node) Node {
       assert(tag.kind.isExpression)
       assert(attributes.kind == .SEQUENCE)
       assert(children.kind == .BLOCK)
-      return new(.XML).appendChild(tag).appendChild(attributes).appendChild(children)
+      assert(closingTag == null || closingTag.kind.isExpression)
+      return new(.XML).appendChild(tag).appendChild(attributes).appendChild(children).appendChild(closingTag)
     }
 
     def createUnary(kind NodeKind, value Node) Node {
@@ -1262,23 +1263,32 @@ namespace Skew {
 
     def xmlTag Node {
       assert(kind == .XML)
-      assert(childCount == 3)
+      assert(childCount == 3 || childCount == 4)
       assert(_firstChild.kind.isExpression)
       return _firstChild
     }
 
     def xmlAttributes Node {
       assert(kind == .XML)
-      assert(childCount == 3)
+      assert(childCount == 3 || childCount == 4)
       assert(_firstChild._nextSibling.kind == .SEQUENCE)
       return _firstChild._nextSibling
     }
 
     def xmlChildren Node {
       assert(kind == .XML)
-      assert(childCount == 3)
-      assert(_lastChild.kind == .BLOCK)
-      return _lastChild
+      assert(childCount == 3 || childCount == 4)
+      assert(_firstChild._nextSibling._nextSibling.kind == .BLOCK)
+      return _firstChild._nextSibling._nextSibling
+    }
+
+    def xmlClosingTag Node {
+      assert(kind == .XML)
+      assert(childCount == 3 || childCount == 4)
+      assert(
+        _firstChild._nextSibling._nextSibling._nextSibling == null ||
+        _firstChild._nextSibling._nextSibling._nextSibling.kind.isExpression)
+      return _firstChild._nextSibling._nextSibling._nextSibling
     }
 
     def unaryValue Node {

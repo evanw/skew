@@ -1619,6 +1619,7 @@ namespace Skew.Parsing {
 
       # Parse end of tag
       var block = Node.createBlock
+      var closingTag Node = null
       context.skipWhitespace
 
       # Check for children
@@ -1636,7 +1637,7 @@ namespace Skew.Parsing {
         block.withRange(context.spanSince(token.range))
 
         # Parse closing tag
-        var closingTag = parseDotChain(context)
+        closingTag = parseDotChain(context)
         if closingTag == null {
           scanForToken(context, .XML_END)
           return context.createParseError
@@ -1653,7 +1654,7 @@ namespace Skew.Parsing {
         }
       }
 
-      return Node.createXML(tag, attributes, block).withRange(context.spanSince(token.range))
+      return Node.createXML(tag, attributes, block, closingTag).withRange(context.spanSince(token.range))
     }
 
     return pratt

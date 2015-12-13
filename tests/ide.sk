@@ -388,6 +388,13 @@ class Foo.Bar {
   expect("var foo Foo.Bar", ide.tooltipQuery(1, 47))
   expect("var foo Foo.Bar", ide.tooltipQuery(1, 50))
   expect("", ide.tooltipQuery(1, 51))
+
+  expect("", ide.tooltipQuery(1, 58))
+  expect("namespace Foo", ide.tooltipQuery(1, 59))
+  expect("namespace Foo", ide.tooltipQuery(1, 62))
+  expect("class Bar", ide.tooltipQuery(1, 63))
+  expect("class Bar", ide.tooltipQuery(1, 66))
+  expect("", ide.tooltipQuery(1, 67))
 })
 
 # Definitions: test object merging

@@ -2207,9 +2207,10 @@ namespace Skew.Resolving {
       node.resolvedType = type.resolvedType
 
       # Warn about unnecessary casts
-      if type.resolvedType != .DYNAMIC && value.resolvedType != .DYNAMIC && !neededTypeContext && (value.resolvedType == type.resolvedType ||
-          context == type.resolvedType && _cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
-        _log.semanticWarningExtraCast(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
+      var range = node.internalRangeOrRange
+      if range != null && type.resolvedType != .DYNAMIC && value.resolvedType != .DYNAMIC && !neededTypeContext && (
+          value.resolvedType == type.resolvedType || context == type.resolvedType && _cache.canImplicitlyConvert(value.resolvedType, type.resolvedType)) {
+        _log.semanticWarningExtraCast(Range.span(range, type.range), value.resolvedType, type.resolvedType)
       }
     }
 
@@ -2847,6 +2848,7 @@ namespace Skew.Resolving {
       var tag = node.xmlTag
       var attributes = node.xmlAttributes
       var children = node.xmlChildren
+      var closingTag = node.xmlClosingTag?.remove
       var initialErrorCount = _log.errorCount
       _resolveAsParameterizedType(tag, scope)
 
@@ -2918,6 +2920,12 @@ namespace Skew.Resolving {
           symbol.block = children.remove
           result.appendChild(Node.createCall(Node.createLambda(symbol).withRange(symbol.range)).withRange(symbol.range))
         }
+      }
+
+      # Resolve the closing tag for IDE tooltips
+      if closingTag != null {
+        _resolveAsParameterizedType(closingTag, scope)
+        value = Node.createCast(value, closingTag)
       }
 
       # Resolve the value
