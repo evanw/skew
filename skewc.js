@@ -10509,11 +10509,17 @@
 
       // Parse a new statement
       else {
+        var current = context.current();
         var statement1 = Skew.Parsing.parseStatement(context);
 
         if (statement1 == null) {
           Skew.Parsing.scanForToken(context, Skew.TokenKind.NEWLINE);
           continue;
+        }
+
+        // Prevent an infinite loop due to a syntax error at the start of an expression
+        if (context.current() == current) {
+          context.next();
         }
 
         // There is a well-known bug in JavaScript where a return statement

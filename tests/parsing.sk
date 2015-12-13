@@ -2,6 +2,41 @@ namespace Skew.Tests {
   def testParsing {
 
 test("
+def foo {
+  0;
+  var x = 0;
+  ;
+  if true {};
+  return;
+}
+", "
+<stdin>:2:4: error: Expected \"\\n\" but found \";\"
+  0;
+   ^
+<stdin>:3:12: error: Expected \"\\n\" but found \";\"
+  var x = 0;
+           ^
+<stdin>:4:3: error: Unexpected \";\"
+  ;
+  ^
+<stdin>:5:13: error: Expected \"\\n\" but found \";\"
+  if true {};
+            ^
+<stdin>:6:9: error: Unexpected \";\"
+  return;
+        ^
+<stdin>:2:3: warning: Unused expression
+  0;
+  ^
+<stdin>:6:9: error: Cannot return a value inside a function without a return type
+  return;
+        ^
+<stdin>:3:7: warning: Local variable \"x\" is never read
+  var x = 0;
+      ^
+")
+
+test("
 def main {
   while true {} else {}
 }

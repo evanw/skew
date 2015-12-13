@@ -571,10 +571,16 @@ namespace Skew.Parsing {
 
       # Parse a new statement
       else {
+        var current = context.current
         var statement = parseStatement(context)
         if statement == null {
           scanForToken(context, .NEWLINE)
           continue
+        }
+
+        # Prevent an infinite loop due to a syntax error at the start of an expression
+        if context.current == current {
+          context.next
         }
 
         # There is a well-known bug in JavaScript where a return statement
