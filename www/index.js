@@ -61,7 +61,6 @@
     var index = targetNames.indexOf(configGet(TARGET_INDEX));
     var target = targets[index === -1 ? 0 : index];
     var options = {};
-    options.target = target.option;
     options.outputFile = 'compiled.' + target.extension;
     options.inputs = [{name: '<stdin>', contents: input.value}];
     if (configGetBool(CONSTANT_FOLDING)) options.foldAllConstants = true;

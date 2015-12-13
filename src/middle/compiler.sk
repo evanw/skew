@@ -64,6 +64,22 @@ namespace Skew {
     def _continueAfterResolve bool {
       return !stopAfterResolve && !target.stopAfterResolve
     }
+
+    def createTargetFromExtension bool {
+      if outputFile != null {
+        var dot = outputFile.lastIndexOf(".")
+        if dot != -1 {
+          switch outputFile.slice(dot + 1) {
+            case "cpp", "cxx", "cc" { target = CPlusPlusTarget.new }
+            case "cs" { target = CSharpTarget.new }
+            case "js" { target = JavaScriptTarget.new }
+            default { return false }
+          }
+          return true
+        }
+      }
+      return false
+    }
   }
 
   class Timer {

@@ -212,14 +212,6 @@ namespace Skew {
       log.commandLineErrorNoInputFiles(trailingSpace)
     }
 
-    # Check the target format
-    var target = parser.rangeForOption(.TARGET)
-    if target != null {
-      options.target = parseEnum<CompilerTarget>(log, "target", VALID_TARGETS, target, null)
-    } else {
-      log.commandLineErrorMissingTarget(trailingSpace)
-    }
-
     # Parse the output location
     if !options.stopAfterResolve {
       var outputFile = parser.rangeForOption(.OUTPUT_FILE)
@@ -233,6 +225,14 @@ namespace Skew {
       } else {
         options.outputDirectory = outputDirectory.toString
       }
+    }
+
+    # Check the target format
+    var target = parser.rangeForOption(.TARGET)
+    if target != null {
+      options.target = parseEnum<CompilerTarget>(log, "target", VALID_TARGETS, target, null)
+    } else if !options.createTargetFromExtension {
+      log.commandLineErrorMissingTarget(trailingSpace)
     }
 
     return options

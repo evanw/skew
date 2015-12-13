@@ -46,7 +46,11 @@ namespace Skew {
         case "c++" { options.target = CPlusPlusTarget.new }
         case "js" { options.target = JavaScriptTarget.new }
         case "lisp-tree" { options.target = LispTreeTarget.new }
-        default { throw dynamic.Error.new("Invalid target '\(args.target)'") }
+        default {
+          if !options.createTargetFromExtension {
+            throw dynamic.Error.new("Invalid target '\(args.target)'")
+          }
+        }
       }
 
       for i in 0..args.inputs.length {

@@ -820,17 +820,6 @@
       log.commandLineErrorNoInputFiles(trailingSpace);
     }
 
-    // Check the target format
-    var target = parser.rangeForOption(Skew.Option.TARGET);
-
-    if (target != null) {
-      options.target = Skew.parseEnum(log, 'target', Skew.VALID_TARGETS, target, null);
-    }
-
-    else {
-      log.commandLineErrorMissingTarget(trailingSpace);
-    }
-
     // Parse the output location
     if (!options.stopAfterResolve) {
       var outputFile = parser.rangeForOption(Skew.Option.OUTPUT_FILE);
@@ -851,6 +840,17 @@
       else {
         options.outputDirectory = outputDirectory.toString();
       }
+    }
+
+    // Check the target format
+    var target = parser.rangeForOption(Skew.Option.TARGET);
+
+    if (target != null) {
+      options.target = Skew.parseEnum(log, 'target', Skew.VALID_TARGETS, target, null);
+    }
+
+    else if (!options.createTargetFromExtension()) {
+      log.commandLineErrorMissingTarget(trailingSpace);
     }
 
     return options;
@@ -12337,6 +12337,41 @@
 
   Skew.CompilerOptions.prototype._continueAfterResolve = function() {
     return !this.stopAfterResolve && !this.target.stopAfterResolve();
+  };
+
+  Skew.CompilerOptions.prototype.createTargetFromExtension = function() {
+    if (this.outputFile != null) {
+      var dot = this.outputFile.lastIndexOf('.');
+
+      if (dot != -1) {
+        switch (this.outputFile.slice(dot + 1 | 0)) {
+          case 'cpp':
+          case 'cxx':
+          case 'cc': {
+            this.target = new Skew.CPlusPlusTarget();
+            break;
+          }
+
+          case 'cs': {
+            this.target = new Skew.CSharpTarget();
+            break;
+          }
+
+          case 'js': {
+            this.target = new Skew.JavaScriptTarget();
+            break;
+          }
+
+          default: {
+            return false;
+          }
+        }
+
+        return true;
+      }
+    }
+
+    return false;
   };
 
   Skew.Timer = function() {
