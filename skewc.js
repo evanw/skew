@@ -7180,29 +7180,35 @@
   };
 
   Skew.NodeFlags = {
+    // This flag is only for blocks. A simple control flow analysis is run
+    // during code resolution and blocks where control flow reaches the end of
+    // the block have this flag set.
+    HAS_CONTROL_FLOW_AT_END: 1,
+
+    // Use this flag to tell the IDE support code to ignore this node. This is
+    // useful for compiler-generated nodes that are used for lowering and that
+    // need marked ranges for error reporting but that should not show up in
+    // tooltips.
+    IS_IGNORED_BY_IDE: 2,
+
     // An implicit return is a return statement inside an expression lambda. For
     // example, the lambda "x => x" is compiled into "x => { return x }" where
     // the return statement has this flag set.
-    IS_IMPLICIT_RETURN: 1,
+    IS_IMPLICIT_RETURN: 4,
+
+    // This flag marks list nodes that help implement initializer expressions.
+    IS_INITIALIZER_EXPANSION: 8,
 
     // This flag marks nodes that were wrapped in parentheses in the original
     // source code. It's used for warnings about C-style syntax in conditional
     // statements and to call a lambda returned from a getter.
-    IS_INSIDE_PARENTHESES: 2,
-
-    // This flag is only for blocks. A simple control flow analysis is run
-    // during code resolution and blocks where control flow reaches the end of
-    // the block have this flag set.
-    HAS_CONTROL_FLOW_AT_END: 4,
-
-    // This flag marks nodes that were converted from NULL_JOIN to HOOK nodes.
-    WAS_NULL_JOIN: 8,
+    IS_INSIDE_PARENTHESES: 16,
 
     // This flag marks nodes that were converted from ASSIGN_NULL to ASSIGN nodes.
-    WAS_ASSIGN_NULL: 16,
+    WAS_ASSIGN_NULL: 32,
 
-    // This flag marks list nodes that help implement initializer expressions.
-    IS_INITIALIZER_EXPANSION: 32
+    // This flag marks nodes that were converted from NULL_JOIN to HOOK nodes.
+    WAS_NULL_JOIN: 64
   };
 
   // Nodes represent executable code (variable initializers and function bodies)
@@ -7318,28 +7324,28 @@
     return this._nextSibling;
   };
 
+  Skew.Node.prototype.hasControlFlowAtEnd = function() {
+    return (Skew.NodeFlags.HAS_CONTROL_FLOW_AT_END & this.flags) != 0;
+  };
+
   Skew.Node.prototype.isImplicitReturn = function() {
     return (Skew.NodeFlags.IS_IMPLICIT_RETURN & this.flags) != 0;
+  };
+
+  Skew.Node.prototype.isInitializerExpansion = function() {
+    return (Skew.NodeFlags.IS_INITIALIZER_EXPANSION & this.flags) != 0;
   };
 
   Skew.Node.prototype.isInsideParentheses = function() {
     return (Skew.NodeFlags.IS_INSIDE_PARENTHESES & this.flags) != 0;
   };
 
-  Skew.Node.prototype.hasControlFlowAtEnd = function() {
-    return (Skew.NodeFlags.HAS_CONTROL_FLOW_AT_END & this.flags) != 0;
-  };
-
-  Skew.Node.prototype.wasNullJoin = function() {
-    return (Skew.NodeFlags.WAS_NULL_JOIN & this.flags) != 0;
-  };
-
   Skew.Node.prototype.wasAssignNull = function() {
     return (Skew.NodeFlags.WAS_ASSIGN_NULL & this.flags) != 0;
   };
 
-  Skew.Node.prototype.isInitializerExpansion = function() {
-    return (Skew.NodeFlags.IS_INITIALIZER_EXPANSION & this.flags) != 0;
+  Skew.Node.prototype.wasNullJoin = function() {
+    return (Skew.NodeFlags.WAS_NULL_JOIN & this.flags) != 0;
   };
 
   // This is cheaper than childCount == 0
@@ -18897,7 +18903,7 @@
     }
 
     // Replace the original expression with a reference
-    var reference = this._generateReference(scope, node.resolvedType).withRange(node.range);
+    var reference = this._generateReference(scope, node.resolvedType).withRange(node.range).withFlags(Skew.NodeFlags.IS_IGNORED_BY_IDE);
     var setup = node.cloneAndStealChildren();
     node.become(reference);
     return Skew.Node.createBinary(Skew.NodeKind.ASSIGN, reference, setup).withType(node.resolvedType).withRange(node.range);
@@ -18921,7 +18927,7 @@
 
     // Handle dot expressions
     if (node.kind == Skew.NodeKind.DOT && node.symbol != null) {
-      return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(node.asString())).appendChild(this._extractExpression(node.dotTarget(), scope)).withSymbol(node.symbol).withType(node.resolvedType).withRange(node.range);
+      return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(node.asString())).appendChild(this._extractExpression(node.dotTarget(), scope)).withSymbol(node.symbol).withType(node.resolvedType).withRange(node.range).withInternalRange(node.internalRange);
     }
 
     // Handle index expressions

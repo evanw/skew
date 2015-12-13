@@ -3113,7 +3113,7 @@ namespace Skew.Resolving {
       }
 
       # Replace the original expression with a reference
-      var reference = _generateReference(scope, node.resolvedType).withRange(node.range)
+      var reference = _generateReference(scope, node.resolvedType).withRange(node.range).withFlags(.IS_IGNORED_BY_IDE)
       var setup = node.cloneAndStealChildren
       node.become(reference)
       return Node.createBinary(.ASSIGN, reference, setup).withType(node.resolvedType).withRange(node.range)
@@ -3137,7 +3137,8 @@ namespace Skew.Resolving {
 
       # Handle dot expressions
       if node.kind == .DOT && node.symbol != null {
-        return Node.createDot(_extractExpression(node.dotTarget, scope), node.asString).withSymbol(node.symbol).withType(node.resolvedType).withRange(node.range)
+        return Node.createDot(_extractExpression(node.dotTarget, scope), node.asString).withSymbol(node.symbol)
+          .withType(node.resolvedType).withRange(node.range).withInternalRange(node.internalRange)
       }
 
       # Handle index expressions

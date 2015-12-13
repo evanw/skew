@@ -170,29 +170,35 @@ namespace Skew {
   }
 
   flags NodeFlags {
+    # This flag is only for blocks. A simple control flow analysis is run
+    # during code resolution and blocks where control flow reaches the end of
+    # the block have this flag set.
+    HAS_CONTROL_FLOW_AT_END
+
+    # Use this flag to tell the IDE support code to ignore this node. This is
+    # useful for compiler-generated nodes that are used for lowering and that
+    # need marked ranges for error reporting but that should not show up in
+    # tooltips.
+    IS_IGNORED_BY_IDE
+
     # An implicit return is a return statement inside an expression lambda. For
     # example, the lambda "x => x" is compiled into "x => { return x }" where
     # the return statement has this flag set.
     IS_IMPLICIT_RETURN
+
+    # This flag marks list nodes that help implement initializer expressions.
+    IS_INITIALIZER_EXPANSION
 
     # This flag marks nodes that were wrapped in parentheses in the original
     # source code. It's used for warnings about C-style syntax in conditional
     # statements and to call a lambda returned from a getter.
     IS_INSIDE_PARENTHESES
 
-    # This flag is only for blocks. A simple control flow analysis is run
-    # during code resolution and blocks where control flow reaches the end of
-    # the block have this flag set.
-    HAS_CONTROL_FLOW_AT_END
-
-    # This flag marks nodes that were converted from NULL_JOIN to HOOK nodes.
-    WAS_NULL_JOIN
-
     # This flag marks nodes that were converted from ASSIGN_NULL to ASSIGN nodes.
     WAS_ASSIGN_NULL
 
-    # This flag marks list nodes that help implement initializer expressions.
-    IS_INITIALIZER_EXPANSION
+    # This flag marks nodes that were converted from NULL_JOIN to HOOK nodes.
+    WAS_NULL_JOIN
   }
 
   # Nodes represent executable code (variable initializers and function bodies)
@@ -280,12 +286,13 @@ namespace Skew {
     def previousSibling Node { return _previousSibling }
     def nextSibling Node     { return _nextSibling }
 
-    def isImplicitReturn bool       { return .IS_IMPLICIT_RETURN in flags }
-    def isInsideParentheses bool    { return .IS_INSIDE_PARENTHESES in flags }
     def hasControlFlowAtEnd bool    { return .HAS_CONTROL_FLOW_AT_END in flags }
-    def wasNullJoin bool            { return .WAS_NULL_JOIN in flags }
-    def wasAssignNull bool          { return .WAS_ASSIGN_NULL in flags }
+    def isIgnoredByIDE bool         { return .IS_IGNORED_BY_IDE in flags }
+    def isImplicitReturn bool       { return .IS_IMPLICIT_RETURN in flags }
     def isInitializerExpansion bool { return .IS_INITIALIZER_EXPANSION in flags }
+    def isInsideParentheses bool    { return .IS_INSIDE_PARENTHESES in flags }
+    def wasAssignNull bool          { return .WAS_ASSIGN_NULL in flags }
+    def wasNullJoin bool            { return .WAS_NULL_JOIN in flags }
 
     # This is cheaper than childCount == 0
     def hasChildren bool {

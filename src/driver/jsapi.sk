@@ -125,7 +125,7 @@ namespace Skew.API {
               # Search diagnostics first
               if log != null {
                 for diagnostic in log.diagnostics {
-                  if diagnostic.range.source == source && diagnostic.range.touches(index) {
+                  if diagnostic.range != null && diagnostic.range.source == source && diagnostic.range.touches(index) {
                     tooltip = diagnostic.text
                     range = diagnostic.range
                     break
