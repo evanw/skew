@@ -145,6 +145,11 @@ namespace Skew {
     var timer = Timer.new
   }
 
+  enum StatisticsKind {
+    SHORT
+    LONG
+  }
+
   class CompilerResult {
     var cache TypeCache
     var global ObjectSymbol
@@ -152,27 +157,35 @@ namespace Skew {
     var passTimers List<PassTimer>
     var totalTimer Timer
 
-    def statistics string {
+    def statistics(kind StatisticsKind) string {
       var builder = StringBuilder.new
-
-      # Compilation time
-      builder.append("Total time: \(totalTimer.elapsedMilliseconds)")
-      for passTimer in passTimers {
-        builder.append("\n  \(passTimer.kind): \(passTimer.timer.elapsedMilliseconds)")
-      }
 
       # Sources
       var totalBytes = 0
       var totalLines = 0
       for source in outputs {
         totalBytes += source.contents.count
-        totalLines += source.lineCount
+        if kind == .LONG {
+          totalLines += source.lineCount
+        }
       }
-      builder.append("\nOutputs: \(outputs.count) file\(PrettyPrint.plural(outputs.count)) " +
-        "(\(bytesToString(totalBytes)), \(totalLines) line\(PrettyPrint.plural(totalLines)))")
-      for source in outputs {
-        var lines = source.lineCount
-        builder.append("\n  \(source.name) (\(bytesToString(source.contents.count)), \(lines) line\(PrettyPrint.plural(lines)))")
+      builder.append("output\(PrettyPrint.plural(outputs.count)): " +
+        (outputs.count == 1 ? outputs.first.name : "\(outputs.count) files") +
+        " (\(bytesToString(totalBytes))" +
+        (kind == .LONG ? ", \(totalLines) line\(PrettyPrint.plural(totalLines))" : "") + ")")
+      if kind == .LONG {
+        for source in outputs {
+          var lines = source.lineCount
+          builder.append("\n  \(source.name) (\(bytesToString(source.contents.count)), \(lines) line\(PrettyPrint.plural(lines)))")
+        }
+      }
+
+      # Compilation time
+      builder.append("\ntime: \(totalTimer.elapsedMilliseconds)")
+      if kind == .LONG {
+        for passTimer in passTimers {
+          builder.append("\n  \(passTimer.kind): \(passTimer.timer.elapsedMilliseconds)")
+        }
       }
 
       return builder.toString

@@ -1,8 +1,8 @@
-SOURCES += src/backend/*.sk
-SOURCES += src/core/*.sk
-SOURCES += src/frontend/*.sk
+SOURCES += src/backend
+SOURCES += src/core
+SOURCES += src/frontend
 SOURCES += src/lib/timestamp.sk
-SOURCES += src/middle/*.sk
+SOURCES += src/middle
 
 SOURCES_SKEWC += $(SOURCES)
 SOURCES_SKEWC += src/driver/nodejs.sk
@@ -17,7 +17,7 @@ SOURCES_TEST += $(SOURCES)
 SOURCES_TEST += src/driver/tests.sk
 SOURCES_TEST += src/lib/terminal.sk
 SOURCES_TEST += src/lib/unit.sk
-SOURCES_TEST += tests/*.sk
+SOURCES_TEST += tests
 
 FLAGS += --inline-functions
 FLAGS += --verbose

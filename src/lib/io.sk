@@ -1,5 +1,21 @@
-namespace IO {
-  if TARGET == .JAVASCRIPT {
+if TARGET == .JAVASCRIPT {
+  namespace IO {
+    def isDirectory(path string) bool {
+      try {
+        return dynamic.require("fs").statSync(path).isDirectory()
+      }
+      return false
+    }
+
+    def readDirectory(path string) List<string> {
+      try {
+        var entries List<string> = dynamic.require("fs").readdirSync(path)
+        entries.sort((a, b) => a <=> b)
+        return entries
+      }
+      return null
+    }
+
     def readFile(path string) string {
       try {
         var contents string = dynamic.require("fs").readFileSync(path, "utf8")
@@ -16,8 +32,29 @@ namespace IO {
       return false
     }
   }
+}
 
-  else if TARGET == .CSHARP {
+else if TARGET == .CSHARP {
+  namespace IO {
+    def isDirectory(path string) bool {
+      try {
+        return dynamic.System.IO.Directory.Exists(path)
+      }
+      return false
+    }
+
+    def readDirectory(path string) List<string> {
+      try {
+        var entries List<string> = dynamic.System.Linq.Enumerable.ToList(dynamic.System.IO.Directory.GetFileSystemEntries(path))
+        for i in 0..entries.count {
+          entries[i] = dynamic.System.IO.Path.GetFileName(entries[i])
+        }
+        entries.sort((a, b) => a <=> b)
+        return entries
+      }
+      return null
+    }
+
     def readFile(path string) string {
       try {
         var contents string = dynamic.System.IO.File.ReadAllText(path)
@@ -34,11 +71,14 @@ namespace IO {
       return false
     }
   }
+}
 
-  else {
-    @import {
-      def readFile(path string) string
-      def writeFile(path string, contents string) bool
-    }
+else {
+  @import
+  namespace IO {
+    def isDirectory(path string) bool
+    def readDirectory(path string) List<string>
+    def readFile(path string) string
+    def writeFile(path string, contents string) bool
   }
 }

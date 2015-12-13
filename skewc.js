@@ -626,8 +626,8 @@
         }
 
         // Print compilation statistics
-        if (!log.hasErrors() && options.verbose) {
-          Skew.printWithColor(Terminal.Color.GRAY, result.statistics() + '\n');
+        if (!log.hasErrors()) {
+          Skew.printWithColor(Terminal.Color.GRAY, result.statistics(options.verbose ? Skew.StatisticsKind.LONG : Skew.StatisticsKind.SHORT) + '\n');
         }
       }
     }
@@ -731,21 +731,49 @@
     }
   };
 
-  Skew.readSources = function(log, files) {
+  Skew.readSources = function(log, inputs) {
     var result = [];
-
-    for (var i = 0, list = files, count = list.length; i < count; i = i + 1 | 0) {
-      var file = list[i];
-      var path = file.toString();
-      var contents = IO.readFile(path);
-
-      if (contents == null) {
-        log.commandLineErrorUnreadableFile(file, path);
+    var visit = null;
+    visit = function(range, path) {
+      if (in_string.startsWith(path, '.')) {
+        return;
       }
 
-      else {
-        result.push(new Skew.Source(path, contents));
+      // Directories
+      if (IO.isDirectory(path)) {
+        var entries = IO.readDirectory(path);
+
+        if (entries == null) {
+          log.commandLineErrorUnreadableFile(range, path);
+        }
+
+        for (var i = 0, list = entries, count = list.length; i < count; i = i + 1 | 0) {
+          var entry = list[i];
+
+          if (!in_string.startsWith(entry, '.')) {
+            visit(null, path + '/' + entry);
+          }
+        }
       }
+
+      // Files (ignore non-skew files that aren't explicitly specified)
+      else if (range != null || in_string.endsWith(path, '.sk')) {
+        var contents = IO.readFile(path);
+
+        if (contents == null) {
+          log.commandLineErrorUnreadableFile(range, path);
+        }
+
+        else {
+          result.push(new Skew.Source(path, contents));
+        }
+      }
+    };
+
+    // Recursively visit input directories
+    for (var i = 0, list = inputs, count = list.length; i < count; i = i + 1 | 0) {
+      var range = list[i];
+      visit(range, range.toString());
     }
 
     return result;
@@ -12632,6 +12660,11 @@
     this.timer = new Skew.Timer();
   };
 
+  Skew.StatisticsKind = {
+    SHORT: 0,
+    LONG: 1
+  };
+
   Skew.CompilerResult = function(cache, global, outputs, passTimers, totalTimer) {
     this.cache = cache;
     this.global = global;
@@ -12640,33 +12673,40 @@
     this.totalTimer = totalTimer;
   };
 
-  Skew.CompilerResult.prototype.statistics = function() {
+  Skew.CompilerResult.prototype.statistics = function(kind) {
     var builder = new StringBuilder();
-
-    // Compilation time
-    builder.append('Total time: ' + this.totalTimer.elapsedMilliseconds());
-
-    for (var i = 0, list = this.passTimers, count = list.length; i < count; i = i + 1 | 0) {
-      var passTimer = list[i];
-      builder.append('\n  ' + Skew.in_PassKind._strings[passTimer.kind] + ': ' + passTimer.timer.elapsedMilliseconds());
-    }
 
     // Sources
     var totalBytes = 0;
     var totalLines = 0;
 
-    for (var i1 = 0, list1 = this.outputs, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var source = list1[i1];
+    for (var i = 0, list = this.outputs, count = list.length; i < count; i = i + 1 | 0) {
+      var source = list[i];
       totalBytes = totalBytes + source.contents.length | 0;
-      totalLines = totalLines + source.lineCount() | 0;
+
+      if (kind == Skew.StatisticsKind.LONG) {
+        totalLines = totalLines + source.lineCount() | 0;
+      }
     }
 
-    builder.append('\nOutputs: ' + this.outputs.length.toString() + ' file' + (this.outputs.length == 1 ? '' : 's') + ' ' + ('(' + Skew.bytesToString(totalBytes) + ', ' + totalLines.toString() + ' line' + (totalLines == 1 ? '' : 's') + ')'));
+    builder.append('output' + (this.outputs.length == 1 ? '' : 's') + ': ' + (this.outputs.length == 1 ? this.outputs[0].name : this.outputs.length.toString() + ' files') + (' (' + Skew.bytesToString(totalBytes)) + (kind == Skew.StatisticsKind.LONG ? ', ' + totalLines.toString() + ' line' + (totalLines == 1 ? '' : 's') : '') + ')');
 
-    for (var i2 = 0, list2 = this.outputs, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var source1 = list2[i2];
-      var lines = source1.lineCount();
-      builder.append('\n  ' + source1.name + ' (' + Skew.bytesToString(source1.contents.length) + ', ' + lines.toString() + ' line' + (lines == 1 ? '' : 's') + ')');
+    if (kind == Skew.StatisticsKind.LONG) {
+      for (var i1 = 0, list1 = this.outputs, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+        var source1 = list1[i1];
+        var lines = source1.lineCount();
+        builder.append('\n  ' + source1.name + ' (' + Skew.bytesToString(source1.contents.length) + ', ' + lines.toString() + ' line' + (lines == 1 ? '' : 's') + ')');
+      }
+    }
+
+    // Compilation time
+    builder.append('\ntime: ' + this.totalTimer.elapsedMilliseconds());
+
+    if (kind == Skew.StatisticsKind.LONG) {
+      for (var i2 = 0, list2 = this.passTimers, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
+        var passTimer = list2[i2];
+        builder.append('\n  ' + Skew.in_PassKind._strings[passTimer.kind] + ': ' + passTimer.timer.elapsedMilliseconds());
+      }
     }
 
     return builder.toString();
@@ -21085,7 +21125,53 @@
     return Skew.in_TokenKind._toString[self];
   };
 
+  var Terminal = {};
+
+  Terminal.setColor = function(color) {
+    if (process.stdout.isTTY) {
+      process.stdout.write('\x1B[0;' + Terminal.colorToEscapeCode[color].toString() + 'm');
+    }
+  };
+
+  Terminal.Color = {
+    DEFAULT: 0,
+    BOLD: 1,
+    GRAY: 2,
+    RED: 3,
+    GREEN: 4,
+    YELLOW: 5,
+    BLUE: 6,
+    MAGENTA: 7,
+    CYAN: 8
+  };
+
   var IO = {};
+
+  IO.isDirectory = function(path) {
+    try {
+      return require('fs').statSync(path).isDirectory();
+    }
+
+    catch (e) {
+    }
+
+    return false;
+  };
+
+  IO.readDirectory = function(path) {
+    try {
+      var entries = require('fs').readdirSync(path);
+      entries.sort(function(a, b) {
+        return in_string.compare(a, b);
+      });
+      return entries;
+    }
+
+    catch (e) {
+    }
+
+    return null;
+  };
 
   IO.readFile = function(path) {
     try {
@@ -21109,26 +21195,6 @@
     }
 
     return false;
-  };
-
-  var Terminal = {};
-
-  Terminal.setColor = function(color) {
-    if (process.stdout.isTTY) {
-      process.stdout.write('\x1B[0;' + Terminal.colorToEscapeCode[color].toString() + 'm');
-    }
-  };
-
-  Terminal.Color = {
-    DEFAULT: 0,
-    BOLD: 1,
-    GRAY: 2,
-    RED: 3,
-    GREEN: 4,
-    YELLOW: 5,
-    BLUE: 6,
-    MAGENTA: 7,
-    CYAN: 8
   };
 
   var in_int = {};

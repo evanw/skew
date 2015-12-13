@@ -43,8 +43,8 @@ namespace Skew {
         }
 
         # Print compilation statistics
-        if !log.hasErrors && options.verbose {
-          printWithColor(.GRAY, result.statistics + "\n")
+        if !log.hasErrors {
+          printWithColor(.GRAY, result.statistics(options.verbose ? .LONG : .SHORT) + "\n")
         }
       }
     }
@@ -135,16 +135,42 @@ namespace Skew {
     }
   }
 
-  def readSources(log Log, files List<Range>) List<Source> {
-    var result List<Source>  = []
-    for file in files {
-      var path = file.toString
-      var contents = IO.readFile(path)
-      if contents == null {
-        log.commandLineErrorUnreadableFile(file, path)
-      } else {
-        result.append(Source.new(path, contents))
+  def readSources(log Log, inputs List<Range>) List<Source> {
+    var result List<Source> = []
+    var visit fn(Range, string)
+
+    visit = (range, path) => {
+      if path.startsWith(".") {
+        return
       }
+
+      # Directories
+      if IO.isDirectory(path) {
+        var entries = IO.readDirectory(path)
+        if entries == null {
+          log.commandLineErrorUnreadableFile(range, path)
+        }
+        for entry in entries {
+          if !entry.startsWith(".") {
+            visit(null, path + "/" + entry)
+          }
+        }
+      }
+
+      # Files (ignore non-skew files that aren't explicitly specified)
+      else if range != null || path.endsWith(".sk") {
+        var contents = IO.readFile(path)
+        if contents == null {
+          log.commandLineErrorUnreadableFile(range, path)
+        } else {
+          result.append(Source.new(path, contents))
+        }
+      }
+    }
+
+    # Recursively visit input directories
+    for range in inputs {
+      visit(range, range.toString)
     }
     return result
   }
