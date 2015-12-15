@@ -113,6 +113,7 @@ namespace Skew.API {
       var name string = message.source + ""
       var line int = message.line | 0
       var column int = message.column | 0
+      var ignoreDiagnostics bool = !!message.ignoreDiagnostics
       var range Range = null
       var tooltip string = null
       var symbol string = null
@@ -123,7 +124,7 @@ namespace Skew.API {
             var index = source.lineColumnToIndex(line, column)
             if index != -1 {
               # Search diagnostics first
-              if log != null {
+              if !ignoreDiagnostics && log != null {
                 for diagnostic in log.diagnostics {
                   if diagnostic.range != null && diagnostic.range.source == source && diagnostic.range.touches(index) {
                     tooltip = diagnostic.text
