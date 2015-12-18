@@ -7179,5 +7179,31 @@ def test List<Foo> {
             ~~~~
 ")
 
+# Test for a crash due to a missing symbol initialization
+test("
+namespace Baz {
+  def test {
+    Bar.new
+  }
+}
+
+class Bar :: Foo {
+  def foo
+  def bar
+}
+
+interface Foo {
+  def foo
+  def bar
+}
+", "
+<stdin>:3:5: error: Cannot construct abstract type \"Bar\"
+    Bar.new
+    ~~~~~~~
+<stdin>:8:7: note: The type \"Bar\" is abstract due to member \"foo\"
+  def foo
+      ~~~
+")
+
   }
 }

@@ -15778,6 +15778,8 @@
 
           // Search for a matching function
           if (member1 != null) {
+            this._initializeSymbol(member1);
+
             if (member1.kind == Skew.SymbolKind.OVERLOADED_INSTANCE) {
               for (var i2 = 0, list2 = member1.asOverloadedFunctionSymbol().symbols, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
                 var other = list2[i2];

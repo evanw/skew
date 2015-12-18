@@ -458,6 +458,7 @@ namespace Skew.Resolving {
 
             # Search for a matching function
             if member != null {
+              _initializeSymbol(member)
               if member.kind == .OVERLOADED_INSTANCE {
                 for other in member.asOverloadedFunctionSymbol.symbols {
                   equivalence = _cache.areFunctionSymbolsEquivalent(function, interfaceType.environment, other, null)
