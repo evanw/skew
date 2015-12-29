@@ -7794,6 +7794,10 @@
     return this._parent != null && (Skew.in_NodeKind.isUnaryAssign(this._parent.kind) || Skew.in_NodeKind.isBinaryAssign(this._parent.kind) && this == this._parent.binaryLeft());
   };
 
+  Skew.Node.prototype.isZero = function() {
+    return this.isInt() && this.asInt() == 0 || this.isDouble() && this.asDouble() == 0;
+  };
+
   Skew.Node.prototype.isNumberLessThanZero = function() {
     return this.isInt() && this.asInt() < 0 || this.isDouble() && this.asDouble() < 0;
   };
@@ -13508,7 +13512,7 @@
     }
   };
 
-  Skew.Folding.ConstantFolder.prototype._foldConstantAddOrSubtract = function(node, variable, constant, delta) {
+  Skew.Folding.ConstantFolder.prototype._foldConstantIntegerAddOrSubtract = function(node, variable, constant, delta) {
     var isAdd = node.kind == Skew.NodeKind.ADD;
     var needsContentUpdate = delta != 0;
     var isRightConstant = constant == node.binaryRight();
@@ -13523,9 +13527,12 @@
     // Include the delta from the parent node if present
     value = value + delta | 0;
 
-    // Apply addition identities
+    // 0 + a => a
+    // 0 - a => -a
+    // a + 0 => a
+    // a - 0 => a
     if (value == 0) {
-      node.become(variable.remove());
+      node.become(isAdd || isRightConstant ? variable.remove() : Skew.Node.createUnary(Skew.NodeKind.NEGATIVE, variable.remove()).withType(node.resolvedType));
       return;
     }
 
@@ -13540,7 +13547,7 @@
       var isLeftConstant = left.isInt();
 
       if (isLeftConstant || right.isInt()) {
-        this._foldConstantAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value);
+        this._foldConstantIntegerAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value);
         node.become(variable.remove());
         return;
       }
@@ -13596,6 +13603,18 @@
     else if (right.kind == Skew.NodeKind.NEGATIVE) {
       right.become(right.unaryValue().remove());
       node.kind = isAdd ? Skew.NodeKind.SUBTRACT : Skew.NodeKind.ADD;
+    }
+
+    // 0 + a => a
+    // 0 - a => -a
+    else if (left.isZero()) {
+      node.become(isAdd ? right.remove() : Skew.Node.createUnary(Skew.NodeKind.NEGATIVE, right.remove()).withType(node.resolvedType));
+    }
+
+    // a + 0 => a
+    // a - 0 => a
+    else if (right.isZero()) {
+      node.become(left.remove());
     }
   };
 
@@ -13724,11 +13743,11 @@
       case Skew.NodeKind.ADD:
       case Skew.NodeKind.SUBTRACT: {
         if (left.isInt()) {
-          this._foldConstantAddOrSubtract(node, right, left, 0);
+          this._foldConstantIntegerAddOrSubtract(node, right, left, 0);
         }
 
         else if (right.isInt()) {
-          this._foldConstantAddOrSubtract(node, left, right, 0);
+          this._foldConstantIntegerAddOrSubtract(node, left, right, 0);
         }
 
         else {

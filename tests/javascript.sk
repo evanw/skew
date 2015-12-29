@@ -3182,5 +3182,35 @@ def test {
 })();
 ").js
 
+
+# Check for constant folding a subtraction identity
+test("
+@export
+def test(x int, y double) {
+  dynamic.foo(0 + x)
+  dynamic.foo(0 - x)
+  dynamic.foo(0 + y)
+  dynamic.foo(0 - y)
+
+  dynamic.bar(x + 0)
+  dynamic.bar(x - 0)
+  dynamic.bar(y + 0)
+  dynamic.bar(y - 0)
+}
+", "
+(function() {
+  test = function(x, y) {
+    foo(x);
+    foo(-x | 0);
+    foo(y);
+    foo(-y);
+    bar(x);
+    bar(x);
+    bar(y);
+    bar(y);
+  };
+})();
+").js.foldAllConstants
+
   }
 }

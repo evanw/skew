@@ -669,6 +669,10 @@ namespace Skew {
       return _parent != null && (_parent.kind.isUnaryAssign || _parent.kind.isBinaryAssign && self == _parent.binaryLeft)
     }
 
+    def isZero bool {
+      return isInt && asInt == 0 || isDouble && asDouble == 0
+    }
+
     def isNumberLessThanZero bool {
       return isInt && asInt < 0 || isDouble && asDouble < 0
     }

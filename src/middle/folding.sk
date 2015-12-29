@@ -575,7 +575,7 @@ namespace Skew.Folding {
       }
     }
 
-    def _foldConstantAddOrSubtract(node Node, variable Node, constant Node, delta int) {
+    def _foldConstantIntegerAddOrSubtract(node Node, variable Node, constant Node, delta int) {
       var isAdd = node.kind == .ADD
       var needsContentUpdate = delta != 0
       var isRightConstant = constant == node.binaryRight
@@ -590,9 +590,12 @@ namespace Skew.Folding {
       # Include the delta from the parent node if present
       value += delta
 
-      # Apply addition identities
+      # 0 + a => a
+      # 0 - a => -a
+      # a + 0 => a
+      # a - 0 => a
       if value == 0 {
-        node.become(variable.remove)
+        node.become(isAdd || isRightConstant ? variable.remove : Node.createUnary(.NEGATIVE, variable.remove).withType(node.resolvedType))
         return
       }
 
@@ -606,7 +609,7 @@ namespace Skew.Folding {
         # (a + 1) + 2 => a + 3
         var isLeftConstant = left.isInt
         if isLeftConstant || right.isInt {
-          _foldConstantAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value)
+          _foldConstantIntegerAddOrSubtract(variable, isLeftConstant ? right : left, isLeftConstant ? left : right, value)
           node.become(variable.remove)
           return
         }
@@ -662,6 +665,18 @@ namespace Skew.Folding {
       else if right.kind == .NEGATIVE {
         right.become(right.unaryValue.remove)
         node.kind = isAdd ? .SUBTRACT : .ADD
+      }
+
+      # 0 + a => a
+      # 0 - a => -a
+      else if left.isZero {
+        node.become(isAdd ? right.remove : Node.createUnary(.NEGATIVE, right.remove).withType(node.resolvedType))
+      }
+
+      # a + 0 => a
+      # a - 0 => a
+      else if right.isZero {
+        node.become(left.remove)
       }
     }
 
@@ -778,8 +793,8 @@ namespace Skew.Folding {
         # addition/subtraction improves minification in JavaScript and often
         # helps with readability.
         case .ADD, .SUBTRACT {
-          if left.isInt { _foldConstantAddOrSubtract(node, right, left, 0) }
-          else if right.isInt { _foldConstantAddOrSubtract(node, left, right, 0) }
+          if left.isInt { _foldConstantIntegerAddOrSubtract(node, right, left, 0) }
+          else if right.isInt { _foldConstantIntegerAddOrSubtract(node, left, right, 0) }
           else { _foldAddOrSubtract(node) }
         }
 
