@@ -9,6 +9,7 @@ const __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) =
   return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0
 }
 
+const __prototype dynamic
 const __isInt = (value dynamic) => value == (value | 0)
 const __isBool = (value dynamic) => value == !!value
 const __isDouble = (value dynamic) => value == +value || dynamic.isNaN(value)

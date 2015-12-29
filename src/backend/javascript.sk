@@ -46,6 +46,7 @@ namespace Skew {
       IS_INT
       IS_STRING
       MULTIPLY
+      PROTOTYPE
     }
 
     const _context PassContext
@@ -114,6 +115,10 @@ namespace Skew {
       assert(SpecialVariable.IS_INT in _specialVariables)
       assert(SpecialVariable.IS_STRING in _specialVariables)
       assert(SpecialVariable.MULTIPLY in _specialVariables)
+      assert(SpecialVariable.PROTOTYPE in _specialVariables)
+
+      # The prototype cache doesn't need to be initialized
+      _specialVariables[SpecialVariable.PROTOTYPE].value = null
 
       # Preprocess the code
       if _mangle {
@@ -136,7 +141,7 @@ namespace Skew {
       specialVariables.sort((a, b) => a.id <=> b.id)
       for variable in specialVariables {
         if variable.id in _isSpecialVariableNeeded {
-          if variable.value.kind == .LAMBDA {
+          if variable.value != null && variable.value.kind == .LAMBDA {
             _emitFunction(_convertLambdaToFunction(variable))
           } else {
             _emitVariable(variable)
@@ -785,6 +790,12 @@ namespace Skew {
         _namespacePrefix += _mangleName(symbol) + "."
       }
 
+      if symbol.usePrototypeCache {
+        _emitSemicolonIfNeeded
+        _emit(_newline + _indent + _mangleName(_specialVariables[SpecialVariable.PROTOTYPE]) + _space + "=" + _space + _fullName(symbol) + ".prototype")
+        _emitSemicolonAfterStatement
+      }
+
       # Ignore instance functions if the class is never constructed
       for function in symbol.functions {
         if foundPrimaryConstructor ? !function.isPrimaryConstructor : function.kind == .FUNCTION_GLOBAL {
@@ -815,7 +826,10 @@ namespace Skew {
       var name = _mangleName(symbol.isPrimaryConstructor ? symbol.parent : symbol)
 
       if isExpression {
-        _emit(_indent + _namespacePrefix + (symbol.kind == .FUNCTION_INSTANCE ? "prototype." : "") + name + _space + "=" + _space + "function(")
+        _emit(_indent + (
+          symbol.kind != .FUNCTION_INSTANCE ? _namespacePrefix :
+          symbol.parent.usePrototypeCache ? _mangleName(_specialVariables[SpecialVariable.PROTOTYPE]) + "." :
+          _namespacePrefix + "prototype.") + name + _space + "=" + _space + "function(")
       } else {
         _emit(_indent + "function " + name + "(")
       }
@@ -836,9 +850,12 @@ namespace Skew {
       }
       _emitNewlineAfterSymbol(symbol)
 
+      # Secondary constructors need the same prototype as the primary constructor
       if symbol.kind == .FUNCTION_CONSTRUCTOR && !symbol.isPrimaryConstructor {
         _emitSemicolonIfNeeded
-        _emit(_newline + _indent + _fullName(symbol) + ".prototype" + _space + "=" + _space + _fullName(symbol.parent) + ".prototype")
+        _emit(_newline + _indent + _fullName(symbol) + ".prototype" + _space + "=" + _space + (
+          symbol.parent.usePrototypeCache ? _mangleName(_specialVariables[SpecialVariable.PROTOTYPE]) :
+          _fullName(symbol.parent) + ".prototype"))
         _emitSemicolonAfterStatement
       }
     }
@@ -1521,6 +1538,7 @@ namespace Skew {
 
       # Scan over child functions
       var isPrimaryConstructor = true
+      var prototypeCount = 0
       for function in symbol.functions {
         var block = function.block
         var this = function.this
@@ -1574,10 +1592,17 @@ namespace Skew {
         }
 
         # Rename extra constructors overloads so they don't conflict
-        if function.kind == .FUNCTION_CONSTRUCTOR {
-          if isPrimaryConstructor {
-            function.flags |= .IS_PRIMARY_CONSTRUCTOR
-            isPrimaryConstructor = false
+        if function.kind == .FUNCTION_CONSTRUCTOR && isPrimaryConstructor {
+          function.flags |= .IS_PRIMARY_CONSTRUCTOR
+          isPrimaryConstructor = false
+        }
+
+        # Mark the prototype variable as needed when the prototype is used
+        else if _mangle && (function.kind == .FUNCTION_INSTANCE || function.kind == .FUNCTION_CONSTRUCTOR && !isPrimaryConstructor) {
+          if ++prototypeCount == 2 {
+            var variable = _specialVariable(.PROTOTYPE)
+            _symbolCounts[variable.id] = _symbolCounts.get(variable.id, 0) + 1
+            symbol.flags |= .USE_PROTOTYPE_CACHE
           }
         }
       }
@@ -2835,6 +2860,7 @@ namespace Skew {
       "__isDouble": SpecialVariable.IS_DOUBLE,
       "__isInt": SpecialVariable.IS_INT,
       "__isString": SpecialVariable.IS_STRING,
+      "__prototype": SpecialVariable.PROTOTYPE,
     }
   }
 }

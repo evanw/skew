@@ -120,6 +120,7 @@ namespace Skew {
     IS_OBSOLETE
     IS_PRIMARY_CONSTRUCTOR
     IS_VIRTUAL
+    USE_PROTOTYPE_CACHE
   }
 
   class Symbol {
@@ -177,6 +178,7 @@ namespace Skew {
     def isObsolete bool           { return .IS_OBSOLETE in flags }
     def isPrimaryConstructor bool { return .IS_PRIMARY_CONSTRUCTOR in flags }
     def isVirtual bool            { return .IS_VIRTUAL in flags }
+    def usePrototypeCache bool    { return .USE_PROTOTYPE_CACHE in flags }
 
     # Combinations
     def isImportedOrExported bool { return (.IS_IMPORTED | .IS_EXPORTED) in flags }

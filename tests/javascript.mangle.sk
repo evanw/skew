@@ -756,18 +756,22 @@ class Foo {
 }
 ", "
 (function() {
+  var c;
+
   Foo = function() {
     this.x = 100;
   };
 
-  Foo.prototype.foo = function() {
+  c = Foo.prototype;
+
+  c.foo = function() {
     var b = this, a = get();
     return function() {
       return b.x + a;
     };
   };
 
-  Foo.prototype.bar = function() {
+  c.bar = function() {
     for (var b = this, a = get();;) {
       return function() {
         return b.x + a;
@@ -775,7 +779,7 @@ class Foo {
     }
   };
 
-  Foo.prototype.baz = function() {
+  c.baz = function() {
     for (var a = this;;) {
       return function() {
         return a.x;
@@ -783,7 +787,7 @@ class Foo {
     }
   };
 
-  Foo.prototype.test = function() {
+  c.test = function() {
     var a = this;
     return function() {
       return a.x;
@@ -2016,34 +2020,40 @@ def main {
 }
 ", "
 (function() {
-  function g() {
-    var c = new e, d = new f;
+  var e;
+
+  function h() {
+    var c = new f, d = new g;
     c.a(0), c.b(!1), d.a(0), d.b(!1);
   }
-
-  function e() {
-  }
-
-  // Foo.foo(x int)
-  e.prototype.a = function(c) {
-  };
-
-  // Foo.foo(x bool)
-  e.prototype.b = function(c) {
-  };
 
   function f() {
   }
 
+  e = f.prototype;
+
+  // Foo.foo(x int)
+  e.a = function(c) {
+  };
+
+  // Foo.foo(x bool)
+  e.b = function(c) {
+  };
+
+  function g() {
+  }
+
+  e = g.prototype;
+
   // Bar.foo(x int)
-  f.prototype.a = function(c) {
+  e.a = function(c) {
   };
 
   // Bar.foo(x bool)
-  f.prototype.b = function(c) {
+  e.b = function(c) {
   };
 
-  g();
+  h();
 })();
 ").jsMangle
 
@@ -2309,6 +2319,71 @@ def test {
   };
 })();
 ").jsMangle.inlineAllFunctions
+
+# Check for prototype caching for secondary constructors
+test("
+class Foo {
+  def new {}
+  def new(x int) {}
+  def foo {}
+}
+
+class Bar {
+  def new {}
+  def foo {}
+}
+
+class Baz {
+  def new {}
+  def new(x int) {}
+}
+
+@entry
+def main {
+  Foo.new.foo
+  Foo.new(0).foo
+  Bar.new.foo
+  Baz.new
+  Baz.new(0)
+}
+", "
+(function() {
+  var e;
+
+  function j() {
+    new g().a(), new g.b(0).a(), new h().c(), new i, new i.d(0);
+  }
+
+  function g() {
+  }
+
+  e = g.prototype;
+
+  g.b = function(f) {
+  };
+
+  g.b.prototype = e;
+
+  e.a = function() {
+  };
+
+  function h() {
+  }
+
+  h.prototype.c = function() {
+  };
+
+  function i() {
+  }
+
+  i.d = function(f) {
+  };
+
+  i.d.prototype = i.prototype;
+
+  j();
+})();
+").jsMangle
 
   }
 }
