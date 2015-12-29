@@ -1060,33 +1060,32 @@ def main(args List<string>) int {
 }
 ", "
 (function() {
-  function h(a, b) {
+  function d(a, b) {
     a.prototype = Object.create(b.prototype), a.prototype.constructor = a;
   }
 
-  var i = Math.imul || function(a, b) {
-    var e = a >> 16 & 65535, f = b >> 16 & 65535, c = a & 65535, d = b & 65535;
-    return c * d + (e * d + c * f << 16) | 0;
+  var e = Math.imul || function(a, b) {
+    return (a * (b >>> 16) << 16) + a * (b & 65535) | 0;
   };
 
-  function l(a) {
-    return new k, i(g(a), 100);
+  function h(a) {
+    return new g, e(c(a), 100);
   }
 
-  function g(a) {
+  function c(a) {
     return a.length;
   }
 
-  function j() {
+  function f() {
   }
 
-  function k() {
-    j.call(this);
+  function g() {
+    f.call(this);
   }
 
-  h(k, j);
+  d(g, f);
 
-  process.exit(l(process.argv.slice(2)));
+  process.exit(h(process.argv.slice(2)));
 })();
 ").jsMangle
 

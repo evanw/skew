@@ -6,11 +6,7 @@ const __extends = (derived dynamic, base dynamic) => {
 }
 
 const __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) => {
-  const ah dynamic = (a >> 16) & 65535
-  const bh dynamic = (b >> 16) & 65535
-  const al dynamic = a & 65535
-  const bl dynamic = b & 65535
-  return al * bl + ((ah * bl + al * bh) << 16) | 0
+  return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0
 }
 
 const __isInt = (value dynamic) => value == (value | 0)

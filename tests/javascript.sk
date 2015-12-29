@@ -985,11 +985,7 @@ def main(x int) {
 ", "
 (function() {
   var __imul = Math.imul ? Math.imul : function(a, b) {
-    var ah = a >> 16 & 65535;
-    var bh = b >> 16 & 65535;
-    var al = a & 65535;
-    var bl = b & 65535;
-    return al * bl + (ah * bl + al * bh << 16) | 0;
+    return (a * (b >>> 16) << 16) + a * (b & 65535) | 0;
   };
 
   main = function(x) {
@@ -1495,11 +1491,7 @@ def main(x int, y fn() int) {
 ", "
 (function() {
   var __imul = Math.imul ? Math.imul : function(a, b) {
-    var ah = a >> 16 & 65535;
-    var bh = b >> 16 & 65535;
-    var al = a & 65535;
-    var bl = b & 65535;
-    return al * bl + (ah * bl + al * bh << 16) | 0;
+    return (a * (b >>> 16) << 16) + a * (b & 65535) | 0;
   };
 
   main = function(x, y) {

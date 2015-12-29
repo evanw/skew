@@ -154,6 +154,12 @@ namespace Skew.Tests {
     testExpect("5 <=> 2", => 5 <=> 2, 1)
     testExpect("-0x7FFFFFFF <=> 0x7FFFFFFF", => -0x7FFFFFFF <=> 0x7FFFFFFF, -1)
 
+    # 32-bit integer multiplication
+    var imul = (a int, b int) => a * b
+    testExpect("0x12345678 * 0x87654321", => imul(0x12345678, 0x87654321), 0x70B88D78)
+    testExpect("0x12345678 * -0x87654321", => imul(0x12345678, -0x87654321), -0x70B88D78)
+    testExpect("-0xDEADF00D * -0xCAFEBABE", => imul(-0xDEADF00D, -0xCAFEBABE), 0x14679BA6)
+
     # Binary assignment
     testExpect("5 += 3", () int => {
       var x = 5
