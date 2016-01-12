@@ -289,7 +289,7 @@ namespace Skew {
   namespace TokenKind {
     const _toString = {
       COMMENT: "comment",
-      NEWLINE: "\"\\n\"",
+      NEWLINE: "newline",
       WHITESPACE: "whitespace",
 
       AS: "\"as\"",

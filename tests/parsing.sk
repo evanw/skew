@@ -10,16 +10,16 @@ def foo {
   return;
 }
 ", "
-<stdin>:2:4: error: Expected \"\\n\" but found \";\"
+<stdin>:2:4: error: Expected newline but found \";\"
   0;
    ^
-<stdin>:3:12: error: Expected \"\\n\" but found \";\"
+<stdin>:3:12: error: Expected newline but found \";\"
   var x = 0;
            ^
 <stdin>:4:3: error: Unexpected \";\"
   ;
   ^
-<stdin>:5:13: error: Expected \"\\n\" but found \";\"
+<stdin>:5:13: error: Expected newline but found \";\"
   if true {};
             ^
 <stdin>:6:9: error: Unexpected \";\"
@@ -49,7 +49,7 @@ def main {
 test("
 var x = 0b2
 ", "
-<stdin>:1:10: error: Expected \"\\n\" but found identifier
+<stdin>:1:10: error: Expected newline but found identifier
 var x = 0b2
          ~~
 ")
@@ -57,7 +57,7 @@ var x = 0b2
 test("
 var x = 0b02
 ", "
-<stdin>:1:12: error: Expected \"\\n\" but found integer
+<stdin>:1:12: error: Expected newline but found integer
 var x = 0b02
            ^
 ")
@@ -65,7 +65,7 @@ var x = 0b02
 test("
 var x = 0o8
 ", "
-<stdin>:1:10: error: Expected \"\\n\" but found identifier
+<stdin>:1:10: error: Expected newline but found identifier
 var x = 0o8
          ~~
 ")
@@ -73,7 +73,7 @@ var x = 0o8
 test("
 var x = 0o08
 ", "
-<stdin>:1:12: error: Expected \"\\n\" but found integer
+<stdin>:1:12: error: Expected newline but found integer
 var x = 0o08
            ^
 ")
@@ -81,7 +81,7 @@ var x = 0o08
 test("
 var x = 0xG
 ", "
-<stdin>:1:10: error: Expected \"\\n\" but found identifier
+<stdin>:1:10: error: Expected newline but found identifier
 var x = 0xG
          ~~
 ")
@@ -89,7 +89,7 @@ var x = 0xG
 test("
 var x = 0x0G
 ", "
-<stdin>:1:12: error: Expected \"\\n\" but found identifier
+<stdin>:1:12: error: Expected newline but found identifier
 var x = 0x0G
            ^
 ")
@@ -97,7 +97,7 @@ var x = 0x0G
 test("
 var ns.foo int
 ", "
-<stdin>:1:7: error: Expected \"\\n\" but found \".\"
+<stdin>:1:7: error: Expected newline but found \".\"
 var ns.foo int
       ^
 <stdin>:1:5: error: The implicitly typed variable \"ns\" must be initialized
@@ -108,7 +108,7 @@ var ns.foo int
 test("
 def ns.foo int
 ", "
-<stdin>:1:7: error: Expected \"\\n\" but found \".\"
+<stdin>:1:7: error: Expected newline but found \".\"
 def ns.foo int
       ^
 <stdin>:1:5: error: Non-imported function \"ns\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
@@ -121,7 +121,7 @@ def main {
   var foo = dynamic
 }
 ", "
-<stdin>:2:20: error: Expected \".\" but found \"\\n\"
+<stdin>:2:20: error: Expected \".\" but found newline
   var foo = dynamic
                    ^
 <stdin>:2:7: warning: Local variable \"foo\" is never read
@@ -133,7 +133,7 @@ def main {
 test("
 var x List<int>>
 ", "
-<stdin>:1:16: error: Expected \"\\n\" but found \">\"
+<stdin>:1:16: error: Expected newline but found \">\"
 var x List<int>>
                ^
 ")
@@ -151,7 +151,7 @@ var x List<int>==
 test("
 var x List<int>>>
 ", "
-<stdin>:1:16: error: Expected \"\\n\" but found \">>\"
+<stdin>:1:16: error: Expected newline but found \">>\"
 var x List<int>>>
                ~~
 ")
@@ -160,7 +160,7 @@ var x List<int>>>
 test("
 var x List<int>>=
 ", "
-<stdin>:1:16: error: Expected \"\\n\" but found \">=\"
+<stdin>:1:16: error: Expected newline but found \">=\"
 var x List<int>>=
                ~~
 ")
@@ -169,7 +169,7 @@ var x List<int>>=
 test("
 var x List<int>>>=
 ", "
-<stdin>:1:16: error: Expected \"\\n\" but found \">>=\"
+<stdin>:1:16: error: Expected newline but found \">>=\"
 var x List<int>>>=
                ~~~
 ")
@@ -278,19 +278,19 @@ class Foo {
 <stdin>:2:22: error: Unexpected \"<<\"
   var foo Foo = <Foo><</Foo>
                      ~~
-<stdin>:2:24: error: Expected \"\\n\" but found \"/\"
+<stdin>:2:24: error: Expected newline but found \"/\"
   var foo Foo = <Foo><</Foo>
                        ^
-<stdin>:2:25: error: Expected \"\\n\" but found identifier
+<stdin>:2:25: error: Expected newline but found identifier
   var foo Foo = <Foo><</Foo>
                         ~~~
-<stdin>:2:28: error: Expected \"\\n\" but found \">\"
+<stdin>:2:28: error: Expected newline but found \">\"
   var foo Foo = <Foo><</Foo>
                            ^
-<stdin>:3:7: error: Expected \"\\n\" but found \"<>...</>\"
+<stdin>:3:7: error: Expected newline but found \"<>...</>\"
   def <>...</>(x Foo) {}
       ~~~~~~~~
-<stdin>:3:15: error: Expected \"\\n\" but found \"(\"
+<stdin>:3:15: error: Expected newline but found \"(\"
   def <>...</>(x Foo) {}
               ^
 <stdin>:3:23: error: Expected \"=>\" but found \"{\"
@@ -428,10 +428,10 @@ def test {
   const y = 0
 }
 ", "
-<stdin>:2:6: error: Expected identifier but found \"\\n\"
+<stdin>:2:6: error: Expected identifier but found newline
   var
      ^
-<stdin>:4:8: error: Expected identifier but found \"\\n\"
+<stdin>:4:8: error: Expected identifier but found newline
   const
        ^
 <stdin>:3:7: warning: Local variable \"x\" is never read

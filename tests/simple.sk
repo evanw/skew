@@ -6491,7 +6491,7 @@ test("
 var foo = <
 Foo/>
 ", "
-<stdin>:1:12: error: Expected identifier but found \"\\n\"
+<stdin>:1:12: error: Expected identifier but found newline
 var foo = <
            ^
 ")
@@ -6501,7 +6501,7 @@ test("
 var foo = <Foo></
 Foo>
 ", "
-<stdin>:1:18: error: Expected identifier but found \"\\n\"
+<stdin>:1:18: error: Expected identifier but found newline
 var foo = <Foo></
                  ^
 ")
