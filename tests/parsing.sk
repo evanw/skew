@@ -2,6 +2,19 @@ namespace Skew.Tests {
   def testParsing {
 
 test("
+var x = ''
+var y = '1'
+var z = '12'
+", "
+<stdin>:1:9: error: Use double quotes for strings (single quotes are for character literals)
+var x = ''
+        ~~
+<stdin>:3:9: error: Use double quotes for strings (single quotes are for character literals)
+var z = '12'
+        ~~~~
+")
+
+test("
 def foo {
   0;
   var x = 0;

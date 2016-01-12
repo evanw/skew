@@ -9315,7 +9315,7 @@
   };
 
   Skew.Log.prototype.syntaxErrorInvalidCharacter = function(range) {
-    this.error(range, 'Invalid character literal');
+    this.error(range, 'Use double quotes for strings (single quotes are for character literals)');
   };
 
   Skew.Log.prototype.syntaxErrorExtraData = function(range, text) {

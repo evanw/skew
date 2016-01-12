@@ -82,7 +82,7 @@ namespace Skew {
     }
 
     def syntaxErrorInvalidCharacter(range Range) {
-      error(range, "Invalid character literal")
+      error(range, "Use double quotes for strings (single quotes are for character literals)")
     }
 
     def syntaxErrorExtraData(range Range, text string) {
