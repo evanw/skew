@@ -352,16 +352,31 @@
 
       // Special-case string interpolation
       var c = text.charCodeAt(yy_cp);
+      var isStringInterpolation = c == 34;
 
-      if (c == 34 || c == 41 && !(stack.length == 0) && in_List.last(stack).kind == Skew.TokenKind.STRING_INTERPOLATION_START) {
-        var isStringInterpolation = c == 41;
+      if (c == 41) {
+        for (var i = stack.length - 1 | 0; i >= 0; i = i - 1 | 0) {
+          var kind = stack[i].kind;
+
+          if (kind == Skew.TokenKind.STRING_INTERPOLATION_START) {
+            isStringInterpolation = true;
+          }
+
+          else if (kind != Skew.TokenKind.LESS_THAN) {
+            break;
+          }
+        }
+      }
+
+      if (isStringInterpolation) {
+        var isExit = c == 41;
         yy_cp = yy_cp + 1 | 0;
 
         while (yy_cp < count) {
           c = text.charCodeAt((yy_cp = yy_cp + 1 | 0) + -1 | 0);
 
           if (c == 34) {
-            yy_act = isStringInterpolation ? Skew.TokenKind.STRING_INTERPOLATION_END : Skew.TokenKind.STRING;
+            yy_act = isExit ? Skew.TokenKind.STRING_INTERPOLATION_END : Skew.TokenKind.STRING;
             break;
           }
 
@@ -373,7 +388,7 @@
             c = text.charCodeAt((yy_cp = yy_cp + 1 | 0) + -1 | 0);
 
             if (c == 40) {
-              yy_act = isStringInterpolation ? Skew.TokenKind.STRING_INTERPOLATION_CONTINUE : Skew.TokenKind.STRING_INTERPOLATION_START;
+              yy_act = isExit ? Skew.TokenKind.STRING_INTERPOLATION_CONTINUE : Skew.TokenKind.STRING_INTERPOLATION_START;
               break;
             }
           }
@@ -15317,7 +15332,7 @@
       }
     }
 
-    if (in_string.endsWith(name, '=')) {
+    if (text != '' && in_string.endsWith(name, '=')) {
       return 'set' + text.slice(0, 1).toUpperCase() + text.slice(1);
     }
 

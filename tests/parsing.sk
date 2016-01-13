@@ -557,5 +557,45 @@ def test {
       ^
 ")
 
+# Check for issues with parsing type parameters and string interpolation
+test("
+var a = \"\\(x > y)\"
+var b = \"\\(x < y)\"
+var c = \"\\(x <= y)\"
+var d = \"\\(x >= y)\"
+var e = \"\\(x <=> y)\"
+", "
+<stdin>:1:12: error: \"x\" is not declared
+var a = \"\\(x > y)\"
+           ^
+<stdin>:1:16: error: \"y\" is not declared
+var a = \"\\(x > y)\"
+               ^
+<stdin>:2:12: error: \"x\" is not declared
+var b = \"\\(x < y)\"
+           ^
+<stdin>:2:16: error: \"y\" is not declared
+var b = \"\\(x < y)\"
+               ^
+<stdin>:3:12: error: \"x\" is not declared
+var c = \"\\(x <= y)\"
+           ^
+<stdin>:3:17: error: \"y\" is not declared
+var c = \"\\(x <= y)\"
+                ^
+<stdin>:4:12: error: \"x\" is not declared
+var d = \"\\(x >= y)\"
+           ^
+<stdin>:4:17: error: \"y\" is not declared
+var d = \"\\(x >= y)\"
+                ^
+<stdin>:5:12: error: \"x\" is not declared
+var e = \"\\(x <=> y)\"
+           ^
+<stdin>:5:18: error: \"y\" is not declared
+var e = \"\\(x <=> y)\"
+                 ^
+")
+
   }
 }

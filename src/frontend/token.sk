@@ -77,13 +77,24 @@ namespace Skew {
 
       # Special-case string interpolation
       var c = text[yy_cp]
-      if c == '"' || c == ')' && !stack.isEmpty && stack.last.kind == .STRING_INTERPOLATION_START {
-        var isStringInterpolation = c == ')'
+      var isStringInterpolation = c == '"'
+      if c == ')' {
+        for i = stack.count - 1; i >= 0; i-- {
+          var kind = stack[i].kind
+          if kind == .STRING_INTERPOLATION_START {
+            isStringInterpolation = true
+          } else if kind != .LESS_THAN {
+            break
+          }
+        }
+      }
+      if isStringInterpolation {
+        var isExit = c == ')'
         yy_cp++
         while yy_cp < count {
           c = text[yy_cp++]
           if c == '"' {
-            yy_act = isStringInterpolation ? .STRING_INTERPOLATION_END : .STRING
+            yy_act = isExit ? .STRING_INTERPOLATION_END : .STRING
             break
           }
           if c == '\\' {
@@ -92,7 +103,7 @@ namespace Skew {
             }
             c = text[yy_cp++]
             if c == '(' {
-              yy_act = isStringInterpolation ? .STRING_INTERPOLATION_CONTINUE : .STRING_INTERPOLATION_START
+              yy_act = isExit ? .STRING_INTERPOLATION_CONTINUE : .STRING_INTERPOLATION_START
               break
             }
           }
