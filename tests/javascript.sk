@@ -3212,5 +3212,24 @@ def test(x int, y double) {
 })();
 ").js.foldAllConstants
 
+# There's no way operator overloading will work with JavaScript, but make sure it at least generates valid JavaScript
+test("
+@export
+class Foo {
+  def + {
+    +new
+  }
+}
+", "
+(function() {
+  Foo = function() {
+  };
+
+  Foo.prototype.positive = function() {
+    new Foo().positive();
+  };
+})();
+").js
+
   }
 }

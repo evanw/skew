@@ -15169,6 +15169,7 @@
 
       var isImportedOrExported = false;
       var shouldRename = false;
+      var isInvalid = false;
       var rename = null;
 
       for (var i4 = 0, count5 = group1.length; i4 < count5; i4 = i4 + 1 | 0) {
@@ -15188,8 +15189,15 @@
         }
 
         // Rename functions with unusual names and make sure overloaded functions have unique names
-        if (!shouldRename && (Skew.Renaming.isInvalidIdentifier(function2.name) || function2.overloaded != null && function2.overloaded.symbols.length > 1)) {
-          shouldRename = true;
+        if (!shouldRename) {
+          if (Skew.Renaming.isInvalidIdentifier(function2.name)) {
+            isInvalid = true;
+            shouldRename = true;
+          }
+
+          else if (function2.overloaded != null && function2.overloaded.symbols.length > 1) {
+            shouldRename = true;
+          }
         }
       }
 
@@ -15206,7 +15214,7 @@
       }
 
       // One function with a pinned name causes the whole group to avoid renaming
-      if (!shouldRename || isImportedOrExported) {
+      if (!shouldRename || isImportedOrExported && !isInvalid) {
         continue;
       }
 
