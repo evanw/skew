@@ -1,6 +1,7 @@
 namespace Skew {
   const NATIVE_LIBRARY = "
 const RELEASE = false
+const ASSERTS = !RELEASE
 
 enum Target {
   NONE
@@ -29,7 +30,7 @@ def @spreads
 }
 
 @import if TARGET == .NONE
-@skip if RELEASE
+@skip if !ASSERTS
 def assert(truth bool)
 
 @import if TARGET == .NONE
@@ -392,6 +393,8 @@ class List {
   }
 
   def swap(i int, j int) {
+    assert(0 <= i && i < count)
+    assert(0 <= j && j < count)
     var temp = self[i]
     self[i] = self[j]
     self[j] = temp

@@ -43,7 +43,7 @@
     switch (encoding) {
       case Unicode.Encoding.UTF8: {
         for (var i = 0, list = codePoints, count1 = list.length; i < count1; i = i + 1 | 0) {
-          var codePoint = list[i];
+          var codePoint = in_List.get(list, i);
 
           if (codePoint < 128) {
             count = count + 1 | 0;
@@ -66,7 +66,7 @@
 
       case Unicode.Encoding.UTF16: {
         for (var i1 = 0, list1 = codePoints, count2 = list1.length; i1 < count2; i1 = i1 + 1 | 0) {
-          var codePoint1 = list1[i1];
+          var codePoint1 = in_List.get(list1, i1);
 
           if (codePoint1 < 65536) {
             count = count + 1 | 0;
@@ -112,7 +112,7 @@
       return -1;
     }
 
-    var a = this.value.charCodeAt((this.index = this.index + 1 | 0) + -1 | 0);
+    var a = in_string.get1(this.value, (this.index = this.index + 1 | 0) + -1 | 0);
 
     if (a < 55296 || a >= 56320) {
       return a;
@@ -122,7 +122,7 @@
       return -1;
     }
 
-    var b = this.value.charCodeAt((this.index = this.index + 1 | 0) + -1 | 0);
+    var b = in_string.get1(this.value, (this.index = this.index + 1 | 0) + -1 | 0);
     return ((a << 10) + b | 0) + ((65536 - (55296 << 10) | 0) - 56320 | 0) | 0;
   };
 
@@ -137,7 +137,7 @@
       var doubleQuotes = 0;
 
       for (var i = 0, count1 = count; i < count1; i = i + 1 | 0) {
-        var c = text.charCodeAt(i);
+        var c = in_string.get1(text, i);
 
         if (c == 34) {
           doubleQuotes = doubleQuotes + 1 | 0;
@@ -161,7 +161,7 @@
     builder.append(quoteString);
 
     for (var i1 = 0, count2 = count; i1 < count2; i1 = i1 + 1 | 0) {
-      var c1 = text.charCodeAt(i1);
+      var c1 = in_string.get1(text, i1);
 
       if (c1 == quote) {
         escaped = '\\' + quoteString;
@@ -181,7 +181,7 @@
 
       else if (c1 == 0) {
         // Avoid issues around accidental octal encoding
-        var next = (i1 + 1 | 0) < count ? text.charCodeAt(i1 + 1 | 0) : 0;
+        var next = (i1 + 1 | 0) < count ? in_string.get1(text, i1 + 1 | 0) : 0;
         escaped = octal == Skew.QuoteOctal.OCTAL_WORKAROUND && next >= 48 && next <= 57 ? '\\000' : '\\0';
       }
 
@@ -190,19 +190,19 @@
       }
 
       else if (c1 < 32) {
-        escaped = '\\x' + Skew.HEX[c1 >> 4] + Skew.HEX[c1 & 15];
+        escaped = '\\x' + in_string.get(Skew.HEX, c1 >> 4) + in_string.get(Skew.HEX, c1 & 15);
       }
 
       else {
         continue;
       }
 
-      builder.append(text.slice(start, i1));
+      builder.append(in_string.slice2(text, start, i1));
       builder.append(escaped);
       start = i1 + 1 | 0;
     }
 
-    builder.append(text.slice(start, count));
+    builder.append(in_string.slice2(text, start, count));
     builder.append(quoteString);
     return builder.toString();
   };
@@ -233,7 +233,7 @@
         digit |= 32;
       }
 
-      encoded += Skew.BASE64[digit];
+      encoded += in_string.get(Skew.BASE64, digit);
 
       if (vlq == 0) {
         break;
@@ -248,7 +248,7 @@
       Skew.validArgumentCounts = Object.create(null);
 
       for (var i = 0, list = in_IntMap.values(Skew.operatorInfo), count = list.length; i < count; i = i + 1 | 0) {
-        var value = list[i];
+        var value = in_List.get(list, i);
         Skew.validArgumentCounts[value.text] = value.validArgumentCounts;
       }
 
@@ -268,7 +268,7 @@
 
   Skew.splitPath = function(path) {
     var slashIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-    return slashIndex == -1 ? new Skew.SplitPath('.', path) : new Skew.SplitPath(path.slice(0, slashIndex), path.slice(slashIndex + 1 | 0));
+    return slashIndex == -1 ? new Skew.SplitPath('.', path) : new Skew.SplitPath(in_string.slice2(path, 0, slashIndex), in_string.slice1(path, slashIndex + 1 | 0));
   };
 
   Skew.bytesToString = function(bytes) {
@@ -313,7 +313,7 @@
       var e = text.indexOf('e');
 
       if (e != -1) {
-        text = text.slice(0, e) + '.0' + text.slice(e);
+        text = in_string.slice2(text, 0, e) + '.0' + in_string.slice1(text, e);
       }
 
       else {
@@ -351,12 +351,12 @@
       var yy_act = Skew.TokenKind.ERROR;
 
       // Special-case string interpolation
-      var c = text.charCodeAt(yy_cp);
+      var c = in_string.get1(text, yy_cp);
       var isStringInterpolation = c == 34;
 
       if (c == 41) {
         for (var i = stack.length - 1 | 0; i >= 0; i = i - 1 | 0) {
-          var kind = stack[i].kind;
+          var kind = in_List.get(stack, i).kind;
 
           if (kind == Skew.TokenKind.STRING_INTERPOLATION_START) {
             isStringInterpolation = true;
@@ -373,7 +373,7 @@
         yy_cp = yy_cp + 1 | 0;
 
         while (yy_cp < count) {
-          c = text.charCodeAt((yy_cp = yy_cp + 1 | 0) + -1 | 0);
+          c = in_string.get1(text, (yy_cp = yy_cp + 1 | 0) + -1 | 0);
 
           if (c == 34) {
             yy_act = isExit ? Skew.TokenKind.STRING_INTERPOLATION_END : Skew.TokenKind.STRING;
@@ -385,7 +385,7 @@
               break;
             }
 
-            c = text.charCodeAt((yy_cp = yy_cp + 1 | 0) + -1 | 0);
+            c = in_string.get1(text, (yy_cp = yy_cp + 1 | 0) + -1 | 0);
 
             if (c == 40) {
               yy_act = isExit ? Skew.TokenKind.STRING_INTERPOLATION_CONTINUE : Skew.TokenKind.STRING_INTERPOLATION_START;
@@ -409,37 +409,37 @@
             break;
           }
 
-          c = text.charCodeAt(yy_cp);
+          c = in_string.get1(text, yy_cp);
 
           // All of the interesting characters are ASCII
           var index = c < 127 ? c : 127;
-          var yy_c = Skew.yy_ec[index];
+          var yy_c = in_List.get(Skew.yy_ec, index);
 
-          if (Skew.yy_accept[yy_current_state] != Skew.TokenKind.YY_INVALID_ACTION) {
+          if (in_List.get(Skew.yy_accept, yy_current_state) != Skew.TokenKind.YY_INVALID_ACTION) {
             yy_last_accepting_state = yy_current_state;
             yy_last_accepting_cpos = yy_cp;
           }
 
-          while (Skew.yy_chk[Skew.yy_base[yy_current_state] + yy_c | 0] != yy_current_state) {
-            yy_current_state = Skew.yy_def[yy_current_state];
+          while (in_List.get(Skew.yy_chk, in_List.get(Skew.yy_base, yy_current_state) + yy_c | 0) != yy_current_state) {
+            yy_current_state = in_List.get(Skew.yy_def, yy_current_state);
 
             if (yy_current_state >= Skew.YY_ACCEPT_LENGTH) {
-              yy_c = Skew.yy_meta[yy_c];
+              yy_c = in_List.get(Skew.yy_meta, yy_c);
             }
           }
 
-          yy_current_state = Skew.yy_nxt[Skew.yy_base[yy_current_state] + yy_c | 0];
+          yy_current_state = in_List.get(Skew.yy_nxt, in_List.get(Skew.yy_base, yy_current_state) + yy_c | 0);
           yy_cp = yy_cp + 1 | 0;
         }
 
         // Find the action
-        yy_act = Skew.yy_accept[yy_current_state];
+        yy_act = in_List.get(Skew.yy_accept, yy_current_state);
 
         while (yy_act == Skew.TokenKind.YY_INVALID_ACTION) {
           // Have to back up
           yy_cp = yy_last_accepting_cpos;
           yy_current_state = yy_last_accepting_state;
-          yy_act = Skew.yy_accept[yy_current_state];
+          yy_act = in_List.get(Skew.yy_accept, yy_current_state);
         }
 
         // Ignore whitespace
@@ -473,7 +473,7 @@
       var loop = true;
 
       while (loop) {
-        var tokenStartsWithGreaterThan = text.charCodeAt(token.range.start) == 62;
+        var tokenStartsWithGreaterThan = in_string.get1(text, token.range.start) == 62;
         var tokenKind = token.kind;
         loop = false;
 
@@ -484,7 +484,7 @@
 
           // Stop parsing a type if we find a token that no type expression uses
           if (topKind == Skew.TokenKind.LESS_THAN && tokenKind != Skew.TokenKind.LESS_THAN && tokenKind != Skew.TokenKind.IDENTIFIER && tokenKind != Skew.TokenKind.COMMA && tokenKind != Skew.TokenKind.DYNAMIC && tokenKind != Skew.TokenKind.DOT && tokenKind != Skew.TokenKind.LEFT_PARENTHESIS && tokenKind != Skew.TokenKind.RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan) {
-            stack.pop();
+            in_List.removeLast(stack);
           }
 
           else {
@@ -510,7 +510,7 @@
             }
 
             // Consume the current token
-            stack.pop();
+            in_List.removeLast(stack);
 
             // Stop if it's a match
             if (tokenKind == Skew.TokenKind.RIGHT_PARENTHESIS && topKind1 == Skew.TokenKind.LEFT_PARENTHESIS || tokenKind == Skew.TokenKind.RIGHT_BRACKET && topKind1 == Skew.TokenKind.LEFT_BRACKET || tokenKind == Skew.TokenKind.RIGHT_BRACE && topKind1 == Skew.TokenKind.LEFT_BRACE || tokenKind == Skew.TokenKind.STRING_INTERPOLATION_END && topKind1 == Skew.TokenKind.STRING_INTERPOLATION_START) {
@@ -549,7 +549,7 @@
       // Make sure to be conservative. We want to be like Python, not like
       // JavaScript ASI! Anything that is at all ambiguous should be disallowed.
       if (previousKind == Skew.TokenKind.NEWLINE && token.kind in Skew.REMOVE_NEWLINE_BEFORE) {
-        tokens.pop();
+        in_List.removeLast(tokens);
       }
 
       previousKind = token.kind;
@@ -577,7 +577,7 @@
 
     // Run all passes, stop compilation if there are errors after resolving (wait until then to make IDE mode better)
     for (var i = 0, list = options.passes, count = list.length; i < count; i = i + 1 | 0) {
-      var pass = list[i];
+      var pass = in_List.get(list, i);
 
       if (context.isResolvePassComplete && log.hasErrors()) {
         break;
@@ -626,7 +626,7 @@
       // Write all outputs
       if (!log.hasErrors()) {
         for (var i = 0, list = result.outputs, count = list.length; i < count; i = i + 1 | 0) {
-          var output = list[i];
+          var output = in_List.get(list, i);
 
           if (output.name != null && !IO.writeFile(output.name, output.contents)) {
             var outputFile = parser.rangeForOption(Skew.Option.OUTPUT_FILE);
@@ -680,7 +680,7 @@
     var diagnosticCount = 0;
 
     for (var i = 0, list = log.diagnostics, count = list.length; i < count; i = i + 1 | 0) {
-      var diagnostic = list[i];
+      var diagnostic = in_List.get(list, i);
 
       if (diagnosticLimit > 0 && diagnosticCount == diagnosticLimit) {
         break;
@@ -759,7 +759,7 @@
         }
 
         for (var i = 0, list = entries, count = list.length; i < count; i = i + 1 | 0) {
-          var entry = list[i];
+          var entry = in_List.get(list, i);
 
           if (!in_string.startsWith(entry, '.')) {
             visit(null, path + '/' + entry);
@@ -783,7 +783,7 @@
 
     // Recursively visit input directories
     for (var i = 0, list = inputs, count = list.length; i < count; i = i + 1 | 0) {
-      var range = list[i];
+      var range = in_List.get(list, i);
       visit(range, range.toString());
     }
 
@@ -839,7 +839,7 @@
     }
 
     for (var i = 0, list = parser.rangeListForOption(Skew.Option.DEFINE), count = list.length; i < count; i = i + 1 | 0) {
-      var range = list[i];
+      var range = in_List.get(list, i);
       var name = range.toString();
       var equals = name.indexOf('=');
 
@@ -848,7 +848,7 @@
         continue;
       }
 
-      options.defines[name.slice(0, equals)] = new Skew.Define(range.fromStart(equals), range.fromEnd((name.length - equals | 0) - 1 | 0));
+      options.defines[in_string.slice2(name, 0, equals)] = new Skew.Define(range.fromStart(equals), range.fromEnd((name.length - equals | 0) - 1 | 0));
     }
 
     // There must be at least one source file
@@ -906,7 +906,7 @@
     var key = range.toString();
 
     if (key in map) {
-      return map[key];
+      return in_StringMap.get1(map, key);
     }
 
     var keys = Object.keys(map);
@@ -954,7 +954,7 @@
   };
 
   Skew.Emitter.prototype._decreaseIndent = function() {
-    this._indent = this._indent.slice(this._indentAmount.length);
+    this._indent = in_string.slice1(this._indent, this._indentAmount.length);
   };
 
   Skew.Emitter.prototype._emit = function(text) {
@@ -992,12 +992,12 @@
 
       // Select an object that comes before all other types
       while (j < objects.length) {
-        var object = objects[j];
+        var object = in_List.get(objects, j);
         var k = i;
 
         // Check to see if this comes before all other types
         while (k < objects.length) {
-          if (j != k && Skew.Emitter._objectComesBefore(objects[k], object)) {
+          if (j != k && Skew.Emitter._objectComesBefore(in_List.get(objects, k), object)) {
             break;
           }
 
@@ -1022,12 +1022,12 @@
 
   Skew.Emitter.prototype._markVirtualFunctions = function(symbol) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._markVirtualFunctions(object);
     }
 
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var $function = list2[i2];
+      var $function = in_List.get(list2, i2);
 
       if ($function.overridden != null) {
         $function.overridden.flags |= Skew.SymbolFlags.IS_VIRTUAL;
@@ -1036,7 +1036,7 @@
 
       if ($function.implementations != null) {
         for (var i1 = 0, list1 = $function.implementations, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-          var other = list1[i1];
+          var other = in_List.get(list1, i1);
           other.flags |= Skew.SymbolFlags.IS_VIRTUAL;
           $function.flags |= Skew.SymbolFlags.IS_VIRTUAL;
         }
@@ -1048,7 +1048,7 @@
     objects.push(object);
 
     for (var i = 0, list = object.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var o = list[i];
+      var o = in_List.get(list, i);
       this._findObjects(objects, o);
     }
   };
@@ -1108,7 +1108,7 @@
 
       // The entry point in C# takes an array, not a list
       if (entryPoint.$arguments.length == 1) {
-        var argument = entryPoint.$arguments[0];
+        var argument = in_List.first(entryPoint.$arguments);
         var array = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, argument.name);
         array.type = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('string[]')).withType(Skew.Type.DYNAMIC);
         array.resolvedType = Skew.Type.DYNAMIC;
@@ -1132,7 +1132,7 @@
 
     // Convert "flags" types to wrapped types
     for (var i1 = 0, list1 = objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var object = list1[i1];
+      var object = in_List.get(list1, i1);
 
       if (object.kind == Skew.SymbolKind.OBJECT_ENUM && object.isFlags()) {
         object.kind = Skew.SymbolKind.OBJECT_WRAPPED;
@@ -1140,7 +1140,7 @@
 
         // Enum values become normal global variables
         for (var i = 0, list = object.variables, count = list.length; i < count; i = i + 1 | 0) {
-          var variable = list[i];
+          var variable = in_List.get(list, i);
 
           if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
             variable.kind = Skew.SymbolKind.VARIABLE_GLOBAL;
@@ -1152,7 +1152,7 @@
 
     // All code in C# is inside objects, so just emit objects recursively
     for (var i2 = 0, list2 = objects, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var object1 = list2[i2];
+      var object1 = in_List.get(list2, i2);
 
       // Nested objects will be emitted by their parent
       if (object1.parent != null && object1.parent.kind == Skew.SymbolKind.OBJECT_CLASS) {
@@ -1198,7 +1198,7 @@
     };
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._moveGlobalsIntoClasses(object);
     }
 
@@ -1241,7 +1241,7 @@
     var i = 0;
 
     while (i < limit) {
-      if (this._namespaceStack[i] != symbols[i]) {
+      if (in_List.get(this._namespaceStack, i) != in_List.get(symbols, i)) {
         break;
       }
 
@@ -1250,7 +1250,7 @@
 
     // Leave the old namespace
     while (this._namespaceStack.length > i) {
-      var object = this._namespaceStack.pop();
+      var object = in_List.takeLast(this._namespaceStack);
       this._decreaseIndent();
       this._emit(this._indent + '}\n');
       this._emitNewlineAfterSymbol(object);
@@ -1258,7 +1258,7 @@
 
     // Enter the new namespace
     while (this._namespaceStack.length < symbols.length) {
-      var object1 = symbols[this._namespaceStack.length];
+      var object1 = in_List.get(symbols, this._namespaceStack.length);
       this._emitNewlineBeforeSymbol(object1);
       this._emit(this._indent + 'namespace ' + Skew.CSharpEmitter._mangleName(object1) + '\n');
       this._emit(this._indent + '{\n');
@@ -1276,7 +1276,7 @@
       });
 
       for (var i = 0, list = usings, count = list.length; i < count; i = i + 1 | 0) {
-        var using = list[i];
+        var using = in_List.get(list, i);
         this._emitPrefix('using ' + using + ';\n');
       }
 
@@ -1295,7 +1295,7 @@
 
       if (symbol.annotations != null) {
         for (var i = 0, list = symbol.annotations, count = list.length; i < count; i = i + 1 | 0) {
-          var annotation = list[i];
+          var annotation = in_List.get(list, i);
 
           if (annotation.symbol != null && annotation.symbol.fullName() == 'using') {
             var value = annotation.annotationValue();
@@ -1340,7 +1340,7 @@
   Skew.CSharpEmitter.prototype._emitComments = function(comments) {
     if (comments != null) {
       for (var i = 0, list = comments, count = list.length; i < count; i = i + 1 | 0) {
-        var comment = list[i];
+        var comment = in_List.get(list, i);
         this._emit(this._indent + '//' + comment);
       }
     }
@@ -1402,9 +1402,9 @@
 
       if (symbol.$implements != null) {
         for (var i = 0, list = symbol.$implements, count = list.length; i < count; i = i + 1 | 0) {
-          var node = list[i];
+          var node = in_List.get(list, i);
 
-          if (node != symbol.$implements[0] || symbol.$extends != null) {
+          if (node != in_List.first(symbol.$implements) || symbol.$extends != null) {
             this._emit(', ');
           }
 
@@ -1417,17 +1417,17 @@
     this._increaseIndent();
 
     for (var i1 = 0, list1 = symbol.objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var object = list1[i1];
+      var object = in_List.get(list1, i1);
       this._emitObject(object);
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+      var variable = in_List.get(list2, i2);
       this._emitVariable(variable);
     }
 
     for (var i3 = 0, list3 = symbol.functions, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-      var $function = list3[i3];
+      var $function = in_List.get(list3, i3);
       this._emitFunction($function);
     }
 
@@ -1441,9 +1441,9 @@
       this._emit('<');
 
       for (var i = 0, list = parameters, count = list.length; i < count; i = i + 1 | 0) {
-        var parameter = list[i];
+        var parameter = in_List.get(list, i);
 
-        if (parameter != parameters[0]) {
+        if (parameter != in_List.first(parameters)) {
           this._emit(', ');
         }
 
@@ -1458,9 +1458,9 @@
     this._emit('(');
 
     for (var i = 0, list = symbol.$arguments, count = list.length; i < count; i = i + 1 | 0) {
-      var argument = list[i];
+      var argument = in_List.get(list, i);
 
-      if (argument != symbol.$arguments[0]) {
+      if (argument != in_List.first(symbol.$arguments)) {
         this._emit(', ');
       }
 
@@ -1617,7 +1617,7 @@
             this._emit(', ');
           }
 
-          this._emitType(argumentTypes[i]);
+          this._emitType(in_List.get(argumentTypes, i));
         }
 
         if (returnType != null) {
@@ -1643,7 +1643,7 @@
         if (this._cache.isIntMap(type) || this._cache.isStringMap(type)) {
           this._emit(this._cache.isIntMap(type) ? 'int' : 'string');
           this._emit(', ');
-          this._emitType(type.substitutions[0]);
+          this._emitType(in_List.first(type.substitutions));
         }
 
         else {
@@ -1652,7 +1652,7 @@
               this._emit(', ');
             }
 
-            this._emitType(type.substitutions[i1]);
+            this._emitType(in_List.get(type.substitutions, i1));
           }
         }
 
@@ -2277,7 +2277,7 @@
       case Skew.NodeKind.PREFIX_DECREMENT:
       case Skew.NodeKind.PREFIX_INCREMENT: {
         var value3 = node.unaryValue();
-        var info = Skew.operatorInfo[kind];
+        var info = in_IntMap.get1(Skew.operatorInfo, kind);
         var sign = Skew.CSharpEmitter._sign(node);
 
         if (info.precedence < precedence) {
@@ -2327,7 +2327,7 @@
           }
 
           else {
-            var info1 = Skew.operatorInfo[kind];
+            var info1 = in_IntMap.get1(Skew.operatorInfo, kind);
 
             if (info1.precedence < precedence) {
               this._emit('(');
@@ -2420,29 +2420,29 @@
 
     // Nested types in C++ can't be forward declared
     for (var i = 0, list = sorted, count = list.length; i < count; i = i + 1 | 0) {
-      var symbol = list[i];
+      var symbol = in_List.get(list, i);
       this._moveNestedObjectToEnclosingNamespace(symbol);
     }
 
     // Emit code in passes to deal with C++'s forward declarations
     for (var i1 = 0, list1 = sorted, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var symbol1 = list1[i1];
+      var symbol1 = in_List.get(list1, i1);
       this._declareObject(symbol1);
     }
 
     for (var i2 = 0, list2 = sorted, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var symbol2 = list2[i2];
+      var symbol2 = in_List.get(list2, i2);
       this._defineObject(symbol2);
     }
 
     this._adjustNamespace(null);
 
     for (var i4 = 0, list4 = sorted, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
-      var symbol3 = list4[i4];
+      var symbol3 = in_List.get(list4, i4);
 
       if (!symbol3.isImported()) {
         for (var i3 = 0, list3 = symbol3.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-          var variable = list3[i3];
+          var variable = in_List.get(list3, i3);
 
           if (variable.kind == Skew.SymbolKind.VARIABLE_GLOBAL) {
             this._emitVariable(variable, Skew.CPlusPlusEmitter.CodeMode.IMPLEMENT);
@@ -2454,11 +2454,11 @@
     this._adjustNamespace(null);
 
     for (var i6 = 0, list6 = sorted, count6 = list6.length; i6 < count6; i6 = i6 + 1 | 0) {
-      var symbol4 = list6[i6];
+      var symbol4 = in_List.get(list6, i6);
 
       if (!symbol4.isImported()) {
         for (var i5 = 0, list5 = symbol4.functions, count5 = list5.length; i5 < count5; i5 = i5 + 1 | 0) {
-          var $function = list5[i5];
+          var $function = in_List.get(list5, i5);
           this._emitFunction($function, Skew.CPlusPlusEmitter.CodeMode.IMPLEMENT);
         }
       }
@@ -2509,7 +2509,7 @@
     var i = 0;
 
     while (i < limit) {
-      if (this._namespaceStack[i] != symbols[i]) {
+      if (in_List.get(this._namespaceStack, i) != in_List.get(symbols, i)) {
         break;
       }
 
@@ -2518,7 +2518,7 @@
 
     // Leave the old namespace
     while (this._namespaceStack.length > i) {
-      var object = this._namespaceStack.pop();
+      var object = in_List.takeLast(this._namespaceStack);
       this._decreaseIndent();
       this._emit(this._indent + '}\n');
       this._emitNewlineAfterSymbol(object);
@@ -2526,7 +2526,7 @@
 
     // Enter the new namespace
     while (this._namespaceStack.length < symbols.length) {
-      var object1 = symbols[this._namespaceStack.length];
+      var object1 = in_List.get(symbols, this._namespaceStack.length);
       this._emitNewlineBeforeSymbol(object1, Skew.CPlusPlusEmitter.CodeMode.DEFINE);
       this._emit(this._indent + 'namespace ' + Skew.CPlusPlusEmitter._mangleName(object1) + ' {\n');
       this._increaseIndent();
@@ -2537,7 +2537,7 @@
   Skew.CPlusPlusEmitter.prototype._emitComments = function(comments) {
     if (comments != null) {
       for (var i = 0, list = comments, count = list.length; i < count; i = i + 1 | 0) {
-        var comment = list[i];
+        var comment = in_List.get(list, i);
         this._emit(this._indent + '//' + comment);
       }
     }
@@ -2566,7 +2566,7 @@
         this._increaseIndent();
 
         for (var i = 0, list = symbol.variables, count = list.length; i < count; i = i + 1 | 0) {
-          var variable = list[i];
+          var variable = in_List.get(list, i);
           this._emitVariable(variable, Skew.CPlusPlusEmitter.CodeMode.DECLARE);
         }
 
@@ -2611,9 +2611,9 @@
 
           if (symbol.$implements != null) {
             for (var i = 0, list = symbol.$implements, count = list.length; i < count; i = i + 1 | 0) {
-              var node = list[i];
+              var node = in_List.get(list, i);
 
-              if (node != symbol.$implements[0] || symbol.$extends != null) {
+              if (node != in_List.first(symbol.$implements) || symbol.$extends != null) {
                 this._emit(', ');
               }
 
@@ -2626,12 +2626,12 @@
         this._increaseIndent();
 
         for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-          var $function = list1[i1];
+          var $function = in_List.get(list1, i1);
           this._emitFunction($function, Skew.CPlusPlusEmitter.CodeMode.DEFINE);
         }
 
         for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-          var variable = list2[i2];
+          var variable = in_List.get(list2, i2);
           this._emitVariable(variable, Skew.CPlusPlusEmitter.CodeMode.DEFINE);
         }
 
@@ -2645,7 +2645,7 @@
         this._adjustNamespace(symbol);
 
         for (var i3 = 0, list3 = symbol.functions, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-          var function1 = list3[i3];
+          var function1 = in_List.get(list3, i3);
           this._emitFunction(function1, Skew.CPlusPlusEmitter.CodeMode.DEFINE);
         }
         break;
@@ -2697,9 +2697,9 @@
         this._emit('<');
 
         for (var i = 0, list = parent.parameters, count = list.length; i < count; i = i + 1 | 0) {
-          var parameter = list[i];
+          var parameter = in_List.get(list, i);
 
-          if (parameter != parent.parameters[0]) {
+          if (parameter != in_List.first(parent.parameters)) {
             this._emit(', ');
           }
 
@@ -2755,9 +2755,9 @@
       this._emit(this._indent + 'template <');
 
       for (var i = 0, list = parameters, count = list.length; i < count; i = i + 1 | 0) {
-        var parameter = list[i];
+        var parameter = in_List.get(list, i);
 
-        if (parameter != parameters[0]) {
+        if (parameter != in_List.first(parameters)) {
           this._emit(', ');
         }
 
@@ -2772,9 +2772,9 @@
     this._emit('(');
 
     for (var i = 0, list = symbol.$arguments, count = list.length; i < count; i = i + 1 | 0) {
-      var argument = list[i];
+      var argument = in_List.get(list, i);
 
-      if (argument != symbol.$arguments[0]) {
+      if (argument != in_List.first(symbol.$arguments)) {
         this._emit(', ');
       }
 
@@ -3401,7 +3401,7 @@
       case Skew.NodeKind.PREFIX_DECREMENT:
       case Skew.NodeKind.PREFIX_INCREMENT: {
         var value3 = node.unaryValue();
-        var info = Skew.operatorInfo[kind];
+        var info = in_IntMap.get1(Skew.operatorInfo, kind);
 
         if (info.precedence < precedence) {
           this._emit('(');
@@ -3432,7 +3432,7 @@
             precedence = Skew.Precedence.MEMBER;
           }
 
-          var info1 = Skew.operatorInfo[kind];
+          var info1 = in_IntMap.get1(Skew.operatorInfo, kind);
 
           if (info1.precedence < precedence) {
             this._emit('(');
@@ -3485,7 +3485,7 @@
           this._emit(', ');
         }
 
-        this._emitType(type.argumentTypes[i], Skew.CPlusPlusEmitter.CppEmitType.NORMAL);
+        this._emitType(in_List.get(type.argumentTypes, i), Skew.CPlusPlusEmitter.CppEmitType.NORMAL);
       }
 
       this._emit(mode == Skew.CPlusPlusEmitter.CppEmitType.DECLARATION ? ')> ' : ')>');
@@ -3504,7 +3504,7 @@
             this._emit(', ');
           }
 
-          this._emitType(type.substitutions[i1], Skew.CPlusPlusEmitter.CppEmitType.NORMAL);
+          this._emitType(in_List.get(type.substitutions, i1), Skew.CPlusPlusEmitter.CppEmitType.NORMAL);
         }
 
         this._emit('>');
@@ -3533,7 +3533,7 @@
       });
 
       for (var i = 0, list = includes, count = list.length; i < count; i = i + 1 | 0) {
-        var include = list[i];
+        var include = in_List.get(list, i);
         this._emitPrefix('#include ' + (in_string.startsWith(include, '<') && in_string.endsWith(include, '>') ? include : '"' + include + '"') + '\n');
       }
 
@@ -3552,7 +3552,7 @@
 
       if (symbol.annotations != null) {
         for (var i = 0, list = symbol.annotations, count = list.length; i < count; i = i + 1 | 0) {
-          var annotation = list[i];
+          var annotation = in_List.get(list, i);
 
           if (annotation.symbol != null && annotation.symbol.fullName() == 'include') {
             var value = annotation.annotationValue();
@@ -3697,7 +3697,7 @@
 
     // Load special-cased variables
     for (var i = 0, list = global.variables, count = list.length; i < count; i = i + 1 | 0) {
-      var variable = list[i];
+      var variable = in_List.get(list, i);
       var special = in_StringMap.get(Skew.JavaScriptEmitter._specialVariableMap, variable.name, Skew.JavaScriptEmitter.SpecialVariable.NONE);
 
       if (special != Skew.JavaScriptEmitter.SpecialVariable.NONE) {
@@ -3714,7 +3714,7 @@
     assert(Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE in this._specialVariables);
 
     // The prototype cache doesn't need to be initialized
-    this._specialVariables[Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE].value = null;
+    in_IntMap.get1(this._specialVariables, Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE).value = null;
 
     // Preprocess the code
     if (this._mangle) {
@@ -3741,7 +3741,7 @@
     });
 
     for (var i1 = 0, list1 = specialVariables, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var variable1 = list1[i1];
+      var variable1 = in_List.get(list1, i1);
 
       if (variable1.id in this._isSpecialVariableNeeded) {
         if (variable1.value != null && variable1.value.kind == Skew.NodeKind.LAMBDA) {
@@ -3756,7 +3756,7 @@
 
     // Emit objects and functions
     for (var i2 = 0, list2 = objects, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var object = list2[i2];
+      var object = in_List.get(list2, i2);
       this._emitObject(object);
     }
 
@@ -3764,7 +3764,7 @@
     var statement = new Skew.Node(Skew.NodeKind.VARIABLES);
 
     for (var i4 = 0, list4 = objects, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
-      var object1 = list4[i4];
+      var object1 = in_List.get(list4, i4);
       this._namespacePrefix = '';
 
       for (var o = object1; o.kind != Skew.SymbolKind.OBJECT_GLOBAL; o = o.parent.asObjectSymbol()) {
@@ -3772,7 +3772,7 @@
       }
 
       for (var i3 = 0, list3 = object1.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-        var variable2 = list3[i3];
+        var variable2 = in_List.get(list3, i3);
 
         if (!(specialVariables.indexOf(variable2) != -1)) {
           if (this._mangle && this._namespacePrefix == '' && !variable2.isImportedOrExported()) {
@@ -3837,7 +3837,7 @@
       var n = text.length;
 
       for (var i = 0, count = n; i < count; i = i + 1 | 0) {
-        if (text.charCodeAt(i) == 10) {
+        if (in_string.get1(text, i) == 10) {
           this._currentColumn = 0;
           this._currentLine = this._currentLine + 1 | 0;
         }
@@ -3848,7 +3848,7 @@
       }
 
       if (n != 0) {
-        this._previousCodeUnit = text.charCodeAt(n - 1 | 0);
+        this._previousCodeUnit = in_string.get1(text, n - 1 | 0);
       }
     }
 
@@ -3862,17 +3862,17 @@
     this._liftGlobals2(global, globalObjects, globalFunctions, globalVariables);
 
     for (var i = 0, list = globalObjects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       object.parent = global;
     }
 
     for (var i1 = 0, list1 = globalFunctions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+      var $function = in_List.get(list1, i1);
       $function.parent = global;
     }
 
     for (var i2 = 0, list2 = globalVariables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+      var variable = in_List.get(list2, i2);
       variable.parent = global;
     }
 
@@ -3918,12 +3918,12 @@
 
   Skew.JavaScriptEmitter.prototype._collectInlineableFunctions = function(symbol, listAppends, mapInserts) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._collectInlineableFunctions(object, listAppends, mapInserts);
     }
 
     for (var i3 = 0, list3 = symbol.functions, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-      var $function = list3[i3];
+      var $function = in_List.get(list3, i3);
 
       if ($function.block == null || !$function.block.hasTwoChildren()) {
         continue;
@@ -3940,9 +3940,9 @@
           var call = first.expressionValue();
           var callValue = call.callValue();
 
-          if (call.hasTwoChildren() && callValue.kind == Skew.NodeKind.DOT && callValue.asString() == 'push' && Skew.JavaScriptEmitter._isReferenceTo(callValue.dotTarget(), $arguments[0]) && Skew.JavaScriptEmitter._isReferenceTo(call.lastChild(), $arguments[1]) && Skew.JavaScriptEmitter._isReferenceTo(second.returnValue(), $arguments[0])) {
+          if (call.hasTwoChildren() && callValue.kind == Skew.NodeKind.DOT && callValue.asString() == 'push' && Skew.JavaScriptEmitter._isReferenceTo(callValue.dotTarget(), in_List.get($arguments, 0)) && Skew.JavaScriptEmitter._isReferenceTo(call.lastChild(), in_List.get($arguments, 1)) && Skew.JavaScriptEmitter._isReferenceTo(second.returnValue(), in_List.get($arguments, 0))) {
             for (var i1 = 0, list1 = this._context.callGraph.callInfoForSymbol($function).callSites, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-              var callSite = list1[i1];
+              var callSite = in_List.get(list1, i1);
 
               if (callSite != null && callSite.callNode.kind == Skew.NodeKind.CALL) {
                 assert(callSite.callNode.symbol == $function);
@@ -3955,16 +3955,16 @@
 
       // "foo({}, 0, 1)" => "{0: 1}" where "foo" is "def foo(a, b, c) { a[b] = c; return a }"
       else if ($arguments.length == 3) {
-        var keyType = $arguments[1].resolvedType;
+        var keyType = in_List.get($arguments, 1).resolvedType;
         var first1 = $function.block.firstChild();
         var second1 = $function.block.lastChild();
 
         if ((keyType == Skew.Type.DYNAMIC || this._cache.isEquivalentToInt(keyType) || this._cache.isEquivalentToString(keyType)) && first1.kind == Skew.NodeKind.EXPRESSION && first1.expressionValue().kind == Skew.NodeKind.ASSIGN_INDEX && second1.kind == Skew.NodeKind.RETURN && second1.returnValue() != null) {
           var assign = first1.expressionValue();
 
-          if (Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexLeft(), $arguments[0]) && Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexCenter(), $arguments[1]) && Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexRight(), $arguments[2]) && Skew.JavaScriptEmitter._isReferenceTo(second1.returnValue(), $arguments[0])) {
+          if (Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexLeft(), in_List.get($arguments, 0)) && Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexCenter(), in_List.get($arguments, 1)) && Skew.JavaScriptEmitter._isReferenceTo(assign.assignIndexRight(), in_List.get($arguments, 2)) && Skew.JavaScriptEmitter._isReferenceTo(second1.returnValue(), in_List.get($arguments, 0))) {
             for (var i2 = 0, list2 = this._context.callGraph.callInfoForSymbol($function).callSites, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-              var callSite1 = list2[i2];
+              var callSite1 = in_List.get(list2, i2);
 
               if (callSite1 != null && callSite1.callNode.kind == Skew.NodeKind.CALL) {
                 assert(callSite1.callNode.symbol == $function);
@@ -3990,7 +3990,7 @@
       changed = false;
 
       for (var i = 0, count = listAppends.length; i < count; i = i + 1 | 0) {
-        var node = listAppends[i];
+        var node = in_List.get(listAppends, i);
 
         // This will be null if it was already inlined
         if (node == null) {
@@ -4008,7 +4008,7 @@
         // Only check when the inputs are constants
         if (firstArgument.kind == Skew.NodeKind.INITIALIZER_LIST) {
           node.become(firstArgument.remove().appendChild(secondArgument.remove()));
-          listAppends[i] = null;
+          in_List.set(listAppends, i, null);
           changed = true;
         }
       }
@@ -4021,7 +4021,7 @@
       changed = false;
 
       for (var i1 = 0, count1 = mapInserts.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var node1 = mapInserts[i1];
+        var node1 = in_List.get(mapInserts, i1);
 
         // This will be null if it was already inlined
         if (node1 == null) {
@@ -4040,7 +4040,7 @@
         // Only check when the inputs are constants
         if (firstArgument1.kind == Skew.NodeKind.INITIALIZER_MAP && (secondArgument1.isInt() || secondArgument1.isString())) {
           node1.become(firstArgument1.remove().appendChild(Skew.Node.createPair(secondArgument1.remove(), thirdArgument.remove()).withType(Skew.Type.DYNAMIC)));
-          mapInserts[i1] = null;
+          in_List.set(mapInserts, i1, null);
           changed = true;
         }
       }
@@ -4058,7 +4058,7 @@
 
     // These will be culled by tree shaking regardless of whether they are needed
     for (var i = 0, list = in_IntMap.values(this._specialVariables), count = list.length; i < count; i = i + 1 | 0) {
-      var variable = list[i];
+      var variable = in_List.get(list, i);
 
       if (variable.id in this._isSpecialVariableNeeded) {
         this._allocateNamingGroupIndex(variable);
@@ -4087,7 +4087,7 @@
     var self = this;
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       self._convertLambdasToFunctions(object);
     }
 
@@ -4117,7 +4117,7 @@
         }
 
         for (var i = 0, list = symbol.asFunctionSymbol().$arguments, count = list.length; i < count; i = i + 1 | 0) {
-          var argument = list[i];
+          var argument = in_List.get(list, i);
           this._allocateNamingGroupIndex(argument);
         }
       }
@@ -4139,7 +4139,7 @@
     var namingGroupMap = {};
 
     for (var i = 0, list = this._allSymbols, count1 = list.length; i < count1; i = i + 1 | 0) {
-      var symbol = list[i];
+      var symbol = in_List.get(list, i);
 
       if (Skew.in_SymbolKind.isFunction(symbol.kind)) {
         var $function = symbol.asFunctionSymbol();
@@ -4147,11 +4147,11 @@
         var id = in_IntMap.get(namingGroupMap, $function.namingGroup, -1);
 
         if (id == -1) {
-          namingGroupMap[$function.namingGroup] = this._namingGroupIndexForSymbol[$function.id];
+          namingGroupMap[$function.namingGroup] = in_IntMap.get1(this._namingGroupIndexForSymbol, $function.id);
         }
 
         else {
-          namingGroupsUnionFind.union(id, this._namingGroupIndexForSymbol[$function.id]);
+          namingGroupsUnionFind.union(id, in_IntMap.get1(this._namingGroupIndexForSymbol, $function.id));
         }
       }
     }
@@ -4160,7 +4160,7 @@
     var reservedNames = in_StringMap.clone(Skew.JavaScriptEmitter._isKeyword);
 
     for (var i1 = 0, list1 = this._allSymbols, count2 = list1.length; i1 < count2; i1 = i1 + 1 | 0) {
-      var symbol1 = list1[i1];
+      var symbol1 = in_List.get(list1, i1);
 
       if (!Skew.JavaScriptEmitter._shouldRenameSymbol(symbol1)) {
         reservedNames[symbol1.name] = 0;
@@ -4173,11 +4173,11 @@
     var sortedGroups = [];
 
     for (var i3 = 0, list2 = this._extractGroups(namingGroupsUnionFind, Skew.JavaScriptEmitter.ExtractGroupsMode.ALL_SYMBOLS), count4 = list2.length; i3 < count4; i3 = i3 + 1 | 0) {
-      var group = list2[i3];
+      var group = in_List.get(list2, i3);
       var count = 0;
 
       for (var i2 = 0, count3 = group.length; i2 < count3; i2 = i2 + 1 | 0) {
-        var symbol2 = group[i2];
+        var symbol2 = in_List.get(group, i2);
 
         if (Skew.JavaScriptEmitter._shouldRenameSymbol(symbol2)) {
           count = count + in_IntMap.get(this._symbolCounts, symbol2.id, 0) | 0;
@@ -4195,7 +4195,7 @@
         difference = in_int.compare(b.symbols.length, a.symbols.length);
 
         for (var i = 0; difference == 0 && i < a.symbols.length; i = i + 1 | 0) {
-          difference = in_int.compare(a.symbols[i].id, b.symbols[i].id);
+          difference = in_int.compare(in_List.get(a.symbols, i).id, in_List.get(b.symbols, i).id);
         }
       }
 
@@ -4203,11 +4203,11 @@
     });
 
     for (var i5 = 0, list4 = sortedGroups, count6 = list4.length; i5 < count6; i5 = i5 + 1 | 0) {
-      var group1 = list4[i5];
+      var group1 = in_List.get(list4, i5);
       var name = '';
 
       for (var i4 = 0, list3 = group1.symbols, count5 = list3.length; i4 < count5; i4 = i4 + 1 | 0) {
-        var symbol3 = list3[i4];
+        var symbol3 = in_List.get(list3, i4);
 
         if (Skew.JavaScriptEmitter._shouldRenameSymbol(symbol3)) {
           if (name == '') {
@@ -4238,18 +4238,18 @@
     var relatedTypesUnionFind = new Skew.UnionFind().allocate2(this._allSymbols.length);
 
     for (var i = 0, count1 = this._allSymbols.length; i < count1; i = i + 1 | 0) {
-      var symbol = this._allSymbols[i];
+      var symbol = in_List.get(this._allSymbols, i);
 
       if (symbol.kind == Skew.SymbolKind.OBJECT_CLASS) {
         var baseClass = symbol.asObjectSymbol().baseClass;
 
         if (baseClass != null) {
-          relatedTypesUnionFind.union(i, this._namingGroupIndexForSymbol[baseClass.id]);
+          relatedTypesUnionFind.union(i, in_IntMap.get1(this._namingGroupIndexForSymbol, baseClass.id));
         }
 
         for (var i1 = 0, list = symbol.asObjectSymbol().variables, count = list.length; i1 < count; i1 = i1 + 1 | 0) {
-          var variable = list[i1];
-          relatedTypesUnionFind.union(i, this._namingGroupIndexForSymbol[variable.id]);
+          var variable = in_List.get(list, i1);
+          relatedTypesUnionFind.union(i, in_IntMap.get1(this._namingGroupIndexForSymbol, variable.id));
         }
       }
     }
@@ -4259,18 +4259,18 @@
 
   Skew.JavaScriptEmitter.prototype._zipTogetherInOrder = function(unionFind, order, groups) {
     for (var i1 = 0, list = groups, count1 = list.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var group = list[i1];
+      var group = in_List.get(list, i1);
 
       for (var i = 0, count = group.length; i < count; i = i + 1 | 0) {
-        var symbol = group[i];
-        var index = this._namingGroupIndexForSymbol[symbol.id];
+        var symbol = in_List.get(group, i);
+        var index = in_IntMap.get1(this._namingGroupIndexForSymbol, symbol.id);
 
         if (i >= order.length) {
           order.push(index);
         }
 
         else {
-          unionFind.union(index, order[i]);
+          unionFind.union(index, in_List.get(order, i));
         }
       }
     }
@@ -4291,14 +4291,14 @@
     var labelToGroup = {};
 
     for (var i = 0, list = this._allSymbols, count = list.length; i < count; i = i + 1 | 0) {
-      var symbol = list[i];
+      var symbol = in_List.get(list, i);
 
       if (mode == Skew.JavaScriptEmitter.ExtractGroupsMode.ONLY_LOCAL_VARIABLES && !Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind) || mode == Skew.JavaScriptEmitter.ExtractGroupsMode.ONLY_INSTANCE_VARIABLES && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
         continue;
       }
 
       assert(symbol.id in this._namingGroupIndexForSymbol);
-      var label = unionFind.find(this._namingGroupIndexForSymbol[symbol.id]);
+      var label = unionFind.find(in_IntMap.get1(this._namingGroupIndexForSymbol, symbol.id));
       var group = in_IntMap.get(labelToGroup, label, null);
 
       if (group == null) {
@@ -4313,7 +4313,7 @@
     var groups = in_IntMap.values(labelToGroup);
 
     for (var i1 = 0, list1 = groups, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var group1 = list1[i1];
+      var group1 = in_List.get(list1, i1);
       group1.sort(function(a, b) {
         return in_int.compare(a.id, b.id);
       });
@@ -4397,7 +4397,7 @@
   Skew.JavaScriptEmitter.prototype._emitComments = function(comments) {
     if (comments != null && !this._minify) {
       for (var i = 0, list = comments, count = list.length; i < count; i = i + 1 | 0) {
-        var comment = list[i];
+        var comment = in_List.get(list, i);
         this._emit(this._indent + '//' + comment);
       }
     }
@@ -4433,7 +4433,7 @@
         var isFirst = true;
 
         for (var i = 0, list = symbol.variables, count = list.length; i < count; i = i + 1 | 0) {
-          var variable = list[i];
+          var variable = in_List.get(list, i);
 
           if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
             if (isFirst) {
@@ -4466,10 +4466,10 @@
       }
 
       case Skew.SymbolKind.OBJECT_CLASS: {
-        var variable1 = this._specialVariables[Skew.JavaScriptEmitter.SpecialVariable.EXTENDS];
+        var variable1 = in_IntMap.get1(this._specialVariables, Skew.JavaScriptEmitter.SpecialVariable.EXTENDS);
 
         for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-          var $function = list1[i1];
+          var $function = in_List.get(list1, i1);
 
           if ($function.isPrimaryConstructor()) {
             if ($function.comments == null && symbol.comments != null) {
@@ -4521,13 +4521,13 @@
 
     if (symbol.usePrototypeCache()) {
       this._emitSemicolonIfNeeded();
-      this._emit(this._newline + this._indent + Skew.JavaScriptEmitter._mangleName(this._specialVariables[Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE]) + this._space + '=' + this._space + Skew.JavaScriptEmitter._fullName(symbol) + '.prototype');
+      this._emit(this._newline + this._indent + Skew.JavaScriptEmitter._mangleName(in_IntMap.get1(this._specialVariables, Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE)) + this._space + '=' + this._space + Skew.JavaScriptEmitter._fullName(symbol) + '.prototype');
       this._emitSemicolonAfterStatement();
     }
 
     // Ignore instance functions if the class is never constructed
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var function1 = list2[i2];
+      var function1 = in_List.get(list2, i2);
 
       if (foundPrimaryConstructor ? !function1.isPrimaryConstructor() : function1.kind == Skew.SymbolKind.FUNCTION_GLOBAL) {
         this._emitFunction(function1);
@@ -4537,9 +4537,9 @@
 
   Skew.JavaScriptEmitter.prototype._emitArgumentList = function($arguments) {
     for (var i = 0, list = $arguments, count = list.length; i < count; i = i + 1 | 0) {
-      var argument = list[i];
+      var argument = in_List.get(list, i);
 
-      if (argument != $arguments[0]) {
+      if (argument != in_List.first($arguments)) {
         this._emit(',' + this._space);
       }
 
@@ -4559,7 +4559,7 @@
     var name = Skew.JavaScriptEmitter._mangleName(symbol.isPrimaryConstructor() ? symbol.parent : symbol);
 
     if (isExpression) {
-      this._emit(this._indent + (symbol.kind != Skew.SymbolKind.FUNCTION_INSTANCE ? this._namespacePrefix : symbol.parent.usePrototypeCache() ? Skew.JavaScriptEmitter._mangleName(this._specialVariables[Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE]) + '.' : this._namespacePrefix + 'prototype.') + name + this._space + '=' + this._space + 'function(');
+      this._emit(this._indent + (symbol.kind != Skew.SymbolKind.FUNCTION_INSTANCE ? this._namespacePrefix : symbol.parent.usePrototypeCache() ? Skew.JavaScriptEmitter._mangleName(in_IntMap.get1(this._specialVariables, Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE)) + '.' : this._namespacePrefix + 'prototype.') + name + this._space + '=' + this._space + 'function(');
     }
 
     else {
@@ -4589,7 +4589,7 @@
     // Secondary constructors need the same prototype as the primary constructor
     if (symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR && !symbol.isPrimaryConstructor()) {
       this._emitSemicolonIfNeeded();
-      this._emit(this._newline + this._indent + Skew.JavaScriptEmitter._fullName(symbol) + '.prototype' + this._space + '=' + this._space + (symbol.parent.usePrototypeCache() ? Skew.JavaScriptEmitter._mangleName(this._specialVariables[Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE]) : Skew.JavaScriptEmitter._fullName(symbol.parent) + '.prototype'));
+      this._emit(this._newline + this._indent + Skew.JavaScriptEmitter._fullName(symbol) + '.prototype' + this._space + '=' + this._space + (symbol.parent.usePrototypeCache() ? Skew.JavaScriptEmitter._mangleName(in_IntMap.get1(this._specialVariables, Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE)) : Skew.JavaScriptEmitter._fullName(symbol.parent) + '.prototype'));
       this._emitSemicolonAfterStatement();
     }
   };
@@ -4975,11 +4975,11 @@
         // "-0.123" => "-.123"
         if (this._minify) {
           if (in_string.startsWith(text, '0.') && text != '0.') {
-            text = text.slice(1);
+            text = in_string.slice1(text, 1);
           }
 
           else if (in_string.startsWith(text, '-0.') && text != '-0.') {
-            text = '-' + text.slice(2);
+            text = '-' + in_string.slice1(text, 2);
           }
         }
 
@@ -5297,7 +5297,7 @@
       case Skew.NodeKind.PREFIX_DECREMENT:
       case Skew.NodeKind.PREFIX_INCREMENT: {
         var value1 = node.unaryValue();
-        var info = Skew.operatorInfo[kind];
+        var info = in_IntMap.get1(Skew.operatorInfo, kind);
 
         if (info.precedence < precedence) {
           this._emit('(');
@@ -5310,7 +5310,7 @@
 
         else {
           // Prevent "x - -1" from becoming "x--1"
-          if (this._minify && (kind == Skew.NodeKind.POSITIVE || kind == Skew.NodeKind.NEGATIVE || kind == Skew.NodeKind.PREFIX_INCREMENT || kind == Skew.NodeKind.PREFIX_DECREMENT) && info.text.charCodeAt(0) == this._previousCodeUnit) {
+          if (this._minify && (kind == Skew.NodeKind.POSITIVE || kind == Skew.NodeKind.NEGATIVE || kind == Skew.NodeKind.PREFIX_INCREMENT || kind == Skew.NodeKind.PREFIX_DECREMENT) && in_string.get1(info.text, 0) == this._previousCodeUnit) {
             this._emit(' ');
           }
 
@@ -5361,7 +5361,7 @@
 
       default: {
         if (Skew.in_NodeKind.isBinary(kind)) {
-          var info1 = Skew.operatorInfo[kind];
+          var info1 = in_IntMap.get1(Skew.operatorInfo, kind);
           var left = node.binaryLeft();
           var right = node.binaryRight();
           var extraEquals = left.resolvedType == Skew.Type.DYNAMIC || right.resolvedType == Skew.Type.DYNAMIC ? '=' : '';
@@ -5399,7 +5399,7 @@
 
     // Scan over child objects
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._patchObject(object);
     }
 
@@ -5408,7 +5408,7 @@
     var prototypeCount = 0;
 
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var $function = list2[i2];
+      var $function = in_List.get(list2, i2);
       var block = $function.block;
       var $this = $function.$this;
       this._allocateNamingGroupIndex($function);
@@ -5464,7 +5464,7 @@
       }
 
       for (var i1 = 0, list1 = $function.$arguments, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var argument = list1[i1];
+        var argument = in_List.get(list1, i1);
         this._allocateNamingGroupIndex(argument);
         this._unionVariableWithFunction(argument, $function);
       }
@@ -5487,7 +5487,7 @@
 
     // Scan over child variables
     for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-      var variable2 = list3[i3];
+      var variable2 = in_List.get(list3, i3);
       this._allocateNamingGroupIndex(variable2);
       this._patchNode(variable2.value);
     }
@@ -5574,7 +5574,7 @@
     if (this._mangle && $function != null) {
       assert(symbol.id in this._namingGroupIndexForSymbol);
       assert($function.id in this._namingGroupIndexForSymbol);
-      this._localVariableUnionFind.union(this._namingGroupIndexForSymbol[symbol.id], this._namingGroupIndexForSymbol[$function.id]);
+      this._localVariableUnionFind.union(in_IntMap.get1(this._namingGroupIndexForSymbol, symbol.id), in_IntMap.get1(this._namingGroupIndexForSymbol, $function.id));
     }
   };
 
@@ -5862,7 +5862,7 @@
     var $function = node.symbol.asFunctionSymbol();
 
     for (var i = 0, list = $function.$arguments, count = list.length; i < count; i = i + 1 | 0) {
-      var argument = list[i];
+      var argument = in_List.get(list, i);
       this._allocateNamingGroupIndex(argument);
       this._unionVariableWithFunction(argument, $function);
     }
@@ -6650,7 +6650,7 @@
 
   Skew.JavaScriptEmitter.prototype._specialVariable = function(name) {
     assert(name in this._specialVariables);
-    var variable = this._specialVariables[name];
+    var variable = in_IntMap.get1(this._specialVariables, name);
     this._isSpecialVariableNeeded[variable.id] = 0;
     return variable;
   };
@@ -6684,7 +6684,7 @@
       var value = node.asString();
 
       for (var i = 0, count = value.length; i < count; i = i + 1 | 0) {
-        var c = value.charCodeAt(i);
+        var c = in_string.get1(value, i);
 
         if ((c < 65 || c > 90) && (c < 97 || c > 122) && c != 95 && c != 36 && (i == 0 || c < 48 || c > 57)) {
           return false;
@@ -6712,12 +6712,12 @@
   };
 
   Skew.JavaScriptEmitter._numberToName = function(number) {
-    var name = Skew.JavaScriptEmitter._first[number % Skew.JavaScriptEmitter._first.length | 0];
+    var name = in_string.get(Skew.JavaScriptEmitter._first, number % Skew.JavaScriptEmitter._first.length | 0);
     number = number / Skew.JavaScriptEmitter._first.length | 0;
 
     while (number > 0) {
       number = number - 1 | 0;
-      name += Skew.JavaScriptEmitter._rest[number % Skew.JavaScriptEmitter._rest.length | 0];
+      name += in_string.get(Skew.JavaScriptEmitter._rest, number % Skew.JavaScriptEmitter._rest.length | 0);
       number = number / Skew.JavaScriptEmitter._rest.length | 0;
     }
 
@@ -6881,23 +6881,23 @@
   };
 
   Skew.LispTreeEmitter.prototype._visitObject = function(symbol) {
-    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
+    this._emit('(' + this._mangleKind(in_List.get(Skew.in_SymbolKind._strings, symbol.kind)) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
     this._increaseIndent();
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._emit('\n' + this._indent);
       this._visitObject(object);
     }
 
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+      var $function = in_List.get(list1, i1);
       this._emit('\n' + this._indent);
       this._visitFunction($function);
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+      var variable = in_List.get(list2, i2);
       this._emit('\n' + this._indent);
       this._visitVariable(variable);
     }
@@ -6907,11 +6907,11 @@
   };
 
   Skew.LispTreeEmitter.prototype._visitFunction = function(symbol) {
-    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
+    this._emit('(' + this._mangleKind(in_List.get(Skew.in_SymbolKind._strings, symbol.kind)) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
     this._increaseIndent();
 
     for (var i = 0, list = symbol.$arguments, count = list.length; i < count; i = i + 1 | 0) {
-      var argument = list[i];
+      var argument = in_List.get(list, i);
       this._emit('\n' + this._indent);
       this._visitVariable(argument);
     }
@@ -6925,7 +6925,7 @@
   };
 
   Skew.LispTreeEmitter.prototype._visitVariable = function(symbol) {
-    this._emit('(' + this._mangleKind(Skew.in_SymbolKind._strings[symbol.kind]) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND) + ' ');
+    this._emit('(' + this._mangleKind(in_List.get(Skew.in_SymbolKind._strings, symbol.kind)) + ' ' + Skew.quoteString(symbol.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND) + ' ');
     this._visitNode(symbol.type);
     this._emit(' ');
     this._visitNode(symbol.value);
@@ -6938,7 +6938,7 @@
       return;
     }
 
-    this._emit('(' + this._mangleKind(Skew.in_NodeKind._strings[node.kind]));
+    this._emit('(' + this._mangleKind(in_List.get(Skew.in_NodeKind._strings, node.kind)));
     var content = node.content;
 
     if (content != null) {
@@ -7023,7 +7023,7 @@
     var sourceContents = [];
 
     for (var i = 0, list = this._sources, count = list.length; i < count; i = i + 1 | 0) {
-      var source = list[i];
+      var source = in_List.get(list, i);
       sourceNames.push(Skew.quoteString(source.name, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
       sourceContents.push(Skew.quoteString(source.contents, Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.OCTAL_WORKAROUND));
     }
@@ -7048,7 +7048,7 @@
 
     // Generate the base64 VLQ encoded mappings
     for (var i1 = 0, list1 = this._mappings, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var mapping = list1[i1];
+      var mapping = in_List.get(list1, i1);
       var generatedLine = mapping.generatedLine;
 
       // Insert ',' for the same line and ';' for a line
@@ -8575,16 +8575,16 @@
   };
 
   Skew.UnionFind.prototype.union = function(left, right) {
-    this.parents[this.find(left)] = this.find(right);
+    in_List.set(this.parents, this.find(left), this.find(right));
   };
 
   Skew.UnionFind.prototype.find = function(index) {
     assert(index >= 0 && index < this.parents.length);
-    var parent = this.parents[index];
+    var parent = in_List.get(this.parents, index);
 
     if (parent != index) {
       parent = this.find(parent);
-      this.parents[index] = parent;
+      in_List.set(this.parents, index, parent);
     }
 
     return parent;
@@ -8623,7 +8623,7 @@
         }
       }
 
-      text += parts[i];
+      text += in_List.get(parts, i);
     }
 
     return text;
@@ -8643,7 +8643,7 @@
     var i = 0;
 
     while (i < words.length) {
-      var word = words[i];
+      var word = in_List.get(words, i);
       var lineLength = line.length;
       var wordLength = word.length;
       var estimatedLength = (lineLength + 1 | 0) + wordLength | 0;
@@ -8657,8 +8657,8 @@
       // Start the line
       if (line == '') {
         while (word.length > width) {
-          lines.push(word.slice(0, width));
-          word = word.slice(width, word.length);
+          lines.push(in_string.slice2(word, 0, width));
+          word = in_string.slice2(word, width, word.length);
         }
 
         line = word;
@@ -8945,7 +8945,7 @@
 
     if (this.annotations != null) {
       for (var i = 0, list = this.annotations, count = list.length; i < count; i = i + 1 | 0) {
-        var annotation = list[i];
+        var annotation = in_List.get(list, i);
 
         if (annotation.symbol != null && annotation.symbol.shouldSpread()) {
           if (result == null) {
@@ -9087,7 +9087,7 @@
       clone.parameters = [];
 
       for (var i = 0, list = this.parameters, count = list.length; i < count; i = i + 1 | 0) {
-        var parameter = list[i];
+        var parameter = in_List.get(list, i);
         var cloned = parameter.clone();
         symbols[parameter.id] = cloned;
         clone.parameters.push(cloned);
@@ -9095,7 +9095,7 @@
     }
 
     for (var i1 = 0, list1 = this.$arguments, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var argument = list1[i1];
+      var argument = in_List.get(list1, i1);
       var cloned1 = argument.clone();
       symbols[argument.id] = cloned1;
       clone.$arguments.push(cloned1);
@@ -9385,7 +9385,7 @@
     var names = [];
 
     for (var i = 0, list = types, count = list.length; i < count; i = i + 1 | 0) {
-      var type = list[i];
+      var type = in_List.get(list, i);
       names.push(type.toString());
     }
 
@@ -9594,7 +9594,7 @@
 
   Skew.Log.prototype.semanticErrorWrongArgumentCountRange = function(range, name, values) {
     assert(!(values.length == 0));
-    var first = values[0];
+    var first = in_List.first(values);
     var count = values.length;
 
     if (count == 1) {
@@ -9607,7 +9607,7 @@
       var max = first;
 
       for (var i = 0, list = values, count1 = list.length; i < count1; i = i + 1 | 0) {
-        var value = list[i];
+        var value = in_List.get(list, i);
         min = Math.min(min, value);
         max = Math.max(max, value);
         counts.push(value.toString());
@@ -9992,8 +9992,8 @@
     var base = 10;
 
     // Parse the base
-    if ((start + 2 | 0) < count && text.charCodeAt(start) == 48) {
-      var c = text.charCodeAt(start + 1 | 0);
+    if ((start + 2 | 0) < count && in_string.get1(text, start) == 48) {
+      var c = in_string.get1(text, start + 1 | 0);
 
       if (c == 98) {
         base = 2;
@@ -10019,7 +10019,7 @@
     // Special-case hexadecimal since it's more complex
     if (base == 16) {
       for (var i = start, count1 = text.length; i < count1; i = i + 1 | 0) {
-        var c1 = text.charCodeAt(i);
+        var c1 = in_string.get1(text, i);
 
         if ((c1 < 48 || c1 > 57) && (c1 < 65 || c1 > 70) && (c1 < 97 || c1 > 102)) {
           return null;
@@ -10032,7 +10032,7 @@
     // All other bases are zero-relative
     else {
       for (var i1 = start, count2 = text.length; i1 < count2; i1 = i1 + 1 | 0) {
-        var c2 = text.charCodeAt(i1);
+        var c2 = in_string.get1(text, i1);
 
         if (c2 < 48 || c2 >= (48 + base | 0)) {
           return null;
@@ -10044,7 +10044,7 @@
 
     // Warn about decimal integers that start with "0" because other languages
     // strangely treat these numbers as octal instead of decimal
-    if (base == 10 && value != 0 && text.charCodeAt(0) == 48) {
+    if (base == 10 && value != 0 && in_string.get1(text, 0) == 48) {
       log.syntaxWarningOctal(range);
     }
 
@@ -10067,7 +10067,7 @@
         comments = [];
       }
 
-      comments.push(range.source.contents.slice(range.start + 1 | 0, range.end));
+      comments.push(in_string.slice2(range.source.contents, range.start + 1 | 0, range.end));
 
       // Ignore blocks of comments with extra lines afterward
       if (context.eat(Skew.TokenKind.NEWLINE)) {
@@ -10089,7 +10089,7 @@
       comments = [];
     }
 
-    var text = range.source.contents.slice(range.start + 1 | 0, range.end);
+    var text = in_string.slice2(range.source.contents, range.start + 1 | 0, range.end);
 
     if (!in_string.endsWith(text, '\n')) {
       text += '\n';
@@ -10107,7 +10107,7 @@
       // Change "@foo.bar.baz" into "foo.bar.@baz"
       if (context.peek(Skew.TokenKind.DOT)) {
         var root = value.asString();
-        value.content = new Skew.StringContent(root.slice(1));
+        value.content = new Skew.StringContent(in_string.slice1(root, 1));
 
         while (context.eat(Skew.TokenKind.DOT)) {
           var name = context.current().range;
@@ -10926,7 +10926,7 @@
         }
 
         else if (nameToken.kind in Skew.Parsing.forbiddenCustomOperators) {
-          context.log.syntaxErrorBadOperatorCustomization(range, nameToken.kind, Skew.Parsing.forbiddenGroupDescription[Skew.Parsing.forbiddenCustomOperators[nameToken.kind]]);
+          context.log.syntaxErrorBadOperatorCustomization(range, nameToken.kind, in_IntMap.get1(Skew.Parsing.forbiddenGroupDescription, in_IntMap.get1(Skew.Parsing.forbiddenCustomOperators, nameToken.kind)));
           isOperator = true;
         }
       }
@@ -11212,22 +11212,22 @@
     var text = range.toString();
     var count = text.length;
     assert(count >= 2);
-    assert(text.charCodeAt(0) == 34 || text.charCodeAt(0) == 39 || text.charCodeAt(0) == 41);
-    assert(text.charCodeAt(count - 1 | 0) == 34 || text.charCodeAt(count - 1 | 0) == 39 || text.charCodeAt(count - 1 | 0) == 40);
+    assert(in_string.get1(text, 0) == 34 || in_string.get1(text, 0) == 39 || in_string.get1(text, 0) == 41);
+    assert(in_string.get1(text, count - 1 | 0) == 34 || in_string.get1(text, count - 1 | 0) == 39 || in_string.get1(text, count - 1 | 0) == 40);
     var builder = new StringBuilder();
     var start = 1;
-    var stop = count - (text.charCodeAt(count - 1 | 0) == 40 ? 2 : 1) | 0;
+    var stop = count - (in_string.get1(text, count - 1 | 0) == 40 ? 2 : 1) | 0;
     var i = start;
 
     while (i < stop) {
-      var c = text.charCodeAt((i = i + 1 | 0) + -1 | 0);
+      var c = in_string.get1(text, (i = i + 1 | 0) + -1 | 0);
 
       if (c == 92) {
         var escape = i - 1 | 0;
-        builder.append(text.slice(start, escape));
+        builder.append(in_string.slice2(text, start, escape));
 
         if (i < stop) {
-          c = text.charCodeAt((i = i + 1 | 0) + -1 | 0);
+          c = in_string.get1(text, (i = i + 1 | 0) + -1 | 0);
 
           if (c == 110) {
             builder.append('\n');
@@ -11256,10 +11256,10 @@
 
           else if (c == 120) {
             if (i < stop) {
-              var c0 = Skew.Parsing.parseHexCharacter(text.charCodeAt((i = i + 1 | 0) + -1 | 0));
+              var c0 = Skew.Parsing.parseHexCharacter(in_string.get1(text, (i = i + 1 | 0) + -1 | 0));
 
               if (i < stop) {
-                var c1 = Skew.Parsing.parseHexCharacter(text.charCodeAt((i = i + 1 | 0) + -1 | 0));
+                var c1 = Skew.Parsing.parseHexCharacter(in_string.get1(text, (i = i + 1 | 0) + -1 | 0));
 
                 if (c0 != -1 && c1 != -1) {
                   builder.append(String.fromCharCode(c0 << 4 | c1));
@@ -11276,7 +11276,7 @@
       }
     }
 
-    builder.append(text.slice(start, i));
+    builder.append(in_string.slice2(text, start, i));
     return builder.toString();
   };
 
@@ -11763,7 +11763,7 @@
   };
 
   Skew.ParserContext.prototype.current = function() {
-    return this._tokens[this._index];
+    return in_List.get(this._tokens, this._index);
   };
 
   Skew.ParserContext.prototype.next = function() {
@@ -11777,7 +11777,7 @@
   };
 
   Skew.ParserContext.prototype.spanSince = function(range) {
-    var previous = this._tokens[this._index > 0 ? this._index - 1 | 0 : 0];
+    var previous = in_List.get(this._tokens, this._index > 0 ? this._index - 1 | 0 : 0);
     return previous.range.end < range.start ? range : Skew.Range.span(range, previous.range);
   };
 
@@ -11952,7 +11952,7 @@
   };
 
   Skew.Range.prototype.toString = function() {
-    return this.source.contents.slice(this.start, this.end);
+    return in_string.slice2(this.source.contents, this.start, this.end);
   };
 
   Skew.Range.prototype.locationString = function() {
@@ -12010,7 +12010,7 @@
 
       // Left aligned
       if (a < centeredStart) {
-        line = in_string.fromCodePoints(codePoints.slice(0, maxLength - 3 | 0)) + '...';
+        line = in_string.fromCodePoints(in_List.slice2(codePoints, 0, maxLength - 3 | 0)) + '...';
 
         if (b > (maxLength - 3 | 0)) {
           b = maxLength - 3 | 0;
@@ -12020,7 +12020,7 @@
       // Right aligned
       else if ((count - a | 0) < (maxLength - centeredStart | 0)) {
         var offset = count - maxLength | 0;
-        line = '...' + in_string.fromCodePoints(codePoints.slice(offset + 3 | 0, count));
+        line = '...' + in_string.fromCodePoints(in_List.slice2(codePoints, offset + 3 | 0, count));
         a = a - offset | 0;
         b = b - offset | 0;
       }
@@ -12028,7 +12028,7 @@
       // Center aligned
       else {
         var offset1 = a - centeredStart | 0;
-        line = '...' + in_string.fromCodePoints(codePoints.slice(offset1 + 3 | 0, (offset1 + maxLength | 0) - 3 | 0)) + '...';
+        line = '...' + in_string.fromCodePoints(in_List.slice2(codePoints, offset1 + 3 | 0, (offset1 + maxLength | 0) - 3 | 0)) + '...';
         a = a - offset1 | 0;
         b = b - offset1 | 0;
 
@@ -12095,9 +12095,9 @@
       return '';
     }
 
-    var start = this._lineOffsets[line];
-    var end = (line + 1 | 0) < this._lineOffsets.length ? this._lineOffsets[line + 1 | 0] - 1 | 0 : this.contents.length;
-    return this.contents.slice(start, end);
+    var start = in_List.get(this._lineOffsets, line);
+    var end = (line + 1 | 0) < this._lineOffsets.length ? in_List.get(this._lineOffsets, line + 1 | 0) - 1 | 0 : this.contents.length;
+    return in_string.slice2(this.contents, start, end);
   };
 
   Skew.Source.prototype.indexToLineColumn = function(index) {
@@ -12111,7 +12111,7 @@
       var step = count / 2 | 0;
       var i = line + step | 0;
 
-      if (this._lineOffsets[i] <= index) {
+      if (in_List.get(this._lineOffsets, i) <= index) {
         line = i + 1 | 0;
         count = (count - step | 0) - 1 | 0;
       }
@@ -12122,7 +12122,7 @@
     }
 
     // Use the line to compute the column
-    var column = line > 0 ? index - this._lineOffsets[line - 1 | 0] | 0 : index;
+    var column = line > 0 ? index - in_List.get(this._lineOffsets, line - 1 | 0) | 0 : index;
     return new Skew.LineColumn(line - 1 | 0, column);
   };
 
@@ -12131,7 +12131,7 @@
       this._lineOffsets = [0];
 
       for (var i = 0, count = this.contents.length; i < count; i = i + 1 | 0) {
-        if (this.contents.charCodeAt(i) == 10) {
+        if (in_string.get1(this.contents, i) == 10) {
           this._lineOffsets.push(i + 1 | 0);
         }
       }
@@ -12161,23 +12161,23 @@
 
   Skew.CallGraph.prototype.callInfoForSymbol = function(symbol) {
     assert(symbol.id in this.symbolToInfoIndex);
-    return this.callInfo[this.symbolToInfoIndex[symbol.id]];
+    return in_List.get(this.callInfo, in_IntMap.get1(this.symbolToInfoIndex, symbol.id));
   };
 
   Skew.CallGraph.prototype._visitObject = function(symbol) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._visitObject(object);
     }
 
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+      var $function = in_List.get(list1, i1);
       this._recordCallSite($function, null, null);
       this._visitNode($function.block, $function);
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+      var variable = in_List.get(list2, i2);
       this._visitNode(variable.value, variable);
     }
   };
@@ -12197,7 +12197,7 @@
 
   Skew.CallGraph.prototype._recordCallSite = function(symbol, node, context) {
     var index = in_IntMap.get(this.symbolToInfoIndex, symbol.id, -1);
-    var info = index < 0 ? new Skew.CallInfo(symbol) : this.callInfo[index];
+    var info = index < 0 ? new Skew.CallInfo(symbol) : in_List.get(this.callInfo, index);
 
     if (index < 0) {
       this.symbolToInfoIndex[symbol.id] = this.callInfo.length;
@@ -12434,7 +12434,7 @@
       var dot = this.outputFile.lastIndexOf('.');
 
       if (dot != -1) {
-        switch (this.outputFile.slice(dot + 1 | 0)) {
+        switch (in_string.slice1(this.outputFile, dot + 1 | 0)) {
           case 'cpp':
           case 'cxx':
           case 'cc': {
@@ -12538,7 +12538,7 @@
       assert(symbol.resolvedType.argumentTypes.length == $function.$arguments.length);
 
       for (var i = 0, count = $function.$arguments.length; i < count; i = i + 1 | 0) {
-        assert(symbol.resolvedType.argumentTypes[i] == $function.$arguments[i].resolvedType);
+        assert(in_List.get(symbol.resolvedType.argumentTypes, i) == in_List.get($function.$arguments, i).resolvedType);
       }
     }
 
@@ -12551,7 +12551,7 @@
     this._verifySymbol(symbol);
 
     for (var i1 = 0, list1 = symbol.objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var object = list1[i1];
+      var object = in_List.get(list1, i1);
       assert(object.parent == symbol);
       this._verifyHierarchy1(object);
 
@@ -12561,14 +12561,14 @@
 
       if (object.$implements != null) {
         for (var i = 0, list = object.$implements, count = list.length; i < count; i = i + 1 | 0) {
-          var node = list[i];
+          var node = in_List.get(list, i);
           this._verifyHierarchy2(node, null);
         }
       }
     }
 
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var $function = list2[i2];
+      var $function = in_List.get(list2, i2);
       assert($function.parent == symbol);
       this._verifySymbol(symbol);
 
@@ -12578,7 +12578,7 @@
     }
 
     for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-      var variable = list3[i3];
+      var variable = in_List.get(list3, i3);
       assert(variable.parent == symbol);
       this._verifySymbol(symbol);
 
@@ -12589,7 +12589,7 @@
 
     if (symbol.guards != null) {
       for (var i4 = 0, list4 = symbol.guards, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
-        var guard = list4[i4];
+        var guard = in_List.get(list4, i4);
         this._verifyHierarchy3(guard, symbol);
       }
     }
@@ -12662,7 +12662,7 @@
 
   Skew.ParsingPass.prototype.run = function(context) {
     for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
-      var tokens = list[i];
+      var tokens = in_List.get(list, i);
       Skew.Parsing.parseFile(context.log, tokens, context.global);
     }
   };
@@ -12712,7 +12712,7 @@
 
   Skew.LexingPass.prototype.run = function(context) {
     for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
-      var source = list[i];
+      var source = in_List.get(list, i);
       context.tokens.push(Skew.tokenize(context.log, source));
     }
   };
@@ -12743,7 +12743,7 @@
     var totalLines = 0;
 
     for (var i = 0, list = this.outputs, count = list.length; i < count; i = i + 1 | 0) {
-      var source = list[i];
+      var source = in_List.get(list, i);
       totalBytes = totalBytes + source.contents.length | 0;
 
       if (kind == Skew.StatisticsKind.LONG) {
@@ -12751,11 +12751,11 @@
       }
     }
 
-    builder.append('output' + (this.outputs.length == 1 ? '' : 's') + ': ' + (this.outputs.length == 1 ? this.outputs[0].name : this.outputs.length.toString() + ' files') + (' (' + Skew.bytesToString(totalBytes)) + (kind == Skew.StatisticsKind.LONG ? ', ' + Skew.PrettyPrint.plural1(totalLines, 'line') : '') + ')');
+    builder.append('output' + (this.outputs.length == 1 ? '' : 's') + ': ' + (this.outputs.length == 1 ? in_List.first(this.outputs).name : this.outputs.length.toString() + ' files') + (' (' + Skew.bytesToString(totalBytes)) + (kind == Skew.StatisticsKind.LONG ? ', ' + Skew.PrettyPrint.plural1(totalLines, 'line') : '') + ')');
 
     if (kind == Skew.StatisticsKind.LONG && this.outputs.length != 1) {
       for (var i1 = 0, list1 = this.outputs, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var source1 = list1[i1];
+        var source1 = in_List.get(list1, i1);
         var lines = source1.lineCount();
         builder.append('\n  ' + source1.name + ' (' + Skew.bytesToString(source1.contents.length) + ', ' + Skew.PrettyPrint.plural1(lines, 'line') + ')');
       }
@@ -12766,8 +12766,8 @@
 
     if (kind == Skew.StatisticsKind.LONG) {
       for (var i2 = 0, list2 = this.passTimers, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-        var passTimer = list2[i2];
-        builder.append('\n  ' + Skew.in_PassKind._strings[passTimer.kind] + ': ' + passTimer.timer.elapsedMilliseconds());
+        var passTimer = in_List.get(list2, i2);
+        builder.append('\n  ' + in_List.get(Skew.in_PassKind._strings, passTimer.kind) + ': ' + passTimer.timer.elapsedMilliseconds());
       }
     }
 
@@ -12805,14 +12805,14 @@
     var parent = node.parent();
 
     // Pop control flow
-    var isLive = this._isControlFlowLive.pop();
+    var isLive = in_List.takeLast(this._isControlFlowLive);
 
     if (isLive) {
       node.flags |= Skew.NodeFlags.HAS_CONTROL_FLOW_AT_END;
     }
 
     // Pop loop info
-    if (parent != null && Skew.in_NodeKind.isLoop(parent.kind) && !this._isLoopBreakTarget.pop() && (parent.kind == Skew.NodeKind.WHILE && parent.whileTest().isTrue() || parent.kind == Skew.NodeKind.FOR && parent.forTest().isTrue())) {
+    if (parent != null && Skew.in_NodeKind.isLoop(parent.kind) && !in_List.takeLast(this._isLoopBreakTarget) && (parent.kind == Skew.NodeKind.WHILE && parent.whileTest().isTrue() || parent.kind == Skew.NodeKind.FOR && parent.forTest().isTrue())) {
       in_List.setLast(this._isControlFlowLive, false);
     }
   };
@@ -12909,12 +12909,12 @@
 
   Skew.Folding.ConstantFolder.prototype.visitObject = function(symbol) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this.visitObject(object);
     }
 
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+      var $function = in_List.get(list1, i1);
 
       if ($function.block != null) {
         this.foldConstants($function.block);
@@ -12922,7 +12922,7 @@
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+      var variable = in_List.get(list2, i2);
 
       if (variable.value != null) {
         this.foldConstants(variable.value);
@@ -14144,7 +14144,7 @@
 
   Skew.Folding.ConstantFolder.prototype.constantForSymbol = function(symbol) {
     if (symbol.id in this._constantCache) {
-      return this._constantCache[symbol.id];
+      return in_IntMap.get1(this._constantCache, symbol.id);
     }
 
     if (this._prepareSymbol != null) {
@@ -14231,7 +14231,7 @@
     var virtualLookup = globalizeAllFunctions || context.options.isAlwaysInlinePresent ? new Skew.VirtualLookup(context.global) : null;
 
     for (var i1 = 0, list1 = context.callGraph.callInfo, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var info = list1[i1];
+      var info = in_List.get(list1, i1);
       var symbol = info.symbol;
 
       // Turn certain instance functions into global functions
@@ -14243,7 +14243,7 @@
 
         // Update all call sites
         for (var i = 0, list = info.callSites, count = list.length; i < count; i = i + 1 | 0) {
-          var callSite = list[i];
+          var callSite = in_List.get(list, i);
           var value = callSite.callNode.callValue();
 
           // Rewrite "super(foo)" to "bar(self, foo)"
@@ -14274,12 +14274,12 @@
 
   Skew.VirtualLookup.prototype._visitObject = function(symbol) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._visitObject(object);
     }
 
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var $function = list2[i2];
+      var $function = in_List.get(list2, i2);
 
       if ($function.overridden != null) {
         this._map[$function.overridden.id] = 0;
@@ -14289,7 +14289,7 @@
       if (symbol.kind == Skew.SymbolKind.OBJECT_INTERFACE && $function.kind == Skew.SymbolKind.FUNCTION_INSTANCE && $function.forwardTo == null) {
         if ($function.implementations != null) {
           for (var i1 = 0, list1 = $function.implementations, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-            var implementation = list1[i1];
+            var implementation = in_List.get(list1, i1);
             this._map[implementation.id] = 0;
           }
         }
@@ -14313,7 +14313,7 @@
     var graph = new Skew.Inlining.InliningGraph(context.callGraph, context.log, context.options.inlineAllFunctions);
 
     for (var i = 0, list = graph.inliningInfo, count = list.length; i < count; i = i + 1 | 0) {
-      var info = list[i];
+      var info = in_List.get(list, i);
       Skew.Inlining.inlineSymbol(graph, info);
     }
   };
@@ -14329,14 +14329,14 @@
     // fewer inlining operations. This won't enter an infinite loop because
     // inlining for all such functions has already been disabled.
     for (var i1 = 0, list = info.bodyCalls, count = list.length; i1 < count; i1 = i1 + 1 | 0) {
-      var bodyCall = list[i1];
+      var bodyCall = in_List.get(list, i1);
       Skew.Inlining.inlineSymbol(graph, bodyCall);
     }
 
     var spreadingAnnotations = info.symbol.spreadingAnnotations();
 
     for (var i = 0, count2 = info.callSites.length; i < count2; i = i + 1 | 0) {
-      var callSite = info.callSites[i];
+      var callSite = in_List.get(info.callSites, i);
 
       // Some calls may be reused for other node types during constant folding
       if (callSite == null || callSite.callNode.kind != Skew.NodeKind.CALL) {
@@ -14365,7 +14365,7 @@
         }
 
         for (var i2 = 0, list1 = spreadingAnnotations, count1 = list1.length; i2 < count1; i2 = i2 + 1 | 0) {
-          var annotation = list1[i2];
+          var annotation = in_List.get(list1, i2);
           in_List.appendOne(annotations, annotation);
         }
       }
@@ -14374,7 +14374,7 @@
       // null. The call site isn't removed from the list since we don't want
       // to mess up the indices of another call to inlineSymbol further up
       // the call stack.
-      info.callSites[i] = null;
+      in_List.set(info.callSites, i, null);
 
       // If there are unused arguments, drop those expressions entirely if
       // they don't have side effects:
@@ -14447,11 +14447,11 @@
 
       if (index != -1) {
         if (node == root) {
-          node.become(values[index]);
+          node.become(in_List.get(values, index));
         }
 
         else {
-          node.replaceWith(values[index]);
+          node.replaceWith(in_List.get(values, index));
         }
 
         return;
@@ -14485,7 +14485,7 @@
 
     // Create the nodes in the graph
     for (var i = 0, list = graph.callInfo, count = list.length; i < count; i = i + 1 | 0) {
-      var callInfo = list[i];
+      var callInfo = in_List.get(list, i);
       var symbol = callInfo.symbol;
 
       if (symbol.isInliningPrevented()) {
@@ -14508,16 +14508,16 @@
 
     // Create the edges in the graph
     for (var i2 = 0, list2 = this.inliningInfo, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var info1 = list2[i2];
+      var info1 = in_List.get(list2, i2);
 
       for (var i1 = 0, list1 = graph.callInfoForSymbol(info1.symbol).callSites, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var callSite = list1[i1];
+        var callSite = in_List.get(list1, i1);
 
         if (callSite.enclosingSymbol.kind == Skew.SymbolKind.FUNCTION_GLOBAL) {
           var index = in_IntMap.get(this.symbolToInfoIndex, callSite.enclosingSymbol.id, -1);
 
           if (index != -1) {
-            this.inliningInfo[index].bodyCalls.push(info1);
+            in_List.get(this.inliningInfo, index).bodyCalls.push(info1);
           }
         }
       }
@@ -14525,7 +14525,7 @@
 
     // Detect and disable infinitely expanding inline operations
     for (var i3 = 0, list3 = this.inliningInfo, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-      var info2 = list3[i3];
+      var info2 = in_List.get(list3, i3);
       info2.shouldInline = !Skew.Inlining.InliningGraph._containsInfiniteExpansion(info2, []);
     }
   };
@@ -14540,14 +14540,14 @@
     symbols.push(info.symbol);
 
     for (var i = 0, list = info.bodyCalls, count = list.length; i < count; i = i + 1 | 0) {
-      var bodyCall = list[i];
+      var bodyCall = in_List.get(list, i);
 
       if (Skew.Inlining.InliningGraph._containsInfiniteExpansion(bodyCall, symbols)) {
         return true;
       }
     }
 
-    symbols.pop();
+    in_List.removeLast(symbols);
     return false;
   };
 
@@ -14596,7 +14596,7 @@
         var argumentCounts = {};
 
         for (var i2 = 0, list = symbol.$arguments, count2 = list.length; i2 < count2; i2 = i2 + 1 | 0) {
-          var argument = list[i2];
+          var argument = in_List.get(list, i2);
           argumentCounts[argument.id] = 0;
         }
 
@@ -14605,7 +14605,7 @@
           var isSimpleSubstitution = true;
 
           for (var i1 = 0, count3 = symbol.$arguments.length; i1 < count3; i1 = i1 + 1 | 0) {
-            var count = argumentCounts[symbol.$arguments[i1].id];
+            var count = in_IntMap.get1(argumentCounts, in_List.get(symbol.$arguments, i1).id);
 
             if (count == 0) {
               unusedArguments1.push(i1);
@@ -14687,7 +14687,7 @@
     this._scanForInterfaces(context.global);
 
     for (var i2 = 0, list2 = this._interfaces, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var symbol = list2[i2];
+      var symbol = in_List.get(list2, i2);
 
       if (symbol.isImportedOrExported()) {
         continue;
@@ -14700,10 +14700,10 @@
 
         // Remove this interface from its implementation
         if (implementations != null) {
-          var object = implementations[0];
+          var object = in_List.first(implementations);
 
           for (var i = 0, list = object.interfaceTypes, count = list.length; i < count; i = i + 1 | 0) {
-            var type = list[i];
+            var type = in_List.get(list, i);
 
             if (type.symbol == symbol) {
               in_List.removeOne(object.interfaceTypes, type);
@@ -14714,10 +14714,10 @@
           // Mark these symbols as forwarded, which is used by the globalization
           // pass and the JavaScript emitter to ignore this interface
           for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-            var $function = list1[i1];
+            var $function = in_List.get(list1, i1);
 
             if ($function.implementations != null) {
-              $function.forwardTo = $function.implementations[0];
+              $function.forwardTo = in_List.first($function.implementations);
             }
           }
 
@@ -14729,7 +14729,7 @@
 
   Skew.InterfaceRemovalPass.prototype._scanForInterfaces = function(symbol) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._scanForInterfaces(object);
     }
 
@@ -14739,7 +14739,7 @@
 
     if (symbol.interfaceTypes != null) {
       for (var i1 = 0, list1 = symbol.interfaceTypes, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var type = list1[i1];
+        var type = in_List.get(list1, i1);
         var key = type.symbol.id;
         var implementations = in_IntMap.get(this._interfaceImplementations, key, null);
 
@@ -14776,7 +14776,7 @@
 
     if (symbol.parameters != null) {
       for (var i = 0, list = symbol.parameters, count = list.length; i < count; i = i + 1 | 0) {
-        var parameter = list[i];
+        var parameter = in_List.get(list, i);
         parameter.scope = parent.scope;
         parameter.parent = target;
 
@@ -14872,7 +14872,7 @@
         }
 
         for (var i = 0, list = child.guards, count = list.length; i < count; i = i + 1 | 0) {
-          var guard = list[i];
+          var guard = in_List.get(list, i);
 
           for (var g = guard; g != null; g = g.elseGuard) {
             g.parent = object;
@@ -14891,7 +14891,7 @@
     var members = parent.members;
 
     for (var i1 = 0, list1 = children, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var child = list1[i1];
+      var child = in_List.get(list1, i1);
       var other = in_StringMap.get(members, child.name, null);
 
       // Create a scope for this function's type parameters
@@ -14902,7 +14902,7 @@
 
         if (child.parameters != null) {
           for (var i = 0, list = child.parameters, count = list.length; i < count; i = i + 1 | 0) {
-            var parameter = list[i];
+            var parameter = in_List.get(list, i);
             parameter.scope = scope;
             parameter.parent = child;
 
@@ -14974,7 +14974,7 @@
     var members = parent.members;
 
     for (var i = 0, list = children, count = list.length; i < count; i = i + 1 | 0) {
-      var child = list[i];
+      var child = in_List.get(list, i);
       var other = in_StringMap.get(members, child.name, null);
       child.scope = new Skew.VariableScope(parent.scope, child);
       child.parent = parent;
@@ -14990,7 +14990,7 @@
   };
 
   Skew.Merging.rangeOfParameters = function(parameters) {
-    return Skew.Range.span(parameters[0].range, in_List.last(parameters).range);
+    return Skew.Range.span(in_List.first(parameters).range, in_List.last(parameters).range);
   };
 
   Skew.Merging.MergeBehavior = {
@@ -15014,7 +15014,7 @@
 
     // Avoid mutation during the iteration above
     for (var i = 0, list = in_IntMap.values(namespaces), count = list.length; i < count; i = i + 1 | 0) {
-      var pair = list[i];
+      var pair = in_List.get(list, i);
       pair.parent.objects.push(pair.child);
     }
   };
@@ -15137,12 +15137,12 @@
     var groups = [];
 
     for (var i = 0, count1 = functions.length; i < count1; i = i + 1 | 0) {
-      functions[i].namingGroup = i;
+      in_List.get(functions, i).namingGroup = i;
       groups.push(null);
     }
 
     for (var i2 = 0, list1 = functions, count3 = list1.length; i2 < count3; i2 = i2 + 1 | 0) {
-      var $function = list1[i2];
+      var $function = in_List.get(list1, i2);
 
       if ($function.overridden != null) {
         labels.union($function.namingGroup, $function.overridden.namingGroup);
@@ -15150,25 +15150,25 @@
 
       if ($function.implementations != null) {
         for (var i1 = 0, list = $function.implementations, count2 = list.length; i1 < count2; i1 = i1 + 1 | 0) {
-          var implementation = list[i1];
+          var implementation = in_List.get(list, i1);
           labels.union($function.namingGroup, implementation.namingGroup);
         }
       }
     }
 
     for (var i3 = 0, list2 = functions, count4 = list2.length; i3 < count4; i3 = i3 + 1 | 0) {
-      var function1 = list2[i3];
+      var function1 = in_List.get(list2, i3);
       var label = labels.find(function1.namingGroup);
-      var group = groups[label];
+      var group = in_List.get(groups, label);
       function1.namingGroup = label;
 
       if (group == null) {
         group = [];
-        groups[label] = group;
+        in_List.set(groups, label, group);
       }
 
       else {
-        assert(function1.name == group[0].name);
+        assert(function1.name == in_List.first(group).name);
       }
 
       group.push(function1);
@@ -15176,7 +15176,7 @@
 
     // Rename stuff
     for (var i7 = 0, list3 = groups, count8 = list3.length; i7 < count8; i7 = i7 + 1 | 0) {
-      var group1 = list3[i7];
+      var group1 = in_List.get(list3, i7);
 
       if (group1 == null) {
         continue;
@@ -15188,7 +15188,7 @@
       var rename = null;
 
       for (var i4 = 0, count5 = group1.length; i4 < count5; i4 = i4 + 1 | 0) {
-        var function2 = group1[i4];
+        var function2 = in_List.get(group1, i4);
 
         if (function2.isImportedOrExported()) {
           isImportedOrExported = true;
@@ -15219,7 +15219,7 @@
       // Bake in the rename annotation now
       if (rename != null) {
         for (var i5 = 0, count6 = group1.length; i5 < count6; i5 = i5 + 1 | 0) {
-          var function3 = group1[i5];
+          var function3 = in_List.get(group1, i5);
           function3.flags |= Skew.SymbolFlags.IS_RENAMED;
           function3.name = rename;
           function3.rename = null;
@@ -15233,22 +15233,22 @@
         continue;
       }
 
-      var first = group1[0];
+      var first = in_List.first(group1);
       var $arguments = first.$arguments.length;
       var count = 0;
       var start = first.name;
 
       if (($arguments == 0 || $arguments == 1 && first.kind == Skew.SymbolKind.FUNCTION_GLOBAL) && start in Skew.Renaming.unaryPrefixes) {
-        start = Skew.Renaming.unaryPrefixes[start];
+        start = in_StringMap.get1(Skew.Renaming.unaryPrefixes, start);
       }
 
       else if (start in Skew.Renaming.prefixes) {
-        start = Skew.Renaming.prefixes[start];
+        start = in_StringMap.get1(Skew.Renaming.prefixes, start);
       }
 
       else {
         if (in_string.startsWith(start, '@')) {
-          start = start.slice(1);
+          start = in_string.slice1(start, 1);
         }
 
         if (Skew.Renaming.isInvalidIdentifier(start)) {
@@ -15267,7 +15267,7 @@
       }
 
       for (var i6 = 0, count7 = group1.length; i6 < count7; i6 = i6 + 1 | 0) {
-        var function4 = group1[i6];
+        var function4 = in_List.get(group1, i6);
         function4.scope.parent.reserveName(name, null);
         function4.name = name;
       }
@@ -15276,7 +15276,7 @@
 
   Skew.Renaming.collectFunctionAndRenameObjectsAndVariables = function(symbol, functions) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
 
       if (object.rename != null) {
         object.name = object.rename;
@@ -15287,12 +15287,12 @@
     }
 
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+      var $function = in_List.get(list1, i1);
       functions.push($function);
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+      var variable = in_List.get(list2, i2);
 
       if (variable.rename != null) {
         variable.name = variable.rename;
@@ -15311,7 +15311,7 @@
 
   Skew.Renaming.isInvalidIdentifier = function(name) {
     for (var i = 0, count = name.length; i < count; i = i + 1 | 0) {
-      var c = name.charCodeAt(i);
+      var c = in_string.get1(name, i);
 
       if (!Skew.Renaming.isAlpha(c) && (i == 0 || !Skew.Renaming.isNumber(c))) {
         return true;
@@ -15325,18 +15325,18 @@
     var text = '';
 
     for (var i = 0, count = name.length; i < count; i = i + 1 | 0) {
-      var c = name.charCodeAt(i);
+      var c = in_string.get1(name, i);
 
       if (Skew.Renaming.isAlpha(c) || Skew.Renaming.isNumber(c)) {
-        text += name[i];
+        text += in_string.get(name, i);
       }
     }
 
     if (text != '' && in_string.endsWith(name, '=')) {
-      return 'set' + text.slice(0, 1).toUpperCase() + text.slice(1);
+      return 'set' + in_string.slice2(text, 0, 1).toUpperCase() + in_string.slice1(text, 1);
     }
 
-    return text == '' || !Skew.Renaming.isAlpha(text.charCodeAt(0)) ? '_' + text : text;
+    return text == '' || !Skew.Renaming.isAlpha(in_string.get1(text, 0)) ? '_' + text : text;
   };
 
   Skew.ResolvingPass = function() {
@@ -15512,8 +15512,8 @@
       var argumentTypes = type.argumentTypes;
 
       // The argument list must be empty or one argument of type "List<string>"
-      if (argumentTypes.length > 1 || argumentTypes.length == 1 && argumentTypes[0] != this._cache.createListType(this._cache.stringType)) {
-        this._log.semanticErrorInvalidEntryPointArguments(Skew.Range.span(symbol.$arguments[0].range, in_List.last(symbol.$arguments).type.range), symbol.name);
+      if (argumentTypes.length > 1 || argumentTypes.length == 1 && in_List.first(argumentTypes) != this._cache.createListType(this._cache.stringType)) {
+        this._log.semanticErrorInvalidEntryPointArguments(Skew.Range.span(in_List.first(symbol.$arguments).range, in_List.last(symbol.$arguments).type.range), symbol.name);
       }
 
       // The return type must be nothing or "int"
@@ -15611,7 +15611,7 @@
   Skew.Resolving.Resolver.prototype._resolveParameters = function(parameters) {
     if (parameters != null) {
       for (var i = 0, list = parameters, count = list.length; i < count; i = i + 1 | 0) {
-        var parameter = list[i];
+        var parameter = in_List.get(list, i);
         this._resolveParameter(parameter);
       }
     }
@@ -15668,7 +15668,7 @@
         var functions = [];
 
         for (var i2 = 0, list1 = in_StringMap.values(symbol.baseClass.members), count1 = list1.length; i2 < count1; i2 = i2 + 1 | 0) {
-          var member = list1[i2];
+          var member = in_List.get(list1, i2);
           var memberKind = member.kind;
 
           // Separate out functions
@@ -15681,7 +15681,7 @@
           // Include overloaded functions individually
           else if (Skew.in_SymbolKind.isOverloadedFunction(memberKind)) {
             for (var i1 = 0, list = member.asOverloadedFunctionSymbol().symbols, count = list.length; i1 < count; i1 = i1 + 1 | 0) {
-              var $function = list[i1];
+              var $function = in_List.get(list, i1);
 
               if ($function.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
                 functions.push($function);
@@ -15717,7 +15717,7 @@
       symbol.interfaceTypes = [];
 
       for (var i = 0, count2 = $implements.length; i < count2; i = i + 1 | 0) {
-        var type = $implements[i];
+        var type = in_List.get($implements, i);
         this._resolveAsParameterizedType(type, symbol.scope);
 
         // Ignore the dynamic type, which will be from errors and dynamic expressions used for exports
@@ -15735,7 +15735,7 @@
 
         // An interface can only be implemented once
         for (var j = 0; j < i; j = j + 1 | 0) {
-          var other1 = $implements[j];
+          var other1 = in_List.get($implements, j);
 
           if (other1.resolvedType == interfaceType) {
             this._log.semanticErrorDuplicateImplements(type.range, interfaceType, other1.range);
@@ -15752,7 +15752,7 @@
       var nextEnumValue = 0;
 
       for (var i3 = 0, list2 = symbol.variables, count3 = list2.length; i3 < count3; i3 = i3 + 1 | 0) {
-        var variable = list2[i3];
+        var variable = in_List.get(list2, i3);
 
         if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
           if (nextEnumValue >= 32 && symbol.isFlags()) {
@@ -15780,7 +15780,7 @@
         var overloaded = baseConstructor.asOverloadedFunctionSymbol();
 
         for (var i4 = 0, list3 = overloaded.symbols, count4 = list3.length; i4 < count4; i4 = i4 + 1 | 0) {
-          var overload = list3[i4];
+          var overload = in_List.get(list3, i4);
 
           if (overload.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
             if (baseConstructor.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
@@ -15839,13 +15839,13 @@
 
     // Check to see if this class is abstract (as unimplemented members)
     for (var i1 = 0, list1 = in_StringMap.values(symbol.members), count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var member = list1[i1];
+      var member = in_List.get(list1, i1);
 
       if (member.kind == Skew.SymbolKind.OVERLOADED_INSTANCE) {
         this._initializeSymbol(member);
 
         for (var i = 0, list = member.asOverloadedFunctionSymbol().symbols, count = list.length; i < count; i = i + 1 | 0) {
-          var $function = list[i];
+          var $function = in_List.get(list, i);
           this._checkInterfacesAndAbstractStatus1(symbol, $function);
         }
       }
@@ -15863,10 +15863,10 @@
     // Check interfaces for missing implementations
     if (symbol.interfaceTypes != null) {
       for (var i4 = 0, list4 = symbol.interfaceTypes, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
-        var interfaceType = list4[i4];
+        var interfaceType = in_List.get(list4, i4);
 
         for (var i3 = 0, list3 = interfaceType.symbol.asObjectSymbol().functions, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-          var function1 = list3[i3];
+          var function1 = in_List.get(list3, i3);
 
           if (function1.kind != Skew.SymbolKind.FUNCTION_INSTANCE || function1.block != null) {
             continue;
@@ -15883,7 +15883,7 @@
 
             if (member1.kind == Skew.SymbolKind.OVERLOADED_INSTANCE) {
               for (var i2 = 0, list2 = member1.asOverloadedFunctionSymbol().symbols, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-                var other = list2[i2];
+                var other = in_List.get(list2, i2);
                 equivalence = this._cache.areFunctionSymbolsEquivalent(function1, interfaceType.environment, other, null);
 
                 if (equivalence != Skew.TypeCache.Equivalence.NOT_EQUIVALENT) {
@@ -15958,7 +15958,7 @@
   //
   Skew.Resolving.Resolver.prototype._removeObsoleteFunctions = function(symbol) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._removeObsoleteFunctions(object);
     }
 
@@ -15989,7 +15989,7 @@
 
     // All remaining guards are errors
     for (var i = 0, list = guards, count1 = list.length; i < count1; i = i + 1 | 0) {
-      var guard = list[i];
+      var guard = in_List.get(list, i);
       var count = this._log.errorCount;
       this._resolveAsParameterizedExpressionWithConversion(guard.test, guard.parent.scope, this._cache.boolType);
 
@@ -16005,7 +16005,7 @@
     }
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._scanForGuards(object, guards);
     }
   };
@@ -16038,7 +16038,7 @@
     var wasGuardRemoved = false;
 
     for (var i = 0, list = guards, count = list.length; i < count; i = i + 1 | 0) {
-      var guard = list[i];
+      var guard = in_List.get(list, i);
       var test = guard.test;
       var parent = guard.parent;
 
@@ -16094,7 +16094,7 @@
     //
     if (symbol.guards != null) {
       for (var i = 0, list = symbol.guards, count = list.length; i < count; i = i + 1 | 0) {
-        var nested = list[i];
+        var nested = in_List.get(list, i);
         object.guards.push(nested);
 
         for (var g = nested; g != null; g = g.elseGuard) {
@@ -16111,7 +16111,7 @@
   // been defined.
   Skew.Resolving.Resolver.prototype._convertForeachLoops = function() {
     for (var i = 0, list1 = this._foreachLoops, count2 = list1.length; i < count2; i = i + 1 | 0) {
-      var node = list1[i];
+      var node = in_List.get(list1, i);
       var symbol = node.symbol.asVariableSymbol();
 
       // Generate names at the function level to avoid conflicts with local scopes
@@ -16203,7 +16203,7 @@
 
   Skew.Resolving.Resolver.prototype._scanLocalVariables = function() {
     for (var i = 0, list = in_IntMap.values(this._localVariableStatistics), count = list.length; i < count; i = i + 1 | 0) {
-      var info = list[i];
+      var info = in_List.get(list, i);
       var symbol = info.symbol;
 
       // Variables that are never re-assigned can safely be considered constants for constant folding
@@ -16231,8 +16231,8 @@
 
   Skew.Resolving.Resolver.prototype._discardUnusedDefines = function() {
     for (var i = 0, list = Object.keys(this._defines), count = list.length; i < count; i = i + 1 | 0) {
-      var key = list[i];
-      this._log.semanticErrorInvalidDefine2(this._defines[key].name, key);
+      var key = in_List.get(list, i);
+      this._log.semanticErrorInvalidDefine2(in_StringMap.get1(this._defines, key).name, key);
     }
   };
 
@@ -16240,17 +16240,17 @@
     this._initializeSymbol(symbol);
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       this._resolveObject(object);
     }
 
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+      var $function = in_List.get(list1, i1);
       this._resolveFunction($function);
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+      var variable = in_List.get(list2, i2);
       this._resolveVariable1(variable);
     }
 
@@ -16290,7 +16290,7 @@
     symbol.resolvedType.argumentTypes = [];
 
     for (var i = 0, list = symbol.$arguments, count1 = list.length; i < count1; i = i + 1 | 0) {
-      var argument = list[i];
+      var argument = in_List.get(list, i);
       argument.scope = symbol.scope;
       this._resolveVariable1(argument);
       symbol.resolvedType.argumentTypes.push(argument.resolvedType);
@@ -16350,7 +16350,7 @@
       // for initializer expressions
       else if (symbol.name == '{new}' || symbol.name == '[new]') {
         for (var i1 = 0, list1 = symbol.$arguments, count2 = list1.length; i1 < count2; i1 = i1 + 1 | 0) {
-          var argument1 = list1[i1];
+          var argument1 = in_List.get(list1, i1);
 
           if (argument1.resolvedType != Skew.Type.DYNAMIC && !this._cache.isList(argument1.resolvedType)) {
             this._log.semanticErrorExpectedList(argument1.range, argument1.name, argument1.resolvedType);
@@ -16387,7 +16387,7 @@
         var call = Skew.Node.createCall(base);
 
         for (var i = 0, list = $arguments, count = list.length; i < count; i = i + 1 | 0) {
-          var variable = list[i];
+          var variable = in_List.get(list, i);
           var argument = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, variable.name);
           argument.initializeWithType(variable.resolvedType);
           symbol.$arguments.push(argument);
@@ -16403,7 +16403,7 @@
     this._initializeSymbol(parent);
 
     for (var i1 = 0, list1 = parent.variables, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var variable1 = list1[i1];
+      var variable1 = in_List.get(list1, i1);
 
       if (variable1.kind == Skew.SymbolKind.VARIABLE_INSTANCE) {
         this._initializeSymbol(variable1);
@@ -16434,7 +16434,7 @@
     this._initializeSymbol(parent);
 
     for (var i = 0, list = parent.variables, count = list.length; i < count; i = i + 1 | 0) {
-      var variable = list[i];
+      var variable = in_List.get(list, i);
 
       if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
         assert(variable.enumValue() == names.childCount());
@@ -16481,7 +16481,7 @@
     // scope since they are evaluated at the call site, not inside the
     // function body, and shouldn't have access to other arguments
     for (var i = 0, list = symbol.$arguments, count = list.length; i < count; i = i + 1 | 0) {
-      var argument = list[i];
+      var argument = in_List.get(list, i);
       scope.define(argument, this._log);
       this._localVariableStatistics[argument.id] = new Skew.Resolving.LocalVariableStatistics(argument);
     }
@@ -16499,7 +16499,7 @@
       // User-specified constructors have variable initializers automatically inserted
       if (symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR && !symbol.isAutomaticallyGenerated()) {
         for (var i1 = 0, list1 = symbol.parent.asObjectSymbol().variables, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-          var variable = list1[i1];
+          var variable = in_List.get(list1, i1);
 
           if (variable.kind == Skew.SymbolKind.VARIABLE_INSTANCE) {
             this._resolveVariable1(variable);
@@ -16683,14 +16683,14 @@
     var i = 0;
 
     while (i < symbols.length) {
-      var $function = symbols[i];
+      var $function = in_List.get(symbols, i);
       this._initializeSymbol($function);
       symbol.flags |= $function.flags & Skew.SymbolFlags.IS_SETTER;
       var equivalence = Skew.TypeCache.Equivalence.NOT_EQUIVALENT;
       var index = -1;
 
       for (var j = 0, count = i; j < count; j = j + 1 | 0) {
-        equivalence = this._cache.areFunctionSymbolsEquivalent($function, null, symbols[j], null);
+        equivalence = this._cache.areFunctionSymbolsEquivalent($function, null, in_List.get(symbols, j), null);
 
         if (equivalence != Skew.TypeCache.Equivalence.NOT_EQUIVALENT) {
           index = j;
@@ -16703,7 +16703,7 @@
         continue;
       }
 
-      var other = symbols[index];
+      var other = in_List.get(symbols, index);
       var parent = symbol.parent.asObjectSymbol();
       var isFromSameObject = $function.parent == other.parent;
       var areReturnTypesDifferent = equivalence == Skew.TypeCache.Equivalence.EQUIVALENT_EXCEPT_RETURN_TYPE && (isFromSameObject || symbol.kind == Skew.SymbolKind.OVERLOADED_INSTANCE);
@@ -16747,7 +16747,7 @@
           $function.overridden = other;
         }
 
-        symbols[index] = $function;
+        in_List.set(symbols, index, $function);
       }
 
       // Keep "other"
@@ -16762,7 +16762,7 @@
       }
 
       // Remove the symbol after the merge
-      symbols.splice(i, 1);
+      in_List.removeAt(symbols, i);
     }
   };
 
@@ -17116,7 +17116,7 @@
     // Deprecation annotations optionally provide a warning message
     if (symbol.isDeprecated()) {
       for (var i = 0, list = symbol.annotations, count = list.length; i < count; i = i + 1 | 0) {
-        var annotation = list[i];
+        var annotation = in_List.get(list, i);
 
         if (annotation.symbol != null && annotation.symbol.fullName() == '@deprecated') {
           var value = annotation.annotationValue();
@@ -17431,7 +17431,7 @@
 
     // Support "for i in [1, 2, 3]"
     else if (this._cache.isList(value.resolvedType)) {
-      type = value.resolvedType.substitutions[0];
+      type = in_List.get(value.resolvedType.substitutions, 0);
     }
 
     // Anything else is an error
@@ -17668,7 +17668,7 @@
         var child = value.nextSibling();
 
         for (var i = 0, count = $arguments.length; i < count; i = i + 1 | 0) {
-          var argument = $arguments[i];
+          var argument = in_List.get($arguments, i);
 
           if (argument.type == null) {
             this._resolveAsParameterizedExpression(child, scope);
@@ -17794,7 +17794,7 @@
     var child = value.nextSibling();
 
     for (var i = 0, list = type.argumentTypes, count1 = list.length; i < count1; i = i + 1 | 0) {
-      var argumentType = list[i];
+      var argumentType = in_List.get(list, i);
       this._resolveAsParameterizedExpressionWithConversion(child, scope, argumentType);
       child = child.nextSibling();
     }
@@ -17830,7 +17830,7 @@
 
     // Filter by argument length and substitute using the current type environment
     for (var i1 = 0, list = overloaded.symbols, count1 = list.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var symbol = list[i1];
+      var symbol = in_List.get(list, i1);
 
       if (symbol.$arguments.length == count || overloaded.symbols.length == 1) {
         candidates.push(this._cache.substitute(symbol.resolvedType, symbolType.environment));
@@ -17845,7 +17845,7 @@
 
     // Check for an unambiguous match
     if (candidates.length == 1) {
-      return candidates[0];
+      return in_List.get(candidates, 0);
     }
 
     // First filter by syntactic structure impossibilities. This helps break
@@ -17857,12 +17857,12 @@
     while (index < candidates.length) {
       var child = firstArgument;
 
-      for (var i2 = 0, list1 = candidates[index].argumentTypes, count2 = list1.length; i2 < count2; i2 = i2 + 1 | 0) {
-        var type = list1[i2];
+      for (var i2 = 0, list1 = in_List.get(candidates, index).argumentTypes, count2 = list1.length; i2 < count2; i2 = i2 + 1 | 0) {
+        var type = in_List.get(list1, i2);
         var kind = child.kind;
 
         if (kind == Skew.NodeKind.NULL && !type.isReference() || kind == Skew.NodeKind.INITIALIZER_LIST && this._findMember(type, '[new]') == null && this._findMember(type, '[...]') == null || kind == Skew.NodeKind.INITIALIZER_MAP && this._findMember(type, '{new}') == null && this._findMember(type, '{...}') == null || kind == Skew.NodeKind.LAMBDA && (type.kind != Skew.TypeKind.LAMBDA || type.argumentTypes.length != child.symbol.asFunctionSymbol().$arguments.length)) {
-          candidates.splice(index, 1);
+          in_List.removeAt(candidates, index);
           index = index - 1 | 0;
           break;
         }
@@ -17875,7 +17875,7 @@
 
     // Check for an unambiguous match
     if (candidates.length == 1) {
-      return candidates[0];
+      return in_List.get(candidates, 0);
     }
 
     // If that still didn't work, resolve the arguments without type context
@@ -17889,11 +17889,11 @@
     while (index < candidates.length) {
       var child2 = firstArgument;
 
-      for (var i3 = 0, list2 = candidates[index].argumentTypes, count3 = list2.length; i3 < count3; i3 = i3 + 1 | 0) {
-        var type1 = list2[i3];
+      for (var i3 = 0, list2 = in_List.get(candidates, index).argumentTypes, count3 = list2.length; i3 < count3; i3 = i3 + 1 | 0) {
+        var type1 = in_List.get(list2, i3);
 
         if (!this._cache.canImplicitlyConvert(child2.resolvedType, type1)) {
-          candidates.splice(index, 1);
+          in_List.removeAt(candidates, index);
           index = index - 1 | 0;
           break;
         }
@@ -17906,7 +17906,7 @@
 
     // Check for an unambiguous match
     if (candidates.length == 1) {
-      return candidates[0];
+      return in_List.get(candidates, 0);
     }
 
     // Extract argument types for an error if there is one
@@ -17924,11 +17924,11 @@
 
     // If that still didn't work, try type equality
     for (var i4 = 0, list3 = candidates, count5 = list3.length; i4 < count5; i4 = i4 + 1 | 0) {
-      var type2 = list3[i4];
+      var type2 = in_List.get(list3, i4);
       var isMatch = true;
 
       for (var i = 0, count4 = count; i < count4; i = i + 1 | 0) {
-        if (childTypes[i] != type2.argumentTypes[i]) {
+        if (in_List.get(childTypes, i) != in_List.get(type2.argumentTypes, i)) {
           isMatch = false;
           break;
         }
@@ -17944,7 +17944,7 @@
     var secondPreferred = null;
 
     for (var i5 = 0, list4 = candidates, count6 = list4.length; i5 < count6; i5 = i5 + 1 | 0) {
-      var type3 = list4[i5];
+      var type3 = in_List.get(list4, i5);
 
       if (type3.symbol.isPreferred()) {
         secondPreferred = firstPreferred;
@@ -18290,13 +18290,13 @@
 
         for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
           if (child.kind == Skew.NodeKind.PAIR) {
-            this._resolveAsParameterizedExpressionWithConversion(child.firstValue(), scope, functionType.argumentTypes[0]);
-            this._resolveAsParameterizedExpressionWithConversion(child.secondValue(), scope, functionType.argumentTypes[1]);
+            this._resolveAsParameterizedExpressionWithConversion(child.firstValue(), scope, in_List.get(functionType.argumentTypes, 0));
+            this._resolveAsParameterizedExpressionWithConversion(child.secondValue(), scope, in_List.get(functionType.argumentTypes, 1));
             child.resolvedType = Skew.Type.DYNAMIC;
           }
 
           else {
-            this._resolveAsParameterizedExpressionWithConversion(child, scope, functionType.argumentTypes[0]);
+            this._resolveAsParameterizedExpressionWithConversion(child, scope, in_List.get(functionType.argumentTypes, 0));
           }
         }
 
@@ -18404,8 +18404,8 @@
       // Copy over the argument types if they line up
       if (context.argumentTypes.length == symbol.$arguments.length) {
         for (var i = 0, count = symbol.$arguments.length; i < count; i = i + 1 | 0) {
-          if ((ref = symbol.$arguments[i]).type == null) {
-            ref.type = new Skew.Node(Skew.NodeKind.TYPE).withType(context.argumentTypes[i]);
+          if ((ref = in_List.get(symbol.$arguments, i)).type == null) {
+            ref.type = new Skew.Node(Skew.NodeKind.TYPE).withType(in_List.get(context.argumentTypes, i));
           }
         }
       }
@@ -18425,7 +18425,7 @@
       // If there's dynamic type context, treat all arguments as dynamic
       if (context == Skew.Type.DYNAMIC) {
         for (var i1 = 0, list = symbol.$arguments, count1 = list.length; i1 < count1; i1 = i1 + 1 | 0) {
-          var argument = list[i1];
+          var argument = in_List.get(list, i1);
 
           if (argument.type == null) {
             argument.type = new Skew.Node(Skew.NodeKind.TYPE).withType(Skew.Type.DYNAMIC);
@@ -18447,7 +18447,7 @@
     var returnType = symbol.returnType;
 
     for (var i2 = 0, list1 = symbol.$arguments, count2 = list1.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var argument1 = list1[i2];
+      var argument1 = in_List.get(list1, i2);
       argumentTypes.push(argument1.resolvedType);
     }
 
@@ -18599,7 +18599,7 @@
       var match = null;
 
       for (var i = 0, list = type.symbol.asOverloadedFunctionSymbol().symbols, count1 = list.length; i < count1; i = i + 1 | 0) {
-        var candidate = list[i];
+        var candidate = in_List.get(list, i);
 
         if (candidate.parameters != null && candidate.parameters.length == count) {
           if (match != null) {
@@ -18638,7 +18638,7 @@
 
     // Make sure all parameters have types
     for (var i1 = 0, list1 = parameters, count2 = list1.length; i1 < count2; i1 = i1 + 1 | 0) {
-      var parameter = list1[i1];
+      var parameter = in_List.get(list1, i1);
       this._initializeSymbol(parameter);
     }
 
@@ -19107,7 +19107,7 @@
     }
 
     // Check if the operator can be overridden at all
-    var info = Skew.operatorInfo[kind];
+    var info = in_IntMap.get1(Skew.operatorInfo, kind);
 
     if (info.kind != Skew.OperatorKind.OVERRIDABLE) {
       this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), info.text, type);
@@ -19183,7 +19183,7 @@
 
     // Convert operators like "+=" to a "+" inside a "="
     if (symbol == null && info.assignKind != Skew.NodeKind.NULL) {
-      symbol = this._findMember(type, Skew.operatorInfo[info.assignKind].text);
+      symbol = this._findMember(type, in_IntMap.get1(Skew.operatorInfo, info.assignKind).text);
 
       if (symbol != null) {
         extracted = this._extractExpressionForAssignment(target, scope);
@@ -19365,7 +19365,7 @@
       var overloaded = symbol.asOverloadedFunctionSymbol();
 
       for (var i = 0, list = overloaded.symbols, count1 = list.length; i < count1; i = i + 1 | 0) {
-        var getter = list[i];
+        var getter = in_List.get(list, i);
 
         // Just return the first getter assuming errors for duplicate getters
         // were already logged when the overloaded symbol was initialized
@@ -19398,7 +19398,7 @@
 
       else {
         for (var i1 = 0, list1 = symbol.asOverloadedFunctionSymbol().symbols, count2 = list1.length; i1 < count2; i1 = i1 + 1 | 0) {
-          var $function = list1[i1];
+          var $function = in_List.get(list1, i1);
           var count = $function.$arguments.length;
 
           if (count < lower) {
@@ -19763,7 +19763,7 @@
 
     // Iterate until a fixed point is reached
     while (!(stack.length == 0)) {
-      var symbol = stack.pop();
+      var symbol = in_List.takeLast(stack);
 
       if (!(symbol.id in combinedUsages)) {
         combinedUsages[symbol.id] = symbol;
@@ -19787,7 +19787,7 @@
           // Check function overrides too
           if (symbolOverrides != null) {
             for (var i = 0, list = symbolOverrides, count = list.length; i < count; i = i + 1 | 0) {
-              var override = list[i];
+              var override = in_List.get(list, i);
               var key = override.parent.id;
 
               // Queue this override immediately if the parent type is used
@@ -19860,7 +19860,7 @@
 
   Skew.UsageGraph.prototype._visitObject = function(symbol) {
     for (var i1 = 0, list1 = symbol.objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var object = list1[i1];
+      var object = in_List.get(list1, i1);
       this._changeContext(object);
       this._recordUsage(symbol);
 
@@ -19872,7 +19872,7 @@
       // Only pull interfaces in for typed targets (interfaces disappear entirely for untyped targets)
       if (this._mode != Skew.ShakingMode.IGNORE_TYPES && object.interfaceTypes != null) {
         for (var i = 0, list = object.interfaceTypes, count = list.length; i < count; i = i + 1 | 0) {
-          var type = list[i];
+          var type = in_List.get(list, i);
 
           if (type.symbol != null) {
             this._recordUsage(type.symbol);
@@ -19884,7 +19884,7 @@
     }
 
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var $function = list2[i2];
+      var $function = in_List.get(list2, i2);
       this._changeContext($function);
 
       // Instance functions shouldn't cause their instance type to be emitted for dynamically-typed targets
@@ -19896,7 +19896,7 @@
     }
 
     for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-      var variable = list3[i3];
+      var variable = in_List.get(list3, i3);
       this._changeContext(variable);
 
       // Instance variables shouldn't require the class to be present because
@@ -19911,7 +19911,7 @@
 
   Skew.UsageGraph.prototype._visitFunction = function(symbol) {
     for (var i = 0, list = symbol.$arguments, count = list.length; i < count; i = i + 1 | 0) {
-      var argument = list[i];
+      var argument = in_List.get(list, i);
       this._visitVariable(argument);
     }
 
@@ -19926,7 +19926,7 @@
     // Remember which functions are overridden for later
     if (symbol.implementations != null) {
       for (var i1 = 0, list1 = symbol.implementations, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var $function = list1[i1];
+        var $function = in_List.get(list1, i1);
         this._recordOverride(symbol, $function);
         this._recordOverride($function, symbol);
       }
@@ -19963,7 +19963,7 @@
         var $function = node.symbol.asFunctionSymbol();
 
         for (var i = 0, list = $function.$arguments, count = list.length; i < count; i = i + 1 | 0) {
-          var argument = list[i];
+          var argument = in_List.get(list, i);
           this._visitVariable(argument);
         }
 
@@ -19985,7 +19985,7 @@
       // This should be a tree too, so infinite loops should not happen
       if (type.isParameterized()) {
         for (var i = 0, list = type.substitutions, count = list.length; i < count; i = i + 1 | 0) {
-          var substitution = list[i];
+          var substitution = in_List.get(list, i);
           this._visitType(substitution);
         }
       }
@@ -20000,7 +20000,7 @@
 
   Skew.Shaking.collectExportedSymbols = function(symbol, symbols, entryPoint) {
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       Skew.Shaking.collectExportedSymbols(object, symbols, entryPoint);
 
       if (object.isExported()) {
@@ -20009,7 +20009,7 @@
     }
 
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var $function = list1[i1];
+      var $function = in_List.get(list1, i1);
 
       if ($function.isExported() || $function == entryPoint) {
         symbols.push($function);
@@ -20017,7 +20017,7 @@
     }
 
     for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var variable = list2[i2];
+      var variable = in_List.get(list2, i2);
 
       if (variable.isExported()) {
         symbols.push(variable);
@@ -20037,7 +20037,7 @@
     });
 
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
-      var object = list[i];
+      var object = in_List.get(list, i);
       Skew.Shaking.removeUnusedSymbols(object, usages);
     }
   };
@@ -20107,7 +20107,7 @@
             name += ', ';
           }
 
-          name += this.substitutions[i].toString();
+          name += in_List.get(this.substitutions, i).toString();
         }
 
         return name + '>';
@@ -20124,7 +20124,7 @@
           result += ', ';
         }
 
-        result += this.argumentTypes[i1].toString();
+        result += in_List.get(this.argumentTypes, i1).toString();
       }
 
       return result + (this.returnType != null ? ') ' + this.returnType.toString() : ')');
@@ -20261,7 +20261,7 @@
 
         if (interfaceTypes != null) {
           for (var i = 0, list = interfaceTypes, count = list.length; i < count; i = i + 1 | 0) {
-            var type = list[i];
+            var type = in_List.get(list, i);
 
             if (this.substitute(type, classType.environment) == interfaceType) {
               return true;
@@ -20420,7 +20420,7 @@
     // Check existing environments in the bucket for a match
     if (bucket != null) {
       for (var i = 0, list = bucket, count = list.length; i < count; i = i + 1 | 0) {
-        var existing = list[i];
+        var existing = in_List.get(list, i);
 
         if (in_List.equals(parameters, existing.parameters) && in_List.equals(substitutions, existing.substitutions)) {
           return existing;
@@ -20449,7 +20449,7 @@
     // Check existing types in the bucket for a match
     if (bucket != null) {
       for (var i = 0, list = bucket, count = list.length; i < count; i = i + 1 | 0) {
-        var existing = list[i];
+        var existing = in_List.get(list, i);
 
         if (in_List.equals(argumentTypes, existing.argumentTypes) && returnType == existing.returnType) {
           return existing;
@@ -20484,8 +20484,8 @@
     var substitutions = this.substituteAll(a.substitutions, b);
 
     for (var i = 0, count = b.parameters.length; i < count; i = i + 1 | 0) {
-      var parameter = b.parameters[i];
-      var substitution = b.substitutions[i];
+      var parameter = in_List.get(b.parameters, i);
+      var substitution = in_List.get(b.substitutions, i);
 
       if (!(parameters.indexOf(parameter) != -1) && (restrictions == null || restrictions.indexOf(parameter) != -1)) {
         parameters.push(parameter);
@@ -20507,7 +20507,7 @@
     var substitutions = [];
 
     for (var i = 0, list = parameters, count = list.length; i < count; i = i + 1 | 0) {
-      var parameter = list[i];
+      var parameter = in_List.get(list, i);
       substitutions.push(parameter.resolvedType);
     }
 
@@ -20518,7 +20518,7 @@
     var substitutions = [];
 
     for (var i = 0, list = types, count = list.length; i < count; i = i + 1 | 0) {
-      var type = list[i];
+      var type = in_List.get(list, i);
       substitutions.push(this.substitute(type, environment));
     }
 
@@ -20562,7 +20562,7 @@
 
       // Substitute function arguments
       for (var i = 0, list = type.argumentTypes, count = list.length; i < count; i = i + 1 | 0) {
-        var argumentType = list[i];
+        var argumentType = in_List.get(list, i);
         argumentTypes.push(this.substitute(argumentType, environment));
       }
 
@@ -20582,7 +20582,7 @@
         var index = environment.parameters.indexOf(symbol.asParameterSymbol());
 
         if (index != -1) {
-          substituted = environment.substitutions[index];
+          substituted = in_List.get(environment.substitutions, index);
         }
       }
 
@@ -20599,7 +20599,7 @@
           var found = true;
 
           for (var i1 = 0, list1 = parameters, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-            var parameter = list1[i1];
+            var parameter = in_List.get(list1, i1);
             found = environment.parameters.indexOf(parameter) != -1;
 
             if (!found) {
@@ -20611,7 +20611,7 @@
             substituted.substitutions = [];
 
             for (var i2 = 0, list2 = parameters, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-              var parameter1 = list2[i2];
+              var parameter1 = in_List.get(list2, i2);
               substituted.substitutions.push(this.substitute(parameter1.resolvedType, environment));
             }
           }
@@ -20622,7 +20622,7 @@
           substituted.argumentTypes = [];
 
           for (var i3 = 0, list3 = type.argumentTypes, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-            var argumentType1 = list3[i3];
+            var argumentType1 = in_List.get(list3, i3);
             substituted.argumentTypes.push(this.substitute(argumentType1, environment));
           }
         }
@@ -20644,7 +20644,7 @@
       var substitutions = [];
 
       for (var i = 0, list = from.parameters, count = list.length; i < count; i = i + 1 | 0) {
-        var parameter = list[i];
+        var parameter = in_List.get(list, i);
         substitutions.push(parameter.resolvedType);
       }
 
@@ -20696,13 +20696,13 @@
         }
 
         // Substitute the same type parameters into both functions
-        var parameters = this._parameters.length == parameterCount ? this._parameters : this._parameters.slice(0, parameterCount);
+        var parameters = this._parameters.length == parameterCount ? this._parameters : in_List.slice2(this._parameters, 0, parameterCount);
         var leftParametersEnvironment = this.createEnvironment(left.parameters, parameters);
         var rightParametersEnvironment = this.createEnvironment(right.parameters, parameters);
 
         // Compare each argument
         for (var i1 = 0, count1 = argumentCount; i1 < count1; i1 = i1 + 1 | 0) {
-          if (this.substitute(this.substitute(leftArguments[i1], leftEnvironment), leftParametersEnvironment) != this.substitute(this.substitute(rightArguments[i1], rightEnvironment), rightParametersEnvironment)) {
+          if (this.substitute(this.substitute(in_List.get(leftArguments, i1), leftEnvironment), leftParametersEnvironment) != this.substitute(this.substitute(in_List.get(rightArguments, i1), rightEnvironment), rightParametersEnvironment)) {
             return Skew.TypeCache.Equivalence.NOT_EQUIVALENT;
           }
         }
@@ -20747,7 +20747,7 @@
     var hash = 0;
 
     for (var i = 0, list = parameters, count = list.length; i < count; i = i + 1 | 0) {
-      var parameter = list[i];
+      var parameter = in_List.get(list, i);
       hash = Skew.hashCombine(hash, parameter.id);
     }
 
@@ -20756,7 +20756,7 @@
 
   Skew.TypeCache._hashTypes = function(hash, types) {
     for (var i = 0, list = types, count = list.length; i < count; i = i + 1 | 0) {
-      var type = list[i];
+      var type = in_List.get(list, i);
       hash = Skew.hashCombine(hash, type.id);
     }
 
@@ -20830,7 +20830,7 @@
 
   Skew.Options.Data.prototype.aliases = function(names) {
     for (var i = 0, list = names, count = list.length; i < count; i = i + 1 | 0) {
-      var name = list[i];
+      var name = in_List.get(list, i);
       this.parser.map[name] = this;
     }
 
@@ -20892,7 +20892,7 @@
     // trailing space is needed to be able to point to the character after
     // the last argument without wrapping onto the next line.
     for (var i1 = 0, list = $arguments, count = list.length; i1 < count; i1 = i1 + 1 | 0) {
-      var argument = list[i1];
+      var argument = in_List.get(list, i1);
       var needsQuotes = argument.indexOf(' ') != -1;
       var start = this.source.contents.length + (needsQuotes | 0) | 0;
       ranges.push(new Skew.Range(this.source, start, start + argument.length | 0));
@@ -20901,11 +20901,11 @@
 
     // Parse each argument
     for (var i = 0, count1 = $arguments.length; i < count1; i = i + 1 | 0) {
-      var argument1 = $arguments[i];
-      var range = ranges[i];
+      var argument1 = in_List.get($arguments, i);
+      var range = in_List.get(ranges, i);
 
       // Track all normal arguments separately
-      if (argument1 == '' || argument1.charCodeAt(0) != 45 && !(argument1 in this.map)) {
+      if (argument1 == '' || in_string.get1(argument1, 0) != 45 && !(argument1 in this.map)) {
         this.normalArguments.push(range);
         continue;
       }
@@ -20914,7 +20914,7 @@
       var equals = argument1.indexOf('=');
       var colon = argument1.indexOf(':');
       var separator = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon;
-      var name = separator >= 0 ? argument1.slice(0, separator) : argument1;
+      var name = separator >= 0 ? in_string.slice2(argument1, 0, separator) : argument1;
       var data = in_StringMap.get(this.map, name, null);
 
       // Check that the flag exists
@@ -20924,7 +20924,7 @@
       }
 
       // Validate the flag data
-      var text = argument1.slice(separator + 1 | 0);
+      var text = in_string.slice1(argument1, separator + 1 | 0);
       var separatorRange = separator < 0 ? null : range.slice(separator, separator + 1 | 0);
       var textRange = range.fromEnd(text.length);
 
@@ -20934,8 +20934,8 @@
             text = 'true';
           }
 
-          else if (argument1.charCodeAt(separator) != 61) {
-            log.commandLineErrorExpectedToken(separatorRange, '=', argument1[separator], argument1);
+          else if (in_string.get1(argument1, separator) != 61) {
+            log.commandLineErrorExpectedToken(separatorRange, '=', in_string.get(argument1, separator), argument1);
             continue;
           }
 
@@ -20945,7 +20945,7 @@
           }
 
           if (data.option in this.optionalArguments) {
-            log.commandLineWarningDuplicateFlagValue(textRange, name, this.optionalArguments[data.option].range);
+            log.commandLineWarningDuplicateFlagValue(textRange, name, in_IntMap.get1(this.optionalArguments, data.option).range);
           }
 
           this.optionalArguments[data.option] = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.BoolContent(text == 'true')).withRange(textRange);
@@ -20957,8 +20957,8 @@
             log.commandLineErrorMissingValue(textRange, data.nameText());
           }
 
-          else if (argument1.charCodeAt(separator) != 61) {
-            log.commandLineErrorExpectedToken(separatorRange, '=', argument1[separator], argument1);
+          else if (in_string.get1(argument1, separator) != 61) {
+            log.commandLineErrorExpectedToken(separatorRange, '=', in_string.get(argument1, separator), argument1);
           }
 
           else {
@@ -20970,7 +20970,7 @@
 
             else {
               if (data.option in this.optionalArguments) {
-                log.commandLineWarningDuplicateFlagValue(textRange, name, this.optionalArguments[data.option].range);
+                log.commandLineWarningDuplicateFlagValue(textRange, name, in_IntMap.get1(this.optionalArguments, data.option).range);
               }
 
               this.optionalArguments[data.option] = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(box.value)).withRange(textRange);
@@ -20984,13 +20984,13 @@
             log.commandLineErrorMissingValue(textRange, data.nameText());
           }
 
-          else if (argument1.charCodeAt(separator) != 61) {
-            log.commandLineErrorExpectedToken(separatorRange, '=', argument1[separator], argument1);
+          else if (in_string.get1(argument1, separator) != 61) {
+            log.commandLineErrorExpectedToken(separatorRange, '=', in_string.get(argument1, separator), argument1);
           }
 
           else {
             if (data.option in this.optionalArguments) {
-              log.commandLineWarningDuplicateFlagValue(textRange, name, this.optionalArguments[data.option].range);
+              log.commandLineWarningDuplicateFlagValue(textRange, name, in_IntMap.get1(this.optionalArguments, data.option).range);
             }
 
             this.optionalArguments[data.option] = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.StringContent(text)).withRange(textRange);
@@ -21003,15 +21003,15 @@
             log.commandLineErrorMissingValue(textRange, data.nameText());
           }
 
-          else if (argument1.charCodeAt(separator) != 58) {
-            log.commandLineErrorExpectedToken(separatorRange, ':', argument1[separator], argument1);
+          else if (in_string.get1(argument1, separator) != 58) {
+            log.commandLineErrorExpectedToken(separatorRange, ':', in_string.get(argument1, separator), argument1);
           }
 
           else {
             var node = null;
 
             if (data.option in this.optionalArguments) {
-              node = this.optionalArguments[data.option];
+              node = in_IntMap.get1(this.optionalArguments, data.option);
             }
 
             else {
@@ -21033,7 +21033,7 @@
 
     // Figure out the column width
     for (var i = 0, list = this.options, count = list.length; i < count; i = i + 1 | 0) {
-      var option = list[i];
+      var option = in_List.get(list, i);
       var width = option.nameText().length + 4 | 0;
 
       if (columnWidth < width) {
@@ -21045,13 +21045,13 @@
     var columnText = in_string.repeat(' ', columnWidth);
 
     for (var i2 = 0, list2 = this.options, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var option1 = list2[i2];
+      var option1 = in_List.get(list2, i2);
       var nameText = option1.nameText();
       var isFirst = true;
       text += '\n  ' + nameText + in_string.repeat(' ', (columnWidth - nameText.length | 0) - 2 | 0);
 
       for (var i1 = 0, list1 = Skew.PrettyPrint.wrapWords(option1.description, wrapWidth - columnWidth | 0), count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var line = list1[i1];
+        var line = in_List.get(list1, i1);
         text += (isFirst ? '' : columnText) + line + '\n';
         isFirst = false;
       }
@@ -21234,14 +21234,14 @@
 
   Skew.in_TokenKind.toString = function(self) {
     assert(self in Skew.in_TokenKind._toString);
-    return Skew.in_TokenKind._toString[self];
+    return in_IntMap.get1(Skew.in_TokenKind._toString, self);
   };
 
   var Terminal = {};
 
   Terminal.setColor = function(color) {
     if (process.stdout.isTTY) {
-      process.stdout.write('\x1B[0;' + Terminal.colorToEscapeCode[color].toString() + 'm');
+      process.stdout.write('\x1B[0;' + in_IntMap.get1(Terminal.colorToEscapeCode, color).toString() + 'm');
     }
   };
 
@@ -21337,7 +21337,7 @@
     var builder = new StringBuilder();
 
     for (var i = 0, list = codePoints, count1 = list.length; i < count1; i = i + 1 | 0) {
-      var codePoint = list[i];
+      var codePoint = in_List.get(list, i);
       builder.append(in_string.fromCodePoint(codePoint));
     }
 
@@ -21348,12 +21348,32 @@
     return (x < self | 0) - (x > self | 0) | 0;
   };
 
+  in_string.slice1 = function(self, start) {
+    assert(0 <= start && start <= self.length);
+    return self.slice(start);
+  };
+
+  in_string.slice2 = function(self, start, end) {
+    assert(0 <= start && start <= end && end <= self.length);
+    return self.slice(start, end);
+  };
+
   in_string.startsWith = function(self, text) {
-    return self.length >= text.length && self.slice(0, text.length) == text;
+    return self.length >= text.length && in_string.slice2(self, 0, text.length) == text;
   };
 
   in_string.endsWith = function(self, text) {
-    return self.length >= text.length && self.slice(self.length - text.length | 0) == text;
+    return self.length >= text.length && in_string.slice1(self, self.length - text.length | 0) == text;
+  };
+
+  in_string.get1 = function(self, index) {
+    assert(0 <= index && index < self.length);
+    return self.charCodeAt(index);
+  };
+
+  in_string.get = function(self, index) {
+    assert(0 <= index && index < self.length);
+    return self[index];
   };
 
   in_string.repeat = function(self, times) {
@@ -21389,40 +21409,83 @@
   var in_List = {};
 
   in_List.setLast = function(self, x) {
-    return self[self.length - 1 | 0] = x;
+    return in_List.set(self, self.length - 1 | 0, x);
   };
 
   in_List.swap = function(self, i, j) {
-    var temp = self[i];
-    self[i] = self[j];
-    self[j] = temp;
+    assert(0 <= i && i < self.length);
+    assert(0 <= j && j < self.length);
+    var temp = in_List.get(self, i);
+    in_List.set(self, i, in_List.get(self, j));
+    in_List.set(self, j, temp);
+  };
+
+  in_List.slice2 = function(self, start, end) {
+    assert(0 <= start && start <= end && end <= self.length);
+    return self.slice(start, end);
+  };
+
+  in_List.get = function(self, index) {
+    assert(0 <= index && index < self.length);
+    return self[index];
+  };
+
+  in_List.set = function(self, index, value) {
+    assert(0 <= index && index < self.length);
+    return self[index] = value;
+  };
+
+  in_List.first = function(self) {
+    assert(!(self.length == 0));
+    return in_List.get(self, 0);
   };
 
   in_List.last = function(self) {
-    return self[self.length - 1 | 0];
+    assert(!(self.length == 0));
+    return in_List.get(self, self.length - 1 | 0);
   };
 
   in_List.prepend1 = function(self, values) {
     var count = values.length;
 
     for (var i = 0, count1 = count; i < count1; i = i + 1 | 0) {
-      self.unshift(values[(count - i | 0) - 1 | 0]);
+      self.unshift(in_List.get(values, (count - i | 0) - 1 | 0));
     }
   };
 
   in_List.append1 = function(self, values) {
     for (var i = 0, list = values, count1 = list.length; i < count1; i = i + 1 | 0) {
-      var value = list[i];
+      var value = in_List.get(list, i);
       self.push(value);
     }
   };
 
   in_List.insert1 = function(self, index, values) {
     for (var i = 0, list = values, count1 = list.length; i < count1; i = i + 1 | 0) {
-      var value = list[i];
-      self.splice(index, 0, value);
+      var value = in_List.get(list, i);
+      in_List.insert2(self, index, value);
       index = index + 1 | 0;
     }
+  };
+
+  in_List.insert2 = function(self, index, value) {
+    assert(0 <= index && index <= self.length);
+    self.splice(index, 0, value);
+  };
+
+  in_List.removeLast = function(self) {
+    assert(!(self.length == 0));
+    self.pop();
+  };
+
+  in_List.takeLast = function(self) {
+    assert(!(self.length == 0));
+    return self.pop();
+  };
+
+  in_List.removeAt = function(self, index) {
+    assert(0 <= index && index < self.length);
+    self.splice(index, 1);
   };
 
   in_List.appendOne = function(self, value) {
@@ -21435,7 +21498,7 @@
     var index = self.indexOf(value);
 
     if (index >= 0) {
-      self.splice(index, 1);
+      in_List.removeAt(self, index);
     }
   };
 
@@ -21444,9 +21507,9 @@
 
     // Remove elements in place
     for (var i = 0, count1 = self.length; i < count1; i = i + 1 | 0) {
-      if (!callback(self[i])) {
+      if (!callback(in_List.get(self, i))) {
         if (index < i) {
-          self[index] = self[i];
+          in_List.set(self, index, in_List.get(self, i));
         }
 
         index = index + 1 | 0;
@@ -21455,7 +21518,7 @@
 
     // Shrink the array to the correct size
     while (index < self.length) {
-      self.pop();
+      in_List.removeLast(self);
     }
   };
 
@@ -21465,7 +21528,7 @@
     }
 
     for (var i = 0, count1 = self.length; i < count1; i = i + 1 | 0) {
-      if (self[i] != other[i]) {
+      if (in_List.get(self, i) != in_List.get(other, i)) {
         return false;
       }
     }
@@ -21474,6 +21537,11 @@
   };
 
   var in_StringMap = {};
+
+  in_StringMap.get1 = function(self, key) {
+    assert(key in self);
+    return self[key];
+  };
 
   in_StringMap.insert = function(self, key, value) {
     self[key] = value;
@@ -21491,7 +21559,7 @@
     var values = [];
 
     for (var key in self) {
-      values.push(self[key]);
+      values.push(in_StringMap.get1(self, key));
     }
 
     return values;
@@ -21501,14 +21569,19 @@
     var clone = Object.create(null);
 
     for (var i = 0, list = Object.keys(self), count1 = list.length; i < count1; i = i + 1 | 0) {
-      var key = list[i];
-      clone[key] = self[key];
+      var key = in_List.get(list, i);
+      clone[key] = in_StringMap.get1(self, key);
     }
 
     return clone;
   };
 
   var in_IntMap = {};
+
+  in_IntMap.get1 = function(self, key) {
+    assert(key in self);
+    return self[key];
+  };
 
   in_IntMap.insert = function(self, key, value) {
     self[key] = value;
@@ -21526,7 +21599,7 @@
     var values = [];
 
     for (var key in self) {
-      values.push(self[key]);
+      values.push(in_IntMap.get1(self, key));
     }
 
     return values;
@@ -21549,10 +21622,10 @@
   Skew.YY_ACCEPT_LENGTH = 219;
   Skew.REMOVE_NEWLINE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.DOT, 0), Skew.TokenKind.NEWLINE, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.RIGHT_BRACKET, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0);
   Skew.FORBID_XML_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.CHARACTER, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DOUBLE, 0), Skew.TokenKind.DYNAMIC, 0), Skew.TokenKind.STRING_INTERPOLATION_END, 0), Skew.TokenKind.FALSE, 0), Skew.TokenKind.IDENTIFIER, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INT, 0), Skew.TokenKind.INT_BINARY, 0), Skew.TokenKind.INT_HEX, 0), Skew.TokenKind.INT_OCTAL, 0), Skew.TokenKind.NULL, 0), Skew.TokenKind.RIGHT_BRACE, 0), Skew.TokenKind.RIGHT_BRACKET, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0), Skew.TokenKind.STRING, 0), Skew.TokenKind.SUPER, 0), Skew.TokenKind.TRUE, 0);
-  Skew.NATIVE_LIBRARY = '\nconst RELEASE = false\n\nenum Target {\n  NONE\n  CPLUSPLUS\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @alwaysinline\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @neverinline\ndef @prefer\ndef @rename(name string)\ndef @skip\ndef @spreads\n\n@spreads {\n  def @using(name string) # For use with C#\n  def @include(name string) # For use with C++\n}\n\n@import if TARGET == .NONE\n@skip if RELEASE\ndef assert(truth bool)\n\n@import if TARGET == .NONE\nnamespace Math {\n  @prefer\n  def abs(x double) double\n  def abs(x int) int\n\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n\n  def sin(x double) double\n  def cos(x double) double\n  def tan(x double) double\n\n  def floor(x double) double\n  def ceil(x double) double\n  def round(x double) double\n\n  def exp(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def sqrt(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  @prefer\n  def clamp(x double, min double, max double) double\n  def clamp(x int, min int, max int) int\n\n  def E double        { return 2.718281828459045 }\n  def INFINITY double { return 1 / 0.0 }\n  def NAN double      { return 0 / 0.0 }\n  def PI double       { return 3.141592653589793 }\n  def SQRT_2 double   { return 2 ** 0.5 }\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def - int\n  def ~ int\n\n  def +(x int) int\n  def -(x int) int\n  def *(x int) int\n  def /(x int) int\n  def %(x int) int\n  def **(x int) int\n  def <=>(x int) int\n  def <<(x int) int\n  def >>(x int) int\n  def >>>(x int) int\n  def &(x int) int\n  def |(x int) int\n  def ^(x int) int\n\n  def <<=(x int) int\n  def >>=(x int) int\n  def &=(x int) int\n  def |=(x int) int\n  def ^=(x int) int\n\n  if TARGET != .CSHARP {\n    def >>>=(x int)\n  }\n\n  if TARGET != .JAVASCRIPT {\n    def ++ int\n    def -- int\n\n    def %=(x int) int\n    def +=(x int) int\n    def -=(x int) int\n    def *=(x int) int\n    def /=(x int) int\n  }\n\n  def toString string\n}\n\n@import\nclass double {\n  def + double\n  def ++ double\n  def - double\n  def -- double\n\n  def *(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def **(x double) double\n  def <=>(x double) int\n\n  def *=(x double) double\n  def +=(x double) double\n  def -=(x double) double\n  def /=(x double) double\n\n  def isFinite bool\n  def isNaN bool\n\n  def toString string\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string) string\n  def <=>(x string) int\n\n  def count int\n  def in(x string) bool\n  def indexOf(x string) int\n  def lastIndexOf(x string) int\n  def startsWith(x string) bool\n  def endsWith(x string) bool\n\n  def [](x int) int\n  def get(x int) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n\n  def split(x string) List<string>\n  def join(x List<string>) string\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n\n  def toLowerCase string\n  def toUpperCase string\n  def toString string { return self }\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .NONE\nclass StringBuilder {\n  def new\n  def append(x string)\n  def toString string\n}\n\n@import\nclass List<T> {\n  def new\n  def [...](x T) List<T>\n\n  def [](x int) T\n  def []=(x int, y T) T\n\n  def count int\n  def isEmpty bool\n  def resize(count int, defaultValue T)\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n  def appendOne(x T)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeIf(x fn(T) bool)\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n\n  def takeFirst T\n  def takeLast T\n  def takeAt(x int) T\n  def takeRange(start int, end int) List<T>\n\n  def first T\n  def first=(x T) T { return self[0] = x }\n  def last T\n  def last=(x T) T { return self[count - 1] = x }\n\n  def in(x T) bool\n  def indexOf(x T) int\n  def lastIndexOf(x T) int\n\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def clone List<T>\n  def each(x fn(T))\n  def equals(x List<T>) bool\n  def filter(x fn(T) bool) List<T>\n  def map<R>(x fn(T) R) List<R>\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n}\n\n@import\nclass StringMap<T> {\n  def new\n  def {...}(key string, value T) StringMap<T>\n\n  def [](key string) T\n  def []=(key string, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<string>\n  def values List<T>\n\n  def clone StringMap<T>\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def remove(key string)\n}\n\n@import\nclass IntMap<T> {\n  def new\n  def {...}(key int, value T) IntMap<T>\n\n  def [](key int) T\n  def []=(key int, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<int>\n  def values List<T>\n\n  def clone IntMap<T>\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def remove(key int)\n}\n\nclass Box<T> {\n  var value T\n}\n\n################################################################################\n# Implementations\n\nclass int {\n  def **(x int) int {\n    var y = self\n    var z = x < 0 ? 0 : 1\n    while x > 0 {\n      if (x & 1) != 0 { z *= y }\n      x >>= 1\n      y *= y\n    }\n    return z\n  }\n\n  def <=>(x int) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass double {\n  def **(x double) double {\n    return Math.pow(self, x)\n  }\n\n  def <=>(x double) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass List {\n  def resize(count int, defaultValue T) {\n    while self.count < count { append(defaultValue) }\n    while self.count > count { removeLast }\n  }\n\n  def removeAll(value T) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if self[i] != value {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def removeDuplicates {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      var found = false\n      var value = self[i]\n      for j in 0..i {\n        if value == self[j] {\n          found = true\n          break\n        }\n      }\n      if !found {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def shuffle {\n    var n = count\n    for i in 0..n - 1 {\n      swap(i, i + ((Math.random * (n - i)) as int))\n    }\n  }\n\n  def swap(i int, j int) {\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n}\n\nnamespace Math {\n  def clamp(x double, min double, max double) double {\n    return x < min ? min : x > max ? max : x\n  }\n\n  def clamp(x int, min int, max int) int {\n    return x < min ? min : x > max ? max : x\n  }\n}\n';
+  Skew.NATIVE_LIBRARY = '\nconst RELEASE = false\nconst ASSERTS = !RELEASE\n\nenum Target {\n  NONE\n  CPLUSPLUS\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @alwaysinline\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @neverinline\ndef @prefer\ndef @rename(name string)\ndef @skip\ndef @spreads\n\n@spreads {\n  def @using(name string) # For use with C#\n  def @include(name string) # For use with C++\n}\n\n@import if TARGET == .NONE\n@skip if !ASSERTS\ndef assert(truth bool)\n\n@import if TARGET == .NONE\nnamespace Math {\n  @prefer\n  def abs(x double) double\n  def abs(x int) int\n\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n\n  def sin(x double) double\n  def cos(x double) double\n  def tan(x double) double\n\n  def floor(x double) double\n  def ceil(x double) double\n  def round(x double) double\n\n  def exp(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def sqrt(x double) double\n\n  @prefer\n  def max(x double, y double) double\n  def max(x int, y int) int\n\n  @prefer\n  def min(x double, y double) double\n  def min(x int, y int) int\n\n  @prefer\n  def clamp(x double, min double, max double) double\n  def clamp(x int, min int, max int) int\n\n  def E double        { return 2.718281828459045 }\n  def INFINITY double { return 1 / 0.0 }\n  def NAN double      { return 0 / 0.0 }\n  def PI double       { return 3.141592653589793 }\n  def SQRT_2 double   { return 2 ** 0.5 }\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def - int\n  def ~ int\n\n  def +(x int) int\n  def -(x int) int\n  def *(x int) int\n  def /(x int) int\n  def %(x int) int\n  def **(x int) int\n  def <=>(x int) int\n  def <<(x int) int\n  def >>(x int) int\n  def >>>(x int) int\n  def &(x int) int\n  def |(x int) int\n  def ^(x int) int\n\n  def <<=(x int) int\n  def >>=(x int) int\n  def &=(x int) int\n  def |=(x int) int\n  def ^=(x int) int\n\n  if TARGET != .CSHARP {\n    def >>>=(x int)\n  }\n\n  if TARGET != .JAVASCRIPT {\n    def ++ int\n    def -- int\n\n    def %=(x int) int\n    def +=(x int) int\n    def -=(x int) int\n    def *=(x int) int\n    def /=(x int) int\n  }\n\n  def toString string\n}\n\n@import\nclass double {\n  def + double\n  def ++ double\n  def - double\n  def -- double\n\n  def *(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def **(x double) double\n  def <=>(x double) int\n\n  def *=(x double) double\n  def +=(x double) double\n  def -=(x double) double\n  def /=(x double) double\n\n  def isFinite bool\n  def isNaN bool\n\n  def toString string\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string) string\n  def <=>(x string) int\n\n  def count int\n  def in(x string) bool\n  def indexOf(x string) int\n  def lastIndexOf(x string) int\n  def startsWith(x string) bool\n  def endsWith(x string) bool\n\n  def [](x int) int\n  def get(x int) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n\n  def split(x string) List<string>\n  def join(x List<string>) string\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n\n  def toLowerCase string\n  def toUpperCase string\n  def toString string { return self }\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .NONE\nclass StringBuilder {\n  def new\n  def append(x string)\n  def toString string\n}\n\n@import\nclass List<T> {\n  def new\n  def [...](x T) List<T>\n\n  def [](x int) T\n  def []=(x int, y T) T\n\n  def count int\n  def isEmpty bool\n  def resize(count int, defaultValue T)\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n  def appendOne(x T)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeIf(x fn(T) bool)\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n\n  def takeFirst T\n  def takeLast T\n  def takeAt(x int) T\n  def takeRange(start int, end int) List<T>\n\n  def first T\n  def first=(x T) T { return self[0] = x }\n  def last T\n  def last=(x T) T { return self[count - 1] = x }\n\n  def in(x T) bool\n  def indexOf(x T) int\n  def lastIndexOf(x T) int\n\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def clone List<T>\n  def each(x fn(T))\n  def equals(x List<T>) bool\n  def filter(x fn(T) bool) List<T>\n  def map<R>(x fn(T) R) List<R>\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n}\n\n@import\nclass StringMap<T> {\n  def new\n  def {...}(key string, value T) StringMap<T>\n\n  def [](key string) T\n  def []=(key string, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<string>\n  def values List<T>\n\n  def clone StringMap<T>\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def remove(key string)\n}\n\n@import\nclass IntMap<T> {\n  def new\n  def {...}(key int, value T) IntMap<T>\n\n  def [](key int) T\n  def []=(key int, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<int>\n  def values List<T>\n\n  def clone IntMap<T>\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def remove(key int)\n}\n\nclass Box<T> {\n  var value T\n}\n\n################################################################################\n# Implementations\n\nclass int {\n  def **(x int) int {\n    var y = self\n    var z = x < 0 ? 0 : 1\n    while x > 0 {\n      if (x & 1) != 0 { z *= y }\n      x >>= 1\n      y *= y\n    }\n    return z\n  }\n\n  def <=>(x int) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass double {\n  def **(x double) double {\n    return Math.pow(self, x)\n  }\n\n  def <=>(x double) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass List {\n  def resize(count int, defaultValue T) {\n    while self.count < count { append(defaultValue) }\n    while self.count > count { removeLast }\n  }\n\n  def removeAll(value T) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if self[i] != value {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def removeDuplicates {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      var found = false\n      var value = self[i]\n      for j in 0..i {\n        if value == self[j] {\n          found = true\n          break\n        }\n      }\n      if !found {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def shuffle {\n    var n = count\n    for i in 0..n - 1 {\n      swap(i, i + ((Math.random * (n - i)) as int))\n    }\n  }\n\n  def swap(i int, j int) {\n    assert(0 <= i && i < count)\n    assert(0 <= j && j < count)\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n}\n\nnamespace Math {\n  def clamp(x double, min double, max double) double {\n    return x < min ? min : x > max ? max : x\n  }\n\n  def clamp(x int, min int, max int) int {\n    return x < min ? min : x > max ? max : x\n  }\n}\n';
   Skew.NATIVE_LIBRARY_CPP = '\nnamespace Math {\n  @import {\n    def abs(x double) double\n    def abs(x int) int\n\n    def acos(x double) double\n    def asin(x double) double\n    def atan(x double) double\n    def atan2(x double, y double) double\n\n    def sin(x double) double\n    def cos(x double) double\n    def tan(x double) double\n\n    def floor(x double) double\n    def ceil(x double) double\n    def round(x double) double\n\n    def exp(x double) double\n    def log(x double) double\n    def pow(x double, y double) double\n    def sqrt(x double) double\n\n    def max(x double, y double) double\n    def max(x int, y int) int\n\n    def min(x double, y double) double\n    def min(x int, y int) int\n\n    def random double\n  }\n}\n\nclass bool {\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  def toString string {\n    return dynamic.intToString(self)\n  }\n\n  def >>>(x int) int {\n    return (self as dynamic.unsigned >> x) as dynamic.signed\n  }\n}\n\nclass double {\n  def toString string {\n    return dynamic.doubleToString(self)\n  }\n\n  @include("<math.h>") {\n    def isNaN bool {\n      return dynamic.isnan(self)\n    }\n\n    def isFinite bool {\n      return dynamic.isfinite(self)\n    }\n  }\n}\n\nclass string {\n  @rename("compare")\n  def <=>(x string) int\n\n  @rename("contains")\n  def in(x string) bool\n}\n\nclass List {\n  @rename("contains")\n  def in(x T) bool\n}\n\nclass StringMap {\n  @rename("contains")\n  def in(x string) bool\n}\n\nclass IntMap {\n  @rename("contains")\n  def in(x int) bool\n}\n\n@import {\n  class StringBuilder {}\n  def assert(truth bool)\n}\n';
   Skew.NATIVE_LIBRARY_CS = '\n@using("System.Diagnostics")\ndef assert(truth bool) {\n  dynamic.Debug.Assert(truth)\n}\n\n@using("System")\nvar __random dynamic.Random = null\n\n@using("System")\n@import\nnamespace Math {\n  @rename("Abs") if TARGET == .CSHARP\n  def abs(x double) double\n  @rename("Abs") if TARGET == .CSHARP\n  def abs(x int) int\n\n  @rename("Acos") if TARGET == .CSHARP\n  def acos(x double) double\n  @rename("Asin") if TARGET == .CSHARP\n  def asin(x double) double\n  @rename("Atan") if TARGET == .CSHARP\n  def atan(x double) double\n  @rename("Atan2") if TARGET == .CSHARP\n  def atan2(x double, y double) double\n\n  @rename("Sin") if TARGET == .CSHARP\n  def sin(x double) double\n  @rename("Cos") if TARGET == .CSHARP\n  def cos(x double) double\n  @rename("Tan") if TARGET == .CSHARP\n  def tan(x double) double\n\n  @rename("Floor") if TARGET == .CSHARP\n  def floor(x double) double\n  @rename("Ceiling") if TARGET == .CSHARP\n  def ceil(x double) double\n  @rename("Round") if TARGET == .CSHARP\n  def round(x double) double\n\n  @rename("Exp") if TARGET == .CSHARP\n  def exp(x double) double\n  @rename("Log") if TARGET == .CSHARP\n  def log(x double) double\n  @rename("Pow") if TARGET == .CSHARP\n  def pow(x double, y double) double\n  @rename("Sqrt") if TARGET == .CSHARP\n  def sqrt(x double) double\n\n  @rename("Max") if TARGET == .CSHARP\n  def max(x double, y double) double\n  @rename("Max") if TARGET == .CSHARP\n  def max(x int, y int) int\n\n  @rename("Min") if TARGET == .CSHARP\n  def min(x double, y double) double\n  @rename("Min") if TARGET == .CSHARP\n  def min(x int, y int) int\n\n  def random double {\n    __random ?= dynamic.Random.new()\n    return __random.NextDouble()\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return !isNaN && !dynamic.double.IsInfinity(self)\n  }\n\n  def isNaN bool {\n    return dynamic.double.IsNaN(self)\n  }\n}\n\n@using("System.Text")\n@import\nclass StringBuilder {\n  @rename("Append")\n  def append(x string)\n\n  @rename("ToString")\n  def toString string\n}\n\nclass bool {\n  @rename("ToString")\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  @rename("ToString")\n  def toString string\n\n  def >>>(x int) int {\n    return dynamic.unchecked(self as dynamic.uint >> x) as int\n  }\n}\n\nclass double {\n  @rename("ToString")\n  def toString string\n}\n\nclass string {\n  @rename("CompareTo")\n  def <=>(x string) int\n\n  @rename("StartsWith")\n  def startsWith(x string) bool\n\n  @rename("EndsWith")\n  def endsWith(x string) bool\n\n  @rename("Contains")\n  def in(x string) bool\n\n  @rename("IndexOf")\n  def indexOf(x string) int\n\n  @rename("LastIndexOf")\n  def lastIndexOf(x string) int\n\n  @rename("Replace")\n  def replaceAll(before string, after string) string\n\n  @rename("Substring") {\n    def slice(start int) string\n    def slice(start int, end int) string\n  }\n\n  @rename("ToLower")\n  def toLowerCase string\n\n  @rename("ToUpper")\n  def toUpperCase string\n\n  def count int {\n    return (self as dynamic).Length\n  }\n\n  def get(index int) string {\n    return fromCodeUnit(self[index])\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  @using("System.Linq")\n  @using("System")\n  def split(separator string) List<string> {\n    var separators = [separator]\n    return dynamic.Enumerable.ToList((self as dynamic).Split(dynamic.Enumerable.ToArray(separators as dynamic), dynamic.StringSplitOptions.None))\n  }\n\n  def join(parts List<string>) string {\n    return dynamic.string.Join(self, parts)\n  }\n\n  def slice(start int, end int) string {\n    return (self as dynamic).Substring(start, end - start)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.string.new(codeUnit as dynamic.char, 1)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var builder = StringBuilder.new\n    for codeUnit in codeUnits {\n      builder.append(codeUnit as dynamic.char)\n    }\n    return builder.toString\n  }\n}\n\n@using("System.Collections.Generic")\nclass List {\n  @rename("Contains")\n  def in(x T) bool\n\n  @rename("Add")\n  def append(value T)\n\n  @rename("AddRange")\n  def append(value List<T>)\n\n  @rename("Sort")\n  def sort(x fn(T, T) int)\n\n  @rename("Reverse")\n  def reverse\n\n  @rename("RemoveAll")\n  def removeIf(x fn(T) bool)\n\n  @rename("RemoveAt")\n  def removeAt(x int)\n\n  @rename("Remove")\n  def removeOne(x T)\n\n  @rename("TrueForAll")\n  def all(x fn(T) bool) bool\n\n  @rename("ForEach")\n  def each(x fn(T))\n\n  @rename("FindAll")\n  def filter(x fn(T) bool) List<T>\n\n  @rename("ConvertAll")\n  def map<R>(x fn(T) R) List<R>\n\n  @rename("IndexOf")\n  def indexOf(x T) int\n\n  @rename("LastIndexOf")\n  def lastIndexOf(x T) int\n\n  @rename("Insert")\n  def insert(x int, value T)\n\n  @rename("InsertRange")\n  def insert(x int, value List<T>)\n\n  def appendOne(x T) {\n    if !(x in self) {\n      append(x)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    (self as dynamic).RemoveRange(start, end - start)\n  }\n\n  @using("System.Linq") {\n    @rename("SequenceEqual")\n    def equals(x List<T>) bool\n\n    @rename("First")\n    def first T\n\n    @rename("Last")\n    def last T\n  }\n\n  def any(callback fn(T) bool) bool {\n    return !all(x => !callback(x))\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).Count\n  }\n\n  def prepend(value T) {\n    insert(0, value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def removeFirst {\n    removeAt(0)\n  }\n\n  def removeLast {\n    removeAt(count - 1)\n  }\n\n  def takeFirst T {\n    var value = first\n    removeFirst\n    return value\n  }\n\n  def takeLast T {\n    var value = last\n    removeLast\n    return value\n  }\n\n  def takeAt(x int) T {\n    var value = self[x]\n    removeAt(x)\n    return value\n  }\n\n  def takeRange(start int, end int) List<T> {\n    var value = slice(start, end)\n    removeRange(start, end)\n    return value\n  }\n\n  def slice(start int) List<T> {\n    return slice(start, count)\n  }\n\n  def slice(start int, end int) List<T> {\n    return (self as dynamic).GetRange(start, end - start)\n  }\n\n  def clone List<T> {\n    var clone = new\n    clone.append(self)\n    return clone\n  }\n}\n\n@using("System.Collections.Generic")\n@rename("Dictionary")\nclass StringMap {\n  @rename("Count")\n  def count int\n\n  @rename("ContainsKey")\n  def in(key string) bool\n\n  @rename("Remove")\n  def remove(key string)\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def {...}(key string, value T) StringMap<T> {\n    (self as dynamic).Add(key, value)\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Keys)\n  }\n\n  def values List<T> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Values)\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def each(x fn(string, T)) {\n    for pair in self as dynamic {\n      x(pair.Key, pair.Value)\n    }\n  }\n}\n\n@using("System.Collections.Generic")\n@rename("Dictionary")\nclass IntMap {\n  @rename("Count")\n  def count int\n\n  @rename("ContainsKey")\n  def in(key int) bool\n\n  @rename("Remove")\n  def remove(key int)\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def {...}(key int, value T) IntMap<T> {\n    (self as dynamic).Add(key, value)\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Keys)\n  }\n\n  def values List<T> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Values)\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def each(x fn(int, T)) {\n    for pair in self as dynamic {\n      x(pair.Key, pair.Value)\n    }\n  }\n}\n';
-  Skew.NATIVE_LIBRARY_JS = '\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = dynamic.Object.create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) => {\n  return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0\n}\n\nconst __prototype dynamic\nconst __isInt = (value dynamic) => value == (value | 0)\nconst __isBool = (value dynamic) => value == !!value\nconst __isDouble = (value dynamic) => value == +value || dynamic.isNaN(value)\nconst __isString = (value dynamic) => dynamic.typeof(value) == "string"\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error("Assertion failed")\n  }\n}\n\n@import\nnamespace Math {}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNaN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def <=>(x string) int {\n    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)\n  }\n\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def endsWith(text string) bool {\n    return count >= text.count && slice(count - text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.String.fromCharCode(codeUnit)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var result = ""\n    for codeUnit in codeUnits {\n      result += string.fromCodeUnit(codeUnit)\n    }\n    return result\n  }\n}\n\nclass StringBuilder {\n  var buffer = ""\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\n@rename("Array")\nclass List {\n  @rename("shift") {\n    def removeFirst\n    def takeFirst T\n  }\n\n  @rename("pop") {\n    def removeLast\n    def takeLast T\n  }\n\n  @rename("unshift")\n  def prepend(x T)\n\n  @rename("push")\n  def append(x T)\n\n  @rename("every") if TARGET == .JAVASCRIPT\n  def all(x fn(T) bool) bool\n\n  @rename("some") if TARGET == .JAVASCRIPT\n  def any(x fn(T) bool) bool\n\n  @rename("slice") if TARGET == .JAVASCRIPT\n  def clone List<T>\n\n  @rename("forEach") if TARGET == .JAVASCRIPT\n  def each(x fn(T))\n\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    return self[0]\n  }\n\n  def last T {\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def insert(index int, values List<T>) {\n    for value in values {\n      insert(index, value)\n      index++\n    }\n  }\n\n  def insert(index int, value T) {\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeAt(x int) {\n    (self as dynamic).splice(x, 1)\n  }\n\n  def takeAt(x int) T {\n    return (self as dynamic).splice(x, 1)[0]\n  }\n\n  def takeRange(start int, end int) List<T> {\n    return (self as dynamic).splice(start, end - start)\n  }\n\n  def appendOne(value T) {\n    if !(value in self) {\n      append(value)\n    }\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    (self as dynamic).splice(start, end - start)\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def equals(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n}\n\nnamespace List {\n  def new List<T> {\n    return [] as dynamic\n  }\n}\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def count int {\n    return keys.count\n  }\n\n  def isEmpty bool {\n    for key in self as dynamic {\n      return false\n    }\n    return true\n  }\n\n  def get(key string, defaultValue T) T {\n    var value = self[key]\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete(self[key])\n  }\n\n  def each(x fn(string, T)) {\n    for key in self as dynamic {\n      x(key, self[key])\n    }\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return {} as dynamic\n  }\n}\n\nclass IntMap {\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def count int {\n    return values.count\n  }\n\n  def isEmpty bool {\n    for key in self as dynamic {\n      return false\n    }\n    return true\n  }\n\n  def get(key int, defaultValue T) T {\n    var value = self[key]\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in self as dynamic {\n      keys.append(key as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete(self[key])\n  }\n\n  def each(x fn(int, T)) {\n    for key in self as dynamic {\n      x(key as int, self[key])\n    }\n  }\n}\n';
+  Skew.NATIVE_LIBRARY_JS = '\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = dynamic.Object.create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) => {\n  return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0\n}\n\nconst __prototype dynamic\nconst __isInt = (value dynamic) => value == (value | 0)\nconst __isBool = (value dynamic) => value == !!value\nconst __isDouble = (value dynamic) => value == +value || dynamic.isNaN(value)\nconst __isString = (value dynamic) => dynamic.typeof(value) == "string"\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error("Assertion failed")\n  }\n}\n\n@import\nnamespace Math {}\n\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNaN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def <=>(x string) int {\n    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)\n  }\n\n  def slice(start int) string {\n    assert(0 <= start && start <= count)\n    return (self as dynamic).slice(start)\n  }\n\n  def slice(start int, end int) string {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).slice(start, end)\n  }\n\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def endsWith(text string) bool {\n    return count >= text.count && slice(count - text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    assert(0 <= index && index < count)\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.String.fromCharCode(codeUnit)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var result = ""\n    for codeUnit in codeUnits {\n      result += string.fromCodeUnit(codeUnit)\n    }\n    return result\n  }\n}\n\nclass StringBuilder {\n  var buffer = ""\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\n@rename("Array")\nclass List {\n  @rename("unshift")\n  def prepend(x T)\n\n  @rename("push")\n  def append(x T)\n\n  @rename("every") if TARGET == .JAVASCRIPT\n  def all(x fn(T) bool) bool\n\n  @rename("some") if TARGET == .JAVASCRIPT\n  def any(x fn(T) bool) bool\n\n  @rename("slice") if TARGET == .JAVASCRIPT\n  def clone List<T>\n\n  @rename("forEach") if TARGET == .JAVASCRIPT\n  def each(x fn(T))\n\n  def slice(start int) List<T> {\n    assert(0 <= start && start <= count)\n    return (self as dynamic).slice(start)\n  }\n\n  def slice(start int, end int) List<T> {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).slice(start, end)\n  }\n\n  def [](index int) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index]\n  }\n\n  def []=(index int, value T) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index] = value\n  }\n\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    assert(!isEmpty)\n    return self[0]\n  }\n\n  def last T {\n    assert(!isEmpty)\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    for value in values {\n      append(value)\n    }\n  }\n\n  def insert(index int, values List<T>) {\n    for value in values {\n      insert(index, value)\n      index++\n    }\n  }\n\n  def insert(index int, value T) {\n    assert(0 <= index && index <= count)\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeFirst {\n    assert(!isEmpty)\n    (self as dynamic).shift()\n  }\n\n  def takeFirst T {\n    assert(!isEmpty)\n    return (self as dynamic).shift()\n  }\n\n  def removeLast {\n    assert(!isEmpty)\n    (self as dynamic).pop()\n  }\n\n  def takeLast T {\n    assert(!isEmpty)\n    return (self as dynamic).pop()\n  }\n\n  def removeAt(index int) {\n    assert(0 <= index && index < count)\n    (self as dynamic).splice(index, 1)\n  }\n\n  def takeAt(index int) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic).splice(index, 1)[0]\n  }\n\n  def takeRange(start int, end int) List<T> {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).splice(start, end - start)\n  }\n\n  def appendOne(value T) {\n    if !(value in self) {\n      append(value)\n    }\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    assert(0 <= start && start <= end && end <= count)\n    (self as dynamic).splice(start, end - start)\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def equals(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n}\n\nnamespace List {\n  def new List<T> {\n    return [] as dynamic\n  }\n}\n\nnamespace StringMap {\n  def new StringMap<T> {\n    return dynamic.Object.create(null)\n  }\n}\n\nclass StringMap {\n  def [](key string) T {\n    assert(key in self)\n    return (self as dynamic)[key]\n  }\n\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def count int {\n    return keys.count\n  }\n\n  def isEmpty bool {\n    for key in self as dynamic {\n      return false\n    }\n    return true\n  }\n\n  def get(key string, defaultValue T) T {\n    var value = (self as dynamic)[key]\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  def keys List<string> {\n    return dynamic.Object.keys(self)\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key string) {\n    dynamic.delete((self as dynamic)[key])\n  }\n\n  def each(x fn(string, T)) {\n    for key in self as dynamic {\n      x(key, self[key])\n    }\n  }\n}\n\nnamespace IntMap {\n  def new IntMap<T> {\n    return {} as dynamic\n  }\n}\n\nclass IntMap {\n  def [](key int) T {\n    assert(key in self)\n    return (self as dynamic)[key]\n  }\n\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def count int {\n    return values.count\n  }\n\n  def isEmpty bool {\n    for key in self as dynamic {\n      return false\n    }\n    return true\n  }\n\n  def get(key int, defaultValue T) T {\n    var value = (self as dynamic)[key]\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  def keys List<int> {\n    var keys List<int> = []\n    for key in self as dynamic {\n      keys.append(key as int)\n    }\n    return keys\n  }\n\n  def values List<T> {\n    var values List<T> = []\n    for key in self as dynamic {\n      values.append(self[key])\n    }\n    return values\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def remove(key int) {\n    dynamic.delete((self as dynamic)[key])\n  }\n\n  def each(x fn(int, T)) {\n    for key in self as dynamic {\n      x(key as int, self[key])\n    }\n  }\n}\n';
   Skew.UNICODE_LIBRARY = '\nnamespace Unicode {\n  enum Encoding {\n    UTF8\n    UTF16\n    UTF32\n  }\n\n  const STRING_ENCODING Encoding =\n    TARGET == .CPLUSPLUS ? .UTF8 :\n    TARGET == .CSHARP || TARGET == .JAVASCRIPT ? .UTF16 :\n    .UTF32\n\n  class StringIterator {\n    var value = ""\n    var index = 0\n    var stop = 0\n\n    def reset(text string, start int) StringIterator {\n      value = text\n      index = start\n      stop = text.count\n      return self\n    }\n\n    def countCodePointsUntil(stop int) int {\n      var count = 0\n      while index < stop && nextCodePoint >= 0 {\n        count++\n      }\n      return count\n    }\n\n    if STRING_ENCODING == .UTF8 {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index++]\n        if a < 0xC0 { return a }\n        if index >= stop { return -1 }\n        var b = value[index++]\n        if a < 0xE0 { return ((a & 0x1F) << 6) | (b & 0x3F) }\n        if index >= stop { return -1 }\n        var c = value[index++]\n        if a < 0xF0 { return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F) }\n        if index >= stop { return -1 }\n        var d = value[index++]\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)\n      }\n    }\n\n    else if STRING_ENCODING == .UTF16 {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index++]\n        if a < 0xD800 || a >= 0xDC00 { return a }\n        if index >= stop { return -1 }\n        var b = value[index++]\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)\n      }\n    }\n\n    else {\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        return value[index++]\n      }\n    }\n  }\n\n  namespace StringIterator {\n    const INSTANCE = StringIterator.new\n  }\n\n  def codeUnitCountForCodePoints(codePoints List<int>, encoding Encoding) int {\n    var count = 0\n\n    switch encoding {\n      case .UTF8 {\n        for codePoint in codePoints {\n          if codePoint < 0x80 { count++ }\n          else if codePoint < 0x800 { count += 2 }\n          else if codePoint < 0x10000 { count += 3 }\n          else { count += 4 }\n        }\n      }\n\n      case .UTF16 {\n        for codePoint in codePoints {\n          if codePoint < 0x10000 { count++ }\n          else { count += 2 }\n        }\n      }\n\n      case .UTF32 {\n        count = codePoints.count\n      }\n    }\n\n    return count\n  }\n}\n\nclass string {\n  if Unicode.STRING_ENCODING == .UTF32 {\n    def codePoints List<int> {\n      return codeUnits\n    }\n  }\n\n  else {\n    def codePoints List<int> {\n      var codePoints List<int> = []\n      var instance = Unicode.StringIterator.INSTANCE\n      instance.reset(self, 0)\n\n      while true {\n        var codePoint = instance.nextCodePoint\n        if codePoint < 0 {\n          return codePoints\n        }\n        codePoints.append(codePoint)\n      }\n    }\n  }\n}\n\nnamespace string {\n  def fromCodePoints(codePoints List<int>) string {\n    var builder = StringBuilder.new\n    for codePoint in codePoints {\n      builder.append(fromCodePoint(codePoint))\n    }\n    return builder.toString\n  }\n\n  if Unicode.STRING_ENCODING == .UTF8 {\n    def fromCodePoint(codePoint int) string {\n      return\n        codePoint < 0x80 ? fromCodeUnit(codePoint) : (\n          codePoint < 0x800 ? fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0) : (\n            codePoint < 0x10000 ? fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0) : (\n              fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0)\n            ) + fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80)\n          ) + fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80)\n        ) + fromCodeUnit((codePoint & 0x3F) | 0x80)\n    }\n  }\n\n  else if Unicode.STRING_ENCODING == .UTF16 {\n    def fromCodePoint(codePoint int) string {\n      return codePoint < 0x10000 ? fromCodeUnit(codePoint) :\n        fromCodeUnit(((codePoint - 0x10000) >> 10) + 0xD800) +\n        fromCodeUnit(((codePoint - 0x10000) & ((1 << 10) - 1)) + 0xDC00)\n    }\n  }\n\n  else {\n    def fromCodePoint(codePoint int) string {\n      return fromCodeUnit(codePoint)\n    }\n  }\n}\n';
   Skew.DEFAULT_MESSAGE_LIMIT = 10;
   Skew.VALID_TARGETS = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'cpp', new Skew.CPlusPlusTarget()), 'cs', new Skew.CSharpTarget()), 'js', new Skew.JavaScriptTarget()), 'lisp-tree', new Skew.LispTreeTarget());

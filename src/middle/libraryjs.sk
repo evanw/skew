@@ -39,6 +39,16 @@ class string {
     return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)
   }
 
+  def slice(start int) string {
+    assert(0 <= start && start <= count)
+    return (self as dynamic).slice(start)
+  }
+
+  def slice(start int, end int) string {
+    assert(0 <= start && start <= end && end <= count)
+    return (self as dynamic).slice(start, end)
+  }
+
   def startsWith(text string) bool {
     return count >= text.count && slice(0, text.count) == text
   }
@@ -60,10 +70,12 @@ class string {
   }
 
   def [](index int) int {
+    assert(0 <= index && index < count)
     return (self as dynamic).charCodeAt(index)
   }
 
   def get(index int) string {
+    assert(0 <= index && index < count)
     return (self as dynamic)[index]
   }
 
@@ -119,16 +131,6 @@ class StringBuilder {
 
 @rename(\"Array\")
 class List {
-  @rename(\"shift\") {
-    def removeFirst
-    def takeFirst T
-  }
-
-  @rename(\"pop\") {
-    def removeLast
-    def takeLast T
-  }
-
   @rename(\"unshift\")
   def prepend(x T)
 
@@ -147,6 +149,26 @@ class List {
   @rename(\"forEach\") if TARGET == .JAVASCRIPT
   def each(x fn(T))
 
+  def slice(start int) List<T> {
+    assert(0 <= start && start <= count)
+    return (self as dynamic).slice(start)
+  }
+
+  def slice(start int, end int) List<T> {
+    assert(0 <= start && start <= end && end <= count)
+    return (self as dynamic).slice(start, end)
+  }
+
+  def [](index int) T {
+    assert(0 <= index && index < count)
+    return (self as dynamic)[index]
+  }
+
+  def []=(index int, value T) T {
+    assert(0 <= index && index < count)
+    return (self as dynamic)[index] = value
+  }
+
   def in(value T) bool {
     return indexOf(value) != -1
   }
@@ -160,10 +182,12 @@ class List {
   }
 
   def first T {
+    assert(!isEmpty)
     return self[0]
   }
 
   def last T {
+    assert(!isEmpty)
     return self[count - 1]
   }
 
@@ -188,18 +212,42 @@ class List {
   }
 
   def insert(index int, value T) {
+    assert(0 <= index && index <= count)
     (self as dynamic).splice(index, 0, value)
   }
 
-  def removeAt(x int) {
-    (self as dynamic).splice(x, 1)
+  def removeFirst {
+    assert(!isEmpty)
+    (self as dynamic).shift()
   }
 
-  def takeAt(x int) T {
-    return (self as dynamic).splice(x, 1)[0]
+  def takeFirst T {
+    assert(!isEmpty)
+    return (self as dynamic).shift()
+  }
+
+  def removeLast {
+    assert(!isEmpty)
+    (self as dynamic).pop()
+  }
+
+  def takeLast T {
+    assert(!isEmpty)
+    return (self as dynamic).pop()
+  }
+
+  def removeAt(index int) {
+    assert(0 <= index && index < count)
+    (self as dynamic).splice(index, 1)
+  }
+
+  def takeAt(index int) T {
+    assert(0 <= index && index < count)
+    return (self as dynamic).splice(index, 1)[0]
   }
 
   def takeRange(start int, end int) List<T> {
+    assert(0 <= start && start <= end && end <= count)
     return (self as dynamic).splice(start, end - start)
   }
 
@@ -217,6 +265,7 @@ class List {
   }
 
   def removeRange(start int, end int) {
+    assert(0 <= start && start <= end && end <= count)
     (self as dynamic).splice(start, end - start)
   }
 
@@ -265,6 +314,11 @@ namespace StringMap {
 }
 
 class StringMap {
+  def [](key string) T {
+    assert(key in self)
+    return (self as dynamic)[key]
+  }
+
   def {...}(key string, value T) StringMap<T> {
     self[key] = value
     return self
@@ -282,7 +336,7 @@ class StringMap {
   }
 
   def get(key string, defaultValue T) T {
-    var value = self[key]
+    var value = (self as dynamic)[key]
     return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
   }
 
@@ -307,7 +361,7 @@ class StringMap {
   }
 
   def remove(key string) {
-    dynamic.delete(self[key])
+    dynamic.delete((self as dynamic)[key])
   }
 
   def each(x fn(string, T)) {
@@ -324,6 +378,11 @@ namespace IntMap {
 }
 
 class IntMap {
+  def [](key int) T {
+    assert(key in self)
+    return (self as dynamic)[key]
+  }
+
   def {...}(key int, value T) IntMap<T> {
     self[key] = value
     return self
@@ -341,7 +400,7 @@ class IntMap {
   }
 
   def get(key int, defaultValue T) T {
-    var value = self[key]
+    var value = (self as dynamic)[key]
     return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
   }
 
@@ -370,7 +429,7 @@ class IntMap {
   }
 
   def remove(key int) {
-    dynamic.delete(self[key])
+    dynamic.delete((self as dynamic)[key])
   }
 
   def each(x fn(int, T)) {

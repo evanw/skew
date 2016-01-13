@@ -26,6 +26,7 @@ namespace Skew.Tests {
     def jsMangle CompilerTest {
       _options.target = JavaScriptTarget.new
       _options.jsMangle = true
+      _options.define("RELEASE", "true")
       return self
     }
 

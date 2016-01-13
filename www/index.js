@@ -28,6 +28,7 @@
   var SOURCE_MAP = 'SOURCE_MAP';
   var STOP_AFTER_RESOLVE = 'STOP_AFTER_RESOLVE';
   var USE_WEB_WORKER = 'USE_WEB_WORKER';
+  var SET_RELEASE = 'SET_RELEASE';
 
   var compiler = null;
   var start = null;
@@ -72,6 +73,7 @@
     if (configGetBool(SOURCE_MAP)) options.jsSourceMap = true;
     if (configGetBool(STOP_AFTER_RESOLVE)) options.stopAfterResolve = true;
     if (configGetBool(MULTIPLE_OUTPUTS)) options.outputDirectory = 'output';
+    if (configGetBool(SET_RELEASE)) options.defines = {RELEASE: 'true'};
     if (configGetBool(USE_WEB_WORKER)) {
       if (!worker) {
         worker = new Worker(document.getElementById('skew-api').src);
@@ -144,6 +146,7 @@
     optionArea.appendChild(createCheckbox('IDE mode (no output)', STOP_AFTER_RESOLVE));
     optionArea.appendChild(createCheckbox('Multiple outputs', MULTIPLE_OUTPUTS));
     optionArea.appendChild(createCheckbox('Use a web worker', USE_WEB_WORKER));
+    optionArea.appendChild(createCheckbox('Set RELEASE', SET_RELEASE));
     input.oninput = update;
     update();
   }
