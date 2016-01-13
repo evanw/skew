@@ -9342,6 +9342,10 @@
     this.error(range, 'The ' + Skew.in_TokenKind.toString(kind) + ' operator is not customizable because ' + why);
   };
 
+  Skew.Log.prototype.syntaxErrorVariableDeclarationNeedsVar = function(range) {
+    this.error(range, 'Declare variables using "var" and put the type after the variable name');
+  };
+
   Skew.Log.prototype.syntaxErrorXMLClosingTagMismatch = function(range, found, expected, openingRange) {
     this.error(range, 'Expected "' + expected + '" but found "' + found + '" in XML literal');
 
@@ -10441,7 +10445,19 @@
 
     var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
     Skew.Parsing.checkExtraParentheses(context, value);
-    return Skew.Node.createExpression(value).withRange(value.range);
+
+    // A special case for better errors when users try to use C-style variable declarations
+    if (!value.isInsideParentheses() && Skew.Parsing.looksLikeType(value) && context.peek(Skew.TokenKind.IDENTIFIER) && context.canReportSyntaxError()) {
+      context.log.syntaxErrorVariableDeclarationNeedsVar(context.current().range);
+    }
+
+    var node = Skew.Node.createExpression(value).withRange(value.range);
+    return node;
+  };
+
+  Skew.Parsing.looksLikeType = function(node) {
+    var kind = node.kind;
+    return kind == Skew.NodeKind.NAME || kind == Skew.NodeKind.TYPE || kind == Skew.NodeKind.LAMBDA_TYPE || kind == Skew.NodeKind.DOT && Skew.Parsing.looksLikeType(node.dotTarget()) || kind == Skew.NodeKind.PARAMETERIZE && Skew.Parsing.looksLikeType(node.parameterizeValue());
   };
 
   Skew.Parsing.parseStatements = function(context, parent) {
@@ -11728,7 +11744,7 @@
     this.inNonVoidFunction = false;
     this._tokens = _tokens;
     this._index = 0;
-    this._previousSyntaxError = null;
+    this._previousSyntaxError = -1;
   };
 
   Skew.ParserContext.prototype.current = function() {
@@ -11775,12 +11791,8 @@
 
   Skew.ParserContext.prototype.expect = function(kind) {
     if (!this.eat(kind)) {
-      var token = this.current();
-
-      if (this._previousSyntaxError != token) {
-        var range = token.range;
-        this.log.syntaxErrorExpectedToken(range, token.kind, kind);
-        this._previousSyntaxError = token;
+      if (this.canReportSyntaxError()) {
+        this.log.syntaxErrorExpectedToken(this.current().range, this.current().kind, kind);
       }
 
       return false;
@@ -11790,16 +11802,22 @@
   };
 
   Skew.ParserContext.prototype.unexpectedToken = function() {
-    var token = this.current();
-
-    if (this._previousSyntaxError != token) {
-      this.log.syntaxErrorUnexpectedToken(token);
-      this._previousSyntaxError = token;
+    if (this.canReportSyntaxError()) {
+      this.log.syntaxErrorUnexpectedToken(this.current());
     }
   };
 
   Skew.ParserContext.prototype.createParseError = function() {
     return new Skew.Node(Skew.NodeKind.PARSE_ERROR).withRange(this.current().range);
+  };
+
+  Skew.ParserContext.prototype.canReportSyntaxError = function() {
+    if (this._previousSyntaxError != this._index) {
+      this._previousSyntaxError = this._index;
+      return true;
+    }
+
+    return false;
   };
 
   Skew.Parselet = function(precedence) {

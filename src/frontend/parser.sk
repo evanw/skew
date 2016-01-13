@@ -454,7 +454,24 @@ namespace Skew.Parsing {
 
     var value = expressionParser.parse(context, .LOWEST)
     checkExtraParentheses(context, value)
-    return Node.createExpression(value).withRange(value.range)
+
+    # A special case for better errors when users try to use C-style variable declarations
+    if !value.isInsideParentheses && looksLikeType(value) && context.peek(.IDENTIFIER) && context.canReportSyntaxError {
+      context.log.syntaxErrorVariableDeclarationNeedsVar(context.current.range)
+    }
+
+    var node = Node.createExpression(value).withRange(value.range)
+    return node
+  }
+
+  def looksLikeType(node Node) bool {
+    var kind = node.kind
+    return
+      kind == .NAME ||
+      kind == .TYPE ||
+      kind == .LAMBDA_TYPE ||
+      kind == .DOT && looksLikeType(node.dotTarget) ||
+      kind == .PARAMETERIZE && looksLikeType(node.parameterizeValue)
   }
 
   def parseStatements(context ParserContext, parent Node) bool {

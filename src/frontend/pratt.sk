@@ -33,7 +33,7 @@ namespace Skew {
     #
     # In the code above, the only syntax error should be about an unexpected
     # end of file and not also about the two missing right parentheses.
-    var _previousSyntaxError Token = null
+    var _previousSyntaxError = -1
 
     def current Token {
       return _tokens[_index]
@@ -76,11 +76,8 @@ namespace Skew {
 
     def expect(kind TokenKind) bool {
       if !eat(kind) {
-        var token = current
-        if _previousSyntaxError != token {
-          var range = token.range
-          log.syntaxErrorExpectedToken(range, token.kind, kind)
-          _previousSyntaxError = token
+        if canReportSyntaxError {
+          log.syntaxErrorExpectedToken(current.range, current.kind, kind)
         }
         return false
       }
@@ -88,15 +85,21 @@ namespace Skew {
     }
 
     def unexpectedToken {
-      var token = current
-      if _previousSyntaxError != token {
-        log.syntaxErrorUnexpectedToken(token)
-        _previousSyntaxError = token
+      if canReportSyntaxError {
+        log.syntaxErrorUnexpectedToken(current)
       }
     }
 
     def createParseError Node {
       return Node.createParseError.withRange(current.range)
+    }
+
+    def canReportSyntaxError bool {
+      if _previousSyntaxError != _index {
+        _previousSyntaxError = _index
+        return true
+      }
+      return false
     }
   }
 

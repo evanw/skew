@@ -109,6 +109,10 @@ namespace Skew {
       error(range, "The \(kind) operator is not customizable because \(why)")
     }
 
+    def syntaxErrorVariableDeclarationNeedsVar(range Range) {
+      error(range, "Declare variables using \"var\" and put the type after the variable name")
+    }
+
     def syntaxErrorXMLClosingTagMismatch(range Range, found string, expected string, openingRange Range) {
       error(range, "Expected \"\(expected)\" but found \"\(found)\" in XML literal")
       if openingRange != null {

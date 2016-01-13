@@ -471,5 +471,91 @@ def test {
       ^
 ")
 
+# This should not infinite loop
+test("
+def test {
+  f(
+}
+", "
+<stdin>:3:1: error: Unexpected \"}\"
+}
+^
+<stdin>:2:3: error: \"f\" is not declared
+  f(
+  ^
+")
+
+# Check for a special error message when attempting to use C-style variable declarations (complex cases aren't handled but are still tested)
+test("
+def test {
+  # Bad
+  int a = 0
+  List<int> b = []
+  fn(int) int c = x => x
+  dynamic d = null
+
+  # Good
+  var a int = 0
+  var b List<int> = []
+  var c fn(int) int = x => x
+  var d dynamic = null
+}
+", "
+<stdin>:3:7: error: Declare variables using \"var\" and put the type after the variable name
+  int a = 0
+      ^
+<stdin>:4:13: error: Declare variables using \"var\" and put the type after the variable name
+  List<int> b = []
+            ^
+<stdin>:5:11: error: Expected newline but found identifier
+  fn(int) int c = x => x
+          ~~~
+<stdin>:5:15: error: Declare variables using \"var\" and put the type after the variable name
+  fn(int) int c = x => x
+              ^
+<stdin>:6:11: error: Expected \".\" but found identifier
+  dynamic d = null
+          ^
+<stdin>:3:3: error: Unexpected type \"int\"
+  int a = 0
+  ~~~
+<stdin>:3:7: error: \"a\" is not declared
+  int a = 0
+      ^
+<stdin>:4:3: error: Unexpected type \"List<int>\"
+  List<int> b = []
+  ~~~~~~~~~
+<stdin>:4:13: error: \"b\" is not declared
+  List<int> b = []
+            ^
+<stdin>:5:3: error: \"fn\" is not declared
+  fn(int) int c = x => x
+  ~~
+<stdin>:5:6: error: Unexpected type \"int\"
+  fn(int) int c = x => x
+     ~~~
+<stdin>:5:11: error: Unexpected type \"int\"
+  fn(int) int c = x => x
+          ~~~
+<stdin>:5:15: error: \"c\" is not declared
+  fn(int) int c = x => x
+              ^
+<stdin>:6:11: error: \"d\" is not declared
+  dynamic d = null
+          ^
+<stdin>:9:7: warning: Local variable \"a\" is never read
+  var a int = 0
+      ^
+<stdin>:10:7: warning: Local variable \"b\" is never read
+  var b List<int> = []
+      ^
+<stdin>:11:7: warning: Local variable \"c\" is never read
+  var c fn(int) int = x => x
+      ^
+<stdin>:12:7: warning: Local variable \"d\" is never read
+  var d dynamic = null
+      ^
+")
+
   }
 }
