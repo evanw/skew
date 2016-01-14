@@ -251,4 +251,200 @@ namespace Skew.IDE {
       }
     }
   }
+
+  class RenameQuery {
+    const source Source
+    const index int
+    const ranges List<Range> = []
+    const _targets IntMap<int> = {}
+    var _targetName string = null
+
+    def run(global ObjectSymbol) {
+      var query = SymbolQuery.new(source, index)
+      query.run(global)
+      var symbol = query.symbol
+
+      if symbol != null {
+        _targetName = symbol.name
+        _targets[symbol.id] = 0
+
+        # Make sure interfaces and overridden methods are all renamed together
+        if symbol.kind.isFunction {
+          _includeRelatedFunctions(global, symbol.asFunctionSymbol)
+        }
+
+        _visitObject(global)
+
+        # Remove overlapping ranges since they are sometimes generated as a side effect of lowering
+        var current Range = null
+        ranges.sort((a, b) => a.source == b.source
+          ? a.start <=> b.start
+          : a.source.name <=> b.source.name)
+        ranges.removeIf(range => {
+          var previous = current
+          current = range
+          return previous != null && current.overlaps(previous)
+        })
+      }
+    }
+
+    def _includeRelatedFunctions(global ObjectSymbol, symbol FunctionSymbol) {
+      var functions List<FunctionSymbol> = []
+      var wasFound = false
+
+      # Gather all non-local functions
+      _searchForFunctions(global, functions)
+      var labels = UnionFind.new.allocate(functions.count)
+
+      # Assign each one an index
+      for i in 0..functions.count {
+        var function = functions[i]
+        function.namingGroup = i
+        if function == symbol {
+          wasFound = true
+        }
+      }
+
+      # Lambda functions won't be found
+      if wasFound {
+        # Merge related functions together (this is the O(n log n) way to find all related functions)
+        for function in functions {
+          if function.overridden != null {
+            labels.union(function.namingGroup, function.overridden.namingGroup)
+          }
+          if function.implementations != null {
+            for implementation in function.implementations {
+              labels.union(function.namingGroup, implementation.namingGroup)
+            }
+          }
+        }
+
+        # Extract the relevant functions
+        var label = labels.find(symbol.namingGroup)
+        for function in functions {
+          if labels.find(function.namingGroup) == label {
+            _targets[function.id] = 0
+          }
+        }
+      }
+    }
+
+    def _appendRange(range Range) {
+      # Sanity check the range to make sure it contains the target name
+      if range != null && range.toString == _targetName {
+        ranges.append(range)
+      }
+    }
+
+    def _visitSymbol(symbol Symbol) {
+      var isTarget = symbol.id in _targets
+
+      while symbol != null {
+        if symbol.annotations != null {
+          for node in symbol.annotations {
+            _visitNode(node)
+          }
+        }
+
+        if isTarget && symbol.range != null {
+          _appendRange(symbol.range)
+        }
+
+        symbol = symbol.nextMergedSymbol
+      }
+    }
+
+    def _visitObject(symbol ObjectSymbol) {
+      _visitSymbol(symbol)
+      _visitParameters(symbol.parameters)
+      _visitNode(symbol.extends)
+
+      for object in symbol.objects {
+        _visitObject(object)
+      }
+
+      for function in symbol.functions {
+        _visitFunction(function)
+      }
+
+      for variable in symbol.variables {
+        _visitVariable(variable)
+      }
+
+      if symbol.implements != null {
+        for node in symbol.implements {
+          _visitNode(node)
+        }
+      }
+    }
+
+    def _visitParameters(parameters List<ParameterSymbol>) {
+      if parameters != null {
+        for parameter in parameters {
+          _visitSymbol(parameter)
+        }
+      }
+    }
+
+    def _visitFunction(symbol FunctionSymbol) {
+      _visitSymbol(symbol)
+      _visitParameters(symbol.parameters)
+      _visitNode(symbol.returnType)
+      _visitNode(symbol.block)
+
+      for argument in symbol.arguments {
+        _visitVariable(argument)
+      }
+    }
+
+    def _visitVariable(symbol VariableSymbol) {
+      _visitSymbol(symbol)
+      _visitNode(symbol.type)
+      _visitNode(symbol.value)
+    }
+
+    def _visitNode(node Node) {
+      if node != null {
+        var kind = node.kind
+
+        if kind == .VARIABLE {
+          _visitVariable(node.symbol.asVariableSymbol)
+          return
+        }
+
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          _visitNode(child)
+        }
+
+        if kind == .LAMBDA {
+          for argument in node.symbol.asFunctionSymbol.arguments {
+            _visitVariable(argument)
+          }
+          _visitNode(node.symbol.asFunctionSymbol.returnType)
+        }
+
+        else if node.symbol != null && node.symbol.id in _targets && !node.isIgnoredByIDE {
+          if kind == .NAME {
+            _appendRange(node.range)
+          }
+
+          else if kind == .DOT {
+            _appendRange(node.internalRange)
+          }
+        }
+      }
+    }
+  }
+
+  namespace RenameQuery {
+    def _searchForFunctions(symbol ObjectSymbol, functions List<FunctionSymbol>) {
+      for object in symbol.objects {
+        _searchForFunctions(object, functions)
+      }
+
+      for function in symbol.functions {
+        functions.append(function)
+      }
+    }
+  }
 }

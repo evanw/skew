@@ -2660,7 +2660,7 @@ namespace Skew.Resolving {
       if symbol.kind.isOnInstances {
         var variable = enclosingFunction?.symbol.this
         if variable != null && enclosingFunction.symbol.parent.asObjectSymbol.isSameOrHasBaseClass(symbol.parent) {
-          node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range))
+          node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range).withInternalRange(node.range))
           resolvedType = _cache.substitute(resolvedType, variable.resolvedType.environment)
         } else {
           _log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)

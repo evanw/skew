@@ -18,7 +18,7 @@ namespace Skew.API {
     })
   }
 
-  def rangeToJSON(range Range) dynamic {
+  var rangeToJSON = (range Range) dynamic => {
     if range == null {
       return null
     }
@@ -229,12 +229,41 @@ namespace Skew.API {
       }
     }
 
+    var handleRenameQuery = (message dynamic) dynamic => {
+      var name string = message.source + ""
+      var line int = message.line | 0
+      var column int = message.column | 0
+      var ranges List<Range> = null
+
+      if inputs != null {
+        for source in inputs {
+          if source.name == name {
+            var index = source.lineColumnToIndex(line, column)
+            if index != -1 && result != null && result.global != null {
+              var renameQuery = IDE.RenameQuery.new(source, index)
+              renameQuery.run(result.global)
+              ranges = renameQuery.ranges
+            }
+            break
+          }
+        }
+      }
+
+      return {
+        "type": "rename-query",
+        "id": message.id,
+        "source": name,
+        "ranges": ranges.map<dynamic>(rangeToJSON),
+      }
+    }
+
     var handleMessage = (message dynamic) dynamic => {
       switch message.type {
         case "compile" { return handleCompile(message) }
         case "tooltip-query" { return handleTooltipQuery(message) }
         case "definition-query" { return handleDefinitionQuery(message) }
         case "symbols-query" { return handleSymbolsQuery(message) }
+        case "rename-query" { return handleRenameQuery(message) }
         default { throw dynamic.Error.new("Unexpected message type '\(message.type)'") }
       }
     }
@@ -244,6 +273,7 @@ namespace Skew.API {
       "tooltipQuery": handleTooltipQuery,
       "definitionQuery": handleDefinitionQuery,
       "symbolsQuery": handleSymbolsQuery,
+      "renameQuery": handleRenameQuery,
       "message": handleMessage,
     }
   }

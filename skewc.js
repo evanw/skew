@@ -18521,7 +18521,7 @@
       var variable = enclosingFunction != null ? enclosingFunction.symbol.$this : null;
 
       if (variable != null && enclosingFunction.symbol.parent.asObjectSymbol().isSameOrHasBaseClass(symbol.parent)) {
-        node.become(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name)).appendChild(Skew.Node.createSymbolReference(variable)).withRange(node.range));
+        node.become(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name)).appendChild(Skew.Node.createSymbolReference(variable)).withRange(node.range).withInternalRange(node.range));
         resolvedType = this._cache.substitute(resolvedType, variable.resolvedType.environment);
       }
 

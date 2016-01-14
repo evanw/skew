@@ -424,5 +424,201 @@ def test {
   expect("<stdin>:3:5", ide.definitionQuery(6, 2))
 })
 
+# Renaming: test function arguments
+testIDE("
+var x = 0
+def foo(x int) {
+  var y = x
+  x += x
+  var z = (x bool) => x ? y : -y
+  z(x == y)
+}
+", (ide, expect) => {
+  expect("<stdin>:2:9, <stdin>:3:11, <stdin>:4:3, <stdin>:4:8, <stdin>:6:5", ide.renameQuery(3, 2))
+})
+
+# Renaming: test local variables
+testIDE("
+var x = 0
+def foo {
+  var x = 0
+  x += x
+  var z = (x bool) => x ? 1 : -1
+  z(x == 1)
+}
+", (ide, expect) => {
+  expect("<stdin>:3:7, <stdin>:4:3, <stdin>:4:8, <stdin>:6:5", ide.renameQuery(3, 2))
+})
+
+# Renaming: test instance variables
+testIDE("
+var x = 0
+class Foo {
+  var x = 0
+  def foo {
+    x += x
+    var z = (x bool) => x ? 1 : -1
+    z(x == 1)
+  }
+}
+", (ide, expect) => {
+  expect("<stdin>:3:7, <stdin>:5:5, <stdin>:5:10, <stdin>:7:7", ide.renameQuery(4, 4))
+})
+
+# Renaming: test global variables
+testIDE("
+var x = 0
+namespace Foo {
+  var x = 0
+  def foo {
+    x += x
+    var z = (x bool) => x ? 1 : -1
+    z(x == 1)
+  }
+}
+", (ide, expect) => {
+  expect("<stdin>:3:7, <stdin>:5:5, <stdin>:5:10, <stdin>:7:7", ide.renameQuery(4, 4))
+})
+
+# Renaming: test instance functions without arguments
+testIDE("
+def foo {
+  foo
+}
+class Foo {
+  def foo {
+    foo
+    var bar = (foo int) int => {
+      new.foo
+      return foo
+    }
+    bar(0)
+  }
+}
+", (ide, expect) => {
+  expect("<stdin>:5:7, <stdin>:6:5, <stdin>:8:11", ide.renameQuery(5, 4))
+})
+
+# Renaming: test instance functions with arguments
+testIDE("
+def foo(x int) {
+  foo(x)
+}
+class Foo {
+  def foo(x int) {
+    foo(x)
+    var bar = (foo int) int => {
+      new.foo(x)
+      return foo
+    }
+    bar(0)
+  }
+}
+", (ide, expect) => {
+  expect("<stdin>:5:7, <stdin>:6:5, <stdin>:8:11", ide.renameQuery(5, 4))
+})
+
+# Renaming: test instance functions without arguments
+testIDE("
+def foo {
+  foo
+}
+namespace Foo {
+  def foo {
+    foo
+    var bar = (foo int) int => {
+      Foo.foo
+      return foo
+    }
+    bar(0)
+  }
+}
+", (ide, expect) => {
+  expect("<stdin>:5:7, <stdin>:6:5, <stdin>:8:11", ide.renameQuery(5, 4))
+})
+
+# Renaming: test instance functions with arguments
+testIDE("
+def foo(x int) {
+  foo(x)
+}
+namespace Foo {
+  def foo(x int) {
+    foo(x)
+    var bar = (foo int) int => {
+      Foo.foo(x)
+      return foo
+    }
+    bar(0)
+  }
+}
+", (ide, expect) => {
+  expect("<stdin>:5:7, <stdin>:6:5, <stdin>:8:11", ide.renameQuery(5, 4))
+})
+
+# Renaming: test classes
+testIDE("
+class Foo.Bar {}
+namespace Foo.Bar {
+  def new Bar {
+    var bar Bar = <Bar/>
+    var baz Baz.Bar = null
+    baz = baz ?? Baz.Bar.new
+    return bar
+  }
+}
+class Baz.Bar {}
+", (ide, expect) => {
+  expect("<stdin>:1:11, <stdin>:2:15, <stdin>:3:11, <stdin>:4:13, <stdin>:4:20", ide.renameQuery(2, 10))
+})
+
+# Renaming: test overridden instance methods
+testIDE("
+class Foo :: IFoo {
+  def foo {}
+  def foo(x int) {}
+}
+class Bar : Foo {
+  over foo {}
+  over foo(x int) {}
+}
+class Baz : Bar {
+  over foo {}
+  over foo(x int) {}
+}
+class Nope {
+  def foo {}
+  def foo(x int) {}
+}
+interface IFoo {
+  def foo
+  def foo(x int)
+}
+", (ide, expect) => {
+  expect("<stdin>:2:7, <stdin>:6:8, <stdin>:10:8, <stdin>:18:7", ide.renameQuery(5, 7))
+})
+
+# Renaming: test overloaded interface methods
+testIDE("
+interface Foo {
+  def foo
+  def foo(x int) {}
+}
+class Bar :: Foo {
+  def foo {}
+  def foo(x int) {}
+}
+class Baz :: Foo {
+  def foo {}
+  def foo(x int) {}
+}
+class Nope {
+  def foo {}
+  def foo(x int) {}
+}
+", (ide, expect) => {
+  expect("<stdin>:2:7, <stdin>:6:7, <stdin>:10:7", ide.renameQuery(1, 6))
+})
+
   }
 }
