@@ -3257,5 +3257,27 @@ class Foo {
 })();
 ").js
 
+# Check for parentheses in a stupid JavaScript corner case
+test("
+@export
+def test(z dynamic) {
+  for x = 0 in z; x; x = !x {}
+  for x2 in z {}
+  var x3 = 0 in z
+}
+", "
+(function() {
+  test = function(z) {
+    for (var x = (0 in z); x; x = !x) {
+    }
+
+    for (var x2 in z) {
+    }
+
+    var x3 = 0 in z;
+  };
+})();
+").js
+
   }
 }

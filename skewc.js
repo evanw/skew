@@ -3661,6 +3661,7 @@
     this._namespacePrefix = '';
     this._previousNode = null;
     this._previousSymbol = null;
+    this._parenthesizeInExpressions = 0;
     this._currentColumn = 0;
     this._currentLine = 0;
     this._generator = new Skew.SourceMapGenerator();
@@ -4753,6 +4754,8 @@
         this._emit('for' + this._space + '(');
 
         if (!setup.isEmptySequence()) {
+          this._parenthesizeInExpressions = this._parenthesizeInExpressions + 1 | 0;
+
           if (setup.kind == Skew.NodeKind.VARIABLES) {
             this._emitVariables(setup);
           }
@@ -4760,6 +4763,8 @@
           else {
             this._emitExpression(setup, Skew.Precedence.LOWEST);
           }
+
+          this._parenthesizeInExpressions = this._parenthesizeInExpressions - 1 | 0;
         }
 
         this._emit(';');
@@ -5365,8 +5370,9 @@
           var left = node.binaryLeft();
           var right = node.binaryRight();
           var extraEquals = left.resolvedType == Skew.Type.DYNAMIC || right.resolvedType == Skew.Type.DYNAMIC ? '=' : '';
+          var needsParentheses = info1.precedence < precedence || kind == Skew.NodeKind.IN && this._parenthesizeInExpressions != 0;
 
-          if (info1.precedence < precedence) {
+          if (needsParentheses) {
             this._emit('(');
           }
 
@@ -5376,7 +5382,7 @@
           this._emit(kind == Skew.NodeKind.IN ? ' in ' : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text) + this._space);
           this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
 
-          if (info1.precedence < precedence) {
+          if (needsParentheses) {
             this._emit(')');
           }
         }

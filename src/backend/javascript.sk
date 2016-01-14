@@ -61,6 +61,26 @@ namespace Skew {
     var _previousNode Node = null
     var _previousSymbol Symbol = null
 
+    # There's this stupid corner case in JavaScript syntax where a for-in loop
+    # allows the variable to be initialized. That looks like this:
+    #
+    #   // This is valid JavaScript
+    #   for (var x = 'y' in z) {}
+    #
+    # This means that the variable initializer in the for-in loop cannot be
+    # initialized using an "in" expression without parenthesizing it first:
+    #
+    #   // This is invalid JavaScript
+    #   for (var x = 'y' in z; x; x = !x) {}
+    #
+    #   // The initializer must be parenthesized to be valid JavaScript
+    #   for (var x = ('y' in z); x; x = !x) {}
+    #
+    # Rather than parenthesizing all "in" expressions, this variable tracks
+    # whether the current state is nested inside a for-in initializer and
+    # only parenthesizes then.
+    var _parenthesizeInExpressions = 0
+
     # Source map support
     var _currentColumn = 0
     var _currentLine = 0
@@ -1002,11 +1022,13 @@ namespace Skew {
           _emitLoopLabel(node)
           _emit("for" + _space + "(")
           if !setup.isEmptySequence {
+            _parenthesizeInExpressions++
             if setup.kind == .VARIABLES {
               _emitVariables(setup)
             } else {
               _emitExpression(setup, .LOWEST)
             }
+            _parenthesizeInExpressions--
           }
           _emit(";")
           if !test.isEmptySequence {
@@ -1501,8 +1523,9 @@ namespace Skew {
             var left = node.binaryLeft
             var right = node.binaryRight
             var extraEquals = left.resolvedType == .DYNAMIC || right.resolvedType == .DYNAMIC ? "=" : ""
+            var needsParentheses = info.precedence < precedence || kind == .IN && _parenthesizeInExpressions != 0
 
-            if info.precedence < precedence {
+            if needsParentheses {
               _emit("(")
             }
             _emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
@@ -1511,7 +1534,7 @@ namespace Skew {
             _emit(kind == .IN ? " in " : _space + (kind == .EQUAL ? "==" + extraEquals : kind == .NOT_EQUAL ? "!=" + extraEquals : info.text) + _space)
 
             _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
-            if info.precedence < precedence {
+            if needsParentheses {
               _emit(")")
             }
           }
