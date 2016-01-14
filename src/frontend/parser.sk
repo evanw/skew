@@ -1010,25 +1010,42 @@ namespace Skew.Parsing {
       # Parse the symbol body
       switch kind {
         case .VARIABLE_GLOBAL, .VARIABLE_INSTANCE {
-          var variable = VariableSymbol.new(kind, name)
-          variable.range = range
-          variable.parent = parent
+          while true {
+            var variable = VariableSymbol.new(kind, name)
+            variable.range = range
+            variable.parent = parent
 
-          if token.kind == .CONST {
-            variable.flags |= .IS_CONST
+            if token.kind == .CONST {
+              variable.flags |= .IS_CONST
+            }
+
+            if peekType(context) {
+              variable.type = parseType(context)
+            }
+
+            if context.eat(.ASSIGN) {
+              variable.value = expressionParser.parse(context, .LOWEST)
+              checkExtraParentheses(context, variable.value)
+            }
+
+            parent.variables.append(variable)
+
+            if !context.eat(.COMMA) {
+              symbol = variable
+              break
+            }
+
+            variable.annotations = annotations?.clone
+            variable.comments = comments
+
+            nameToken = context.current
+            range = nameToken.range
+            name = range.toString
+
+            if !context.expect(.IDENTIFIER) {
+              return false
+            }
           }
-
-          if peekType(context) {
-            variable.type = parseType(context)
-          }
-
-          if context.eat(.ASSIGN) {
-            variable.value = expressionParser.parse(context, .LOWEST)
-            checkExtraParentheses(context, variable.value)
-          }
-
-          parent.variables.append(variable)
-          symbol = variable
         }
 
         case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {

@@ -597,5 +597,43 @@ var e = \"\\(x <=> y)\"
                  ^
 ")
 
+# Check that comma separated variables are parsed correctly
+test("
+var a int, b int
+var c = 1, d = 2
+const e = 3, f = 4
+
+class Foo {
+  var a int, b int
+  var c = 1, d = 2
+  const e = 3, f = 4
+}
+
+def test {
+  var a int, b int
+  var c = 1, d = 2
+  const e = 3, f = 4
+}
+", "
+<stdin>:12:7: warning: Local variable \"a\" is never read
+  var a int, b int
+      ^
+<stdin>:12:14: warning: Local variable \"b\" is never read
+  var a int, b int
+             ^
+<stdin>:13:7: warning: Local variable \"c\" is never read
+  var c = 1, d = 2
+      ^
+<stdin>:13:14: warning: Local variable \"d\" is never read
+  var c = 1, d = 2
+             ^
+<stdin>:14:9: warning: Local variable \"e\" is never read
+  const e = 3, f = 4
+        ^
+<stdin>:14:16: warning: Local variable \"f\" is never read
+  const e = 3, f = 4
+               ^
+")
+
   }
 }
