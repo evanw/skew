@@ -243,6 +243,7 @@ namespace Skew.Parsing {
     checkExtraParentheses(context, value)
     var node = Node.createSwitch(value)
 
+    context.skipWhitespace
     if !context.expect(.LEFT_BRACE) {
       return null
     }
@@ -721,6 +722,9 @@ namespace Skew.Parsing {
     if peekType(context) {
       symbol.returnType = parseType(context)
     }
+    if context.eat(.NEWLINE) && !context.peek(.LEFT_BRACE) {
+      context.undo
+    }
     return parseFunctionBlock(context, symbol)
   }
 
@@ -1145,6 +1149,7 @@ namespace Skew.Parsing {
               }
             }
 
+            context.skipWhitespace
             if !context.expect(.LEFT_BRACE) {
               scanForToken(context, .LEFT_BRACE)
             }

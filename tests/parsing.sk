@@ -635,5 +635,79 @@ def test {
                ^
 ")
 
+# Check that using braces on the next line works
+test("
+class Foo : int
+{
+  def test
+  {
+    if true
+    {
+    }
+
+    else if false
+    {
+    }
+
+    else
+    {
+    }
+
+    while true
+    {
+    }
+
+    for x = 0; x < 1; x++
+    {
+    }
+
+    for x in 1..2
+    {
+    }
+
+    switch 0
+    {
+      case 0
+      {
+      }
+
+      case 1, 2
+      {
+      }
+
+      default
+      {
+      }
+    }
+
+    try
+    {
+    }
+
+    catch e dynamic
+    {
+    }
+
+    finally
+    {
+    }
+
+    =>
+    {
+    }
+  }
+}
+", "
+<stdin>:1:13: error: Cannot extend type \"int\"
+class Foo : int
+            ~~~
+<stdin>:57:5: error: Cannot infer a type for this literal
+    {
+    ^
+<stdin>:56:5: warning: Unused expression
+    =>
+    ~~
+")
+
   }
 }
