@@ -709,5 +709,28 @@ class Foo : int
     ~~
 ")
 
+# Check for a crash due to a type comparison on a dot expression with an implicit target
+test("
+def test {
+  switch 0 {
+    case .X {
+    case .Y {}
+  }
+}
+", "
+<stdin>:4:5: error: Unexpected \"case\"
+    case .Y {}
+    ~~~~
+<stdin>:4:10: error: Expected newline but found \".\"
+    case .Y {}
+         ^
+<stdin>:4:13: error: Expected newline but found \"{\"
+    case .Y {}
+            ^
+<stdin>:6:2: error: Expected newline but found end of input
+}
+ ^
+")
+
   }
 }

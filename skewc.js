@@ -10213,6 +10213,7 @@
     var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
     Skew.Parsing.checkExtraParentheses(context, value);
     var node = Skew.Node.createSwitch(value);
+    context.skipWhitespace();
 
     if (!context.expect(Skew.TokenKind.LEFT_BRACE)) {
       return null;
@@ -10478,7 +10479,7 @@
 
   Skew.Parsing.looksLikeType = function(node) {
     var kind = node.kind;
-    return kind == Skew.NodeKind.NAME || kind == Skew.NodeKind.TYPE || kind == Skew.NodeKind.LAMBDA_TYPE || kind == Skew.NodeKind.DOT && Skew.Parsing.looksLikeType(node.dotTarget()) || kind == Skew.NodeKind.PARAMETERIZE && Skew.Parsing.looksLikeType(node.parameterizeValue());
+    return kind == Skew.NodeKind.NAME || kind == Skew.NodeKind.TYPE || kind == Skew.NodeKind.LAMBDA_TYPE || kind == Skew.NodeKind.DOT && node.dotTarget() != null && Skew.Parsing.looksLikeType(node.dotTarget()) || kind == Skew.NodeKind.PARAMETERIZE && Skew.Parsing.looksLikeType(node.parameterizeValue());
   };
 
   Skew.Parsing.parseStatements = function(context, parent) {
@@ -10766,6 +10767,10 @@
       symbol.returnType = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
     }
 
+    if (context.eat(Skew.TokenKind.NEWLINE) && !context.peek(Skew.TokenKind.LEFT_BRACE)) {
+      context.undo();
+    }
+
     return Skew.Parsing.parseFunctionBlock(context, symbol);
   };
 
@@ -10989,25 +10994,41 @@
       switch (kind) {
         case Skew.SymbolKind.VARIABLE_GLOBAL:
         case Skew.SymbolKind.VARIABLE_INSTANCE: {
-          var variable1 = new Skew.VariableSymbol(kind, name);
-          variable1.range = range;
-          variable1.parent = parent;
+          while (true) {
+            var variable1 = new Skew.VariableSymbol(kind, name);
+            variable1.range = range;
+            variable1.parent = parent;
 
-          if (token.kind == Skew.TokenKind.CONST) {
-            variable1.flags |= Skew.SymbolFlags.IS_CONST;
+            if (token.kind == Skew.TokenKind.CONST) {
+              variable1.flags |= Skew.SymbolFlags.IS_CONST;
+            }
+
+            if (Skew.Parsing.peekType(context)) {
+              variable1.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
+            }
+
+            if (context.eat(Skew.TokenKind.ASSIGN)) {
+              variable1.value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
+              Skew.Parsing.checkExtraParentheses(context, variable1.value);
+            }
+
+            parent.variables.push(variable1);
+
+            if (!context.eat(Skew.TokenKind.COMMA)) {
+              symbol = variable1;
+              break;
+            }
+
+            variable1.annotations = annotations != null ? annotations.slice() : null;
+            variable1.comments = comments;
+            nameToken = context.current();
+            range = nameToken.range;
+            name = range.toString();
+
+            if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
+              return false;
+            }
           }
-
-          if (Skew.Parsing.peekType(context)) {
-            variable1.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
-          }
-
-          if (context.eat(Skew.TokenKind.ASSIGN)) {
-            variable1.value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-            Skew.Parsing.checkExtraParentheses(context, variable1.value);
-          }
-
-          parent.variables.push(variable1);
-          symbol = variable1;
           break;
         }
 
@@ -11122,6 +11143,8 @@
                 }
               }
             }
+
+            context.skipWhitespace();
 
             if (!context.expect(Skew.TokenKind.LEFT_BRACE)) {
               Skew.Parsing.scanForToken(context, Skew.TokenKind.LEFT_BRACE);

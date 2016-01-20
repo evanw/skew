@@ -471,7 +471,7 @@ namespace Skew.Parsing {
       kind == .NAME ||
       kind == .TYPE ||
       kind == .LAMBDA_TYPE ||
-      kind == .DOT && looksLikeType(node.dotTarget) ||
+      kind == .DOT && node.dotTarget != null && looksLikeType(node.dotTarget) ||
       kind == .PARAMETERIZE && looksLikeType(node.parameterizeValue)
   }
 
