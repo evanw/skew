@@ -732,5 +732,53 @@ def test {
  ^
 ")
 
+# Allow commas between enums and allow enums between other declarations
+test("
+enum Foo {
+  def x {}
+  A, B
+  X, Y
+  def y {}
+}
+", "
+")
+
+# Forbid invalid enum names
+test("
+enum Foo {
+  def, A
+}
+", "
+<stdin>:2:6: error: Expected identifier but found \",\"
+  def, A
+     ^
+")
+
+# Forbid invalid enum names
+test("
+enum Foo {
+  A, def
+}
+", "
+<stdin>:2:6: error: Expected newline but found identifier
+  A, def
+     ~~~
+")
+
+# Warn about extra commas
+test("
+enum Foo {
+  A, B,
+  X, Y,
+}
+", "
+<stdin>:2:7: warning: Unnecessary comma
+  A, B,
+      ^
+<stdin>:3:7: warning: Unnecessary comma
+  X, Y,
+      ^
+")
+
   }
 }

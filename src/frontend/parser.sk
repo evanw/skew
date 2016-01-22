@@ -109,7 +109,7 @@ namespace Skew.Parsing {
 
   def checkExtraParentheses(context ParserContext, node Node) {
     if node.isInsideParentheses {
-      context.log.semanticWarningExtraParentheses(node.range)
+      context.log.syntaxWarningExtraParentheses(node.range)
     }
   }
 
@@ -910,13 +910,33 @@ namespace Skew.Parsing {
 
     # Special-case enum symbols
     if parent.kind == .OBJECT_ENUM && token.kind == .IDENTIFIER && !(text in identifierToSymbolKind) {
-      var variable = VariableSymbol.new(.VARIABLE_ENUM, text)
-      variable.range = token.range
-      variable.parent = parent
-      variable.flags |= .IS_CONST
-      parent.variables.append(variable)
-      symbol = variable
-      context.next
+      while true {
+        if text in identifierToSymbolKind || !context.expect(.IDENTIFIER) {
+          break
+        }
+
+        var variable = VariableSymbol.new(.VARIABLE_ENUM, text)
+        variable.range = token.range
+        variable.parent = parent
+        variable.flags |= .IS_CONST
+        parent.variables.append(variable)
+        symbol = variable
+
+        var comma = context.current
+        if !context.eat(.COMMA) {
+          break
+        }
+
+        variable.annotations = annotations?.clone
+        variable.comments = comments
+        token = context.current
+        text = token.range.toString
+
+        if context.peek(.NEWLINE) {
+          context.log.syntaxWarningExtraComma(comma.range)
+          break
+        }
+      }
     }
 
     else {

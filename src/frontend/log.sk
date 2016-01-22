@@ -72,11 +72,22 @@ namespace Skew {
     }
   }
 
+  # Syntax warnings can be thought of as linting
   class Log {
     def syntaxWarningOctal(range Range) {
       warning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)")
     }
 
+    def syntaxWarningExtraParentheses(range Range) {
+      warning(range, "Unnecessary parentheses")
+    }
+
+    def syntaxWarningExtraComma(range Range) {
+      warning(range, "Unnecessary comma")
+    }
+  }
+
+  class Log {
     def syntaxErrorInvalidEscapeSequence(range Range) {
       error(range, "Invalid escape sequence")
     }
@@ -153,10 +164,6 @@ namespace Skew {
 
     def semanticWarningShiftByZero(range Range) {
       warning(range, "Shifting an integer by zero doesn't do anything, is this a bug?")
-    }
-
-    def semanticWarningExtraParentheses(range Range) {
-      warning(range, "Unnecessary parentheses")
     }
 
     def semanticWarningUnusedExpression(range Range) {

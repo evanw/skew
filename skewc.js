@@ -9297,6 +9297,7 @@
     this.noteText = '';
   };
 
+  // Syntax warnings can be thought of as lints
   Skew.Log = function() {
     this.diagnostics = [];
     this.warningCount = 0;
@@ -9329,6 +9330,14 @@
 
   Skew.Log.prototype.syntaxWarningOctal = function(range) {
     this.warning(range, 'Number interpreted as decimal (use the prefix "0o" for octal numbers)');
+  };
+
+  Skew.Log.prototype.syntaxWarningExtraParentheses = function(range) {
+    this.warning(range, 'Unnecessary parentheses');
+  };
+
+  Skew.Log.prototype.syntaxWarningExtraComma = function(range) {
+    this.warning(range, 'Unnecessary comma');
   };
 
   Skew.Log.prototype.syntaxErrorInvalidEscapeSequence = function(range) {
@@ -9408,10 +9417,6 @@
 
   Skew.Log.prototype.semanticWarningShiftByZero = function(range) {
     this.warning(range, "Shifting an integer by zero doesn't do anything, is this a bug?");
-  };
-
-  Skew.Log.prototype.semanticWarningExtraParentheses = function(range) {
-    this.warning(range, 'Unnecessary parentheses');
   };
 
   Skew.Log.prototype.semanticWarningUnusedExpression = function(range) {
@@ -10059,7 +10064,7 @@
 
   Skew.Parsing.checkExtraParentheses = function(context, node) {
     if (node.isInsideParentheses()) {
-      context.log.semanticWarningExtraParentheses(node.range);
+      context.log.syntaxWarningExtraParentheses(node.range);
     }
   };
 
@@ -10884,13 +10889,33 @@
 
     // Special-case enum symbols
     if (parent.kind == Skew.SymbolKind.OBJECT_ENUM && token.kind == Skew.TokenKind.IDENTIFIER && !(text in Skew.Parsing.identifierToSymbolKind)) {
-      var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ENUM, text);
-      variable.range = token.range;
-      variable.parent = parent;
-      variable.flags |= Skew.SymbolFlags.IS_CONST;
-      parent.variables.push(variable);
-      symbol = variable;
-      context.next();
+      while (true) {
+        if (text in Skew.Parsing.identifierToSymbolKind || !context.expect(Skew.TokenKind.IDENTIFIER)) {
+          break;
+        }
+
+        var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ENUM, text);
+        variable.range = token.range;
+        variable.parent = parent;
+        variable.flags |= Skew.SymbolFlags.IS_CONST;
+        parent.variables.push(variable);
+        symbol = variable;
+        var comma = context.current();
+
+        if (!context.eat(Skew.TokenKind.COMMA)) {
+          break;
+        }
+
+        variable.annotations = annotations != null ? annotations.slice() : null;
+        variable.comments = comments;
+        token = context.current();
+        text = token.range.toString();
+
+        if (context.peek(Skew.TokenKind.NEWLINE)) {
+          context.log.syntaxWarningExtraComma(comma.range);
+          break;
+        }
+      }
     }
 
     else {
