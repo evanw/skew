@@ -210,8 +210,11 @@ namespace Skew {
       error(range, "Cyclic declaration of \"\(name)\"")
     }
 
-    def semanticErrorUndeclaredSymbol(range Range, name string) {
-      error(range, "\"\(name)\" is not declared")
+    def semanticErrorUndeclaredSymbol(range Range, name string, correction string, correctionRange Range) {
+      error(range, "\"\(name)\" is not declared" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
+      if correction != null && correctionRange != null {
+        note(correctionRange, "\"\(correction)\" is defined here")
+      }
     }
 
     def semanticErrorUndeclaredSelfSymbol(range Range, name string) {

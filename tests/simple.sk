@@ -7259,10 +7259,9 @@ class Foo {
              ~~~~~~
 ")
 
-# Check typo corrections
+# Check member typo corrections
 test("
 def test(x Foo) {
-  x.toStr
   x.string
   x.toStrong
   x.tostring
@@ -7272,6 +7271,7 @@ def test(x Foo) {
   x.blah
   x.blong
   x.tostr
+  x.toStr
   x.to_str
   x.bloblobloblob
 }
@@ -7282,47 +7282,44 @@ class Foo {
   }
 }
 ", "
-<stdin>:2:5: error: \"toStr\" is not declared on type \"Foo\", did you mean \"toString\"?
-  x.toStr
-    ~~~~~
-<stdin>:17:7: note: \"toString\" is defined here
-  def toString string {
-      ~~~~~~~~
-<stdin>:3:5: error: \"string\" is not declared on type \"Foo\", did you mean \"toString\"?
+<stdin>:2:5: error: \"string\" is not declared on type \"Foo\", did you mean \"toString\"?
   x.string
     ~~~~~~
 <stdin>:17:7: note: \"toString\" is defined here
   def toString string {
       ~~~~~~~~
-<stdin>:4:5: error: \"toStrong\" is not declared on type \"Foo\", did you mean \"toString\"?
+<stdin>:3:5: error: \"toStrong\" is not declared on type \"Foo\", did you mean \"toString\"?
   x.toStrong
     ~~~~~~~~
 <stdin>:17:7: note: \"toString\" is defined here
   def toString string {
       ~~~~~~~~
-<stdin>:5:5: error: \"tostring\" is not declared on type \"Foo\", did you mean \"toString\"?
+<stdin>:4:5: error: \"tostring\" is not declared on type \"Foo\", did you mean \"toString\"?
   x.tostring
     ~~~~~~~~
 <stdin>:17:7: note: \"toString\" is defined here
   def toString string {
       ~~~~~~~~
-<stdin>:6:5: error: \"to_string\" is not declared on type \"Foo\", did you mean \"toString\"?
+<stdin>:5:5: error: \"to_string\" is not declared on type \"Foo\", did you mean \"toString\"?
   x.to_string
     ~~~~~~~~~
 <stdin>:17:7: note: \"toString\" is defined here
   def toString string {
       ~~~~~~~~
-<stdin>:8:5: error: \"to\" is not declared on type \"Foo\"
+<stdin>:7:5: error: \"to\" is not declared on type \"Foo\"
   x.to
     ~~
-<stdin>:9:5: error: \"blah\" is not declared on type \"Foo\"
+<stdin>:8:5: error: \"blah\" is not declared on type \"Foo\"
   x.blah
     ~~~~
-<stdin>:10:5: error: \"blong\" is not declared on type \"Foo\"
+<stdin>:9:5: error: \"blong\" is not declared on type \"Foo\"
   x.blong
     ~~~~~
-<stdin>:11:5: error: \"tostr\" is not declared on type \"Foo\"
+<stdin>:10:5: error: \"tostr\" is not declared on type \"Foo\"
   x.tostr
+    ~~~~~
+<stdin>:11:5: error: \"toStr\" is not declared on type \"Foo\"
+  x.toStr
     ~~~~~
 <stdin>:12:5: error: \"to_str\" is not declared on type \"Foo\"
   x.to_str
@@ -7352,6 +7349,136 @@ class Foo {
 <stdin>:3:7: error: \"Foo\" is not declared on type \"Foo\"
   Foo.Foo
       ~~~
+")
+
+# Type corrections for global names from the derived class
+test("
+class Foo : Bar {
+  def test {
+    abc
+    xyz
+    abb
+    xyy
+  }
+}
+
+class Bar {
+}
+
+namespace Bar {
+  var abc int
+  def xyz {}
+}
+", "
+<stdin>:3:5: error: \"abc\" is not declared, did you mean \"Bar.abc\"?
+    abc
+    ~~~
+<stdin>:14:7: note: \"Bar.abc\" is defined here
+  var abc int
+      ~~~
+<stdin>:4:5: error: \"xyz\" is not declared, did you mean \"Bar.xyz\"?
+    xyz
+    ~~~
+<stdin>:15:7: note: \"Bar.xyz\" is defined here
+  def xyz {}
+      ~~~
+<stdin>:5:5: error: \"abb\" is not declared, did you mean \"Bar.abc\"?
+    abb
+    ~~~
+<stdin>:14:7: note: \"Bar.abc\" is defined here
+  var abc int
+      ~~~
+<stdin>:6:5: error: \"xyy\" is not declared, did you mean \"Bar.xyz\"?
+    xyy
+    ~~~
+<stdin>:15:7: note: \"Bar.xyz\" is defined here
+  def xyz {}
+      ~~~
+")
+
+# Check name typo corrections
+test("
+class Foo {
+  def test {
+    var x Foot = Foot.new
+    var y tset # This shouldn't match because it's a type context
+    Foot
+    tset # This should match because this is an instance context
+  }
+}
+
+namespace Foo {
+  def foo {
+    var x Foot = Foot.new
+    var y tset # This shouldn't match because it's a type context
+    Foot
+    tset # This shouldn't match because this isn't an instance context
+  }
+}
+", "
+<stdin>:3:11: error: \"Foot\" is not declared, did you mean \"Foo\"?
+    var x Foot = Foot.new
+          ~~~~
+<stdin>:1:7: note: \"Foo\" is defined here
+class Foo {
+      ~~~
+<stdin>:3:18: error: \"Foot\" is not declared, did you mean \"Foo\"?
+    var x Foot = Foot.new
+                 ~~~~
+<stdin>:1:7: note: \"Foo\" is defined here
+class Foo {
+      ~~~
+<stdin>:4:11: error: \"tset\" is not declared
+    var y tset # This shouldn't match because it's a type context
+          ~~~~
+<stdin>:5:5: error: \"Foot\" is not declared, did you mean \"Foo\"?
+    Foot
+    ~~~~
+<stdin>:1:7: note: \"Foo\" is defined here
+class Foo {
+      ~~~
+<stdin>:6:5: error: \"tset\" is not declared, did you mean \"test\"?
+    tset # This should match because this is an instance context
+    ~~~~
+<stdin>:2:7: note: \"test\" is defined here
+  def test {
+      ~~~~
+<stdin>:12:11: error: \"Foot\" is not declared, did you mean \"Foo\"?
+    var x Foot = Foot.new
+          ~~~~
+<stdin>:1:7: note: \"Foo\" is defined here
+class Foo {
+      ~~~
+<stdin>:12:18: error: \"Foot\" is not declared, did you mean \"Foo\"?
+    var x Foot = Foot.new
+                 ~~~~
+<stdin>:1:7: note: \"Foo\" is defined here
+class Foo {
+      ~~~
+<stdin>:13:11: error: \"tset\" is not declared
+    var y tset # This shouldn't match because it's a type context
+          ~~~~
+<stdin>:14:5: error: \"Foot\" is not declared, did you mean \"Foo\"?
+    Foot
+    ~~~~
+<stdin>:1:7: note: \"Foo\" is defined here
+class Foo {
+      ~~~
+<stdin>:15:5: error: \"tset\" is not declared
+    tset # This shouldn't match because this isn't an instance context
+    ~~~~
+<stdin>:3:9: warning: Local variable \"x\" is never read
+    var x Foot = Foot.new
+        ^
+<stdin>:4:9: warning: Local variable \"y\" is never read
+    var y tset # This shouldn't match because it's a type context
+        ^
+<stdin>:12:9: warning: Local variable \"x\" is never read
+    var x Foot = Foot.new
+        ^
+<stdin>:13:9: warning: Local variable \"y\" is never read
+    var y tset # This shouldn't match because it's a type context
+        ^
 ")
 
   }

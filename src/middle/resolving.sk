@@ -1329,6 +1329,7 @@ namespace Skew.Resolving {
 
     def _resolveAsParameterizedType(node Node, scope Scope) {
       assert(node.kind.isExpression)
+      node.flags |= .SHOULD_EXPECT_TYPE
       _resolveNode(node, scope, null)
       _checkIsType(node)
       _checkIsParameterized(node)
@@ -2263,38 +2264,6 @@ namespace Skew.Resolving {
       return null
     }
 
-    def _findMemberWithFuzzyMatching(type Type, name string, findType bool) Symbol {
-      if type.kind == .SYMBOL {
-        var symbol = type.symbol
-
-        if symbol.kind.isObject {
-          var members = symbol.asObjectSymbol.members
-          var bestScore = (name.count + 1) / 2
-          var bestMember Symbol = null
-
-          for key in members.keys {
-            var member = members[key]
-
-            if member.kind.isOnInstances != findType {
-              var score = levenshteinEditDistance(member.name, name)
-
-              if score <= bestScore && score <= (member.name.count + 1) / 2 {
-                bestScore = score
-                bestMember = member
-              }
-            }
-          }
-
-          if bestMember != null {
-            _initializeSymbol(bestMember)
-            return bestMember
-          }
-        }
-      }
-
-      return null
-    }
-
     def _sinkNullDotIntoHook(node Node, scope Scope, context Type) Node {
       var nullDot = node
 
@@ -2359,7 +2328,9 @@ namespace Skew.Resolving {
         symbol = _findMember(target.resolvedType, name)
         if symbol == null {
           if target.resolvedType != .DYNAMIC {
-            var correction = _findMemberWithFuzzyMatching(target.resolvedType, name, target.isType)
+            var type = target.resolvedType
+            var correction = type.kind != .SYMBOL || !type.symbol.kind.isObject ? null :
+              type.symbol.asObjectSymbol.scope.findWithFuzzyMatching(name, target.isType ? .GLOBAL_ONLY : .INSTANCE_ONLY, .SELF_ONLY)
             _reportGuardMergingFailure(node)
             _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType, correction?.name, correction?.range)
           }
@@ -2680,11 +2651,17 @@ namespace Skew.Resolving {
       var symbol = scope.find(name, _shouldCheckForSetter(node) ? .ALSO_CHECK_FOR_SETTER : .NORMAL)
 
       if symbol == null {
+        var canAccessSelf = enclosingFunction != null && enclosingFunction.symbol.this != null
         _reportGuardMergingFailure(node)
-        if name == "this" && enclosingFunction != null && enclosingFunction.symbol.this != null {
+
+        if name == "this" && canAccessSelf {
           _log.semanticErrorUndeclaredSelfSymbol(node.range, name)
-        } else {
-          _log.semanticErrorUndeclaredSymbol(node.range, name)
+        }
+
+        else {
+          var correction = scope.findWithFuzzyMatching(name, node.shouldExpectType ? .TYPE_ONLY : canAccessSelf ? .EVERYTHING : .GLOBAL_ONLY, .SELF_AND_PARENTS)
+          _log.semanticErrorUndeclaredSymbol(node.range, name, correction == null ? null : enclosingFunction != null &&
+            _isBaseGlobalReference(enclosingFunction.symbol.parent, correction) ? correction.fullName : correction.name, correction?.range)
         }
         return
       }
@@ -2705,7 +2682,7 @@ namespace Skew.Resolving {
 
       # Forbid referencing a base class global or constructor function from a derived class
       if enclosingFunction != null && _isBaseGlobalReference(enclosingFunction.symbol.parent, symbol) {
-        _log.semanticErrorUndeclaredSymbol(node.range, name)
+        _log.semanticErrorUndeclaredSymbol(node.range, name, symbol.fullName, symbol.range)
         return
       }
 

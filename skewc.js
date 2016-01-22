@@ -7287,11 +7287,14 @@
     // statements and to call a lambda returned from a getter.
     IS_INSIDE_PARENTHESES: 16,
 
+    // This flag is set on nodes that are expected to be types.
+    SHOULD_EXPECT_TYPE: 32,
+
     // This flag marks nodes that were converted from ASSIGN_NULL to ASSIGN nodes.
-    WAS_ASSIGN_NULL: 32,
+    WAS_ASSIGN_NULL: 64,
 
     // This flag marks nodes that were converted from NULL_JOIN to HOOK nodes.
-    WAS_NULL_JOIN: 64
+    WAS_NULL_JOIN: 128
   };
 
   // Nodes represent executable code (variable initializers and function bodies)
@@ -7429,6 +7432,16 @@
 
   Skew.Node.prototype.wasNullJoin = function() {
     return (Skew.NodeFlags.WAS_NULL_JOIN & this.flags) != 0;
+  };
+
+  Skew.Node.prototype.shouldExpectType = function() {
+    for (var node = this; node != null; node = node.parent()) {
+      if ((Skew.NodeFlags.SHOULD_EXPECT_TYPE & node.flags) != 0) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   // This is cheaper than childCount == 0
@@ -9191,6 +9204,41 @@
 
   __extends(Skew.OverloadedFunctionSymbol, Skew.Symbol);
 
+  Skew.FuzzySymbolKind = {
+    EVERYTHING: 0,
+    TYPE_ONLY: 1,
+    GLOBAL_ONLY: 2,
+    INSTANCE_ONLY: 3
+  };
+
+  Skew.FuzzySymbolMatcher = function(name, kind) {
+    this._name = null;
+    this._kind = 0;
+    this._bestScore = 0;
+    this._bestMatch = null;
+    this._name = name;
+    this._kind = kind;
+    this._bestScore = name.length / 2 | 0;
+    this._bestMatch = null;
+  };
+
+  Skew.FuzzySymbolMatcher.prototype.include = function(match) {
+    if (this._kind == Skew.FuzzySymbolKind.INSTANCE_ONLY && !Skew.in_SymbolKind.isOnInstances(match.kind) || this._kind == Skew.FuzzySymbolKind.GLOBAL_ONLY && Skew.in_SymbolKind.isOnInstances(match.kind) || this._kind == Skew.FuzzySymbolKind.TYPE_ONLY && !Skew.in_SymbolKind.isType(match.kind)) {
+      return;
+    }
+
+    var score = Skew.levenshteinEditDistance(this._name, match.name);
+
+    if (score <= this._bestScore && score <= (match.name.length / 2 | 0)) {
+      this._bestScore = score;
+      this._bestMatch = match;
+    }
+  };
+
+  Skew.FuzzySymbolMatcher.prototype.bestSoFar = function() {
+    return this._bestMatch;
+  };
+
   Skew.TokenKind = {
     ANNOTATION: 0,
     ARROW: 1,
@@ -9493,8 +9541,12 @@
     this.error(range, 'Cyclic declaration of "' + name + '"');
   };
 
-  Skew.Log.prototype.semanticErrorUndeclaredSymbol = function(range, name) {
-    this.error(range, '"' + name + '" is not declared');
+  Skew.Log.prototype.semanticErrorUndeclaredSymbol = function(range, name, correction, correctionRange) {
+    this.error(range, '"' + name + '" is not declared' + (correction != null ? ', did you mean "' + correction + '"?' : ''));
+
+    if (correction != null && correctionRange != null) {
+      this.note(correctionRange, '"' + correction + '" is defined here');
+    }
   };
 
   Skew.Log.prototype.semanticErrorUndeclaredSelfSymbol = function(range, name) {
@@ -12330,40 +12382,6 @@
     return null;
   };
 
-  Skew.CPlusPlusTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
-
-  Skew.CPlusPlusTarget.prototype.stopAfterResolve = function() {
-    return false;
-  };
-
-  Skew.CPlusPlusTarget.prototype.requiresIntegerSwitchStatements = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.supportsListForeach = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
-    return Unicode.Encoding.UTF8;
-  };
-
-  Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
-    options.define('TARGET', 'CPLUSPLUS');
-  };
-
-  Skew.CPlusPlusTarget.prototype.includeSources = function(sources) {
-    sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
-  };
-
-  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
-    return new Skew.CPlusPlusEmitter(context.options, context.cache);
-  };
-
   Skew.LispTreeTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -12444,6 +12462,40 @@
 
   Skew.CSharpTarget.prototype.createEmitter = function(context) {
     return new Skew.CSharpEmitter(context.options, context.cache);
+  };
+
+  Skew.CPlusPlusTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
+
+  Skew.CPlusPlusTarget.prototype.stopAfterResolve = function() {
+    return false;
+  };
+
+  Skew.CPlusPlusTarget.prototype.requiresIntegerSwitchStatements = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.supportsListForeach = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF8;
+  };
+
+  Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
+    options.define('TARGET', 'CPLUSPLUS');
+  };
+
+  Skew.CPlusPlusTarget.prototype.includeSources = function(sources) {
+    sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
+  };
+
+  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
+    return new Skew.CPlusPlusEmitter(context.options, context.cache);
   };
 
   Skew.Define = function(name, value) {
@@ -12751,6 +12803,20 @@
     }
   };
 
+  Skew.CallGraphPass = function() {
+    Skew.Pass.call(this);
+  };
+
+  __extends(Skew.CallGraphPass, Skew.Pass);
+
+  Skew.CallGraphPass.prototype.kind = function() {
+    return Skew.PassKind.CALL_GRAPH;
+  };
+
+  Skew.CallGraphPass.prototype.run = function(context) {
+    context.callGraph = new Skew.CallGraph(context.global);
+  };
+
   Skew.EmittingPass = function() {
     Skew.Pass.call(this);
   };
@@ -12768,20 +12834,6 @@
       emitter.visit(context.global);
       context.outputs = emitter.sources();
     }
-  };
-
-  Skew.CallGraphPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.CallGraphPass, Skew.Pass);
-
-  Skew.CallGraphPass.prototype.kind = function() {
-    return Skew.PassKind.CALL_GRAPH;
-  };
-
-  Skew.CallGraphPass.prototype.run = function(context) {
-    context.callGraph = new Skew.CallGraph(context.global);
   };
 
   Skew.LexingPass = function() {
@@ -17084,6 +17136,7 @@
 
   Skew.Resolving.Resolver.prototype._resolveAsParameterizedType = function(node, scope) {
     assert(Skew.in_NodeKind.isExpression(node.kind));
+    node.flags |= Skew.NodeFlags.SHOULD_EXPECT_TYPE;
     this._resolveNode(node, scope, null);
     this._checkIsType(node);
     this._checkIsParameterized(node);
@@ -18139,39 +18192,6 @@
     return null;
   };
 
-  Skew.Resolving.Resolver.prototype._findMemberWithFuzzyMatching = function(type, name, findType) {
-    if (type.kind == Skew.TypeKind.SYMBOL) {
-      var symbol = type.symbol;
-
-      if (Skew.in_SymbolKind.isObject(symbol.kind)) {
-        var members = symbol.asObjectSymbol().members;
-        var bestScore = (name.length + 1 | 0) / 2 | 0;
-        var bestMember = null;
-
-        for (var i = 0, list = Object.keys(members), count = list.length; i < count; i = i + 1 | 0) {
-          var key = in_List.get(list, i);
-          var member = in_StringMap.get1(members, key);
-
-          if (Skew.in_SymbolKind.isOnInstances(member.kind) != findType) {
-            var score = Skew.levenshteinEditDistance(member.name, name);
-
-            if (score <= bestScore && score <= ((member.name.length + 1 | 0) / 2 | 0)) {
-              bestScore = score;
-              bestMember = member;
-            }
-          }
-        }
-
-        if (bestMember != null) {
-          this._initializeSymbol(bestMember);
-          return bestMember;
-        }
-      }
-    }
-
-    return null;
-  };
-
   Skew.Resolving.Resolver.prototype._sinkNullDotIntoHook = function(node, scope, context) {
     var nullDot = node;
 
@@ -18249,7 +18269,8 @@
 
       if (symbol == null) {
         if (target.resolvedType != Skew.Type.DYNAMIC) {
-          var correction = this._findMemberWithFuzzyMatching(target.resolvedType, name, target.isType());
+          var type = target.resolvedType;
+          var correction = type.kind != Skew.TypeKind.SYMBOL || !Skew.in_SymbolKind.isObject(type.symbol.kind) ? null : type.symbol.asObjectSymbol().scope.findWithFuzzyMatching(name, target.isType() ? Skew.FuzzySymbolKind.GLOBAL_ONLY : Skew.FuzzySymbolKind.INSTANCE_ONLY, Skew.FuzzyScopeSearch.SELF_ONLY);
           this._reportGuardMergingFailure(node);
           this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType, correction != null ? correction.name : null, correction != null ? correction.range : null);
         }
@@ -18616,14 +18637,16 @@
     var symbol = scope.find(name, Skew.Resolving.Resolver._shouldCheckForSetter(node) ? Skew.ScopeSearch.ALSO_CHECK_FOR_SETTER : Skew.ScopeSearch.NORMAL);
 
     if (symbol == null) {
+      var canAccessSelf = enclosingFunction != null && enclosingFunction.symbol.$this != null;
       this._reportGuardMergingFailure(node);
 
-      if (name == 'this' && enclosingFunction != null && enclosingFunction.symbol.$this != null) {
+      if (name == 'this' && canAccessSelf) {
         this._log.semanticErrorUndeclaredSelfSymbol(node.range, name);
       }
 
       else {
-        this._log.semanticErrorUndeclaredSymbol(node.range, name);
+        var correction = scope.findWithFuzzyMatching(name, node.shouldExpectType() ? Skew.FuzzySymbolKind.TYPE_ONLY : canAccessSelf ? Skew.FuzzySymbolKind.EVERYTHING : Skew.FuzzySymbolKind.GLOBAL_ONLY, Skew.FuzzyScopeSearch.SELF_AND_PARENTS);
+        this._log.semanticErrorUndeclaredSymbol(node.range, name, correction == null ? null : enclosingFunction != null && Skew.Resolving.Resolver._isBaseGlobalReference(enclosingFunction.symbol.parent, correction) ? correction.fullName() : correction.name, correction != null ? correction.range : null);
       }
 
       return;
@@ -18647,7 +18670,7 @@
 
     // Forbid referencing a base class global or constructor function from a derived class
     if (enclosingFunction != null && Skew.Resolving.Resolver._isBaseGlobalReference(enclosingFunction.symbol.parent, symbol)) {
-      this._log.semanticErrorUndeclaredSymbol(node.range, name);
+      this._log.semanticErrorUndeclaredSymbol(node.range, name, symbol.fullName(), symbol.range);
       return;
     }
 
@@ -19636,6 +19659,11 @@
     ALSO_CHECK_FOR_SETTER: 1
   };
 
+  Skew.FuzzyScopeSearch = {
+    SELF_ONLY: 0,
+    SELF_AND_PARENTS: 1
+  };
+
   Skew.Scope = function(parent) {
     this.parent = parent;
     this.used = null;
@@ -19644,15 +19672,23 @@
     this._enclosingLoop = null;
   };
 
+  Skew.Scope.prototype._find = function(name) {
+    return null;
+  };
+
+  Skew.Scope.prototype._findWithFuzzyMatching = function(matcher) {
+  };
+
   // Need to check for a setter at the same time as for a normal symbol
   // because the one in the closer scope must be picked. If both are in
   // the same scope, pick the setter.
   Skew.Scope.prototype.find = function(name, search) {
     var symbol = null;
+    var setterName = search == Skew.ScopeSearch.ALSO_CHECK_FOR_SETTER ? name + '=' : null;
 
     for (var scope = this; scope != null && symbol == null; scope = scope.parent) {
-      if (search == Skew.ScopeSearch.ALSO_CHECK_FOR_SETTER) {
-        symbol = scope._find(name + '=');
+      if (setterName != null) {
+        symbol = scope._find(setterName);
       }
 
       if (symbol == null) {
@@ -19661,6 +19697,20 @@
     }
 
     return symbol;
+  };
+
+  Skew.Scope.prototype.findWithFuzzyMatching = function(name, kind, search) {
+    var matcher = new Skew.FuzzySymbolMatcher(name, kind);
+
+    for (var scope = this; scope != null; scope = scope.parent) {
+      scope._findWithFuzzyMatching(matcher);
+
+      if (search == Skew.FuzzyScopeSearch.SELF_ONLY) {
+        break;
+      }
+    }
+
+    return matcher.bestSoFar();
   };
 
   Skew.Scope.prototype.asObjectScope = function() {
@@ -19791,6 +19841,12 @@
     return in_StringMap.get(this.symbol.members, name, null);
   };
 
+  Skew.ObjectScope.prototype._findWithFuzzyMatching = function(matcher) {
+    in_StringMap.each(this.symbol.members, function(name, member) {
+      matcher.include(member);
+    });
+  };
+
   Skew.FunctionScope = function(parent, symbol) {
     Skew.Scope.call(this, parent);
     this.symbol = symbol;
@@ -19807,6 +19863,12 @@
     return in_StringMap.get(this.parameters, name, null);
   };
 
+  Skew.FunctionScope.prototype._findWithFuzzyMatching = function(matcher) {
+    in_StringMap.each(this.parameters, function(name, parameter) {
+      matcher.include(parameter);
+    });
+  };
+
   Skew.VariableScope = function(parent, symbol) {
     Skew.Scope.call(this, parent);
     this.symbol = symbol;
@@ -19816,10 +19878,6 @@
 
   Skew.VariableScope.prototype.kind = function() {
     return Skew.ScopeKind.VARIABLE;
-  };
-
-  Skew.VariableScope.prototype._find = function(name) {
-    return null;
   };
 
   Skew.LocalType = {
@@ -19841,6 +19899,12 @@
 
   Skew.LocalScope.prototype._find = function(name) {
     return in_StringMap.get(this.locals, name, null);
+  };
+
+  Skew.LocalScope.prototype._findWithFuzzyMatching = function(matcher) {
+    in_StringMap.each(this.locals, function(name, local) {
+      matcher.include(local);
+    });
   };
 
   Skew.LocalScope.prototype.define = function(symbol, log) {
@@ -21711,6 +21775,12 @@
     }
 
     return clone;
+  };
+
+  in_StringMap.each = function(self, x) {
+    for (var key in self) {
+      x(key, in_StringMap.get1(self, key));
+    }
   };
 
   var in_IntMap = {};

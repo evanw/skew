@@ -11,6 +11,11 @@ namespace Skew {
     ALSO_CHECK_FOR_SETTER
   }
 
+  enum FuzzyScopeSearch {
+    SELF_ONLY
+    SELF_AND_PARENTS
+  }
+
   class Scope {
     var parent Scope
     var used StringMap<VariableSymbol> = null
@@ -19,18 +24,33 @@ namespace Skew {
     var _enclosingLoop LocalScope = null
 
     def kind ScopeKind
-    def _find(name string) Symbol
+    def _find(name string) Symbol { return null }
+    def _findWithFuzzyMatching(matcher FuzzySymbolMatcher) {}
 
     # Need to check for a setter at the same time as for a normal symbol
     # because the one in the closer scope must be picked. If both are in
     # the same scope, pick the setter.
     def find(name string, search ScopeSearch) Symbol {
       var symbol Symbol = null
+      var setterName = search == .ALSO_CHECK_FOR_SETTER ? name + "=" : null
       for scope = self; scope != null && symbol == null; scope = scope.parent {
-        if search == .ALSO_CHECK_FOR_SETTER { symbol = scope._find(name + "=") }
+        if setterName != null {
+          symbol = scope._find(setterName)
+        }
         symbol ?= scope._find(name)
       }
       return symbol
+    }
+
+    def findWithFuzzyMatching(name string, kind FuzzySymbolKind, search FuzzyScopeSearch) Symbol {
+      var matcher = FuzzySymbolMatcher.new(name, kind)
+      for scope = self; scope != null; scope = scope.parent {
+        scope._findWithFuzzyMatching(matcher)
+        if search == .SELF_ONLY {
+          break
+        }
+      }
+      return matcher.bestSoFar
     }
 
     def asObjectScope ObjectScope {
@@ -138,6 +158,10 @@ namespace Skew {
     over _find(name string) Symbol {
       return symbol.members.get(name, null)
     }
+
+    over _findWithFuzzyMatching(matcher FuzzySymbolMatcher) {
+      symbol.members.each((name, member) => matcher.include(member))
+    }
   }
 
   class FunctionScope : Scope {
@@ -151,6 +175,10 @@ namespace Skew {
     over _find(name string) Symbol {
       return parameters.get(name, null)
     }
+
+    over _findWithFuzzyMatching(matcher FuzzySymbolMatcher) {
+      parameters.each((name, parameter) => matcher.include(parameter))
+    }
   }
 
   class VariableScope : Scope {
@@ -158,10 +186,6 @@ namespace Skew {
 
     over kind ScopeKind {
       return .VARIABLE
-    }
-
-    over _find(name string) Symbol {
-      return null
     }
   }
 
@@ -180,6 +204,10 @@ namespace Skew {
 
     over _find(name string) Symbol {
       return locals.get(name, null)
+    }
+
+    over _findWithFuzzyMatching(matcher FuzzySymbolMatcher) {
+      locals.each((name, local) => matcher.include(local))
     }
 
     def define(symbol VariableSymbol, log Log) {

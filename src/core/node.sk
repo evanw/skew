@@ -194,6 +194,9 @@ namespace Skew {
     # statements and to call a lambda returned from a getter.
     IS_INSIDE_PARENTHESES
 
+    # This flag is set on nodes that are expected to be types.
+    SHOULD_EXPECT_TYPE
+
     # This flag marks nodes that were converted from ASSIGN_NULL to ASSIGN nodes.
     WAS_ASSIGN_NULL
 
@@ -293,6 +296,15 @@ namespace Skew {
     def isInsideParentheses bool    { return .IS_INSIDE_PARENTHESES in flags }
     def wasAssignNull bool          { return .WAS_ASSIGN_NULL in flags }
     def wasNullJoin bool            { return .WAS_NULL_JOIN in flags }
+
+    def shouldExpectType bool {
+      for node = self; node != null; node = node.parent {
+        if .SHOULD_EXPECT_TYPE in node.flags {
+          return true
+        }
+      }
+      return false
+    }
 
     # This is cheaper than childCount == 0
     def hasChildren bool {
