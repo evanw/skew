@@ -85,6 +85,35 @@ namespace Skew {
 
     return text
   }
+
+  def levenshteinEditDistance(a string, b string) int {
+    var an = a.count
+    var bn = b.count
+
+    var v0 List<int> = []
+    var v1 List<int> = []
+
+    for i in 0..bn + 1 {
+      v0.append(i)
+      v1.append(i)
+    }
+
+    for i in 0..an {
+      v1[0] = i + 1
+
+      for j in 0..bn {
+        v1[j + 1] = Math.min(
+          v0[j] + (a[i] == b[j] ? 0 : 1),
+          Math.min(v1[j], v0[j + 1]) + 1)
+      }
+
+      for j in 0..bn + 1 {
+        v0[j] = v1[j]
+      }
+    }
+
+    return v1[bn]
+  }
 }
 
 namespace Skew.PrettyPrint {

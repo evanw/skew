@@ -269,6 +269,7 @@ namespace Skew.Tests {
     testSimple
 
     # Unit tests
+    testLevenshteinEditDistance
     testFormatting
     testLibrary
     testNode

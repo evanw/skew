@@ -1,0 +1,41 @@
+namespace Skew.Tests {
+  def testLevenshteinEditDistance {
+    var check = (a string, b string, expected int) => {
+      testExpect("levenshteinEditDistance(\(a), \(b))", => levenshteinEditDistance(a, b), expected)
+      testExpect("levenshteinEditDistance(\(b), \(a))", => levenshteinEditDistance(b, a), expected)
+    }
+
+    check("", "", 0)
+
+    check("x", "", 1)
+    check("xy", "", 2)
+    check("xyz", "", 3)
+
+    check("x", "x", 0)
+    check("xy", "x", 1)
+    check("xyz", "x", 2)
+
+    check("x", "z", 1)
+    check("xy", "z", 2)
+    check("xyz", "z", 2)
+
+    check("xyz", "yz", 1)
+    check("xyz", "xz", 1)
+    check("xyz", "xy", 1)
+
+    check("xyz", "1xyz", 1)
+    check("xyz", "x1yz", 1)
+    check("xyz", "xy1z", 1)
+    check("xyz", "xyz1", 1)
+
+    check("xxx", "x", 2)
+    check("xxx", "xx", 1)
+    check("xxx", "xxx", 0)
+    check("xxx", "xxxx", 1)
+    check("xxx", "xxxxx", 2)
+
+    check("1xy2xy3xy4", "xyxyxy", 4)
+    check("1xy2xy3xy4", "4xy3xy2xy1", 4)
+    check("programming", "language", 9)
+  }
+}
