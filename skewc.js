@@ -9297,7 +9297,7 @@
     this.noteText = '';
   };
 
-  // Syntax warnings can be thought of as lints
+  // Syntax warnings can be thought of as linting
   Skew.Log = function() {
     this.diagnostics = [];
     this.warningCount = 0;
@@ -17392,8 +17392,7 @@
     }
   };
 
-  Skew.Resolving.Resolver.prototype._resolveExpression = function(node, scope) {
-    var value = node.expressionValue();
+  Skew.Resolving.Resolver.prototype._resolveExpressionOrImplicitReturn = function(node, value, scope) {
     var hook = this._sinkNullDotIntoHook(value, scope, null);
 
     // Turn top-level "?." expressions into if statements
@@ -17421,6 +17420,15 @@
     // Normal expression statement
     else {
       this._resolveAsParameterizedExpression(value, scope);
+    }
+  };
+
+  Skew.Resolving.Resolver.prototype._resolveExpression = function(node, scope) {
+    var value = node.expressionValue();
+    this._resolveExpressionOrImplicitReturn(node, value, scope);
+
+    // Only continue this didn't get turned into an if statement due to a top-level "?." or "?=" expression
+    if (node.kind == Skew.NodeKind.EXPRESSION) {
       this._checkUnusedExpression(value);
     }
   };
@@ -17542,7 +17550,18 @@
     }
 
     // If there's no return type, still check for other errors
-    this._resolveAsParameterizedExpression(value, scope);
+    if (node.isImplicitReturn()) {
+      this._resolveExpressionOrImplicitReturn(node, value, scope);
+
+      // Stop now if this got turned into an if statement due to a top-level "?." or "?=" expression
+      if (node.kind != Skew.NodeKind.RETURN) {
+        return;
+      }
+    }
+
+    else {
+      this._resolveAsParameterizedExpression(value, scope);
+    }
 
     // Lambdas without a return type or an explicit "return" statement get special treatment
     if (!node.isImplicitReturn()) {

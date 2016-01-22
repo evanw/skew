@@ -3279,5 +3279,45 @@ def test(z dynamic) {
 })();
 ").js
 
+# The null dot operator shouldn't require a value inside a lambda expression
+test("
+@export
+def test(x Foo, y Foo) {
+  x?.z
+  (=> x?.z)()
+
+  x ?= y
+  (=> x ?= y)()
+}
+
+class Foo {
+  def z {}
+}
+", "
+(function() {
+  test = function(x, y) {
+    if (x != null) {
+      x.z();
+    }
+
+    (function() {
+      if (x != null) {
+        x.z();
+      }
+    })();
+
+    if (x == null) {
+      x = y;
+    }
+
+    (function() {
+      if (x == null) {
+        x = y;
+      }
+    })();
+  };
+})();
+").js
+
   }
 }

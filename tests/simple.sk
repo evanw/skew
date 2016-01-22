@@ -7205,5 +7205,35 @@ interface Foo {
       ~~~
 ")
 
+# The null dot operator shouldn't require a value inside a lambda expression
+test("
+def test(x Foo, y Foo) {
+  x?.z
+  (=> x?.z)()
+  (() int => x?.z)()
+
+  x ?= y
+  (=> x ?= y)()
+  (() int => x ?= y)()
+}
+
+class Foo {
+  def z {}
+}
+", "
+<stdin>:4:14: error: The function \"z\" does not return a value
+  (() int => x?.z)()
+             ~~~~
+<stdin>:12:7: note: The function declaration is here
+  def z {}
+      ^
+<stdin>:8:14: error: Cannot convert from type \"Foo\" to type \"int\"
+  (() int => x ?= y)()
+             ^
+<stdin>:8:14: error: Cannot convert from type \"Foo\" to type \"int\"
+  (() int => x ?= y)()
+             ~~~~~~
+")
+
   }
 }

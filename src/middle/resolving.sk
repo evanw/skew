@@ -1617,8 +1617,7 @@ namespace Skew.Resolving {
       }
     }
 
-    def _resolveExpression(node Node, scope Scope) {
-      var value = node.expressionValue
+    def _resolveExpressionOrImplicitReturn(node Node, value Node, scope Scope) {
       var hook = _sinkNullDotIntoHook(value, scope, null)
 
       # Turn top-level "?." expressions into if statements
@@ -1646,6 +1645,15 @@ namespace Skew.Resolving {
       # Normal expression statement
       else {
         _resolveAsParameterizedExpression(value, scope)
+      }
+    }
+
+    def _resolveExpression(node Node, scope Scope) {
+      var value = node.expressionValue
+      _resolveExpressionOrImplicitReturn(node, value, scope)
+
+      # Only continue this didn't get turned into an if statement due to a top-level "?." or "?=" expression
+      if node.kind == .EXPRESSION {
         _checkUnusedExpression(value)
       }
     }
@@ -1750,6 +1758,7 @@ namespace Skew.Resolving {
       # Check the type of the returned value
       if returnType != null {
         _resolveAsParameterizedExpressionWithConversion(value, scope, returnType)
+
         if function.shouldInferReturnType && _isCallReturningVoid(value) {
           node.kind = .EXPRESSION
         }
@@ -1757,7 +1766,16 @@ namespace Skew.Resolving {
       }
 
       # If there's no return type, still check for other errors
-      _resolveAsParameterizedExpression(value, scope)
+      if node.isImplicitReturn {
+        _resolveExpressionOrImplicitReturn(node, value, scope)
+
+        # Stop now if this got turned into an if statement due to a top-level "?." or "?=" expression
+        if node.kind != .RETURN {
+          return
+        }
+      } else {
+        _resolveAsParameterizedExpression(value, scope)
+      }
 
       # Lambdas without a return type or an explicit "return" statement get special treatment
       if !node.isImplicitReturn {
