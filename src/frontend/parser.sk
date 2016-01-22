@@ -932,7 +932,7 @@ namespace Skew.Parsing {
         token = context.current
         text = token.range.toString
 
-        if context.peek(.NEWLINE) {
+        if context.peek(.NEWLINE) || context.peek(.RIGHT_BRACE) {
           context.log.syntaxWarningExtraComma(comma.range)
           break
         }

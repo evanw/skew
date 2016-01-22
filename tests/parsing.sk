@@ -771,6 +771,7 @@ enum Foo {
   A, B,
   X, Y,
 }
+enum Bar { A, B, }
 ", "
 <stdin>:2:7: warning: Unnecessary comma
   A, B,
@@ -778,6 +779,9 @@ enum Foo {
 <stdin>:3:7: warning: Unnecessary comma
   X, Y,
       ^
+<stdin>:5:16: warning: Unnecessary comma
+enum Bar { A, B, }
+               ^
 ")
 
   }

@@ -10993,7 +10993,7 @@
         token = context.current();
         text = token.range.toString();
 
-        if (context.peek(Skew.TokenKind.NEWLINE)) {
+        if (context.peek(Skew.TokenKind.NEWLINE) || context.peek(Skew.TokenKind.RIGHT_BRACE)) {
           context.log.syntaxWarningExtraComma(comma.range);
           break;
         }
