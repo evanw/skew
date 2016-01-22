@@ -2249,14 +2249,49 @@ namespace Skew.Resolving {
     def _findMember(type Type, name string) Symbol {
       if type.kind == .SYMBOL {
         var symbol = type.symbol
+
         if symbol.kind.isObject {
           var member = symbol.asObjectSymbol.members.get(name, null)
+
           if member != null {
             _initializeSymbol(member)
             return member
           }
         }
       }
+
+      return null
+    }
+
+    def _findMemberWithFuzzyMatching(type Type, name string, findType bool) Symbol {
+      if type.kind == .SYMBOL {
+        var symbol = type.symbol
+
+        if symbol.kind.isObject {
+          var members = symbol.asObjectSymbol.members
+          var bestScore = (name.count + 1) / 2
+          var bestMember Symbol = null
+
+          for key in members.keys {
+            var member = members[key]
+
+            if member.kind.isOnInstances != findType {
+              var score = levenshteinEditDistance(member.name, name)
+
+              if score <= bestScore && score <= (member.name.count + 1) / 2 {
+                bestScore = score
+                bestMember = member
+              }
+            }
+          }
+
+          if bestMember != null {
+            _initializeSymbol(bestMember)
+            return bestMember
+          }
+        }
+      }
+
       return null
     }
 
@@ -2324,8 +2359,9 @@ namespace Skew.Resolving {
         symbol = _findMember(target.resolvedType, name)
         if symbol == null {
           if target.resolvedType != .DYNAMIC {
+            var correction = _findMemberWithFuzzyMatching(target.resolvedType, name, target.isType)
             _reportGuardMergingFailure(node)
-            _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
+            _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType, correction?.name, correction?.range)
           }
           if target.kind == .TYPE && target.resolvedType == .DYNAMIC {
             node.kind = .NAME
@@ -2337,7 +2373,7 @@ namespace Skew.Resolving {
 
       # Forbid referencing a base class global or constructor function from a derived class
       if _isBaseGlobalReference(target.resolvedType.symbol, symbol) {
-        _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType)
+        _log.semanticErrorUnknownMemberSymbol(node.range, name, target.resolvedType, symbol.fullName, symbol.range)
         return
       }
 
@@ -3224,7 +3260,7 @@ namespace Skew.Resolving {
       # Check if the operator can be overridden at all
       var info = operatorInfo[kind]
       if info.kind != .OVERRIDABLE {
-        _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, info.text, type)
+        _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, info.text, type, null, null)
         _resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }
@@ -3314,7 +3350,7 @@ namespace Skew.Resolving {
 
       # Fail if the operator wasn't found
       if symbol == null {
-        _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, type)
+        _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, type, null, null)
         _resolveChildrenAsParameterizedExpressions(node, scope)
         return
       }

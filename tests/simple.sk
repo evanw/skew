@@ -492,9 +492,12 @@ namespace foo {
 @foo.bar.baz
 def main {}
 ", "
-<stdin>:7:10: error: \"@bax\" is not declared on type \"foo.bar\"
+<stdin>:7:10: error: \"@bax\" is not declared on type \"foo.bar\", did you mean \"@baz\"?
 @foo.bar.bax
          ~~~
+<stdin>:3:9: note: \"@baz\" is defined here
+    def @baz
+        ~~~~
 ")
 
 test("
@@ -1585,9 +1588,12 @@ def main(foo Foo, bar Bar, baz Baz) {
 <stdin>:7:7: error: \"bar\" is not declared on type \"Foo\"
   foo.bar
       ~~~
-<stdin>:11:7: error: \"bar\" is not declared on type \"Baz\"
+<stdin>:11:7: error: \"bar\" is not declared on type \"Baz\", did you mean \"baz\"?
   baz.bar
       ~~~
+<stdin>:3:23: note: \"baz\" is defined here
+class Baz : Foo { def baz {} }
+                      ~~~
 ")
 
 test("
@@ -2648,9 +2654,12 @@ def main {
   }
 }
 ", "
-<stdin>:8:23: error: \"BAZ\" is not declared on type \"Foo\"
+<stdin>:8:23: error: \"BAZ\" is not declared on type \"Foo\", did you mean \"BAR\"?
     case .FOO, .BAR, .BAZ {}
                       ~~~
+<stdin>:3:3: note: \"BAR\" is defined here
+  BAR
+  ~~~
 <stdin>:9:10: error: Cannot convert from type \"int\" to type \"Foo\" without a cast
     case 0 {}
          ^
@@ -3478,14 +3487,23 @@ def main {
   Baz.gfun
 }
 ", "
-<stdin>:29:7: error: \"gvar\" is not declared on type \"Bar\"
+<stdin>:29:3: error: \"gvar\" is not declared on type \"Bar\", did you mean \"Foo.gvar\"?
   Bar.gvar = 0
+  ~~~~~~~~
+<stdin>:11:7: note: \"Foo.gvar\" is defined here
+  var gvar = 0
       ~~~~
-<stdin>:30:7: error: \"gvar\" is not declared on type \"Baz\"
+<stdin>:30:3: error: \"gvar\" is not declared on type \"Baz\", did you mean \"Foo.gvar\"?
   Baz.gvar = 0
+  ~~~~~~~~
+<stdin>:11:7: note: \"Foo.gvar\" is defined here
+  var gvar = 0
       ~~~~
-<stdin>:33:7: error: \"gfun\" is not declared on type \"Bar\"
+<stdin>:33:3: error: \"gfun\" is not declared on type \"Bar\", did you mean \"Foo.gfun\"?
   Bar.gfun
+  ~~~~~~~~
+<stdin>:12:7: note: \"Foo.gfun\" is defined here
+  def gfun {}
       ~~~~
 ")
 
@@ -6425,12 +6443,18 @@ class Foo {
 @import
 var Nope dynamic
 ", "
-<stdin>:5:16: error: \"Baz\" is not declared on type \"Foo\"
+<stdin>:5:16: error: \"Baz\" is not declared on type \"Foo\", did you mean \"Bar\"?
 var baz = <Foo.Baz/>
                ~~~
-<stdin>:6:17: error: \"Baz\" is not declared on type \"Foo\"
+<stdin>:11:9: note: \"Bar\" is defined here
+  class Bar {
+        ~~~
+<stdin>:6:17: error: \"Baz\" is not declared on type \"Foo\", did you mean \"Bar\"?
 var baz2 = <Foo.Baz></Foo.Baz>
                 ~~~
+<stdin>:11:9: note: \"Bar\" is defined here
+  class Bar {
+        ~~~
 <stdin>:7:9: error: Cannot construct type \"int\"
 var i = <int/>
         ~~~~~~
@@ -7233,6 +7257,101 @@ class Foo {
 <stdin>:8:14: error: Cannot convert from type \"Foo\" to type \"int\"
   (() int => x ?= y)()
              ~~~~~~
+")
+
+# Check typo corrections
+test("
+def test(x Foo) {
+  x.toStr
+  x.string
+  x.toStrong
+  x.tostring
+  x.to_string
+
+  x.to
+  x.blah
+  x.blong
+  x.tostr
+  x.to_str
+  x.bloblobloblob
+}
+
+class Foo {
+  def toString string {
+    return \"\"
+  }
+}
+", "
+<stdin>:2:5: error: \"toStr\" is not declared on type \"Foo\", did you mean \"toString\"?
+  x.toStr
+    ~~~~~
+<stdin>:17:7: note: \"toString\" is defined here
+  def toString string {
+      ~~~~~~~~
+<stdin>:3:5: error: \"string\" is not declared on type \"Foo\", did you mean \"toString\"?
+  x.string
+    ~~~~~~
+<stdin>:17:7: note: \"toString\" is defined here
+  def toString string {
+      ~~~~~~~~
+<stdin>:4:5: error: \"toStrong\" is not declared on type \"Foo\", did you mean \"toString\"?
+  x.toStrong
+    ~~~~~~~~
+<stdin>:17:7: note: \"toString\" is defined here
+  def toString string {
+      ~~~~~~~~
+<stdin>:5:5: error: \"tostring\" is not declared on type \"Foo\", did you mean \"toString\"?
+  x.tostring
+    ~~~~~~~~
+<stdin>:17:7: note: \"toString\" is defined here
+  def toString string {
+      ~~~~~~~~
+<stdin>:6:5: error: \"to_string\" is not declared on type \"Foo\", did you mean \"toString\"?
+  x.to_string
+    ~~~~~~~~~
+<stdin>:17:7: note: \"toString\" is defined here
+  def toString string {
+      ~~~~~~~~
+<stdin>:8:5: error: \"to\" is not declared on type \"Foo\"
+  x.to
+    ~~
+<stdin>:9:5: error: \"blah\" is not declared on type \"Foo\"
+  x.blah
+    ~~~~
+<stdin>:10:5: error: \"blong\" is not declared on type \"Foo\"
+  x.blong
+    ~~~~~
+<stdin>:11:5: error: \"tostr\" is not declared on type \"Foo\"
+  x.tostr
+    ~~~~~
+<stdin>:12:5: error: \"to_str\" is not declared on type \"Foo\"
+  x.to_str
+    ~~~~~~
+<stdin>:13:5: error: \"bloblobloblob\" is not declared on type \"Foo\"
+  x.bloblobloblob
+    ~~~~~~~~~~~~~
+")
+
+# Avoid typo corrections for mismatched static/instance contexts
+test("
+def test(x Foo) {
+  x.bar
+  Foo.Foo
+}
+
+class Foo {
+  var foo = 0
+
+  namespace Bar {
+  }
+}
+", "
+<stdin>:2:5: error: \"bar\" is not declared on type \"Foo\"
+  x.bar
+    ~~~
+<stdin>:3:7: error: \"Foo\" is not declared on type \"Foo\"
+  Foo.Foo
+      ~~~
 ")
 
   }

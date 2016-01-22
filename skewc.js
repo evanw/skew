@@ -324,6 +324,32 @@
     return text;
   };
 
+  Skew.levenshteinEditDistance = function(a, b) {
+    var an = a.length;
+    var bn = b.length;
+    var v0 = [];
+    var v1 = [];
+
+    for (var i = 0, count = bn + 1 | 0; i < count; i = i + 1 | 0) {
+      v0.push(i);
+      v1.push(i);
+    }
+
+    for (var i1 = 0, count3 = an; i1 < count3; i1 = i1 + 1 | 0) {
+      in_List.set(v1, 0, i1 + 1 | 0);
+
+      for (var j = 0, count1 = bn; j < count1; j = j + 1 | 0) {
+        in_List.set(v1, j + 1 | 0, Math.min(in_List.get(v0, j) + (in_string.get1(a, i1) == in_string.get1(b, j) ? 0 : 1) | 0, Math.min(in_List.get(v1, j), in_List.get(v0, j + 1 | 0)) + 1 | 0));
+      }
+
+      for (var j1 = 0, count2 = bn + 1 | 0; j1 < count2; j1 = j1 + 1 | 0) {
+        in_List.set(v0, j1, in_List.get(v1, j1));
+      }
+    }
+
+    return in_List.get(v1, bn);
+  };
+
   // This is the inner loop from "flex", an ancient lexer generator. The output
   // of flex is pretty bad (obfuscated variable names and the opposite of modular
   // code) but it's fast and somewhat standard for compiler design. The code below
@@ -9475,8 +9501,12 @@
     this.error(range, '"' + name + '" is not declared (use "self" to refer to the object instance)');
   };
 
-  Skew.Log.prototype.semanticErrorUnknownMemberSymbol = function(range, name, type) {
-    this.error(range, '"' + name + '" is not declared on type "' + type.toString() + '"');
+  Skew.Log.prototype.semanticErrorUnknownMemberSymbol = function(range, name, type, correction, correctionRange) {
+    this.error(range, '"' + name + '" is not declared on type "' + type.toString() + '"' + (correction != null ? ', did you mean "' + correction + '"?' : ''));
+
+    if (correction != null && correctionRange != null) {
+      this.note(correctionRange, '"' + correction + '" is defined here');
+    }
   };
 
   Skew.Log.prototype.semanticErrorVarMissingType = function(range, name) {
@@ -18109,6 +18139,39 @@
     return null;
   };
 
+  Skew.Resolving.Resolver.prototype._findMemberWithFuzzyMatching = function(type, name, findType) {
+    if (type.kind == Skew.TypeKind.SYMBOL) {
+      var symbol = type.symbol;
+
+      if (Skew.in_SymbolKind.isObject(symbol.kind)) {
+        var members = symbol.asObjectSymbol().members;
+        var bestScore = (name.length + 1 | 0) / 2 | 0;
+        var bestMember = null;
+
+        for (var i = 0, list = Object.keys(members), count = list.length; i < count; i = i + 1 | 0) {
+          var key = in_List.get(list, i);
+          var member = in_StringMap.get1(members, key);
+
+          if (Skew.in_SymbolKind.isOnInstances(member.kind) != findType) {
+            var score = Skew.levenshteinEditDistance(member.name, name);
+
+            if (score <= bestScore && score <= ((member.name.length + 1 | 0) / 2 | 0)) {
+              bestScore = score;
+              bestMember = member;
+            }
+          }
+        }
+
+        if (bestMember != null) {
+          this._initializeSymbol(bestMember);
+          return bestMember;
+        }
+      }
+    }
+
+    return null;
+  };
+
   Skew.Resolving.Resolver.prototype._sinkNullDotIntoHook = function(node, scope, context) {
     var nullDot = node;
 
@@ -18186,8 +18249,9 @@
 
       if (symbol == null) {
         if (target.resolvedType != Skew.Type.DYNAMIC) {
+          var correction = this._findMemberWithFuzzyMatching(target.resolvedType, name, target.isType());
           this._reportGuardMergingFailure(node);
-          this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType);
+          this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType, correction != null ? correction.name : null, correction != null ? correction.range : null);
         }
 
         if (target.kind == Skew.NodeKind.TYPE && target.resolvedType == Skew.Type.DYNAMIC) {
@@ -18201,7 +18265,7 @@
 
     // Forbid referencing a base class global or constructor function from a derived class
     if (Skew.Resolving.Resolver._isBaseGlobalReference(target.resolvedType.symbol, symbol)) {
-      this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType);
+      this._log.semanticErrorUnknownMemberSymbol(node.range, name, target.resolvedType, symbol.fullName(), symbol.range);
       return;
     }
 
@@ -19183,7 +19247,7 @@
     var info = in_IntMap.get1(Skew.operatorInfo, kind);
 
     if (info.kind != Skew.OperatorKind.OVERRIDABLE) {
-      this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), info.text, type);
+      this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), info.text, type, null, null);
       this._resolveChildrenAsParameterizedExpressions(node, scope);
       return;
     }
@@ -19280,7 +19344,7 @@
 
     // Fail if the operator wasn't found
     if (symbol == null) {
-      this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, type);
+      this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, type, null, null);
       this._resolveChildrenAsParameterizedExpressions(node, scope);
       return;
     }

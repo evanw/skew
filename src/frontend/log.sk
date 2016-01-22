@@ -218,8 +218,11 @@ namespace Skew {
       error(range, "\"\(name)\" is not declared (use \"self\" to refer to the object instance)")
     }
 
-    def semanticErrorUnknownMemberSymbol(range Range, name string, type Type) {
-      error(range, "\"\(name)\" is not declared on type \"\(type)\"")
+    def semanticErrorUnknownMemberSymbol(range Range, name string, type Type, correction string, correctionRange Range) {
+      error(range, "\"\(name)\" is not declared on type \"\(type)\"" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
+      if correction != null && correctionRange != null {
+        note(correctionRange, "\"\(correction)\" is defined here")
+      }
     }
 
     def semanticErrorVarMissingType(range Range, name string) {
