@@ -143,7 +143,6 @@ namespace Skew {
     }
 
     def syntaxErrorSlashComment(range Range) {
-      error(range, "Comments start with \"#\" instead of \"//\"")
       var text = range.toString
       var last = text.count - 1
       assert(text.startsWith("//"))
@@ -151,6 +150,7 @@ namespace Skew {
         text = text.slice(0, last)
         range = range.fromStart(last)
       }
+      error(range, "Comments start with \"#\" instead of \"//\"")
       fix(range, "Replace \"//\" with \"#\"", "#" + text.slice(2))
     }
 

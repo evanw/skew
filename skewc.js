@@ -9503,7 +9503,6 @@
   };
 
   Skew.Log.prototype.syntaxErrorSlashComment = function(range) {
-    this.error(range, 'Comments start with "#" instead of "//"');
     var text = range.toString();
     var last = text.length - 1 | 0;
     assert(in_string.startsWith(text, '//'));
@@ -9513,6 +9512,7 @@
       range = range.fromStart(last);
     }
 
+    this.error(range, 'Comments start with "#" instead of "//"');
     this.fix(range, 'Replace "//" with "#"', '#' + in_string.slice1(text, 2));
   };
 
