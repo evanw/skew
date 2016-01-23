@@ -86,12 +86,13 @@ namespace Skew {
     return text
   }
 
-  def levenshteinEditDistance(a string, b string) int {
+  # The cost of changing the case of a letter is 0.5 instead of 1
+  def caseAwareLevenshteinEditDistance(a string, b string) double {
     var an = a.count
     var bn = b.count
 
-    var v0 List<int> = []
-    var v1 List<int> = []
+    var v0 List<double> = []
+    var v1 List<double> = []
 
     for i in 0..bn + 1 {
       v0.append(i)
@@ -99,11 +100,13 @@ namespace Skew {
     }
 
     for i in 0..an {
+      var ca = a[i]
       v1[0] = i + 1
 
       for j in 0..bn {
+        var cb = b[j]
         v1[j + 1] = Math.min(
-          v0[j] + (a[i] == b[j] ? 0 : 1),
+          v0[j] + (ca == cb ? 0 : toLowerCase(ca) == toLowerCase(cb) ? 0.5 : 1),
           Math.min(v1[j], v0[j + 1]) + 1)
       }
 
@@ -113,6 +116,10 @@ namespace Skew {
     }
 
     return v1[bn]
+  }
+
+  def toLowerCase(c int) int {
+    return c >= 'A' && c <= 'Z' ? 'a' - 'A' + c : c
   }
 }
 

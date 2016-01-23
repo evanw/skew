@@ -324,7 +324,8 @@
     return text;
   };
 
-  Skew.levenshteinEditDistance = function(a, b) {
+  // The cost of changing the case of a letter is 0.5 instead of 1
+  Skew.caseAwareLevenshteinEditDistance = function(a, b) {
     var an = a.length;
     var bn = b.length;
     var v0 = [];
@@ -336,10 +337,12 @@
     }
 
     for (var i1 = 0, count3 = an; i1 < count3; i1 = i1 + 1 | 0) {
+      var ca = in_string.get1(a, i1);
       in_List.set(v1, 0, i1 + 1 | 0);
 
       for (var j = 0, count1 = bn; j < count1; j = j + 1 | 0) {
-        in_List.set(v1, j + 1 | 0, Math.min(in_List.get(v0, j) + (in_string.get1(a, i1) == in_string.get1(b, j) ? 0 : 1) | 0, Math.min(in_List.get(v1, j), in_List.get(v0, j + 1 | 0)) + 1 | 0));
+        var cb = in_string.get1(b, j);
+        in_List.set(v1, j + 1 | 0, Math.min(in_List.get(v0, j) + (ca == cb ? 0 : Skew.toLowerCase(ca) == Skew.toLowerCase(cb) ? 0.5 : 1), Math.min(in_List.get(v1, j), in_List.get(v0, j + 1 | 0)) + 1));
       }
 
       for (var j1 = 0, count2 = bn + 1 | 0; j1 < count2; j1 = j1 + 1 | 0) {
@@ -348,6 +351,10 @@
     }
 
     return in_List.get(v1, bn);
+  };
+
+  Skew.toLowerCase = function(c) {
+    return c >= 65 && c <= 90 ? (97 - 65 | 0) + c | 0 : c;
   };
 
   // This is the inner loop from "flex", an ancient lexer generator. The output
@@ -9218,18 +9225,18 @@
     this._bestMatch = null;
     this._name = name;
     this._kind = kind;
-    this._bestScore = name.length / 2 | 0;
+    this._bestScore = name.length * 0.5;
     this._bestMatch = null;
   };
 
   Skew.FuzzySymbolMatcher.prototype.include = function(match) {
-    if (this._kind == Skew.FuzzySymbolKind.INSTANCE_ONLY && !Skew.in_SymbolKind.isOnInstances(match.kind) || this._kind == Skew.FuzzySymbolKind.GLOBAL_ONLY && Skew.in_SymbolKind.isOnInstances(match.kind) || this._kind == Skew.FuzzySymbolKind.TYPE_ONLY && !Skew.in_SymbolKind.isType(match.kind)) {
+    if (this._kind == Skew.FuzzySymbolKind.INSTANCE_ONLY && !Skew.in_SymbolKind.isOnInstances(match.kind) || this._kind == Skew.FuzzySymbolKind.GLOBAL_ONLY && Skew.in_SymbolKind.isOnInstances(match.kind) || this._kind == Skew.FuzzySymbolKind.TYPE_ONLY && !Skew.in_SymbolKind.isType(match.kind) || match.state == Skew.SymbolState.INITIALIZING) {
       return;
     }
 
-    var score = Skew.levenshteinEditDistance(this._name, match.name);
+    var score = Skew.caseAwareLevenshteinEditDistance(this._name, match.name);
 
-    if (score <= this._bestScore && score <= (match.name.length / 2 | 0)) {
+    if (score <= this._bestScore && score <= match.name.length * 0.5) {
       this._bestScore = score;
       this._bestMatch = match;
     }

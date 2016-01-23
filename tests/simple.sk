@@ -7481,5 +7481,71 @@ class Foo {
         ^
 ")
 
+# Type corrections shouldn't suggest symbols that are currently being initialized
+test("
+var foo = Bar
+var bar = Bar
+var fooo = Fooo
+", "
+<stdin>:1:11: error: \"Bar\" is not declared, did you mean \"bar\"?
+var foo = Bar
+          ~~~
+<stdin>:2:5: note: \"bar\" is defined here
+var bar = Bar
+    ~~~
+<stdin>:2:11: error: \"Bar\" is not declared
+var bar = Bar
+          ~~~
+<stdin>:3:12: error: \"Fooo\" is not declared, did you mean \"foo\"?
+var fooo = Fooo
+           ~~~~
+<stdin>:1:5: note: \"foo\" is defined here
+var foo = Bar
+    ~~~
+")
+
+# Check case-sensitive typo corrections
+test("
+var Foo = 0
+var FOo = 0
+var bar = 0
+var a = foo
+var b = FOO
+var c = fOO
+var d = foO
+var e = BAR
+", "
+<stdin>:4:9: error: \"foo\" is not declared, did you mean \"Foo\"?
+var a = foo
+        ~~~
+<stdin>:1:5: note: \"Foo\" is defined here
+var Foo = 0
+    ~~~
+<stdin>:5:9: error: \"FOO\" is not declared, did you mean \"FOo\"?
+var b = FOO
+        ~~~
+<stdin>:2:5: note: \"FOo\" is defined here
+var FOo = 0
+    ~~~
+<stdin>:6:9: error: \"fOO\" is not declared, did you mean \"FOo\"?
+var c = fOO
+        ~~~
+<stdin>:2:5: note: \"FOo\" is defined here
+var FOo = 0
+    ~~~
+<stdin>:7:9: error: \"foO\" is not declared, did you mean \"Foo\"?
+var d = foO
+        ~~~
+<stdin>:1:5: note: \"Foo\" is defined here
+var Foo = 0
+    ~~~
+<stdin>:8:9: error: \"BAR\" is not declared, did you mean \"bar\"?
+var e = BAR
+        ~~~
+<stdin>:3:5: note: \"bar\" is defined here
+var bar = 0
+    ~~~
+")
+
   }
 }

@@ -429,25 +429,26 @@ namespace Skew {
   class FuzzySymbolMatcher {
     var _name string
     var _kind FuzzySymbolKind
-    var _bestScore int
+    var _bestScore double
     var _bestMatch Symbol
 
     def new(name string, kind FuzzySymbolKind) {
       _name = name
       _kind = kind
-      _bestScore = name.count / 2
+      _bestScore = name.count * 0.5
       _bestMatch = null
     }
 
     def include(match Symbol) {
       if _kind == .INSTANCE_ONLY && !match.kind.isOnInstances ||
           _kind == .GLOBAL_ONLY && match.kind.isOnInstances ||
-          _kind == .TYPE_ONLY && !match.kind.isType {
+          _kind == .TYPE_ONLY && !match.kind.isType ||
+          match.state == .INITIALIZING {
         return
       }
 
-      var score = levenshteinEditDistance(_name, match.name)
-      if score <= _bestScore && score <= match.name.count / 2 {
+      var score = caseAwareLevenshteinEditDistance(_name, match.name)
+      if score <= _bestScore && score <= match.name.count * 0.5 {
         _bestScore = score
         _bestMatch = match
       }
