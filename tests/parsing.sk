@@ -12,6 +12,14 @@ var x = ''
 <stdin>:3:9: error: Use double quotes for strings (single quotes are for character literals)
 var z = '12'
         ~~~~
+<stdin>:1:9: fix: Replace single quotes with double quotes
+var x = ''
+        ~~
+        [\"\"]
+<stdin>:3:9: fix: Replace single quotes with double quotes
+var z = '12'
+        ~~~~
+        [\"12\"]
 ")
 
 test("
@@ -782,6 +790,18 @@ enum Bar { A, B, }
 <stdin>:5:16: warning: Unnecessary comma
 enum Bar { A, B, }
                ^
+<stdin>:2:7: fix: Remove comma
+  A, B,
+      ^
+      []
+<stdin>:3:7: fix: Remove comma
+  X, Y,
+      ^
+      []
+<stdin>:5:16: fix: Remove comma
+enum Bar { A, B, }
+               ^
+               []
 ")
 
   }

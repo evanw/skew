@@ -4,12 +4,19 @@ namespace Skew {
     WARNING
   }
 
+  class Fix {
+    const range Range
+    const description string
+    const replacement string
+  }
+
   class Diagnostic {
-    var kind DiagnosticKind
-    var range Range
-    var text string
+    const kind DiagnosticKind
+    const range Range
+    const text string
     var noteRange Range = null
     var noteText = ""
+    var fixes List<Fix> = null
   }
 
   namespace Diagnostic {
@@ -65,6 +72,12 @@ namespace Skew {
       warningCount++
     }
 
+    def fix(range Range, description string, replacement string) {
+      if range != null {
+        (diagnostics.last.fixes ?= []).append(Fix.new(range, description, replacement))
+      }
+    }
+
     def note(range Range, text string) {
       var last = diagnostics.last
       last.noteRange = range
@@ -75,15 +88,24 @@ namespace Skew {
   # Syntax warnings can be thought of as linting
   class Log {
     def syntaxWarningOctal(range Range) {
+      var text = range.toString
       warning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)")
+      while text.startsWith("0") {
+        text = text.slice(1)
+      }
+      fix(range, "Remove the leading zeros to avoid confusion", text)
+      fix(range, "Add the prefix \"0o\" to interpret the number as octal", "0o" + text)
     }
 
     def syntaxWarningExtraParentheses(range Range) {
+      var text = range.toString
       warning(range, "Unnecessary parentheses")
+      fix(range, "Remove parentheses", text.slice(1, text.count - 1))
     }
 
     def syntaxWarningExtraComma(range Range) {
       warning(range, "Unnecessary comma")
+      fix(range, "Remove comma", "")
     }
   }
 
@@ -94,6 +116,7 @@ namespace Skew {
 
     def syntaxErrorInvalidCharacter(range Range) {
       error(range, "Use double quotes for strings (single quotes are for character literals)")
+      fix(range, "Replace single quotes with double quotes", replaceSingleQuotesWithDoubleQuotes(range.toString))
     }
 
     def syntaxErrorExtraData(range Range, text string) {
@@ -110,6 +133,7 @@ namespace Skew {
 
     def syntaxErrorEmptyFunctionParentheses(range Range) {
       error(range, "Functions without arguments do not use parentheses")
+      fix(range, "Remove parentheses", "")
     }
 
     def syntaxErrorBadDeclarationInsideType(range Range) {
@@ -213,6 +237,7 @@ namespace Skew {
     def semanticErrorUndeclaredSymbol(range Range, name string, correction string, correctionRange Range) {
       error(range, "\"\(name)\" is not declared" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
       if correction != null && correctionRange != null {
+        fix(range, "Replace with \"\(correction)\"", correction)
         note(correctionRange, "\"\(correction)\" is defined here")
       }
     }
@@ -224,6 +249,7 @@ namespace Skew {
     def semanticErrorUnknownMemberSymbol(range Range, name string, type Type, correction string, correctionRange Range) {
       error(range, "\"\(name)\" is not declared on type \"\(type)\"" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
       if correction != null && correctionRange != null {
+        fix(range, "Replace with \"\(correction)\"", correction)
         note(correctionRange, "\"\(correction)\" is defined here")
       }
     }
@@ -307,6 +333,7 @@ namespace Skew {
 
     def semanticErrorConstructorReturnType(range Range) {
       error(range, "Constructors cannot have a return type")
+      fix(range?.rangeIncludingLeftWhitespace, "Remove the return type", "")
     }
 
     def semanticErrorNoMatchingOverload(range Range, name string, count int, types List<Type>) {
@@ -335,6 +362,7 @@ namespace Skew {
 
     def semanticWarningExtraCast(range Range, from Type, to Type) {
       warning(range, "Unnecessary cast from type \"\(from)\" to type \"\(to)\"")
+      fix(range?.rangeIncludingLeftWhitespace, "Remove the cast", "")
     }
 
     def semanticWarningExtraTypeCheck(range Range, from Type, to Type) {

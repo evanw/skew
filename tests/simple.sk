@@ -62,6 +62,14 @@ def main List<double> {
 <stdin>:21:5: error: Cannot convert from type \"string\" to type \"double\"
     0.5e-100.toString,
     ~~~~~~~~~~~~~~~~~
+<stdin>:22:5: fix: Remove the leading zeros to avoid confusion
+    01,
+    ~~
+    [1]
+<stdin>:22:5: fix: Add the prefix \"0o\" to interpret the number as octal
+    01,
+    ~~
+    [0o1]
 ")
 
 test("
@@ -498,6 +506,10 @@ def main {}
 <stdin>:3:9: note: \"@baz\" is defined here
     def @baz
         ~~~~
+<stdin>:7:10: fix: Replace with \"@baz\"
+@foo.bar.bax
+         ~~~
+         [@baz]
 ")
 
 test("
@@ -1217,6 +1229,14 @@ class Foo {
 <stdin>:3:7: error: Expected \"{new}\" to take either 0 or 2 arguments
   def {new}(x int, y int, z int) int {}
       ~~~~~
+<stdin>:2:33: fix: Remove the return type
+  def [new](x int, y int, z int) int {}
+                                ~~~~
+                                []
+<stdin>:3:33: fix: Remove the return type
+  def {new}(x int, y int, z int) int {}
+                                ~~~~
+                                []
 ")
 
 test("
@@ -1594,6 +1614,10 @@ def main(foo Foo, bar Bar, baz Baz) {
 <stdin>:3:23: note: \"baz\" is defined here
 class Baz : Foo { def baz {} }
                       ~~~
+<stdin>:11:7: fix: Replace with \"baz\"
+  baz.bar
+      ~~~
+      [baz]
 ")
 
 test("
@@ -2669,6 +2693,10 @@ def main {
 <stdin>:8:10: note: The first occurrence is here
     case .FOO, .BAR, .BAZ {}
          ~~~~
+<stdin>:8:23: fix: Replace with \"BAR\"
+    case .FOO, .BAR, .BAZ {}
+                      ~~~
+                      [BAR]
 ")
 
 test("
@@ -2984,6 +3012,18 @@ def main {
 <stdin>:10:7: warning: Local variable \"f\" is never read
   var f double = 0 as double
       ^
+<stdin>:5:19: fix: Remove the cast
+  var a Foo = null as Foo
+                  ~~~~~~~
+                  []
+<stdin>:7:12: fix: Remove the cast
+  var c = a as Foo
+           ~~~~~~~
+           []
+<stdin>:10:19: fix: Remove the cast
+  var f double = 0 as double
+                  ~~~~~~~~~~
+                  []
 ")
 
 test("
@@ -3505,6 +3545,18 @@ def main {
 <stdin>:12:7: note: \"Foo.gfun\" is defined here
   def gfun {}
       ~~~~
+<stdin>:29:3: fix: Replace with \"Foo.gvar\"
+  Bar.gvar = 0
+  ~~~~~~~~
+  [Foo.gvar]
+<stdin>:30:3: fix: Replace with \"Foo.gvar\"
+  Baz.gvar = 0
+  ~~~~~~~~
+  [Foo.gvar]
+<stdin>:33:3: fix: Replace with \"Foo.gfun\"
+  Bar.gfun
+  ~~~~~~~~
+  [Foo.gfun]
 ")
 
 test("
@@ -3696,6 +3748,19 @@ def main {
 <stdin>:5:3: warning: Use of deprecated symbol \"Foo\"
   Foo.new
   ~~~
+")
+
+test("
+@deprecated(\"Why are you using this?\")
+def test {}
+
+def main {
+  test
+}
+", "
+<stdin>:5:3: warning: Why are you using this?
+  test
+  ~~~~
 ")
 
 test("
@@ -4630,21 +4695,21 @@ def main {
   dynamic.foo(Bar.new is Baz)
 }
 ", "
-<stdin>:7:23: warning: Unnecessary type check, type \"Foo\" is always type \"dynamic\"
+<stdin>:7:15: warning: Unnecessary type check, type \"Foo\" is always type \"dynamic\"
   dynamic.foo(Foo.new is dynamic)
-                      ~~~~~~~~~~
-<stdin>:9:23: warning: Unnecessary type check, type \"Foo\" is always type \"Foo\"
+              ~~~~~~~~~~~~~~~~~~
+<stdin>:9:15: warning: Unnecessary type check, type \"Foo\" is always type \"Foo\"
   dynamic.foo(Foo.new is Foo)
-                      ~~~~~~
+              ~~~~~~~~~~~~~~
 <stdin>:11:26: error: Cannot check against interface type \"Baz\"
   dynamic.foo(Foo.new is Baz)
                          ~~~
-<stdin>:12:23: warning: Unnecessary type check, type \"Bar\" is always type \"Foo\"
+<stdin>:12:15: warning: Unnecessary type check, type \"Bar\" is always type \"Foo\"
   dynamic.foo(Bar.new is Foo)
-                      ~~~~~~
-<stdin>:13:23: warning: Unnecessary type check, type \"Bar\" is always type \"Bar\"
+              ~~~~~~~~~~~~~~
+<stdin>:13:15: warning: Unnecessary type check, type \"Bar\" is always type \"Bar\"
   dynamic.foo(Bar.new is Bar)
-                      ~~~~~~
+              ~~~~~~~~~~~~~~
 <stdin>:14:26: error: Cannot check against interface type \"Baz\"
   dynamic.foo(Bar.new is Baz)
                          ~~~
@@ -6461,6 +6526,14 @@ var i = <int/>
 <stdin>:8:12: error: Cannot construct type \"dynamic\"
 var nope = <Nope/>
            ~~~~~~~
+<stdin>:5:16: fix: Replace with \"Bar\"
+var baz = <Foo.Baz/>
+               ~~~
+               [Bar]
+<stdin>:6:17: fix: Replace with \"Bar\"
+var baz2 = <Foo.Baz></Foo.Baz>
+                ~~~
+                [Bar]
 ")
 
 # Test child element function error
@@ -6639,6 +6712,10 @@ class Foo {
 <stdin>:13:20: error: Cannot convert from type \"int\" to type \"Foo\"
     <Foo>if true { bar + bar }</Foo>
                    ~~~~~~~~~
+<stdin>:8:10: fix: Remove parentheses
+    <Foo>(bar + bar)</Foo>
+         ~~~~~~~~~~~
+         [bar + bar]
 ")
 
 # Test XML nested children
@@ -7327,6 +7404,22 @@ class Foo {
 <stdin>:13:5: error: \"bloblobloblob\" is not declared on type \"Foo\"
   x.bloblobloblob
     ~~~~~~~~~~~~~
+<stdin>:2:5: fix: Replace with \"toString\"
+  x.string
+    ~~~~~~
+    [toString]
+<stdin>:3:5: fix: Replace with \"toString\"
+  x.toStrong
+    ~~~~~~~~
+    [toString]
+<stdin>:4:5: fix: Replace with \"toString\"
+  x.tostring
+    ~~~~~~~~
+    [toString]
+<stdin>:5:5: fix: Replace with \"toString\"
+  x.to_string
+    ~~~~~~~~~
+    [toString]
 ")
 
 # Avoid typo corrections for mismatched static/instance contexts
@@ -7394,6 +7487,22 @@ namespace Bar {
 <stdin>:15:7: note: \"Bar.xyz\" is defined here
   def xyz {}
       ~~~
+<stdin>:3:5: fix: Replace with \"Bar.abc\"
+    abc
+    ~~~
+    [Bar.abc]
+<stdin>:4:5: fix: Replace with \"Bar.xyz\"
+    xyz
+    ~~~
+    [Bar.xyz]
+<stdin>:5:5: fix: Replace with \"Bar.abc\"
+    abb
+    ~~~
+    [Bar.abc]
+<stdin>:6:5: fix: Replace with \"Bar.xyz\"
+    xyy
+    ~~~
+    [Bar.xyz]
 ")
 
 # Check name typo corrections
@@ -7479,6 +7588,34 @@ class Foo {
 <stdin>:13:9: warning: Local variable \"y\" is never read
     var y tset # This shouldn't match because it's a type context
         ^
+<stdin>:3:11: fix: Replace with \"Foo\"
+    var x Foot = Foot.new
+          ~~~~
+          [Foo]
+<stdin>:3:18: fix: Replace with \"Foo\"
+    var x Foot = Foot.new
+                 ~~~~
+                 [Foo]
+<stdin>:5:5: fix: Replace with \"Foo\"
+    Foot
+    ~~~~
+    [Foo]
+<stdin>:6:5: fix: Replace with \"test\"
+    tset # This should match because this is an instance context
+    ~~~~
+    [test]
+<stdin>:12:11: fix: Replace with \"Foo\"
+    var x Foot = Foot.new
+          ~~~~
+          [Foo]
+<stdin>:12:18: fix: Replace with \"Foo\"
+    var x Foot = Foot.new
+                 ~~~~
+                 [Foo]
+<stdin>:14:5: fix: Replace with \"Foo\"
+    Foot
+    ~~~~
+    [Foo]
 ")
 
 # Type corrections shouldn't suggest symbols that are currently being initialized
@@ -7502,6 +7639,14 @@ var fooo = Fooo
 <stdin>:1:5: note: \"foo\" is defined here
 var foo = Bar
     ~~~
+<stdin>:1:11: fix: Replace with \"bar\"
+var foo = Bar
+          ~~~
+          [bar]
+<stdin>:3:12: fix: Replace with \"foo\"
+var fooo = Fooo
+           ~~~~
+           [foo]
 ")
 
 # Check case-sensitive typo corrections
@@ -7545,6 +7690,26 @@ var e = BAR
 <stdin>:3:5: note: \"bar\" is defined here
 var bar = 0
     ~~~
+<stdin>:4:9: fix: Replace with \"Foo\"
+var a = foo
+        ~~~
+        [Foo]
+<stdin>:5:9: fix: Replace with \"FOo\"
+var b = FOO
+        ~~~
+        [FOo]
+<stdin>:6:9: fix: Replace with \"FOo\"
+var c = fOO
+        ~~~
+        [FOo]
+<stdin>:7:9: fix: Replace with \"Foo\"
+var d = foO
+        ~~~
+        [Foo]
+<stdin>:8:9: fix: Replace with \"bar\"
+var e = BAR
+        ~~~
+        [bar]
 ")
 
   }

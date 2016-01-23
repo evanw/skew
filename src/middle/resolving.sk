@@ -2872,7 +2872,7 @@ namespace Skew.Resolving {
 
       # Warn about unnecessary type checks
       else if value.resolvedType != .DYNAMIC && _cache.canImplicitlyConvert(value.resolvedType, type.resolvedType) && (type.resolvedType != .DYNAMIC || type.kind == .TYPE) {
-        _log.semanticWarningExtraTypeCheck(Range.span(node.internalRangeOrRange, type.range), value.resolvedType, type.resolvedType)
+        _log.semanticWarningExtraTypeCheck(node.range, value.resolvedType, type.resolvedType)
       }
     }
 

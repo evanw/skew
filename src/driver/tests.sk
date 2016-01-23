@@ -8,8 +8,28 @@ namespace Skew.Tests {
       rename(compactWhitespace(_input))
       var log = Log.new
       var result = compile(log, _options, [Source.new("<stdin>", _input)])
-      var output = result.outputs.isEmpty ? log.toString : "\n".join(
-        result.outputs.map<string>(source => (source.name == null ? "" : "[\(source.name)]\n") + source.contents))
+      var output string
+
+      if result.outputs.isEmpty {
+        output = log.toString
+
+        # Also append fixes for testing purposes only
+        for diagnostic in log.diagnostics {
+          if diagnostic.fixes != null {
+            for fix in diagnostic.fixes {
+              var formatted = fix.range.format(0)
+              var index = formatted.range.lastIndexOf(" ")
+              var indent = index != -1 ? formatted.range.slice(0, index + 1) : ""
+              output += fix.range.locationString + ": fix: " + fix.description + "\n"
+              output += "\(formatted.line)\n\(formatted.range)\n\(indent)[\(fix.replacement)]\n"
+            }
+          }
+        }
+      }
+
+      else {
+        output = "\n".join(result.outputs.map<string>(source => (source.name == null ? "" : "[\(source.name)]\n") + source.contents))
+      }
       expectString(trimNewlines(_expected), trimNewlines(output))
     }
 
@@ -269,10 +289,11 @@ namespace Skew.Tests {
     testSimple
 
     # Unit tests
-    testLevenshteinEditDistance
     testFormatting
+    testLevenshteinEditDistance
     testLibrary
     testNode
+    testQuoteReplacement
     testUnicode
 
     var report = Unit.TerminalReport.new

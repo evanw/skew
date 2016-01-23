@@ -121,6 +121,41 @@ namespace Skew {
   def toLowerCase(c int) int {
     return c >= 'A' && c <= 'Z' ? 'a' - 'A' + c : c
   }
+
+  def replaceSingleQuotesWithDoubleQuotes(text string) string {
+    assert(text.startsWith("'"))
+    assert(text.endsWith("'"))
+
+    var builder = StringBuilder.new
+    var start = 1
+    var limit = text.count - 1
+
+    builder.append("\"")
+
+    for i = start; i < limit; i++ {
+      var c = text[i]
+
+      if c == '\"' {
+        builder.append(text.slice(start, i))
+        builder.append("\\\"")
+        start = i + 1
+      }
+
+      else if c == '\\' {
+        if text[i + 1] == '\'' {
+          builder.append(text.slice(start, i))
+          builder.append("'")
+          start = i + 2
+        }
+        i++
+      }
+    }
+
+    builder.append(text.slice(start, limit))
+    builder.append("\"")
+
+    return builder.toString
+  }
 }
 
 namespace Skew.PrettyPrint {

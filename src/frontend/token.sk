@@ -234,7 +234,7 @@ namespace Skew {
               if tokenKind != .GREATER_THAN {
                 var start = token.range.start
                 tokens.append(Token.new(Range.new(source, start, start + 1), .PARAMETER_LIST_END))
-                token.range.start = start + 1
+                token.range = Range.new(source, start + 1, token.range.end)
                 token.kind =
                   tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
                   tokenKind == .UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :

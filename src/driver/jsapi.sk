@@ -14,6 +14,12 @@ namespace Skew.API {
         "kind": diagnostic.kind.toString.toLowerCase,
         "range": rangeToJSON(diagnostic.range),
         "text": diagnostic.text,
+        "fixes": diagnostic.fixes == null ? [] : diagnostic.fixes.map<dynamic>(fix => ({
+          "range": rangeToJSON(fix.range),
+          "expected": fix.range.toString,
+          "description": fix.description,
+          "replacement": fix.replacement,
+        }))
       }
     })
   }

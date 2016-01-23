@@ -5,9 +5,9 @@ namespace Skew {
   }
 
   class Range {
-    var source Source
-    var start int
-    var end int
+    const source Source
+    const start int
+    const end int
 
     def toString string {
       return source.contents.slice(start, end)
@@ -102,17 +102,30 @@ namespace Skew {
 
     def fromStart(count int) Range {
       assert(count >= 0 && count <= end - start)
-      return Range.new(source, start, start + count)
+      return new(source, start, start + count)
     }
 
     def fromEnd(count int) Range {
       assert(count >= 0 && count <= end - start)
-      return Range.new(source, end - count, end)
+      return new(source, end - count, end)
     }
 
     def slice(offsetStart int, offsetEnd int) Range {
       assert(offsetStart >= 0 && offsetStart <= offsetEnd && offsetEnd <= end - start)
-      return Range.new(source, start + offsetStart, start + offsetEnd)
+      return new(source, start + offsetStart, start + offsetEnd)
+    }
+
+    def rangeIncludingLeftWhitespace Range {
+      var index = start
+      var contents = source.contents
+      while index > 0 {
+        var c = contents[index - 1]
+        if c != ' ' && c != '\t' {
+          break
+        }
+        index--
+      }
+      return new(source, index, end)
     }
   }
 
@@ -120,27 +133,27 @@ namespace Skew {
     def span(start Range, end Range) Range {
       assert(start.source == end.source)
       assert(start.start <= end.end)
-      return Range.new(start.source, start.start, end.end)
+      return new(start.source, start.start, end.end)
     }
 
     def inner(start Range, end Range) Range {
       assert(start.source == end.source)
       assert(start.end <= end.start)
-      return Range.new(start.source, start.end, end.start)
+      return new(start.source, start.end, end.start)
     }
 
     def before(outer Range, inner Range) Range {
       assert(outer.source == inner.source)
       assert(outer.start <= inner.start)
       assert(outer.end >= inner.end)
-      return Range.new(outer.source, outer.start, inner.start)
+      return new(outer.source, outer.start, inner.start)
     }
 
     def after(outer Range, inner Range) Range {
       assert(outer.source == inner.source)
       assert(outer.start <= inner.start)
       assert(outer.end >= inner.end)
-      return Range.new(outer.source, inner.end, outer.end)
+      return new(outer.source, inner.end, outer.end)
     }
 
     def equal(left Range, right Range) bool {

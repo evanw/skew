@@ -47,4 +47,24 @@ namespace Skew.Tests {
     check("programming", "language", 9)
     check("testing", "(TeStInG)", 4)
   }
+
+  def testQuoteReplacement {
+    var check = (input string, expected string) => {
+      testExpect("replaceSingleQuotesWithDoubleQuotes(\(quoteString(input, .DOUBLE, .NORMAL))) == \(quoteString(expected, .DOUBLE, .NORMAL))",
+        => replaceSingleQuotesWithDoubleQuotes(input), expected)
+    }
+
+    check("''", "\"\"")
+    check("'abc'", "\"abc\"")
+
+    # Translate quotes
+    check("'abc\\'xyz'", "\"abc'xyz\"")
+    check("'abc\"xyz'", "\"abc\\\"xyz\"")
+    check("'abc\\\"xyz'", "\"abc\\\"xyz\"")
+
+    # Don't translate other escape sequences
+    check("'abc\nxyz'", "\"abc\nxyz\"")
+    check("'abc\\nxyz'", "\"abc\\nxyz\"")
+    check("'abc\\x20xyz'", "\"abc\\x20xyz\"")
+  }
 }
