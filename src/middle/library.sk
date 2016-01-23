@@ -127,6 +127,11 @@ class int {
   def toString string
 }
 
+namespace int {
+  def MIN int { return -0x80000000 }
+  def MAX int { return 0x7FFFFFFF }
+}
+
 @import
 class double {
   def + double
