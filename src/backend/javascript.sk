@@ -40,6 +40,7 @@ namespace Skew {
 
     enum SpecialVariable {
       NONE
+      AS_STRING
       EXTENDS
       IS_BOOL
       IS_DOUBLE
@@ -129,6 +130,7 @@ namespace Skew {
           _specialVariables[special] = variable
         }
       }
+      assert(SpecialVariable.AS_STRING in _specialVariables)
       assert(SpecialVariable.EXTENDS in _specialVariables)
       assert(SpecialVariable.IS_BOOL in _specialVariables)
       assert(SpecialVariable.IS_DOUBLE in _specialVariables)
@@ -2647,7 +2649,7 @@ namespace Skew {
       # Cast to string
       else if type == _cache.stringType {
         if valueType != _cache.stringType && valueType != .NULL {
-          node.become(Node.createBinary(.ADD, value.remove, _cache.createString("")).withType(_cache.stringType).withRange(node.range))
+          node.become(Node.createSymbolCall(_specialVariable(.AS_STRING)).appendChild(value.remove))
         }
       }
     }
@@ -2877,6 +2879,7 @@ namespace Skew {
     }
 
     const _specialVariableMap = {
+      "__asString": SpecialVariable.AS_STRING,
       "__extends": SpecialVariable.EXTENDS,
       "__imul": SpecialVariable.MULTIPLY,
       "__isBool": SpecialVariable.IS_BOOL,

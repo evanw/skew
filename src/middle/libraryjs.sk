@@ -14,6 +14,7 @@ const __isInt = (value dynamic) => value == (value | 0)
 const __isBool = (value dynamic) => value == !!value
 const __isDouble = (value dynamic) => value == +value || dynamic.isNaN(value)
 const __isString = (value dynamic) => dynamic.typeof(value) == \"string\"
+const __asString = (value dynamic) => value == null ? value : value + \"\"
 
 def assert(truth bool) {
   if !truth {

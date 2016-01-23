@@ -23,6 +23,30 @@ def main {
 })();
 ").js
 
+# Check primitive casting for dynamic values
+test("
+@export
+def test {
+  dynamic.foo(dynamic.x as bool)
+  dynamic.foo(dynamic.x as int)
+  dynamic.foo(dynamic.x as double)
+  dynamic.foo(dynamic.x as string)
+}
+", "
+(function() {
+  function __asString(value) {
+    return value === null ? value : value + '';
+  }
+
+  test = function() {
+    foo(!!x);
+    foo(x | 0);
+    foo(+x);
+    foo(__asString(x));
+  };
+})();
+").js
+
 # Dynamic base classes should still work
 test("
 @export
