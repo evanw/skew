@@ -5413,7 +5413,7 @@
           this._emitExpression(node.binaryLeft(), info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
 
           // Always emit spaces around keyword operators, even when minifying
-          this._emit(kind == Skew.NodeKind.IN ? ' in ' : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text) + this._space);
+          this._emit(kind == Skew.NodeKind.IN ? (left.isString() ? this._space : ' ') + 'in ' : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text) + this._space);
           this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
 
           if (needsParentheses) {

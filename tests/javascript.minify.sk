@@ -224,5 +224,16 @@ def main(x double) double {
 (function(){main=function(x){return x- -4+x+-4}})();
 ").jsMinify.foldAllConstants
 
+# Remove the space before the "in" operator
+test("
+@export
+def test {
+  dynamic.foo(dynamic.x in dynamic.y)
+  dynamic.foo(\"x\" in dynamic.y)
+}
+", "
+(function(){test=function(){foo(x in y);foo('x'in y)}})();
+").jsMinify
+
   }
 }

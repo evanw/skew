@@ -1533,7 +1533,8 @@ namespace Skew {
             _emitExpression(node.binaryLeft, info.precedence.incrementIfRightAssociative(info.associativity))
 
             # Always emit spaces around keyword operators, even when minifying
-            _emit(kind == .IN ? " in " : _space + (kind == .EQUAL ? "==" + extraEquals : kind == .NOT_EQUAL ? "!=" + extraEquals : info.text) + _space)
+            _emit(kind == .IN ? (left.isString ? _space : " ") + "in " :
+              _space + (kind == .EQUAL ? "==" + extraEquals : kind == .NOT_EQUAL ? "!=" + extraEquals : info.text) + _space)
 
             _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
             if needsParentheses {
