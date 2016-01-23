@@ -503,66 +503,75 @@ def test {
   dynamic d = null
 
   # Good
-  var a int = 0
-  var b List<int> = []
-  var c fn(int) int = x => x
-  var d dynamic = null
+  var w int = 0
+  var x List<int> = []
+  var y fn(int) int = x => x
+  var z dynamic = null
 }
 ", "
-<stdin>:3:7: error: Declare variables using \"var\" and put the type after the variable name
+<stdin>:3:3: error: Declare variables using \"var\" and put the type after the variable name
   int a = 0
-      ^
-<stdin>:4:13: error: Declare variables using \"var\" and put the type after the variable name
+  ~~~
+<stdin>:4:3: error: Declare variables using \"var\" and put the type after the variable name
   List<int> b = []
-            ^
+  ~~~~~~~~~
 <stdin>:5:11: error: Expected newline but found identifier
   fn(int) int c = x => x
           ~~~
-<stdin>:5:15: error: Declare variables using \"var\" and put the type after the variable name
+<stdin>:5:11: error: Declare variables using \"var\" and put the type after the variable name
   fn(int) int c = x => x
-              ^
+          ~~~
 <stdin>:6:11: error: Expected \".\" but found identifier
   dynamic d = null
           ^
-<stdin>:3:3: error: Unexpected type \"int\"
-  int a = 0
-  ~~~
-<stdin>:3:7: error: \"a\" is not declared
-  int a = 0
-      ^
-<stdin>:4:3: error: Unexpected type \"List<int>\"
-  List<int> b = []
-  ~~~~~~~~~
-<stdin>:4:13: error: \"b\" is not declared
-  List<int> b = []
-            ^
 <stdin>:5:3: error: \"fn\" is not declared
   fn(int) int c = x => x
   ~~
 <stdin>:5:6: error: Unexpected type \"int\"
   fn(int) int c = x => x
      ~~~
-<stdin>:5:11: error: Unexpected type \"int\"
+<stdin>:5:19: error: Unable to determine the type of \"x\"
   fn(int) int c = x => x
-          ~~~
-<stdin>:5:15: error: \"c\" is not declared
+                  ^
+<stdin>:5:19: error: Cannot convert from type \"fn(dynamic) dynamic\" to type \"int\"
   fn(int) int c = x => x
-              ^
+                  ~~~~~~
 <stdin>:6:11: error: \"d\" is not declared
   dynamic d = null
           ^
-<stdin>:9:7: warning: Local variable \"a\" is never read
-  var a int = 0
+<stdin>:3:7: warning: Local variable \"a\" is never read
+  int a = 0
       ^
-<stdin>:10:7: warning: Local variable \"b\" is never read
-  var b List<int> = []
+<stdin>:4:13: warning: Local variable \"b\" is never read
+  List<int> b = []
+            ^
+<stdin>:5:15: warning: Local variable \"c\" is never read
+  fn(int) int c = x => x
+              ^
+<stdin>:9:7: warning: Local variable \"w\" is never read
+  var w int = 0
       ^
-<stdin>:11:7: warning: Local variable \"c\" is never read
-  var c fn(int) int = x => x
+<stdin>:10:7: warning: Local variable \"x\" is never read
+  var x List<int> = []
       ^
-<stdin>:12:7: warning: Local variable \"d\" is never read
-  var d dynamic = null
+<stdin>:11:7: warning: Local variable \"y\" is never read
+  var y fn(int) int = x => x
       ^
+<stdin>:12:7: warning: Local variable \"z\" is never read
+  var z dynamic = null
+      ^
+<stdin>:3:3: fix: Declare \"a\" correctly
+  int a = 0
+  ~~~~~
+  [var a int]
+<stdin>:4:3: fix: Declare \"b\" correctly
+  List<int> b = []
+  ~~~~~~~~~~~
+  [var b List<int>]
+<stdin>:5:11: fix: Declare \"c\" correctly
+  fn(int) int c = x => x
+          ~~~~~
+          [var c int]
 ")
 
 # Check for issues with parsing type parameters and string interpolation

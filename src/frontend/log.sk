@@ -50,6 +50,25 @@ namespace Skew {
       return builder.toString
     }
 
+    # This is useful for visualizing the diagnostic fixes
+    def fixesToString string {
+      var builder = StringBuilder.new
+
+      for diagnostic in diagnostics {
+        if diagnostic.fixes != null {
+          for fix in diagnostic.fixes {
+            var formatted = fix.range.format(0)
+            var index = formatted.range.lastIndexOf(" ")
+            var indent = index != -1 ? formatted.range.slice(0, index + 1) : ""
+            builder.append(fix.range.locationString + ": fix: " + fix.description + "\n")
+            builder.append("\(formatted.line)\n\(formatted.range)\n\(indent)[\(fix.replacement)]\n")
+          }
+        }
+      }
+
+      return builder.toString
+    }
+
     def isEmpty bool {
       return diagnostics.isEmpty
     }
@@ -144,8 +163,9 @@ namespace Skew {
       error(range, "The \(kind) operator is not customizable because \(why)")
     }
 
-    def syntaxErrorVariableDeclarationNeedsVar(range Range) {
+    def syntaxErrorVariableDeclarationNeedsVar(range Range, name Range) {
       error(range, "Declare variables using \"var\" and put the type after the variable name")
+      fix(Range.span(range, name), "Declare \"\(name)\" correctly", "var \(name) \(range)")
     }
 
     def syntaxErrorXMLClosingTagMismatch(range Range, found string, expected string, openingRange Range) {

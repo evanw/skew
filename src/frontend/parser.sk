@@ -186,9 +186,15 @@ namespace Skew.Parsing {
     return annotations
   }
 
-  def parseVarOrConst(context ParserContext) Node {
+  # When the type is present, this parses something like "int x = 0"
+  def parseVariables(context ParserContext, type Node) Node {
     var variables = Node.createVariables
-    var token = context.next
+    var token = context.current
+
+    # Skip "var" or "const" if present
+    if type == null {
+      context.next
+    }
 
     while true {
       var range = context.current.range
@@ -204,7 +210,9 @@ namespace Skew.Parsing {
         symbol.flags |= .IS_CONST
       }
 
-      if peekType(context) {
+      if type != null {
+        symbol.type = type.clone
+      } else if peekType(context) {
         symbol.type = parseType(context)
       }
 
@@ -219,7 +227,7 @@ namespace Skew.Parsing {
       }
     }
 
-    return variables.withRange(context.spanSince(token.range))
+    return variables.withRange(context.spanSince(type != null ? type.range : token.range))
   }
 
   def parseJump(context ParserContext) Node {
@@ -443,7 +451,7 @@ namespace Skew.Parsing {
 
     switch token.kind {
       case .BREAK, .CONTINUE { return parseJump(context) }
-      case .CONST, .VAR { return parseVarOrConst(context) }
+      case .CONST, .VAR { return parseVariables(context, null) }
       case .FOR { return parseFor(context) }
       case .IF { return parseIf(context) }
       case .RETURN { return parseReturn(context) }
@@ -458,7 +466,8 @@ namespace Skew.Parsing {
 
     # A special case for better errors when users try to use C-style variable declarations
     if !value.isInsideParentheses && looksLikeType(value) && context.peek(.IDENTIFIER) && context.canReportSyntaxError {
-      context.log.syntaxErrorVariableDeclarationNeedsVar(context.current.range)
+      context.log.syntaxErrorVariableDeclarationNeedsVar(value.range, context.current.range)
+      return parseVariables(context, value)
     }
 
     var node = Node.createExpression(value).withRange(value.range)

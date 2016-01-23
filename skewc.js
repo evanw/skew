@@ -9516,8 +9516,9 @@
     this.error(range, 'The ' + Skew.in_TokenKind.toString(kind) + ' operator is not customizable because ' + why);
   };
 
-  Skew.Log.prototype.syntaxErrorVariableDeclarationNeedsVar = function(range) {
+  Skew.Log.prototype.syntaxErrorVariableDeclarationNeedsVar = function(range, name) {
     this.error(range, 'Declare variables using "var" and put the type after the variable name');
+    this.fix(Skew.Range.span(range, name), 'Declare "' + name.toString() + '" correctly', 'var ' + name.toString() + ' ' + range.toString());
   };
 
   Skew.Log.prototype.syntaxErrorXMLClosingTagMismatch = function(range, found, expected, openingRange) {
@@ -10316,9 +10317,15 @@
     return annotations;
   };
 
-  Skew.Parsing.parseVarOrConst = function(context) {
+  // When the type is present, this parses something like "int x = 0"
+  Skew.Parsing.parseVariables = function(context, type) {
     var variables = new Skew.Node(Skew.NodeKind.VARIABLES);
-    var token = context.next();
+    var token = context.current();
+
+    // Skip "var" or "const" if present
+    if (type == null) {
+      context.next();
+    }
 
     while (true) {
       var range = context.current().range;
@@ -10334,7 +10341,11 @@
         symbol.flags |= Skew.SymbolFlags.IS_CONST;
       }
 
-      if (Skew.Parsing.peekType(context)) {
+      if (type != null) {
+        symbol.type = type.clone();
+      }
+
+      else if (Skew.Parsing.peekType(context)) {
         symbol.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
       }
 
@@ -10349,7 +10360,7 @@
       }
     }
 
-    return variables.withRange(context.spanSince(token.range));
+    return variables.withRange(context.spanSince(type != null ? type.range : token.range));
   };
 
   Skew.Parsing.parseJump = function(context) {
@@ -10594,7 +10605,7 @@
 
       case Skew.TokenKind.CONST:
       case Skew.TokenKind.VAR: {
-        return Skew.Parsing.parseVarOrConst(context);
+        return Skew.Parsing.parseVariables(context, null);
       }
 
       case Skew.TokenKind.FOR: {
@@ -10631,7 +10642,8 @@
 
     // A special case for better errors when users try to use C-style variable declarations
     if (!value.isInsideParentheses() && Skew.Parsing.looksLikeType(value) && context.peek(Skew.TokenKind.IDENTIFIER) && context.canReportSyntaxError()) {
-      context.log.syntaxErrorVariableDeclarationNeedsVar(context.current().range);
+      context.log.syntaxErrorVariableDeclarationNeedsVar(value.range, context.current().range);
+      return Skew.Parsing.parseVariables(context, value);
     }
 
     var node = Skew.Node.createExpression(value).withRange(value.range);

@@ -11,25 +11,11 @@ namespace Skew.Tests {
       var output string
 
       if result.outputs.isEmpty {
-        output = log.toString
-
-        # Also append fixes for testing purposes only
-        for diagnostic in log.diagnostics {
-          if diagnostic.fixes != null {
-            for fix in diagnostic.fixes {
-              var formatted = fix.range.format(0)
-              var index = formatted.range.lastIndexOf(" ")
-              var indent = index != -1 ? formatted.range.slice(0, index + 1) : ""
-              output += fix.range.locationString + ": fix: " + fix.description + "\n"
-              output += "\(formatted.line)\n\(formatted.range)\n\(indent)[\(fix.replacement)]\n"
-            }
-          }
-        }
-      }
-
-      else {
+        output = log.toString + log.fixesToString
+      } else {
         output = "\n".join(result.outputs.map<string>(source => (source.name == null ? "" : "[\(source.name)]\n") + source.contents))
       }
+
       expectString(trimNewlines(_expected), trimNewlines(output))
     }
 
