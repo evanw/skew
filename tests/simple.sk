@@ -7712,5 +7712,32 @@ var e = BAR
         [bar]
 ")
 
+# Check comment corrections
+test("
+var x int = false //this is a test
+var y int = false // this is also a test
+", "
+<stdin>:1:19: error: Comments start with \"#\" instead of \"//\"
+var x int = false //this is a test
+                  ~~~~~~~~~~~~~~~~
+<stdin>:2:19: error: Comments start with \"#\" instead of \"//\"
+var y int = false // this is also a test
+                  ~~~~~~~~~~~~~~~~~~~~~~
+<stdin>:1:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+var x int = false //this is a test
+            ~~~~~
+<stdin>:2:13: error: Cannot convert from type \"bool\" to type \"int\" without a cast
+var y int = false // this is also a test
+            ~~~~~
+<stdin>:1:19: fix: Replace \"//\" with \"#\"
+var x int = false //this is a test
+                  ~~~~~~~~~~~~~~~~
+                  [#this is a test]
+<stdin>:2:19: fix: Replace \"//\" with \"#\"
+var y int = false // this is also a test
+                  ~~~~~~~~~~~~~~~~~~~~~~
+                  [# this is also a test]
+")
+
   }
 }

@@ -3,6 +3,7 @@
 \n[ \t\r\n]*                      NEWLINE;
 [ \t\r]+                          WHITESPACE;
 #.*\n?                            COMMENT;
+\/\/.*\n?                         COMMENT_ERROR;
 
 "as"                              AS;
 "break"                           BREAK;

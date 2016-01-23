@@ -165,7 +165,7 @@ namespace Skew {
       }
 
       # This is the default action in flex, which is usually called ECHO
-      if yy_act == .ERROR {
+      else if yy_act == .ERROR {
         var iterator = Unicode.StringIterator.INSTANCE.reset(text, yy_bp)
         iterator.nextCodePoint
         var range = Range.new(source, yy_bp, iterator.index)
@@ -174,6 +174,12 @@ namespace Skew {
       }
 
       var token = Token.new(Range.new(source, yy_bp, yy_cp), yy_act)
+
+      # Have a nice error message for "//" comments
+      if token.kind == .COMMENT_ERROR {
+        log.syntaxErrorSlashComment(token.range)
+        token.kind = .COMMENT
+      }
 
       # Tokens that start with a greater than may need to be split, potentially multiple times
       var loop = true

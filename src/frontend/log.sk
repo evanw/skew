@@ -142,6 +142,18 @@ namespace Skew {
       error(range, "Syntax error \"\(text == "\"" ? "\\\"": text)\"")
     }
 
+    def syntaxErrorSlashComment(range Range) {
+      error(range, "Comments start with \"#\" instead of \"//\"")
+      var text = range.toString
+      var last = text.count - 1
+      assert(text.startsWith("//"))
+      if text[last] == '\n' {
+        text = text.slice(0, last)
+        range = range.fromStart(last)
+      }
+      fix(range, "Replace \"//\" with \"#\"", "#" + text.slice(2))
+    }
+
     def syntaxErrorUnexpectedToken(token Token) {
       error(token.range, "Unexpected \(token.kind)")
     }
