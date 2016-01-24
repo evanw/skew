@@ -762,7 +762,7 @@ namespace Skew.Parsing {
     "class": .OBJECT_CLASS,
     "def": .FUNCTION_GLOBAL,
     "enum": .OBJECT_ENUM,
-    "flags": .OBJECT_ENUM,
+    "flags": .OBJECT_FLAGS,
     "interface": .OBJECT_INTERFACE,
     "namespace": .OBJECT_NAMESPACE,
     "over": .FUNCTION_GLOBAL,
@@ -917,14 +917,14 @@ namespace Skew.Parsing {
     var text = token.range.toString
     var symbol Symbol = null
 
-    # Special-case enum symbols
-    if parent.kind == .OBJECT_ENUM && token.kind == .IDENTIFIER && !(text in identifierToSymbolKind) {
+    # Special-case enum and flags symbols
+    if parent.kind.isEnumOrFlags && token.kind == .IDENTIFIER && !(text in identifierToSymbolKind) {
       while true {
         if text in identifierToSymbolKind || !context.expect(.IDENTIFIER) {
           break
         }
 
-        var variable = VariableSymbol.new(.VARIABLE_ENUM, text)
+        var variable = VariableSymbol.new(.VARIABLE_ENUM_OR_FLAGS, text)
         variable.range = token.range
         variable.parent = parent
         variable.flags |= .IS_CONST
@@ -1132,14 +1132,10 @@ namespace Skew.Parsing {
           symbol = function
         }
 
-        case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
+        case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_FLAGS, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
           var object = ObjectSymbol.new(kind, name)
           object.range = range
           object.parent = parent
-
-          if text == "flags" {
-            object.flags |= .IS_FLAGS
-          }
 
           if kind != .OBJECT_NAMESPACE && context.eat(.PARAMETER_LIST_START) {
             object.parameters = parseTypeParameters(context, .PARAMETER_OBJECT)
@@ -1199,8 +1195,8 @@ namespace Skew.Parsing {
         }
       }
 
-      # Forbid certain kinds of symbols inside enums and wrapped types
-      if (parent.kind == .OBJECT_ENUM || parent.kind == .OBJECT_WRAPPED || parent.kind == .OBJECT_INTERFACE) && (
+      # Forbid certain kinds of symbols inside certain object types
+      if (parent.kind.isEnumOrFlags || parent.kind == .OBJECT_WRAPPED || parent.kind == .OBJECT_INTERFACE) && (
           kind == .FUNCTION_CONSTRUCTOR || kind == .VARIABLE_INSTANCE) {
         context.log.syntaxErrorBadDeclarationInsideType(context.spanSince(token.range))
       }

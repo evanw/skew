@@ -43,7 +43,7 @@ namespace Skew.IDE {
           }
         }
 
-        case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
+        case .VARIABLE_ARGUMENT, .VARIABLE_ENUM_OR_FLAGS, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
           var value = symbol.asVariableSymbol.value
           text += "\(symbol.isConst ? "const" : "var") \(symbol.name)"
           text += resolvedType != null ? " \(resolvedType)" : " dynamic"
@@ -79,7 +79,11 @@ namespace Skew.IDE {
         }
 
         case .OBJECT_ENUM {
-          text += "\(symbol.isFlags ? "flags" : "enum") \(symbol.name)"
+          text += "enum \(symbol.name)"
+        }
+
+        case .OBJECT_FLAGS {
+          text += "flags \(symbol.name)"
         }
 
         case .OBJECT_INTERFACE {

@@ -46,12 +46,12 @@ namespace Skew.Motion {
       return false
     })
 
-    # Move stuff off of enums
-    if symbol.kind == .OBJECT_ENUM {
+    # Move stuff off of enums and flags
+    if symbol.kind.isEnumOrFlags {
       symbol.objects.each(object => moveSymbolIntoNewNamespace(object, namespaces).objects.append(object))
       symbol.functions.each(function => moveSymbolIntoNewNamespace(function, namespaces).functions.append(function))
       symbol.variables.removeIf(variable => {
-        if variable.kind != .VARIABLE_ENUM {
+        if variable.kind != .VARIABLE_ENUM_OR_FLAGS {
           moveSymbolIntoNewNamespace(variable, namespaces).variables.append(variable)
           return true
         }

@@ -60,13 +60,13 @@ namespace Skew {
 
       # Convert "flags" types to wrapped types
       for object in objects {
-        if object.kind == .OBJECT_ENUM && object.isFlags {
+        if object.kind == .OBJECT_FLAGS {
           object.kind = .OBJECT_WRAPPED
           object.wrappedType = _cache.intType
 
           # Enum values become normal global variables
           for variable in object.variables {
-            if variable.kind == .VARIABLE_ENUM {
+            if variable.kind == .VARIABLE_ENUM_OR_FLAGS {
               variable.kind = .VARIABLE_GLOBAL
               variable.flags |= .IS_CSHARP_CONST
             }
@@ -267,7 +267,7 @@ namespace Skew {
       }
       switch symbol.kind {
         case .OBJECT_CLASS, .OBJECT_NAMESPACE { _emit("class ") }
-        case .OBJECT_ENUM { _emit("enum ") }
+        case .OBJECT_ENUM, .OBJECT_FLAGS { _emit("enum ") }
         case .OBJECT_INTERFACE { _emit("interface ") }
         case .OBJECT_WRAPPED { _emit("static class ") }
         default { assert(false) }
@@ -338,7 +338,7 @@ namespace Skew {
 
       _emitNewlineBeforeSymbol(symbol)
       _emitComments(symbol.comments)
-      if symbol.kind == .VARIABLE_ENUM {
+      if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
         _emit(_indent + _mangleName(symbol))
         if symbol.value != null {
           _emit(" = ")

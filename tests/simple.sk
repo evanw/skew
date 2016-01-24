@@ -5971,6 +5971,27 @@ var foo = (x bool = true) => {}
                   ~~~~~~
 ")
 
+# Merging shouldn't be allowed between enums and flags
+test("
+enum Foo { A, B }
+flags Foo { C, D }
+flags Bar { A, B }
+enum Bar { C, D }
+", "
+<stdin>:2:7: error: \"Foo\" is already declared
+flags Foo { C, D }
+      ~~~
+<stdin>:1:6: note: The previous declaration is here
+enum Foo { A, B }
+     ~~~
+<stdin>:4:6: error: \"Bar\" is already declared
+enum Bar { C, D }
+     ~~~
+<stdin>:3:7: note: The previous declaration is here
+flags Bar { A, B }
+      ~~~
+")
+
 # Check for bugs with symbol merging and generics
 test("
 class Foo<X> {

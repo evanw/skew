@@ -59,7 +59,7 @@ namespace Skew.Resolving {
     # optimize functions with try-catch statements
     def _initializeSymbolSwitch(symbol Symbol) {
       switch symbol.kind {
-        case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
+        case .OBJECT_CLASS, .OBJECT_ENUM, .OBJECT_FLAGS, .OBJECT_GLOBAL, .OBJECT_INTERFACE, .OBJECT_NAMESPACE, .OBJECT_WRAPPED {
           _initializeObject(symbol.asObjectSymbol)
         }
 
@@ -67,7 +67,7 @@ namespace Skew.Resolving {
           _initializeFunction(symbol.asFunctionSymbol)
         }
 
-        case .VARIABLE_ARGUMENT, .VARIABLE_ENUM, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
+        case .VARIABLE_ARGUMENT, .VARIABLE_ENUM_OR_FLAGS, .VARIABLE_GLOBAL, .VARIABLE_INSTANCE, .VARIABLE_LOCAL {
           _initializeVariable(symbol.asVariableSymbol)
         }
 
@@ -187,7 +187,7 @@ namespace Skew.Resolving {
       }
 
       # Special-case enums
-      else if type.isEnum {
+      else if type.isEnumOrFlags {
         node = Node.createDot(null, value)
       }
 
@@ -348,16 +348,16 @@ namespace Skew.Resolving {
         }
       }
 
-      # Assign values for all enums before they are initialized
-      if kind == .OBJECT_ENUM {
-        var nextEnumValue = 0
+      # Assign values for all enums and flags before they are initialized
+      if kind.isEnumOrFlags {
+        var nextValue = 0
         for variable in symbol.variables {
-          if variable.kind == .VARIABLE_ENUM {
-            if nextEnumValue >= 32 && symbol.isFlags {
+          if variable.kind == .VARIABLE_ENUM_OR_FLAGS {
+            if nextValue >= 32 && kind == .OBJECT_FLAGS {
               _log.semanticErrorTooManyFlags(variable.range, symbol.name)
             }
-            variable.value = Node.createInt(symbol.isFlags ? 1 << nextEnumValue : nextEnumValue).withType(symbol.resolvedType).withRange(variable.range)
-            nextEnumValue++
+            variable.value = Node.createInt(kind == .OBJECT_FLAGS ? 1 << nextValue : nextValue).withType(symbol.resolvedType).withRange(variable.range)
+            nextValue++
           }
         }
         symbol.flags |= .IS_VALUE_TYPE
@@ -398,7 +398,7 @@ namespace Skew.Resolving {
       }
 
       # Create a default toString if one doesn't exist
-      if kind == .OBJECT_ENUM && !symbol.isImported && !symbol.isFlags && !("toString" in symbol.members) {
+      if kind == .OBJECT_ENUM && !symbol.isImported && !("toString" in symbol.members) {
         var generated = FunctionSymbol.new(.FUNCTION_INSTANCE, "toString")
         generated.scope = FunctionScope.new(symbol.scope, generated)
         generated.flags |= .IS_AUTOMATICALLY_GENERATED
@@ -949,8 +949,8 @@ namespace Skew.Resolving {
       _initializeSymbol(parent)
 
       for variable in parent.variables {
-        if variable.kind == .VARIABLE_ENUM {
-          assert(variable.enumValue == names.childCount)
+        if variable.kind == .VARIABLE_ENUM_OR_FLAGS {
+          assert(variable.value.asInt == names.childCount)
           names.appendChild(Node.createString(variable.name))
         }
       }
@@ -1088,7 +1088,7 @@ namespace Skew.Resolving {
       }
 
       # Enums take their type from their parent
-      else if symbol.kind == .VARIABLE_ENUM {
+      else if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
         symbol.resolvedType = symbol.parent.resolvedType
       }
 
@@ -1124,7 +1124,7 @@ namespace Skew.Resolving {
       _resolveAnnotations(symbol)
 
       # Run post-annotation checks
-      if symbol.resolvedType != .DYNAMIC && symbol.isConst && !symbol.isImported && value == null && symbol.kind != .VARIABLE_ENUM && symbol.kind != .VARIABLE_INSTANCE {
+      if symbol.resolvedType != .DYNAMIC && symbol.isConst && !symbol.isImported && value == null && symbol.kind != .VARIABLE_ENUM_OR_FLAGS && symbol.kind != .VARIABLE_INSTANCE {
         _log.semanticErrorConstMissingValue(symbol.range, symbol.name)
       }
     }
@@ -1137,7 +1137,7 @@ namespace Skew.Resolving {
       }
 
       # Default-initialize variables
-      else if symbol.kind != .VARIABLE_ARGUMENT && symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM {
+      else if symbol.kind != .VARIABLE_ARGUMENT && symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM_OR_FLAGS {
         symbol.value = _createDefaultValueForType(symbol.resolvedType, symbol.range)
       }
     }
@@ -1157,7 +1157,7 @@ namespace Skew.Resolving {
         return Node.createBool(false).withType(type)
       }
 
-      if unwrapped.isEnum {
+      if unwrapped.isEnumOrFlags {
         return Node.createCast(_cache.createInt(0), Node.createType(type)).withType(type)
       }
 
@@ -1823,7 +1823,7 @@ namespace Skew.Resolving {
 
           # Check for a constant variable, which may just be read-only with a
           # value determined at runtime
-          if symbol != null && (mustEnsureConstantIntegers ? symbol.kind == .VARIABLE_ENUM : symbol.kind.isVariable && symbol.isConst) {
+          if symbol != null && (mustEnsureConstantIntegers ? symbol.kind == .VARIABLE_ENUM_OR_FLAGS : symbol.kind.isVariable && symbol.isConst) {
             var constant = _constantFolder.constantForSymbol(symbol.asVariableSymbol)
             if constant == null || constant.kind != .INT {
               allValuesAreIntegers = false
@@ -2241,7 +2241,7 @@ namespace Skew.Resolving {
         case .STRING { node.resolvedType = _cache.stringType }
 
         # The literal "0" represents the empty set for "flags" types
-        case .INT { node.resolvedType = context != null && context.isEnumFlags && node.asInt == 0 ? context : _cache.intType }
+        case .INT { node.resolvedType = context != null && context.isFlags && node.asInt == 0 ? context : _cache.intType }
 
         default { assert(false) }
       }
@@ -3205,7 +3205,7 @@ namespace Skew.Resolving {
       var target = reverseBinaryOrder ? second : first
       var other = kind.isBinary ? reverseBinaryOrder ? first : second : null
       var isBitOperation = kind.isBitOperation
-      var bitContext = isBitOperation && context != null && context.isEnumFlags ? context : null
+      var bitContext = isBitOperation && context != null && context.isFlags ? context : null
 
       # Allow "foo in [.FOO, .BAR]"
       if kind == .IN && target.kind == .INITIALIZER_LIST && !_needsTypeContext(other) {
@@ -3260,15 +3260,15 @@ namespace Skew.Resolving {
           }
 
           # Check if the target is an enum
-          else if type.isEnum {
-            _resolveAsParameterizedExpressionWithTypeContext(other, scope, bitContext ?? ((isBitOperation || kind == .IN) && type.isEnumFlags ? type : null))
+          else if type.isEnumOrFlags {
+            _resolveAsParameterizedExpressionWithTypeContext(other, scope, bitContext ?? ((isBitOperation || kind == .IN) && type.isFlags ? type : null))
 
             # Auto-convert enums to ints when both operands can be converted
             if _cache.isNumeric(other.resolvedType) {
               type = _cache.commonImplicitType(type, other.resolvedType)
               assert(type != null)
-              if type.isEnum {
-                if type.isEnumFlags {
+              if type.isEnumOrFlags {
+                if type.isFlags {
                   enumFlagsType = type
                 }
                 type = _cache.intType
@@ -3280,7 +3280,7 @@ namespace Skew.Resolving {
         }
 
         # Allow certain operations on "flags" types
-        else if isBitOperation && type.isEnumFlags {
+        else if isBitOperation && type.isFlags {
           _resolveAsParameterizedExpressionWithTypeContext(other, scope, type)
           enumFlagsType = type
           type = _cache.intType
@@ -3289,8 +3289,8 @@ namespace Skew.Resolving {
       }
 
       # Allow "~x" on "flags" types
-      else if kind == .COMPLEMENT && type.isEnum {
-        if type.isEnumFlags {
+      else if kind == .COMPLEMENT && type.isEnumOrFlags {
+        if type.isFlags {
           enumFlagsType = type
         }
         type = _cache.intType

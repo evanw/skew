@@ -56,7 +56,7 @@ namespace Skew {
     }
 
     def isEquivalentToInt(type Type) bool {
-      return unwrappedType(type) == intType || type.isEnum
+      return isInteger(unwrappedType(type))
     }
 
     def isEquivalentToDouble(type Type) bool {
@@ -68,7 +68,7 @@ namespace Skew {
     }
 
     def isInteger(type Type) bool {
-      return type == intType || type.isEnum
+      return type == intType || type.isEnumOrFlags
     }
 
     def isNumeric(type Type) bool {
@@ -145,7 +145,7 @@ namespace Skew {
       if from == intType && to == doubleType { return true }
       if isBaseType(from, to) { return true }
       if isImplementedInterface(from, to) { return true }
-      if from.isEnum && !to.isEnum && isNumeric(to) { return true }
+      if from.isEnumOrFlags && !to.isEnumOrFlags && isNumeric(to) { return true }
       return false
     }
 
@@ -156,7 +156,7 @@ namespace Skew {
       if _canCastToNumeric(from) && _canCastToNumeric(to) { return true }
       if isBaseType(to, from) { return true }
       if isImplementedInterface(to, from) { return true }
-      if to.isEnum && isNumeric(from) { return true }
+      if to.isEnumOrFlags && isNumeric(from) { return true }
       return false
     }
 

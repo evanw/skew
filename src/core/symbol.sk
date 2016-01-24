@@ -5,6 +5,7 @@ namespace Skew {
 
     OBJECT_CLASS
     OBJECT_ENUM
+    OBJECT_FLAGS
     OBJECT_GLOBAL
     OBJECT_INTERFACE
     OBJECT_NAMESPACE
@@ -21,7 +22,7 @@ namespace Skew {
     OVERLOADED_INSTANCE
 
     VARIABLE_ARGUMENT
-    VARIABLE_ENUM
+    VARIABLE_ENUM_OR_FLAGS
     VARIABLE_GLOBAL
     VARIABLE_INSTANCE
     VARIABLE_LOCAL
@@ -36,6 +37,10 @@ namespace Skew {
 
     def isObject bool {
       return self >= OBJECT_CLASS && self <= OBJECT_WRAPPED
+    }
+
+    def isEnumOrFlags bool {
+      return self == OBJECT_ENUM || self == OBJECT_FLAGS
     }
 
     def isFunction bool {
@@ -64,13 +69,13 @@ namespace Skew {
 
     def isGlobalReference bool {
       return
-        self == VARIABLE_ENUM || self == VARIABLE_GLOBAL ||
+        self == VARIABLE_ENUM_OR_FLAGS || self == VARIABLE_GLOBAL ||
         self == FUNCTION_GLOBAL || self == FUNCTION_CONSTRUCTOR ||
         self == OVERLOADED_GLOBAL || isType
     }
 
     def hasInstances bool {
-      return self == OBJECT_CLASS || self == OBJECT_ENUM || self == OBJECT_INTERFACE || self == OBJECT_WRAPPED
+      return self == OBJECT_CLASS || self == OBJECT_ENUM || self == OBJECT_FLAGS || self == OBJECT_INTERFACE || self == OBJECT_WRAPPED
     }
 
     def isOnInstances bool {
@@ -92,7 +97,6 @@ namespace Skew {
     # Internal
     IS_AUTOMATICALLY_GENERATED
     IS_CONST
-    IS_FLAGS
     IS_GETTER
     IS_LOOP_VARIABLE
     IS_OVER
@@ -150,7 +154,6 @@ namespace Skew {
     # Flags
     def isAutomaticallyGenerated bool { return .IS_AUTOMATICALLY_GENERATED in flags }
     def isConst bool                  { return .IS_CONST in flags }
-    def isFlags bool                  { return .IS_FLAGS in flags }
     def isGetter bool                 { return .IS_GETTER in flags }
     def isLoopVariable bool           { return .IS_LOOP_VARIABLE in flags }
     def isOver bool                   { return .IS_OVER in flags }
@@ -381,11 +384,6 @@ namespace Skew {
   class VariableSymbol : Symbol {
     var type Node = null
     var value Node = null
-
-    def enumValue int {
-      assert(kind == .VARIABLE_ENUM)
-      return value.asInt
-    }
 
     def clone VariableSymbol {
       var clone = new(kind, name)

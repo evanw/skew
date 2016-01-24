@@ -1206,7 +1206,7 @@
     for (var i1 = 0, list1 = objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
       var object = in_List.get(list1, i1);
 
-      if (object.kind == Skew.SymbolKind.OBJECT_ENUM && object.isFlags()) {
+      if (object.kind == Skew.SymbolKind.OBJECT_FLAGS) {
         object.kind = Skew.SymbolKind.OBJECT_WRAPPED;
         object.wrappedType = this._cache.intType;
 
@@ -1214,7 +1214,7 @@
         for (var i = 0, list = object.variables, count = list.length; i < count; i = i + 1 | 0) {
           var variable = in_List.get(list, i);
 
-          if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
+          if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
             variable.kind = Skew.SymbolKind.VARIABLE_GLOBAL;
             variable.flags |= Skew.SymbolFlags.IS_CSHARP_CONST;
           }
@@ -1441,7 +1441,8 @@
         break;
       }
 
-      case Skew.SymbolKind.OBJECT_ENUM: {
+      case Skew.SymbolKind.OBJECT_ENUM:
+      case Skew.SymbolKind.OBJECT_FLAGS: {
         this._emit('enum ');
         break;
       }
@@ -1553,7 +1554,7 @@
     this._emitNewlineBeforeSymbol(symbol);
     this._emitComments(symbol.comments);
 
-    if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM) {
+    if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
       this._emit(this._indent + Skew.CSharpEmitter._mangleName(symbol));
 
       if (symbol.value != null) {
@@ -2631,7 +2632,8 @@
     }
 
     switch (symbol.kind) {
-      case Skew.SymbolKind.OBJECT_ENUM: {
+      case Skew.SymbolKind.OBJECT_ENUM:
+      case Skew.SymbolKind.OBJECT_FLAGS: {
         this._adjustNamespace(symbol);
         this._emitNewlineBeforeSymbol(symbol, Skew.CPlusPlusEmitter.CodeMode.DECLARE);
         this._emit(this._indent + 'enum struct ' + Skew.CPlusPlusEmitter._mangleName(symbol) + ' {\n');
@@ -2871,7 +2873,7 @@
 
     this._emitNewlineBeforeSymbol(symbol, mode);
 
-    if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM) {
+    if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
       this._emit(this._indent + Skew.CPlusPlusEmitter._mangleName(symbol) + ',\n');
     }
 
@@ -3252,7 +3254,7 @@
       }
 
       case Skew.NodeKind.CONSTANT: {
-        if (node.resolvedType.isEnum()) {
+        if (node.resolvedType.isEnumOrFlags()) {
           this._emit('(');
           this._emitType(node.resolvedType, Skew.CPlusPlusEmitter.CppEmitType.NORMAL);
           this._emit(')');
@@ -4440,7 +4442,7 @@
   Skew.JavaScriptEmitter.prototype._emitNewlineBeforeSymbol = function(symbol) {
     this._emitSemicolonIfNeeded();
 
-    if (!this._minify && this._previousSymbol != null && (!Skew.in_SymbolKind.isObject(this._previousSymbol.kind) || !Skew.in_SymbolKind.isObject(symbol.kind) || symbol.comments != null || this._previousSymbol.kind == Skew.SymbolKind.OBJECT_ENUM || symbol.kind == Skew.SymbolKind.OBJECT_ENUM) && (!Skew.in_SymbolKind.isVariable(this._previousSymbol.kind) || !Skew.in_SymbolKind.isVariable(symbol.kind) || symbol.comments != null)) {
+    if (!this._minify && this._previousSymbol != null && (!Skew.in_SymbolKind.isObject(this._previousSymbol.kind) || !Skew.in_SymbolKind.isObject(symbol.kind) || symbol.comments != null || Skew.in_SymbolKind.isEnumOrFlags(this._previousSymbol.kind) || Skew.in_SymbolKind.isEnumOrFlags(symbol.kind)) && (!Skew.in_SymbolKind.isVariable(this._previousSymbol.kind) || !Skew.in_SymbolKind.isVariable(symbol.kind) || symbol.comments != null)) {
       this._emit('\n');
     }
 
@@ -4499,7 +4501,8 @@
         break;
       }
 
-      case Skew.SymbolKind.OBJECT_ENUM: {
+      case Skew.SymbolKind.OBJECT_ENUM:
+      case Skew.SymbolKind.OBJECT_FLAGS: {
         this._emitNewlineBeforeSymbol(symbol);
         this._emitComments(symbol.comments);
         this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{');
@@ -4509,7 +4512,7 @@
         for (var i = 0, list = symbol.variables, count = list.length; i < count; i = i + 1 | 0) {
           var variable = in_List.get(list, i);
 
-          if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
+          if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
             if (isFirst) {
               isFirst = false;
             }
@@ -4673,7 +4676,7 @@
       return;
     }
 
-    if (symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM && (symbol.value != null || this._namespacePrefix == '' || Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind))) {
+    if (symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS && (symbol.value != null || this._namespacePrefix == '' || Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind))) {
       this._emitNewlineBeforeSymbol(symbol);
       this._emitComments(symbol.comments);
       this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() || Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind) ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol));
@@ -5629,7 +5632,7 @@
       node.become(Skew.Node.createSymbolCall(this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.IS_BOOL)).appendChild(value.remove()));
     }
 
-    else if (type == this._cache.intType || type.isEnum()) {
+    else if (this._cache.isInteger(type)) {
       node.become(Skew.Node.createSymbolCall(this._specialVariable(Skew.JavaScriptEmitter.SpecialVariable.IS_INT)).appendChild(value.remove()));
     }
 
@@ -8789,23 +8792,24 @@
     PARAMETER_OBJECT: 1,
     OBJECT_CLASS: 2,
     OBJECT_ENUM: 3,
-    OBJECT_GLOBAL: 4,
-    OBJECT_INTERFACE: 5,
-    OBJECT_NAMESPACE: 6,
-    OBJECT_WRAPPED: 7,
-    FUNCTION_ANNOTATION: 8,
-    FUNCTION_CONSTRUCTOR: 9,
-    FUNCTION_GLOBAL: 10,
-    FUNCTION_INSTANCE: 11,
-    FUNCTION_LOCAL: 12,
-    OVERLOADED_ANNOTATION: 13,
-    OVERLOADED_GLOBAL: 14,
-    OVERLOADED_INSTANCE: 15,
-    VARIABLE_ARGUMENT: 16,
-    VARIABLE_ENUM: 17,
-    VARIABLE_GLOBAL: 18,
-    VARIABLE_INSTANCE: 19,
-    VARIABLE_LOCAL: 20
+    OBJECT_FLAGS: 4,
+    OBJECT_GLOBAL: 5,
+    OBJECT_INTERFACE: 6,
+    OBJECT_NAMESPACE: 7,
+    OBJECT_WRAPPED: 8,
+    FUNCTION_ANNOTATION: 9,
+    FUNCTION_CONSTRUCTOR: 10,
+    FUNCTION_GLOBAL: 11,
+    FUNCTION_INSTANCE: 12,
+    FUNCTION_LOCAL: 13,
+    OVERLOADED_ANNOTATION: 14,
+    OVERLOADED_GLOBAL: 15,
+    OVERLOADED_INSTANCE: 16,
+    VARIABLE_ARGUMENT: 17,
+    VARIABLE_ENUM_OR_FLAGS: 18,
+    VARIABLE_GLOBAL: 19,
+    VARIABLE_INSTANCE: 20,
+    VARIABLE_LOCAL: 21
   };
 
   Skew.SymbolState = {
@@ -8818,35 +8822,34 @@
     // Internal
     IS_AUTOMATICALLY_GENERATED: 1,
     IS_CONST: 2,
-    IS_FLAGS: 4,
-    IS_GETTER: 8,
-    IS_LOOP_VARIABLE: 16,
-    IS_OVER: 32,
-    IS_SETTER: 64,
-    IS_VALUE_TYPE: 128,
-    SHOULD_INFER_RETURN_TYPE: 256,
+    IS_GETTER: 4,
+    IS_LOOP_VARIABLE: 8,
+    IS_OVER: 16,
+    IS_SETTER: 32,
+    IS_VALUE_TYPE: 64,
+    SHOULD_INFER_RETURN_TYPE: 128,
 
     // Modifiers
-    IS_DEPRECATED: 512,
-    IS_ENTRY_POINT: 1024,
-    IS_EXPORTED: 2048,
-    IS_IMPORTED: 4096,
-    IS_INLINING_FORCED: 8192,
-    IS_INLINING_PREVENTED: 16384,
-    IS_PREFERRED: 32768,
-    IS_PROTECTED: 65536,
-    IS_RENAMED: 131072,
-    IS_SKIPPED: 262144,
-    SHOULD_SPREAD: 524288,
+    IS_DEPRECATED: 256,
+    IS_ENTRY_POINT: 512,
+    IS_EXPORTED: 1024,
+    IS_IMPORTED: 2048,
+    IS_INLINING_FORCED: 4096,
+    IS_INLINING_PREVENTED: 8192,
+    IS_PREFERRED: 16384,
+    IS_PROTECTED: 32768,
+    IS_RENAMED: 65536,
+    IS_SKIPPED: 131072,
+    SHOULD_SPREAD: 262144,
 
     // Pass-specific
-    IS_CSHARP_CONST: 1048576,
-    IS_DYNAMIC_LAMBDA: 2097152,
-    IS_GUARD_CONDITIONAL: 4194304,
-    IS_OBSOLETE: 8388608,
-    IS_PRIMARY_CONSTRUCTOR: 16777216,
-    IS_VIRTUAL: 33554432,
-    USE_PROTOTYPE_CACHE: 67108864
+    IS_CSHARP_CONST: 524288,
+    IS_DYNAMIC_LAMBDA: 1048576,
+    IS_GUARD_CONDITIONAL: 2097152,
+    IS_OBSOLETE: 4194304,
+    IS_PRIMARY_CONSTRUCTOR: 8388608,
+    IS_VIRTUAL: 16777216,
+    USE_PROTOTYPE_CACHE: 33554432
   };
 
   Skew.Symbol = function(kind, name) {
@@ -8881,10 +8884,6 @@
 
   Skew.Symbol.prototype.isConst = function() {
     return (Skew.SymbolFlags.IS_CONST & this.flags) != 0;
-  };
-
-  Skew.Symbol.prototype.isFlags = function() {
-    return (Skew.SymbolFlags.IS_FLAGS & this.flags) != 0;
   };
 
   Skew.Symbol.prototype.isGetter = function() {
@@ -9213,11 +9212,6 @@
   };
 
   __extends(Skew.VariableSymbol, Skew.Symbol);
-
-  Skew.VariableSymbol.prototype.enumValue = function() {
-    assert(this.kind == Skew.SymbolKind.VARIABLE_ENUM);
-    return this.value.asInt();
-  };
 
   Skew.VariableSymbol.prototype.clone = function() {
     var clone = new Skew.VariableSymbol(this.kind, this.name);
@@ -11076,14 +11070,14 @@
     var text = token.range.toString();
     var symbol = null;
 
-    // Special-case enum symbols
-    if (parent.kind == Skew.SymbolKind.OBJECT_ENUM && token.kind == Skew.TokenKind.IDENTIFIER && !(text in Skew.Parsing.identifierToSymbolKind)) {
+    // Special-case enum and flags symbols
+    if (Skew.in_SymbolKind.isEnumOrFlags(parent.kind) && token.kind == Skew.TokenKind.IDENTIFIER && !(text in Skew.Parsing.identifierToSymbolKind)) {
       while (true) {
         if (text in Skew.Parsing.identifierToSymbolKind || !context.expect(Skew.TokenKind.IDENTIFIER)) {
           break;
         }
 
-        var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ENUM, text);
+        var variable = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS, text);
         variable.range = token.range;
         variable.parent = parent;
         variable.flags |= Skew.SymbolFlags.IS_CONST;
@@ -11305,16 +11299,13 @@
 
         case Skew.SymbolKind.OBJECT_CLASS:
         case Skew.SymbolKind.OBJECT_ENUM:
+        case Skew.SymbolKind.OBJECT_FLAGS:
         case Skew.SymbolKind.OBJECT_INTERFACE:
         case Skew.SymbolKind.OBJECT_NAMESPACE:
         case Skew.SymbolKind.OBJECT_WRAPPED: {
           var object = new Skew.ObjectSymbol(kind, name);
           object.range = range;
           object.parent = parent;
-
-          if (text == 'flags') {
-            object.flags |= Skew.SymbolFlags.IS_FLAGS;
-          }
 
           if (kind != Skew.SymbolKind.OBJECT_NAMESPACE && context.eat(Skew.TokenKind.PARAMETER_LIST_START)) {
             object.parameters = Skew.Parsing.parseTypeParameters(context, Skew.SymbolKind.PARAMETER_OBJECT);
@@ -11382,8 +11373,8 @@
         }
       }
 
-      // Forbid certain kinds of symbols inside enums and wrapped types
-      if ((parent.kind == Skew.SymbolKind.OBJECT_ENUM || parent.kind == Skew.SymbolKind.OBJECT_WRAPPED || parent.kind == Skew.SymbolKind.OBJECT_INTERFACE) && (kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR || kind == Skew.SymbolKind.VARIABLE_INSTANCE)) {
+      // Forbid certain kinds of symbols inside certain object types
+      if ((Skew.in_SymbolKind.isEnumOrFlags(parent.kind) || parent.kind == Skew.SymbolKind.OBJECT_WRAPPED || parent.kind == Skew.SymbolKind.OBJECT_INTERFACE) && (kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR || kind == Skew.SymbolKind.VARIABLE_INSTANCE)) {
         context.log.syntaxErrorBadDeclarationInsideType(context.spanSince(token.range));
       }
     }
@@ -14495,7 +14486,7 @@
       var symbol = info.symbol;
 
       // Turn certain instance functions into global functions
-      if (symbol.kind == Skew.SymbolKind.FUNCTION_INSTANCE && (symbol.parent.kind == Skew.SymbolKind.OBJECT_ENUM || symbol.parent.kind == Skew.SymbolKind.OBJECT_WRAPPED || symbol.parent.kind == Skew.SymbolKind.OBJECT_INTERFACE && symbol.block != null || symbol.parent.isImported() && !symbol.isImported() || (globalizeAllFunctions || symbol.isInliningForced()) && !symbol.isImportedOrExported() && !virtualLookup.isVirtual(symbol))) {
+      if (symbol.kind == Skew.SymbolKind.FUNCTION_INSTANCE && (Skew.in_SymbolKind.isEnumOrFlags(symbol.parent.kind) || symbol.parent.kind == Skew.SymbolKind.OBJECT_WRAPPED || symbol.parent.kind == Skew.SymbolKind.OBJECT_INTERFACE && symbol.block != null || symbol.parent.isImported() && !symbol.isImported() || (globalizeAllFunctions || symbol.isInliningForced()) && !symbol.isImportedOrExported() && !virtualLookup.isVirtual(symbol))) {
         var $function = symbol.asFunctionSymbol();
         $function.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
         $function.$arguments.unshift($function.$this);
@@ -15304,8 +15295,8 @@
       return false;
     });
 
-    // Move stuff off of enums
-    if (symbol.kind == Skew.SymbolKind.OBJECT_ENUM) {
+    // Move stuff off of enums and flags
+    if (Skew.in_SymbolKind.isEnumOrFlags(symbol.kind)) {
       symbol.objects.forEach(function(object) {
         Skew.Motion.moveSymbolIntoNewNamespace(object, namespaces).objects.push(object);
       });
@@ -15313,7 +15304,7 @@
         Skew.Motion.moveSymbolIntoNewNamespace($function, namespaces).functions.push($function);
       });
       in_List.removeIf(symbol.variables, function(variable) {
-        if (variable.kind != Skew.SymbolKind.VARIABLE_ENUM) {
+        if (variable.kind != Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
           Skew.Motion.moveSymbolIntoNewNamespace(variable, namespaces).variables.push(variable);
           return true;
         }
@@ -15665,6 +15656,7 @@
     switch (symbol.kind) {
       case Skew.SymbolKind.OBJECT_CLASS:
       case Skew.SymbolKind.OBJECT_ENUM:
+      case Skew.SymbolKind.OBJECT_FLAGS:
       case Skew.SymbolKind.OBJECT_GLOBAL:
       case Skew.SymbolKind.OBJECT_INTERFACE:
       case Skew.SymbolKind.OBJECT_NAMESPACE:
@@ -15683,7 +15675,7 @@
       }
 
       case Skew.SymbolKind.VARIABLE_ARGUMENT:
-      case Skew.SymbolKind.VARIABLE_ENUM:
+      case Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS:
       case Skew.SymbolKind.VARIABLE_GLOBAL:
       case Skew.SymbolKind.VARIABLE_INSTANCE:
       case Skew.SymbolKind.VARIABLE_LOCAL: {
@@ -15820,7 +15812,7 @@
     }
 
     // Special-case enums
-    else if (type.isEnum()) {
+    else if (type.isEnumOrFlags()) {
       node = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(value)).appendChild(null);
     }
 
@@ -16007,20 +15999,20 @@
       }
     }
 
-    // Assign values for all enums before they are initialized
-    if (kind == Skew.SymbolKind.OBJECT_ENUM) {
-      var nextEnumValue = 0;
+    // Assign values for all enums and flags before they are initialized
+    if (Skew.in_SymbolKind.isEnumOrFlags(kind)) {
+      var nextValue = 0;
 
       for (var i3 = 0, list2 = symbol.variables, count3 = list2.length; i3 < count3; i3 = i3 + 1 | 0) {
         var variable = in_List.get(list2, i3);
 
-        if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
-          if (nextEnumValue >= 32 && symbol.isFlags()) {
+        if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
+          if (nextValue >= 32 && kind == Skew.SymbolKind.OBJECT_FLAGS) {
             this._log.semanticErrorTooManyFlags(variable.range, symbol.name);
           }
 
-          variable.value = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(symbol.isFlags() ? 1 << nextEnumValue : nextEnumValue)).withType(symbol.resolvedType).withRange(variable.range);
-          nextEnumValue = nextEnumValue + 1 | 0;
+          variable.value = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(kind == Skew.SymbolKind.OBJECT_FLAGS ? 1 << nextValue : nextValue)).withType(symbol.resolvedType).withRange(variable.range);
+          nextValue = nextValue + 1 | 0;
         }
       }
 
@@ -16068,7 +16060,7 @@
     }
 
     // Create a default toString if one doesn't exist
-    if (kind == Skew.SymbolKind.OBJECT_ENUM && !symbol.isImported() && !symbol.isFlags() && !('toString' in symbol.members)) {
+    if (kind == Skew.SymbolKind.OBJECT_ENUM && !symbol.isImported() && !('toString' in symbol.members)) {
       var generated1 = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_INSTANCE, 'toString');
       generated1.scope = new Skew.FunctionScope(symbol.scope, generated1);
       generated1.flags |= Skew.SymbolFlags.IS_AUTOMATICALLY_GENERATED;
@@ -16696,8 +16688,8 @@
     for (var i = 0, list = parent.variables, count = list.length; i < count; i = i + 1 | 0) {
       var variable = in_List.get(list, i);
 
-      if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM) {
-        assert(variable.enumValue() == names.childCount());
+      if (variable.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
+        assert(variable.value.asInt() == names.childCount());
         names.appendChild(new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.StringContent(variable.name)));
       }
     }
@@ -16848,7 +16840,7 @@
     }
 
     // Enums take their type from their parent
-    else if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM) {
+    else if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
       symbol.resolvedType = symbol.parent.resolvedType;
     }
 
@@ -16886,7 +16878,7 @@
     this._resolveAnnotations(symbol);
 
     // Run post-annotation checks
-    if (symbol.resolvedType != Skew.Type.DYNAMIC && symbol.isConst() && !symbol.isImported() && value == null && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
+    if (symbol.resolvedType != Skew.Type.DYNAMIC && symbol.isConst() && !symbol.isImported() && value == null && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
       this._log.semanticErrorConstMissingValue(symbol.range, symbol.name);
     }
   };
@@ -16899,7 +16891,7 @@
     }
 
     // Default-initialize variables
-    else if (symbol.kind != Skew.SymbolKind.VARIABLE_ARGUMENT && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM) {
+    else if (symbol.kind != Skew.SymbolKind.VARIABLE_ARGUMENT && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
       symbol.value = this._createDefaultValueForType(symbol.resolvedType, symbol.range);
     }
   };
@@ -16919,7 +16911,7 @@
       return new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.BoolContent(false)).withType(type);
     }
 
-    if (unwrapped.isEnum()) {
+    if (unwrapped.isEnumOrFlags()) {
       return Skew.Node.createCast(this._cache.createInt(0), new Skew.Node(Skew.NodeKind.TYPE).withType(type)).withType(type);
     }
 
@@ -17815,7 +17807,7 @@
 
         // Check for a constant variable, which may just be read-only with a
         // value determined at runtime
-        if (symbol != null && (mustEnsureConstantIntegers ? symbol.kind == Skew.SymbolKind.VARIABLE_ENUM : Skew.in_SymbolKind.isVariable(symbol.kind) && symbol.isConst())) {
+        if (symbol != null && (mustEnsureConstantIntegers ? symbol.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS : Skew.in_SymbolKind.isVariable(symbol.kind) && symbol.isConst())) {
           var constant = this._constantFolder.constantForSymbol(symbol.asVariableSymbol());
 
           if (constant == null || constant.kind() != Skew.ContentKind.INT) {
@@ -18288,7 +18280,7 @@
       }
 
       case Skew.ContentKind.INT: {
-        node.resolvedType = context != null && context.isEnumFlags() && node.asInt() == 0 ? context : this._cache.intType;
+        node.resolvedType = context != null && context.isFlags() && node.asInt() == 0 ? context : this._cache.intType;
         break;
       }
 
@@ -19359,7 +19351,7 @@
     var target = reverseBinaryOrder ? second : first;
     var other = Skew.in_NodeKind.isBinary(kind) ? reverseBinaryOrder ? first : second : null;
     var isBitOperation = Skew.in_NodeKind.isBitOperation(kind);
-    var bitContext = isBitOperation && context != null && context.isEnumFlags() ? context : null;
+    var bitContext = isBitOperation && context != null && context.isFlags() ? context : null;
 
     // Allow "foo in [.FOO, .BAR]"
     if (kind == Skew.NodeKind.IN && target.kind == Skew.NodeKind.INITIALIZER_LIST && !Skew.Resolving.Resolver._needsTypeContext(other)) {
@@ -19417,16 +19409,16 @@
         }
 
         // Check if the target is an enum
-        else if (type.isEnum()) {
-          this._resolveAsParameterizedExpressionWithTypeContext(other, scope, bitContext != null ? bitContext : (isBitOperation || kind == Skew.NodeKind.IN) && type.isEnumFlags() ? type : null);
+        else if (type.isEnumOrFlags()) {
+          this._resolveAsParameterizedExpressionWithTypeContext(other, scope, bitContext != null ? bitContext : (isBitOperation || kind == Skew.NodeKind.IN) && type.isFlags() ? type : null);
 
           // Auto-convert enums to ints when both operands can be converted
           if (this._cache.isNumeric(other.resolvedType)) {
             type = this._cache.commonImplicitType(type, other.resolvedType);
             assert(type != null);
 
-            if (type.isEnum()) {
-              if (type.isEnumFlags()) {
+            if (type.isEnumOrFlags()) {
+              if (type.isFlags()) {
                 enumFlagsType = type;
               }
 
@@ -19440,7 +19432,7 @@
       }
 
       // Allow certain operations on "flags" types
-      else if (isBitOperation && type.isEnumFlags()) {
+      else if (isBitOperation && type.isFlags()) {
         this._resolveAsParameterizedExpressionWithTypeContext(other, scope, type);
         enumFlagsType = type;
         type = this._cache.intType;
@@ -19449,8 +19441,8 @@
     }
 
     // Allow "~x" on "flags" types
-    else if (kind == Skew.NodeKind.COMPLEMENT && type.isEnum()) {
-      if (type.isEnumFlags()) {
+    else if (kind == Skew.NodeKind.COMPLEMENT && type.isEnumOrFlags()) {
+      if (type.isFlags()) {
         enumFlagsType = type;
       }
 
@@ -20404,12 +20396,12 @@
     return this.symbol != null && this.symbol.kind == Skew.SymbolKind.OBJECT_INTERFACE;
   };
 
-  Skew.Type.prototype.isEnum = function() {
-    return this.symbol != null && this.symbol.kind == Skew.SymbolKind.OBJECT_ENUM;
+  Skew.Type.prototype.isEnumOrFlags = function() {
+    return this.symbol != null && Skew.in_SymbolKind.isEnumOrFlags(this.symbol.kind);
   };
 
-  Skew.Type.prototype.isEnumFlags = function() {
-    return this.isEnum() && this.symbol.isFlags();
+  Skew.Type.prototype.isFlags = function() {
+    return this.symbol != null && this.symbol.kind == Skew.SymbolKind.OBJECT_FLAGS;
   };
 
   Skew.Type.prototype.isParameter = function() {
@@ -20528,7 +20520,7 @@
   };
 
   Skew.TypeCache.prototype.isEquivalentToInt = function(type) {
-    return this.unwrappedType(type) == this.intType || type.isEnum();
+    return this.isInteger(this.unwrappedType(type));
   };
 
   Skew.TypeCache.prototype.isEquivalentToDouble = function(type) {
@@ -20540,7 +20532,7 @@
   };
 
   Skew.TypeCache.prototype.isInteger = function(type) {
-    return type == this.intType || type.isEnum();
+    return type == this.intType || type.isEnumOrFlags();
   };
 
   Skew.TypeCache.prototype.isNumeric = function(type) {
@@ -20644,7 +20636,7 @@
       return true;
     }
 
-    if (from.isEnum() && !to.isEnum() && this.isNumeric(to)) {
+    if (from.isEnumOrFlags() && !to.isEnumOrFlags() && this.isNumeric(to)) {
       return true;
     }
 
@@ -20671,7 +20663,7 @@
       return true;
     }
 
-    if (to.isEnum() && this.isNumeric(from)) {
+    if (to.isEnumOrFlags() && this.isNumeric(from)) {
       return true;
     }
 
@@ -21511,6 +21503,10 @@
     return self >= Skew.SymbolKind.OBJECT_CLASS && self <= Skew.SymbolKind.OBJECT_WRAPPED;
   };
 
+  Skew.in_SymbolKind.isEnumOrFlags = function(self) {
+    return self == Skew.SymbolKind.OBJECT_ENUM || self == Skew.SymbolKind.OBJECT_FLAGS;
+  };
+
   Skew.in_SymbolKind.isFunction = function(self) {
     return self >= Skew.SymbolKind.FUNCTION_ANNOTATION && self <= Skew.SymbolKind.FUNCTION_LOCAL;
   };
@@ -21536,11 +21532,11 @@
   };
 
   Skew.in_SymbolKind.isGlobalReference = function(self) {
-    return self == Skew.SymbolKind.VARIABLE_ENUM || self == Skew.SymbolKind.VARIABLE_GLOBAL || self == Skew.SymbolKind.FUNCTION_GLOBAL || self == Skew.SymbolKind.FUNCTION_CONSTRUCTOR || self == Skew.SymbolKind.OVERLOADED_GLOBAL || Skew.in_SymbolKind.isType(self);
+    return self == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS || self == Skew.SymbolKind.VARIABLE_GLOBAL || self == Skew.SymbolKind.FUNCTION_GLOBAL || self == Skew.SymbolKind.FUNCTION_CONSTRUCTOR || self == Skew.SymbolKind.OVERLOADED_GLOBAL || Skew.in_SymbolKind.isType(self);
   };
 
   Skew.in_SymbolKind.hasInstances = function(self) {
-    return self == Skew.SymbolKind.OBJECT_CLASS || self == Skew.SymbolKind.OBJECT_ENUM || self == Skew.SymbolKind.OBJECT_INTERFACE || self == Skew.SymbolKind.OBJECT_WRAPPED;
+    return self == Skew.SymbolKind.OBJECT_CLASS || self == Skew.SymbolKind.OBJECT_ENUM || self == Skew.SymbolKind.OBJECT_FLAGS || self == Skew.SymbolKind.OBJECT_INTERFACE || self == Skew.SymbolKind.OBJECT_WRAPPED;
   };
 
   Skew.in_SymbolKind.isOnInstances = function(self) {
@@ -21968,7 +21964,7 @@
   Skew.Symbol._nextID = 0;
   Skew.Parsing.expressionParser = null;
   Skew.Parsing.typeParser = null;
-  Skew.Parsing.identifierToSymbolKind = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'class', Skew.SymbolKind.OBJECT_CLASS), 'def', Skew.SymbolKind.FUNCTION_GLOBAL), 'enum', Skew.SymbolKind.OBJECT_ENUM), 'flags', Skew.SymbolKind.OBJECT_ENUM), 'interface', Skew.SymbolKind.OBJECT_INTERFACE), 'namespace', Skew.SymbolKind.OBJECT_NAMESPACE), 'over', Skew.SymbolKind.FUNCTION_GLOBAL), 'type', Skew.SymbolKind.OBJECT_WRAPPED);
+  Skew.Parsing.identifierToSymbolKind = in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(in_StringMap.insert(Object.create(null), 'class', Skew.SymbolKind.OBJECT_CLASS), 'def', Skew.SymbolKind.FUNCTION_GLOBAL), 'enum', Skew.SymbolKind.OBJECT_ENUM), 'flags', Skew.SymbolKind.OBJECT_FLAGS), 'interface', Skew.SymbolKind.OBJECT_INTERFACE), 'namespace', Skew.SymbolKind.OBJECT_NAMESPACE), 'over', Skew.SymbolKind.FUNCTION_GLOBAL), 'type', Skew.SymbolKind.OBJECT_WRAPPED);
   Skew.Parsing.customOperators = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.ASSIGN_BITWISE_AND, 0), Skew.TokenKind.ASSIGN_BITWISE_OR, 0), Skew.TokenKind.ASSIGN_BITWISE_XOR, 0), Skew.TokenKind.ASSIGN_DIVIDE, 0), Skew.TokenKind.ASSIGN_INDEX, 0), Skew.TokenKind.ASSIGN_MINUS, 0), Skew.TokenKind.ASSIGN_MULTIPLY, 0), Skew.TokenKind.ASSIGN_PLUS, 0), Skew.TokenKind.ASSIGN_POWER, 0), Skew.TokenKind.ASSIGN_REMAINDER, 0), Skew.TokenKind.ASSIGN_SHIFT_LEFT, 0), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, 0), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, 0), Skew.TokenKind.BITWISE_AND, 0), Skew.TokenKind.BITWISE_OR, 0), Skew.TokenKind.BITWISE_XOR, 0), Skew.TokenKind.COMPARE, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DIVIDE, 0), Skew.TokenKind.IN, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INDEX, 0), Skew.TokenKind.LIST, 0), Skew.TokenKind.MINUS, 0), Skew.TokenKind.MULTIPLY, 0), Skew.TokenKind.NOT, 0), Skew.TokenKind.PLUS, 0), Skew.TokenKind.POWER, 0), Skew.TokenKind.REMAINDER, 0), Skew.TokenKind.SET, 0), Skew.TokenKind.SHIFT_LEFT, 0), Skew.TokenKind.SHIFT_RIGHT, 0), Skew.TokenKind.TILDE, 0), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, 0), Skew.TokenKind.XML_CHILD, 0);
   Skew.Parsing.forbiddenCustomOperators = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.ASSIGN, Skew.Parsing.ForbiddenGroup.ASSIGN), Skew.TokenKind.EQUAL, Skew.Parsing.ForbiddenGroup.EQUAL), Skew.TokenKind.GREATER_THAN, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.GREATER_THAN_OR_EQUAL, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LESS_THAN, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LESS_THAN_OR_EQUAL, Skew.Parsing.ForbiddenGroup.COMPARE), Skew.TokenKind.LOGICAL_AND, Skew.Parsing.ForbiddenGroup.LOGICAL), Skew.TokenKind.LOGICAL_OR, Skew.Parsing.ForbiddenGroup.LOGICAL), Skew.TokenKind.NOT_EQUAL, Skew.Parsing.ForbiddenGroup.EQUAL);
 
@@ -22061,7 +22057,7 @@
   Skew.Environment._nextID = 0;
   Skew.in_PassKind._strings = ['EMITTING', 'PARSING', 'LEXING', 'CALL_GRAPH', 'FOLDING', 'GLOBALIZING', 'INLINING', 'INTERFACE_REMOVAL', 'LAMBDA_LIFTING', 'MERGING', 'MOTION', 'RENAMING', 'RESOLVING'];
   Skew.in_NodeKind._strings = ['ANNOTATION', 'BLOCK', 'CASE', 'CATCH', 'VARIABLE', 'BREAK', 'CONTINUE', 'EXPRESSION', 'FOR', 'FOREACH', 'IF', 'RETURN', 'SWITCH', 'THROW', 'TRY', 'VARIABLES', 'WHILE', 'ASSIGN_INDEX', 'CALL', 'CAST', 'CONSTANT', 'DOT', 'HOOK', 'INDEX', 'INITIALIZER_LIST', 'INITIALIZER_MAP', 'LAMBDA', 'LAMBDA_TYPE', 'NAME', 'NULL', 'NULL_DOT', 'PAIR', 'PARAMETERIZE', 'PARSE_ERROR', 'SEQUENCE', 'STRING_INTERPOLATION', 'SUPER', 'TYPE', 'TYPE_CHECK', 'XML', 'COMPLEMENT', 'NEGATIVE', 'NOT', 'POSITIVE', 'POSTFIX_DECREMENT', 'POSTFIX_INCREMENT', 'PREFIX_DECREMENT', 'PREFIX_INCREMENT', 'ADD', 'BITWISE_AND', 'BITWISE_OR', 'BITWISE_XOR', 'COMPARE', 'DIVIDE', 'EQUAL', 'IN', 'LOGICAL_AND', 'LOGICAL_OR', 'MULTIPLY', 'NOT_EQUAL', 'NULL_JOIN', 'POWER', 'REMAINDER', 'SHIFT_LEFT', 'SHIFT_RIGHT', 'SUBTRACT', 'UNSIGNED_SHIFT_RIGHT', 'GREATER_THAN', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN', 'LESS_THAN_OR_EQUAL', 'ASSIGN', 'ASSIGN_ADD', 'ASSIGN_BITWISE_AND', 'ASSIGN_BITWISE_OR', 'ASSIGN_BITWISE_XOR', 'ASSIGN_DIVIDE', 'ASSIGN_MULTIPLY', 'ASSIGN_NULL', 'ASSIGN_POWER', 'ASSIGN_REMAINDER', 'ASSIGN_SHIFT_LEFT', 'ASSIGN_SHIFT_RIGHT', 'ASSIGN_SUBTRACT', 'ASSIGN_UNSIGNED_SHIFT_RIGHT'];
-  Skew.in_SymbolKind._strings = ['PARAMETER_FUNCTION', 'PARAMETER_OBJECT', 'OBJECT_CLASS', 'OBJECT_ENUM', 'OBJECT_GLOBAL', 'OBJECT_INTERFACE', 'OBJECT_NAMESPACE', 'OBJECT_WRAPPED', 'FUNCTION_ANNOTATION', 'FUNCTION_CONSTRUCTOR', 'FUNCTION_GLOBAL', 'FUNCTION_INSTANCE', 'FUNCTION_LOCAL', 'OVERLOADED_ANNOTATION', 'OVERLOADED_GLOBAL', 'OVERLOADED_INSTANCE', 'VARIABLE_ARGUMENT', 'VARIABLE_ENUM', 'VARIABLE_GLOBAL', 'VARIABLE_INSTANCE', 'VARIABLE_LOCAL'];
+  Skew.in_SymbolKind._strings = ['PARAMETER_FUNCTION', 'PARAMETER_OBJECT', 'OBJECT_CLASS', 'OBJECT_ENUM', 'OBJECT_FLAGS', 'OBJECT_GLOBAL', 'OBJECT_INTERFACE', 'OBJECT_NAMESPACE', 'OBJECT_WRAPPED', 'FUNCTION_ANNOTATION', 'FUNCTION_CONSTRUCTOR', 'FUNCTION_GLOBAL', 'FUNCTION_INSTANCE', 'FUNCTION_LOCAL', 'OVERLOADED_ANNOTATION', 'OVERLOADED_GLOBAL', 'OVERLOADED_INSTANCE', 'VARIABLE_ARGUMENT', 'VARIABLE_ENUM_OR_FLAGS', 'VARIABLE_GLOBAL', 'VARIABLE_INSTANCE', 'VARIABLE_LOCAL'];
   Skew.in_TokenKind._toString = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.COMMENT, 'comment'), Skew.TokenKind.NEWLINE, 'newline'), Skew.TokenKind.WHITESPACE, 'whitespace'), Skew.TokenKind.AS, '"as"'), Skew.TokenKind.BREAK, '"break"'), Skew.TokenKind.CASE, '"case"'), Skew.TokenKind.CATCH, '"catch"'), Skew.TokenKind.CONST, '"const"'), Skew.TokenKind.CONTINUE, '"continue"'), Skew.TokenKind.DEFAULT, '"default"'), Skew.TokenKind.DYNAMIC, '"dynamic"'), Skew.TokenKind.ELSE, '"else"'), Skew.TokenKind.FALSE, '"false"'), Skew.TokenKind.FINALLY, '"finally"'), Skew.TokenKind.FOR, '"for"'), Skew.TokenKind.IF, '"if"'), Skew.TokenKind.IN, '"in"'), Skew.TokenKind.IS, '"is"'), Skew.TokenKind.NULL, '"null"'), Skew.TokenKind.RETURN, '"return"'), Skew.TokenKind.SUPER, '"super"'), Skew.TokenKind.SWITCH, '"switch"'), Skew.TokenKind.THROW, '"throw"'), Skew.TokenKind.TRUE, '"true"'), Skew.TokenKind.TRY, '"try"'), Skew.TokenKind.VAR, '"var"'), Skew.TokenKind.WHILE, '"while"'), Skew.TokenKind.ARROW, '"=>"'), Skew.TokenKind.ASSIGN, '"="'), Skew.TokenKind.ASSIGN_BITWISE_AND, '"&="'), Skew.TokenKind.ASSIGN_BITWISE_OR, '"|="'), Skew.TokenKind.ASSIGN_BITWISE_XOR, '"^="'), Skew.TokenKind.ASSIGN_DIVIDE, '"/="'), Skew.TokenKind.ASSIGN_INDEX, '"[]="'), Skew.TokenKind.ASSIGN_MINUS, '"-="'), Skew.TokenKind.ASSIGN_MULTIPLY, '"*="'), Skew.TokenKind.ASSIGN_PLUS, '"+="'), Skew.TokenKind.ASSIGN_POWER, '"**="'), Skew.TokenKind.ASSIGN_REMAINDER, '"%="'), Skew.TokenKind.ASSIGN_SHIFT_LEFT, '"<<="'), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, '">>="'), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, '">>>="'), Skew.TokenKind.BITWISE_AND, '"&"'), Skew.TokenKind.BITWISE_OR, '"|"'), Skew.TokenKind.BITWISE_XOR, '"^"'), Skew.TokenKind.COLON, '":"'), Skew.TokenKind.COMMA, '","'), Skew.TokenKind.COMPARE, '"<=>"'), Skew.TokenKind.DECREMENT, '"--"'), Skew.TokenKind.DIVIDE, '"/"'), Skew.TokenKind.DOT, '"."'), Skew.TokenKind.DOT_DOT, '".."'), Skew.TokenKind.DOUBLE_COLON, '"::"'), Skew.TokenKind.EQUAL, '"=="'), Skew.TokenKind.GREATER_THAN, '">"'), Skew.TokenKind.GREATER_THAN_OR_EQUAL, '">="'), Skew.TokenKind.INCREMENT, '"++"'), Skew.TokenKind.INDEX, '"[]"'), Skew.TokenKind.LEFT_BRACE, '"{"'), Skew.TokenKind.LEFT_BRACKET, '"["'), Skew.TokenKind.LEFT_PARENTHESIS, '"("'), Skew.TokenKind.LESS_THAN, '"<"'), Skew.TokenKind.LESS_THAN_OR_EQUAL, '"<="'), Skew.TokenKind.LIST, '"[...]"'), Skew.TokenKind.LIST_NEW, '"[new]"'), Skew.TokenKind.LOGICAL_AND, '"&&"'), Skew.TokenKind.LOGICAL_OR, '"||"'), Skew.TokenKind.MINUS, '"-"'), Skew.TokenKind.MULTIPLY, '"*"'), Skew.TokenKind.NOT, '"!"'), Skew.TokenKind.NOT_EQUAL, '"!="'), Skew.TokenKind.NULL_DOT, '"?."'), Skew.TokenKind.NULL_JOIN, '"??"'), Skew.TokenKind.PLUS, '"+"'), Skew.TokenKind.POWER, '"**"'), Skew.TokenKind.QUESTION_MARK, '"?"'), Skew.TokenKind.REMAINDER, '"%"'), Skew.TokenKind.RIGHT_BRACE, '"}"'), Skew.TokenKind.RIGHT_BRACKET, '"]"'), Skew.TokenKind.RIGHT_PARENTHESIS, '")"'), Skew.TokenKind.SEMICOLON, '";"'), Skew.TokenKind.SET, '"{...}"'), Skew.TokenKind.SET_NEW, '"{new}"'), Skew.TokenKind.SHIFT_LEFT, '"<<"'), Skew.TokenKind.SHIFT_RIGHT, '">>"'), Skew.TokenKind.TILDE, '"~"'), Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, '">>>"'), Skew.TokenKind.ANNOTATION, 'annotation'), Skew.TokenKind.CHARACTER, 'character'), Skew.TokenKind.DOUBLE, 'double'), Skew.TokenKind.END_OF_FILE, 'end of input'), Skew.TokenKind.IDENTIFIER, 'identifier'), Skew.TokenKind.INT, 'integer'), Skew.TokenKind.INT_BINARY, 'integer'), Skew.TokenKind.INT_HEX, 'integer'), Skew.TokenKind.INT_OCTAL, 'integer'), Skew.TokenKind.STRING, 'string'), Skew.TokenKind.PARAMETER_LIST_END, '">"'), Skew.TokenKind.PARAMETER_LIST_START, '"<"'), Skew.TokenKind.XML_CHILD, '"<>...</>"'), Skew.TokenKind.XML_END, '">"'), Skew.TokenKind.XML_END_EMPTY, '"/>"'), Skew.TokenKind.XML_START, '"<"'), Skew.TokenKind.XML_START_CLOSE, '"</"'), Skew.TokenKind.STRING_INTERPOLATION_CONTINUE, 'string interpolation'), Skew.TokenKind.STRING_INTERPOLATION_END, 'string interpolation'), Skew.TokenKind.STRING_INTERPOLATION_START, 'string interpolation');
   Terminal.colorToEscapeCode = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Terminal.Color.DEFAULT, 0), Terminal.Color.BOLD, 1), Terminal.Color.GRAY, 90), Terminal.Color.RED, 91), Terminal.Color.GREEN, 92), Terminal.Color.YELLOW, 93), Terminal.Color.BLUE, 94), Terminal.Color.MAGENTA, 95), Terminal.Color.CYAN, 96);
 

@@ -39,12 +39,12 @@ namespace Skew {
       return symbol != null && symbol.kind == .OBJECT_INTERFACE
     }
 
-    def isEnum bool {
-      return symbol != null && symbol.kind == .OBJECT_ENUM
+    def isEnumOrFlags bool {
+      return symbol != null && symbol.kind.isEnumOrFlags
     }
 
-    def isEnumFlags bool {
-      return isEnum && symbol.isFlags
+    def isFlags bool {
+      return symbol != null && symbol.kind == .OBJECT_FLAGS
     }
 
     def isParameter bool {

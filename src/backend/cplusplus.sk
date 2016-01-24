@@ -152,7 +152,7 @@ namespace Skew {
       }
 
       switch symbol.kind {
-        case .OBJECT_ENUM {
+        case .OBJECT_ENUM, .OBJECT_FLAGS {
           _adjustNamespace(symbol)
           _emitNewlineBeforeSymbol(symbol, .DECLARE)
           _emit(_indent + "enum struct " + _mangleName(symbol) + " {\n")
@@ -338,7 +338,7 @@ namespace Skew {
       }
 
       _emitNewlineBeforeSymbol(symbol, mode)
-      if symbol.kind == .VARIABLE_ENUM {
+      if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
         _emit(_indent + _mangleName(symbol) + ",\n")
       } else {
         _emit(_indent)
@@ -637,7 +637,7 @@ namespace Skew {
         }
 
         case .CONSTANT {
-          if node.resolvedType.isEnum {
+          if node.resolvedType.isEnumOrFlags {
             _emit("(")
             _emitType(node.resolvedType, .NORMAL)
             _emit(")")

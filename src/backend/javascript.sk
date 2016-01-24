@@ -688,7 +688,7 @@ namespace Skew {
     def _emitNewlineBeforeSymbol(symbol Symbol) {
       _emitSemicolonIfNeeded
       if !_minify && _previousSymbol != null &&
-          (!_previousSymbol.kind.isObject || !symbol.kind.isObject || symbol.comments != null || _previousSymbol.kind == .OBJECT_ENUM || symbol.kind == .OBJECT_ENUM) &&
+          (!_previousSymbol.kind.isObject || !symbol.kind.isObject || symbol.comments != null || _previousSymbol.kind.isEnumOrFlags || symbol.kind.isEnumOrFlags) &&
           (!_previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
         _emit("\n")
       }
@@ -740,14 +740,14 @@ namespace Skew {
           }
         }
 
-        case .OBJECT_ENUM {
+        case .OBJECT_ENUM, .OBJECT_FLAGS {
           _emitNewlineBeforeSymbol(symbol)
           _emitComments(symbol.comments)
           _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{")
           _increaseIndent
           var isFirst = true
           for variable in symbol.variables {
-            if variable.kind == .VARIABLE_ENUM {
+            if variable.kind == .VARIABLE_ENUM_OR_FLAGS {
               if isFirst {
                 isFirst = false
               } else {
@@ -887,7 +887,7 @@ namespace Skew {
         return
       }
 
-      if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM && (symbol.value != null || _namespacePrefix == "" || symbol.kind.isLocalOrArgumentVariable) {
+      if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM_OR_FLAGS && (symbol.value != null || _namespacePrefix == "" || symbol.kind.isLocalOrArgumentVariable) {
         _emitNewlineBeforeSymbol(symbol)
         _emitComments(symbol.comments)
         _emit(_indent + (_namespacePrefix == "" && !symbol.isExported || symbol.kind.isLocalOrArgumentVariable ? "var " : _namespacePrefix) + _mangleName(symbol))
@@ -1693,7 +1693,7 @@ namespace Skew {
         node.become(Node.createSymbolCall(_specialVariable(.IS_BOOL)).appendChild(value.remove))
       }
 
-      else if type == _cache.intType || type.isEnum {
+      else if _cache.isInteger(type) {
         node.become(Node.createSymbolCall(_specialVariable(.IS_INT)).appendChild(value.remove))
       }
 
