@@ -726,57 +726,45 @@ public class Globals
 }
 ").csharp
 
-# Test lambda creation with simple capture
+# Test lambda conversion with scope capture and currying
 test("
-@entry
-def test int {
-  var count = 0
-  var add = => ++count
-  add()
-  add()
-  add()
-  return count
-}
-", "
-public class Globals
-{
-    public static int Main()
-    {
-        int count = 0;
-        System.Func<int> add = () =>
-        {
-            return ++count;
-        };
-        add();
-        add();
-        add();
-        return count;
-    }
-}
-").csharp
+@export
+class Foo {
+  var value = 0
 
-# Test lambda creation with currying
-test("
-@entry
-def test int {
-  var adder = (x int) => (y int) => x + y
-  var addOne = adder(1)
-  return addOne(2)
+  def test(x int) int {
+    var y = 0
+    var f = (a int) => => (b int) => => value + x + y + a + b
+    return f(1)()(2)()
+  }
 }
 ", "
-public class Globals
+public class Foo
 {
-    public static int Main()
+    public int value = 0;
+
+    public int test(int x)
     {
-        System.Func<int, System.Func<int, int>> adder = (int x) =>
+        int y = 0;
+        System.Func<int, System.Func<System.Func<int, System.Func<int>>>> f = (int a) =>
         {
-            return (int y) =>
+            return () =>
             {
-                return x + y;
+                return (int b) =>
+                {
+                    return () =>
+                    {
+                        return this.value + x + y + a + b;
+                    };
+                };
             };
         };
-        System.Func<int, int> addOne = adder(1);
-        return addOne(2);
+        return f(1)()(2)();
+    }
+
+    public Foo()
+    {
+        this.value = 0;
     }
 }
 ").csharp

@@ -4,7 +4,7 @@
 string::string() : _isNull(true) {
 }
 
-string::string(const char *x) : _data(x), _isNull(false) {
+string::string(const char *x) : _data(x ? x : ""), _isNull(!x) {
 }
 
 string::string(const std::string &x) : _data(x), _isNull(false) {
@@ -40,7 +40,7 @@ int string::compare(const string &x) const {
 }
 
 int string::count() const {
-  return _data.size();
+  return (int)_data.size();
 }
 
 bool string::contains(const string &x) const {
@@ -49,12 +49,12 @@ bool string::contains(const string &x) const {
 
 int string::indexOf(const string &x) const {
   auto it = _data.find(x._data);
-  return it != std::string::npos ? it : -1;
+  return it != std::string::npos ? (int)it : -1;
 }
 
 int string::lastIndexOf(const string &x) const {
   auto it = _data.rfind(x._data);
-  return it != std::string::npos ? it : -1;
+  return it != std::string::npos ? (int)it : -1;
 }
 
 bool string::startsWith(const string &x) const {
@@ -218,7 +218,7 @@ T &List<T>::operator [] (int x) {
 
 template <typename T>
 int List<T>::count() const {
-  return _data.size();
+  return (int)_data.size();
 }
 
 template <typename T>
@@ -372,7 +372,7 @@ bool List<T>::contains(const T &x) const {
 template <typename T>
 int List<T>::indexOf(const T &x) const {
   auto it = std::find(begin(), end(), x);
-  return it == end() ? -1 : it - begin();
+  return it == end() ? -1 : (int)(it - begin());
 }
 
 template <typename T>

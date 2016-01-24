@@ -855,6 +855,37 @@ namespace Skew {
       # "a + (b + c)" => "(a + b) + c"
       appendChild(rightRight.remove)
     }
+
+    # If a variable is inside a variable cluster, break up the variable cluster
+    # into separate clusters so that variable is in a cluster all by itself. That
+    # way the variable can easily be replaced by something else (an assigment,
+    # for example. This does not handle variables inside loop headers.
+    #
+    # "var a, b, c, d, e" => c.extractVariableFromVariables => "var a, b; var c; var d, e"
+    #
+    def extractVariableFromVariables {
+      assert(kind == .VARIABLE)
+      assert(parent != null && parent.kind == .VARIABLES)
+      assert(parent.parent != null && parent.parent.kind == .BLOCK)
+
+      # Split off variables before this one
+      if previousSibling != null {
+        var variables = Node.createVariables
+        while previousSibling != null {
+          variables.prependChild(previousSibling.remove)
+        }
+        parent.parent.insertChildBefore(parent, variables)
+      }
+
+      # Split off variables after this one
+      if nextSibling != null {
+        var variables = Node.createVariables
+        while nextSibling != null {
+          variables.appendChild(nextSibling.remove)
+        }
+        parent.parent.insertChildAfter(parent, variables)
+      }
+    }
   }
 
   # Factory functions

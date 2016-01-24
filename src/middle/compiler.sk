@@ -298,6 +298,9 @@ namespace Skew {
         assert(variable.parent == symbol)
         _verifySymbol(symbol)
 
+        var todo = 0
+        # _verifyHierarchy(variable.type, null)
+
         if variable.value != null {
           _verifyHierarchy(variable.value, null)
         }
@@ -323,6 +326,9 @@ namespace Skew {
         assert(node.symbol.kind == .VARIABLE_LOCAL)
         assert(node.symbol.asVariableSymbol.value == node.variableValue)
         _verifySymbol(node.symbol)
+
+        var todo = 0
+        # _verifyHierarchy(node.symbol.asVariableSymbol.type, null)
       }
 
       else if node.kind == .LAMBDA {

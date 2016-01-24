@@ -585,91 +585,324 @@ int in_int::unsignedRightShift(int self, int x) {
 }
 ").cpp
 
-# Test lambda code generation
+# Test lambda conversion with scope capture and currying
+test("
+@export
+class Foo {
+  var value = 0
+
+  def test(x int) int {
+    var y = 0
+    var f = (a int) => => (b int) => => value + x + y + a + b
+    return f(1)()(2)()
+  }
+}
+", "
+struct Foo;
+struct Env1;
+struct Lambda1;
+struct Lambda21;
+struct Lambda31;
+struct Lambda41;
+
+struct Foo {
+  int test(int x);
+  Foo();
+
+  int value;
+};
+
+struct Env1 {
+  Env1();
+
+  int x;
+  int y;
+  Foo *self;
+};
+
+struct Lambda1 : Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> {
+  Lambda1(Env1 *copy);
+  virtual Fn0<Fn1<Fn0<int> *, int> *> *run(int a);
+
+  int a;
+  Env1 *copy;
+};
+
+struct Lambda21 : Fn0<Fn1<Fn0<int> *, int> *> {
+  Lambda21(Env1 *copy, Lambda1 *copy1);
+  virtual Fn1<Fn0<int> *, int> *run();
+
+  Env1 *copy;
+  Lambda1 *copy1;
+};
+
+struct Lambda31 : Fn1<Fn0<int> *, int> {
+  Lambda31(Env1 *copy, Lambda1 *copy1);
+  virtual Fn0<int> *run(int b);
+
+  int b;
+  Env1 *copy;
+  Lambda1 *copy1;
+};
+
+struct Lambda41 : Fn0<int> {
+  Lambda41(Env1 *copy, Lambda1 *copy1, Lambda31 *copy2);
+  virtual int run();
+
+  Env1 *copy;
+  Lambda1 *copy1;
+  Lambda31 *copy2;
+};
+
+int Foo::test(int x) {
+  Env1 *env = new Env1();
+  env->x = x;
+  env->self = this;
+  env->y = 0;
+  Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> *f = new Lambda1(env);
+  return f->run(1)->run()->run(2)->run();
+}
+
+Foo::Foo() {
+  this->value = 0;
+}
+
+Env1::Env1() {
+}
+
+Lambda1::Lambda1(Env1 *copy) {
+  this->copy = copy;
+}
+
+Fn0<Fn1<Fn0<int> *, int> *> *Lambda1::run(int a) {
+  this->a = a;
+  return new Lambda21(this->copy, this);
+}
+
+Lambda21::Lambda21(Env1 *copy, Lambda1 *copy1) {
+  this->copy = copy;
+  this->copy1 = copy1;
+}
+
+Fn1<Fn0<int> *, int> *Lambda21::run() {
+  return new Lambda31(this->copy, this->copy1);
+}
+
+Lambda31::Lambda31(Env1 *copy, Lambda1 *copy1) {
+  this->copy = copy;
+  this->copy1 = copy1;
+}
+
+Fn0<int> *Lambda31::run(int b) {
+  this->b = b;
+  return new Lambda41(this->copy, this->copy1, this);
+}
+
+Lambda41::Lambda41(Env1 *copy, Lambda1 *copy1, Lambda31 *copy2) {
+  this->copy = copy;
+  this->copy1 = copy1;
+  this->copy2 = copy2;
+}
+
+int Lambda41::run() {
+  return this->copy->self->value + this->copy->x + this->copy->y + this->copy1->a + this->copy2->b;
+}
+").cpp
+
+# Test lambda conversion at global scope
+test("
+var f = (x int) => (y int) => x + y
+
+@entry
+def test int {
+  return f(1)(2)
+}
+", "
+struct Lambda1;
+struct Lambda21;
+
+struct Lambda1 : Fn1<Fn1<int, int> *, int> {
+  Lambda1();
+  virtual Fn1<int, int> *run(int x);
+
+  int x;
+};
+
+struct Lambda21 : Fn1<int, int> {
+  Lambda21(Lambda1 *copy);
+  virtual int run(int y);
+
+  Lambda1 *copy;
+};
+
+Fn1<Fn1<int, int> *, int> *f = new Lambda1();
+
+int test() {
+  return f->run(1)->run(2);
+}
+
+Lambda1::Lambda1() {
+}
+
+Fn1<int, int> *Lambda1::run(int x) {
+  this->x = x;
+  return new Lambda21(this);
+}
+
+Lambda21::Lambda21(Lambda1 *copy) {
+  this->copy = copy;
+}
+
+int Lambda21::run(int y) {
+  return this->copy->x + y;
+}
+").cpp
+
+# Check for a crash with nested loop handling
 test("
 @export
 def test {
-  var a = => {}
-  var b = (x int) => {}
-  var c = (x int, y int) => x == y
-  a()
-  b(1)
-  c(2, 3)
+  var foo = 0
+  var bar = () int => {
+    while true {
+      for baz in [1] {
+        return foo + baz
+      }
+    }
+  }
+  bar()
 }
 ", "
-struct Fn_test;
-struct Fn_test1;
-struct Fn_test2;
+struct Env1;
+struct Lambda1;
 
-struct Fn_test : FnVoid0 {
-  Fn_test();
-  virtual void run();
+struct Env1 {
+  Env1();
+
+  int foo;
 };
 
-struct Fn_test1 : FnVoid1<int> {
-  Fn_test1();
-  virtual void run(int x);
-};
+struct Lambda1 : Fn0<int> {
+  Lambda1(Env1 *copy);
+  virtual int run();
 
-struct Fn_test2 : Fn2<bool, int, int> {
-  Fn_test2();
-  virtual bool run(int x, int y);
+  Env1 *copy;
 };
 
 void test() {
-  FnVoid0 *a = new Fn_test();
-  FnVoid1<int> *b = new Fn_test1();
-  Fn2<bool, int, int> *c = new Fn_test2();
-  a->run();
-  b->run(1);
-  c->run(2, 3);
+  Env1 *env = new Env1();
+  env->foo = 0;
+  Fn0<int> *bar = new Lambda1(env);
+  bar->run();
 }
 
-Fn_test::Fn_test() {
+Env1::Env1() {
 }
 
-void Fn_test::run() {
+Lambda1::Lambda1(Env1 *copy) {
+  this->copy = copy;
 }
 
-Fn_test1::Fn_test1() {
-}
-
-void Fn_test1::run(int x) {
-}
-
-Fn_test2::Fn_test2() {
-}
-
-bool Fn_test2::run(int x, int y) {
-  return x == y;
+int Lambda1::run() {
+  while (true) {
+    for (int baz : *new List<int>({1})) {
+      return this->copy->foo + baz;
+    }
+  }
 }
 ").cpp
 
-# Test lambda creation with simple capture
+# Check that recursive lambdas work
 test("
-@entry
-def test int {
-  var count = 0
-  var add = => ++count
-  add()
-  add()
-  add()
-  return count
+@export
+def main {
+  var f fn()
+  f = => f()
+  f()
 }
 ", "
-TODO
+struct Env1;
+struct Lambda1;
+
+struct Env1 {
+  Env1();
+
+  FnVoid0 *f;
+};
+
+struct Lambda1 : FnVoid0 {
+  Lambda1(Env1 *copy);
+  virtual void run();
+
+  Env1 *copy;
+};
+
+void main() {
+  Env1 *env = new Env1();
+  env->f = nullptr;
+  env->f = new Lambda1(env);
+  env->f->run();
+}
+
+Env1::Env1() {
+}
+
+Lambda1::Lambda1(Env1 *copy) {
+  this->copy = copy;
+}
+
+void Lambda1::run() {
+  this->copy->f->run();
+}
 ").cpp
 
-# Test lambda creation with currying
+# Check for a crash in captured variable substitution
 test("
-@entry
-def test int {
-  var adder = (x int) => (y int) => x + y
-  var addOne = adder(1)
-  return addOne(2)
+@export
+def main {
+  var x = [1]
+  var f = => x
+  for y in x {}
+  f()
 }
 ", "
-TODO
+struct Env1;
+struct Lambda1;
+
+struct Env1 {
+  Env1();
+
+  List<int> *x;
+};
+
+struct Lambda1 : Fn0<List<int> *> {
+  Lambda1(Env1 *copy);
+  virtual List<int> *run();
+
+  Env1 *copy;
+};
+
+void main() {
+  Env1 *env = new Env1();
+  env->x = new List<int>({1});
+  Fn0<List<int> *> *f = new Lambda1(env);
+
+  for (int y : *env->x) {
+  }
+
+  f->run();
+}
+
+Env1::Env1() {
+}
+
+Lambda1::Lambda1(Env1 *copy) {
+  this->copy = copy;
+}
+
+List<int> *Lambda1::run() {
+  return this->copy->x;
+}
 ").cpp
 
   }
