@@ -57,13 +57,17 @@ namespace Skew.LambdaConversion {
     var environmentVariable VariableSymbol = null
     var environmentConstructor FunctionSymbol = null
     var environmentConstructorCall Node = null
-    const definitions IntMap<Definition> = {}
+    const definitions List<Definition> = []
     const uses List<Use> = []
-    const copies IntMap<Copy> = {}
+    const copies List<Copy> = []
+    const definitionLookup IntMap<Definition> = {}
+    const copyLookup IntMap<Copy> = {}
 
     def recordDefinition(symbol VariableSymbol, node Node) {
-      assert(!(symbol.id in definitions))
-      definitions[symbol.id] = Definition.new(symbol, node, self)
+      assert(!(symbol.id in definitionLookup))
+      var definition = Definition.new(symbol, node, self)
+      definitions.append(definition)
+      definitionLookup[symbol.id] = definition
     }
 
     def recordUse(symbol VariableSymbol, node Node) {
@@ -71,7 +75,7 @@ namespace Skew.LambdaConversion {
 
       # Walk up the scope chain
       for scope = self; scope != null; scope = scope.parent {
-        var definition = scope.definitions.get(symbol.id, null)
+        var definition = scope.definitionLookup.get(symbol.id, null)
 
         # Stop once the definition is found
         if definition != null {
@@ -105,7 +109,7 @@ namespace Skew.LambdaConversion {
       }
 
       # Reference a parent scope
-      var copy = target.copies[scope.id]
+      var copy = target.copyLookup[scope.id]
       if copy.scope == target.parent {
         return Node.createMemberReference(
           Node.createSymbolReference(target.environmentVariable),
@@ -115,7 +119,7 @@ namespace Skew.LambdaConversion {
       # Reference a grandparent scope
       return Node.createMemberReference(
         Node.createSymbolReference(target.parent.environmentVariable),
-        target.parent.copies[copy.scope.id].member)
+        target.parent.copyLookup[copy.scope.id].member)
     }
   }
 
@@ -129,11 +133,29 @@ namespace Skew.LambdaConversion {
     const _scopes List<Scope> = []
     const _stack List<Scope> = []
     const _interfaces IntMap<ObjectSymbol> = {}
+    const _calls List<Node> = []
     var _enclosingFunction FunctionSymbol = null
 
     def run {
       _visitObject(_global)
+      _convertCalls
       _convertLambdas
+    }
+
+    def _convertCalls {
+      var swap = Node.createNull
+      for node in _calls {
+        var value = node.callValue
+        var resolvedType = value.resolvedType
+
+        if resolvedType.kind == .LAMBDA {
+          var interfaceType = _interfaceTypeForLambdaType(resolvedType)
+          var interfaceRun = interfaceType.symbol.asObjectSymbol.functions.first
+          assert(interfaceRun.name == "run")
+          value.replaceWith(swap)
+          swap.replaceWith(Node.createMemberReference(value, interfaceRun))
+        }
+      }
     }
 
     def _convertLambdas {
@@ -144,7 +166,11 @@ namespace Skew.LambdaConversion {
             if use.definition.isCaptured {
               var definingScope = use.definition.scope
               for s = scope; s != definingScope; s = s.parent {
-                s.copies[definingScope.id] = Copy.new(definingScope)
+                if !(definingScope.id in s.copyLookup) {
+                  var copy = Copy.new(definingScope)
+                  s.copies.append(copy)
+                  s.copyLookup[definingScope.id] = copy
+                }
               }
             }
           }
@@ -159,7 +185,7 @@ namespace Skew.LambdaConversion {
           var constructorCall = Node.createCall(Node.createMemberReference(Node.createSymbolReference(object), constructor)).withType(object.resolvedType)
 
           # The environment must store all captured variables
-          for definition in scope.definitions.values {
+          for definition in scope.definitions {
             if definition.isCaptured {
               definition.member = _createInstanceVariable(object.scope.generateName(definition.symbol.name), definition.symbol.resolvedType, object)
             }
@@ -180,7 +206,7 @@ namespace Skew.LambdaConversion {
               # Assign captured arguments and "self" to the environment
               # TODO: Remove the extra indirection to "self", copy it directly into environments instead
               var previous = variables
-              for definition in scope.definitions.values {
+              for definition in scope.definitions {
                 if definition.isCaptured && (definition.symbol.kind == .VARIABLE_ARGUMENT || definition.symbol == scope.enclosingFunction.this) {
                   var assignment = _createAssignment(variable, definition.member, definition.symbol)
                   scope.node.insertChildAfter(previous, assignment)
@@ -203,7 +229,7 @@ namespace Skew.LambdaConversion {
 
               # Assign captured arguments to the environment
               var first = block.firstChild
-              for definition in scope.definitions.values {
+              for definition in scope.definitions {
                 if definition.isCaptured && definition.symbol.kind == .VARIABLE_ARGUMENT {
                   var assignment = _createAssignment(function.this, definition.member, definition.symbol)
                   block.insertChildBefore(first, assignment)
@@ -269,7 +295,7 @@ namespace Skew.LambdaConversion {
         var constructorCall = scope.environmentConstructorCall
 
         if object != null {
-          for copy in scope.copies.values {
+          for copy in scope.copies {
             var name = object.scope.generateName("copy")
             var member = _createInstanceVariable(name, copy.scope.environmentObject.resolvedType, object)
             var argument = _createVariable(.VARIABLE_ARGUMENT, name, member.resolvedType)
@@ -285,7 +311,7 @@ namespace Skew.LambdaConversion {
       for scope in _scopes {
         # Replace variable definitions of captured symbols with assignments to their environment
         if scope.hasCapturedDefinitions {
-          for definition in scope.definitions.values {
+          for definition in scope.definitions {
             if definition.isCaptured && definition.node != null {
               assert(definition.node.kind == .VARIABLE)
               assert(definition.node.parent.kind == .VARIABLES)
@@ -379,15 +405,7 @@ namespace Skew.LambdaConversion {
       }
 
       else if kind == .CALL {
-        var value = node.callValue
-        var resolvedType = value.resolvedType
-
-        if resolvedType.kind == .LAMBDA {
-          var interfaceType = _interfaceTypeForLambdaType(resolvedType)
-          var interfaceRun = interfaceType.symbol.asObjectSymbol.functions.first
-          assert(interfaceRun.name == "run")
-          value.become(Node.createMemberReference(value.cloneAndStealChildren, interfaceRun))
-        }
+        _calls.append(node)
       }
 
       else if kind == .NAME && symbol != null && (symbol.kind == .VARIABLE_ARGUMENT || symbol.kind == .VARIABLE_LOCAL) {

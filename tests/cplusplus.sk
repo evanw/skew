@@ -615,9 +615,9 @@ struct Foo {
 struct Env1 {
   Env1();
 
+  Foo *self;
   int x;
   int y;
-  Foo *self;
 };
 
 struct Lambda1 : Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> {
@@ -656,8 +656,8 @@ struct Lambda41 : Fn0<int> {
 
 int Foo::test(int x) {
   Env1 *env = new Env1();
-  env->x = x;
   env->self = this;
+  env->x = x;
   env->y = 0;
   Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> *f = new Lambda1(env);
   return f->run(1)->run()->run(2)->run();
