@@ -285,9 +285,9 @@ void List<T>::removeFirst() {
 
 template <typename T>
 void List<T>::removeIf(Fn1<bool, T> *x) {
-  std::remove_if(_data.begin(), _data.end(), [&](const T &y) {
+  _data.erase(std::remove_if(_data.begin(), _data.end(), [&](const T &y) {
     return x->run(y);
-  });
+  }), _data.end());
 }
 
 template <typename T>
@@ -497,6 +497,7 @@ StringMap<T>::StringMap(const std::initializer_list<std::pair<string, T>> &x) {
 
 template <typename T>
 const T &StringMap<T>::operator [] (const string &x) const {
+  assert(contains(x));
   return _data[x];
 }
 
@@ -579,6 +580,7 @@ IntMap<T>::IntMap(const std::initializer_list<std::pair<int, T>> &x) {
 
 template <typename T>
 const T &IntMap<T>::operator [] (int x) const {
+  assert(contains(x));
   return _data[x];
 }
 
