@@ -99,6 +99,10 @@ namespace Skew {
       _totalSeconds += Timestamp.seconds - _startTime
     }
 
+    def elapsedSeconds double {
+      return _totalSeconds
+    }
+
     def elapsedMilliseconds string {
       return formatNumber(_totalSeconds * 1000) + "ms"
     }
@@ -157,31 +161,35 @@ namespace Skew {
     var passTimers List<PassTimer>
     var totalTimer Timer
 
-    def statistics(kind StatisticsKind) string {
+    def statistics(inputs List<Source>, kind StatisticsKind) string {
       var builder = StringBuilder.new
+      var totalTime = totalTimer.elapsedSeconds
+      var sourceStatistics = (name string, sources List<Source>) => {
+        var totalBytes = 0
+        var totalLines = 0
+        for source in sources {
+          totalBytes += source.contents.count
+          if kind == .LONG {
+            totalLines += source.lineCount
+          }
+        }
+        builder.append("\(name)\(PrettyPrint.plural(sources.count)): ")
+        builder.append(sources.count == 1 ? sources.first.name : "\(sources.count) files")
+        builder.append(" (" + bytesToString(totalBytes))
+        builder.append(", " + bytesToString(Math.round(totalBytes / totalTime) as int) + "/s")
+        if kind == .LONG {
+          builder.append(", " + PrettyPrint.plural(totalLines, "line"))
+          builder.append(", " + PrettyPrint.plural(Math.round(totalLines / totalTime) as int, "line") + "/s")
+        }
+        builder.append(")\n")
+      }
 
       # Sources
-      var totalBytes = 0
-      var totalLines = 0
-      for source in outputs {
-        totalBytes += source.contents.count
-        if kind == .LONG {
-          totalLines += source.lineCount
-        }
-      }
-      builder.append("output\(PrettyPrint.plural(outputs.count)): " +
-        (outputs.count == 1 ? outputs.first.name : "\(outputs.count) files") +
-        " (\(bytesToString(totalBytes))" +
-        (kind == .LONG ? ", \(PrettyPrint.plural(totalLines, "line"))" : "") + ")")
-      if kind == .LONG && outputs.count != 1 {
-        for source in outputs {
-          var lines = source.lineCount
-          builder.append("\n  \(source.name) (\(bytesToString(source.contents.count)), \(PrettyPrint.plural(lines, "line")))")
-        }
-      }
+      sourceStatistics("input", inputs)
+      sourceStatistics("output", outputs)
 
       # Compilation time
-      builder.append("\ntime: \(totalTimer.elapsedMilliseconds)")
+      builder.append("time: \(totalTimer.elapsedMilliseconds)")
       if kind == .LONG {
         for passTimer in passTimers {
           builder.append("\n  \(passTimer.kind): \(passTimer.timer.elapsedMilliseconds)")

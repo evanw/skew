@@ -109,9 +109,13 @@ release: compile-api | build
 	type zopfli > /dev/null 2>&1 && (zopfli -c build/skew-api.min.js > build/skew-api.min.js.gz) || (gzip -c build/skew-api.min.js > build/skew-api.min.js.gz)
 	ls -l build/skew-api.js build/skew-api.min.js build/skew-api.min.js.gz
 
+debug-cpp: | build
+	node skewc.js $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc.cpp
+	time clang++ -o build/skewc-debug build/skewc.cpp $(CLANG_FLAGS)
+
 release-cpp: | build
 	node skewc.js $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc.cpp --release
-	time clang++ -o build/skewc build/skewc.cpp $(CLANG_FLAGS) -O3 -include src/backend/fast.cpp
+	time clang++ -o build/skewc build/skewc.cpp $(CLANG_FLAGS) -O3 -DNDEBUG -include src/backend/fast.cpp
 
 watch:
 	node_modules/.bin/watch src 'clear && make compile-api'

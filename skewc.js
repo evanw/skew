@@ -710,7 +710,7 @@
 
         // Print compilation statistics
         if (!log.hasErrors()) {
-          Skew.printWithColor(Terminal.Color.GRAY, result.statistics(options.verbose ? Skew.StatisticsKind.LONG : Skew.StatisticsKind.SHORT) + '\n');
+          Skew.printWithColor(Terminal.Color.GRAY, result.statistics(inputs, options.verbose ? Skew.StatisticsKind.LONG : Skew.StatisticsKind.SHORT) + '\n');
         }
       }
     }
@@ -12933,6 +12933,10 @@
     this._totalSeconds += (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()) / 1000 - this._startTime;
   };
 
+  Skew.Timer.prototype.elapsedSeconds = function() {
+    return this._totalSeconds;
+  };
+
   Skew.Timer.prototype.elapsedMilliseconds = function() {
     return (Math.round(this._totalSeconds * 1000 * 10) / 10).toString() + 'ms';
   };
@@ -13197,38 +13201,45 @@
     this.totalTimer = totalTimer;
   };
 
-  Skew.CompilerResult.prototype.statistics = function(kind) {
+  Skew.CompilerResult.prototype.statistics = function(inputs, kind) {
     var builder = new StringBuilder();
+    var totalTime = this.totalTimer.elapsedSeconds();
+    var sourceStatistics = function(name, sources) {
+      var totalBytes = 0;
+      var totalLines = 0;
 
-    // Sources
-    var totalBytes = 0;
-    var totalLines = 0;
+      for (var i = 0, list = sources, count = list.length; i < count; i = i + 1 | 0) {
+        var source = in_List.get(list, i);
+        totalBytes = totalBytes + source.contents.length | 0;
 
-    for (var i = 0, list = this.outputs, count = list.length; i < count; i = i + 1 | 0) {
-      var source = in_List.get(list, i);
-      totalBytes = totalBytes + source.contents.length | 0;
+        if (kind == Skew.StatisticsKind.LONG) {
+          totalLines = totalLines + source.lineCount() | 0;
+        }
+      }
+
+      builder.append(name + (sources.length == 1 ? '' : 's') + ': ');
+      builder.append(sources.length == 1 ? in_List.first(sources).name : sources.length.toString() + ' files');
+      builder.append(' (' + Skew.bytesToString(totalBytes));
+      builder.append(', ' + Skew.bytesToString(Math.round(totalBytes / totalTime) | 0) + '/s');
 
       if (kind == Skew.StatisticsKind.LONG) {
-        totalLines = totalLines + source.lineCount() | 0;
+        builder.append(', ' + Skew.PrettyPrint.plural1(totalLines, 'line'));
+        builder.append(', ' + Skew.PrettyPrint.plural1(Math.round(totalLines / totalTime) | 0, 'line') + '/s');
       }
-    }
 
-    builder.append('output' + (this.outputs.length == 1 ? '' : 's') + ': ' + (this.outputs.length == 1 ? in_List.first(this.outputs).name : this.outputs.length.toString() + ' files') + (' (' + Skew.bytesToString(totalBytes)) + (kind == Skew.StatisticsKind.LONG ? ', ' + Skew.PrettyPrint.plural1(totalLines, 'line') : '') + ')');
+      builder.append(')\n');
+    };
 
-    if (kind == Skew.StatisticsKind.LONG && this.outputs.length != 1) {
-      for (var i1 = 0, list1 = this.outputs, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var source1 = in_List.get(list1, i1);
-        var lines = source1.lineCount();
-        builder.append('\n  ' + source1.name + ' (' + Skew.bytesToString(source1.contents.length) + ', ' + Skew.PrettyPrint.plural1(lines, 'line') + ')');
-      }
-    }
+    // Sources
+    sourceStatistics('input', inputs);
+    sourceStatistics('output', this.outputs);
 
     // Compilation time
-    builder.append('\ntime: ' + this.totalTimer.elapsedMilliseconds());
+    builder.append('time: ' + this.totalTimer.elapsedMilliseconds());
 
     if (kind == Skew.StatisticsKind.LONG) {
-      for (var i2 = 0, list2 = this.passTimers, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-        var passTimer = in_List.get(list2, i2);
+      for (var i = 0, list = this.passTimers, count = list.length; i < count; i = i + 1 | 0) {
+        var passTimer = in_List.get(list, i);
         builder.append('\n  ' + in_List.get(Skew.in_PassKind._strings, passTimer.kind) + ': ' + passTimer.timer.elapsedMilliseconds());
       }
     }

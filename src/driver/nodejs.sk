@@ -44,7 +44,7 @@ namespace Skew {
 
         # Print compilation statistics
         if !log.hasErrors {
-          printWithColor(.GRAY, result.statistics(options.verbose ? .LONG : .SHORT) + "\n")
+          printWithColor(.GRAY, result.statistics(inputs, options.verbose ? .LONG : .SHORT) + "\n")
         }
       }
     }
