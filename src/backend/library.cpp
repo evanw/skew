@@ -208,11 +208,13 @@ T *List<T>::end() {
 
 template <typename T>
 const T &List<T>::operator [] (int x) const {
+  assert(0 <= x && x < count());
   return CharInsteadOfBool<T>::cast(_data[x]);
 }
 
 template <typename T>
 T &List<T>::operator [] (int x) {
+  assert(0 <= x && x < count());
   return CharInsteadOfBool<T>::cast(_data[x]);
 }
 
@@ -227,17 +229,14 @@ bool List<T>::isEmpty() const {
 }
 
 template <typename T>
-void List<T>::resize(int count, const T &defaultValue) {
-  _data.resize(count, defaultValue);
-}
-
-template <typename T>
 void List<T>::append(const T &x) {
   _data.push_back(x);
 }
 
 template <typename T>
 void List<T>::append(const List<T> *x) {
+  assert(x != this);
+  _data.insert(_data.end(), x->_data.begin(), x->_data.end());
 }
 
 template <typename T>
@@ -255,35 +254,32 @@ void List<T>::prepend(const T &x) {
 
 template <typename T>
 void List<T>::prepend(const List<T> *x) {
+  assert(x != this);
+  _data.insert(_data.begin(), x->_data.begin(), x->_data.end());
 }
 
 template <typename T>
 void List<T>::insert(int x, const T &value) {
+  assert(x >= 0 && x <= count());
   _data.insert(_data.begin() + x, value);
 }
 
 template <typename T>
 void List<T>::insert(int x, const List<T> *values) {
-}
-
-template <typename T>
-void List<T>::removeAll(const T &x) {
-  std::remove_if(_data.begin(), _data.end(), [&x](const T &y) {
-    return x == y;
-  });
+  assert(x >= 0 && x <= count());
+  assert(values != this);
+  _data.insert(_data.begin() + x, values->_data.begin(), values->_data.end());
 }
 
 template <typename T>
 void List<T>::removeAt(int x) {
+  assert(x >= 0 && x < count());
   _data.erase(_data.begin() + x);
 }
 
 template <typename T>
-void List<T>::removeDuplicates() {
-}
-
-template <typename T>
 void List<T>::removeFirst() {
+  assert(!isEmpty());
   _data.erase(_data.begin());
 }
 
@@ -296,6 +292,7 @@ void List<T>::removeIf(Fn1<bool, T> *x) {
 
 template <typename T>
 void List<T>::removeLast() {
+  assert(!isEmpty());
   _data.pop_back();
 }
 
@@ -309,11 +306,13 @@ void List<T>::removeOne(const T &x) {
 
 template <typename T>
 void List<T>::removeRange(int start, int end) {
+  assert(0 <= start && start <= end && end <= count());
   _data.erase(_data.begin() + start, _data.begin() + end);
 }
 
 template <typename T>
 T List<T>::takeFirst() {
+  assert(!isEmpty());
   T result = std::move(_data.front());
   _data.erase(_data.begin());
   return result;
@@ -321,6 +320,7 @@ T List<T>::takeFirst() {
 
 template <typename T>
 T List<T>::takeLast() {
+  assert(!isEmpty());
   T result = std::move(_data.back());
   _data.pop_back();
   return result;
@@ -328,6 +328,7 @@ T List<T>::takeLast() {
 
 template <typename T>
 T List<T>::takeAt(int x) {
+  assert(0 <= index && index < count());
   T result = std::move(_data[x]);
   _data.erase(_data.begin() + x);
   return result;
@@ -335,6 +336,7 @@ T List<T>::takeAt(int x) {
 
 template <typename T>
 List<T> *List<T>::takeRange(int start, int end) {
+  assert(0 <= start && start <= end && end <= count());
   auto result = new List<T>;
   result->_data.reserve(end - start);
   for (int i = start; i < end; i++) {
@@ -346,21 +348,25 @@ List<T> *List<T>::takeRange(int start, int end) {
 
 template <typename T>
 const T &List<T>::first() const {
+  assert(!isEmpty());
   return CharInsteadOfBool<T>::cast(_data.front());
 }
 
 template <typename T>
 const T &List<T>::last() const {
+  assert(!isEmpty());
   return CharInsteadOfBool<T>::cast(_data.back());
 }
 
 template <typename T>
 T &List<T>::setFirst(const T &x) {
+  assert(!isEmpty());
   return CharInsteadOfBool<T>::cast(_data.front()) = x;
 }
 
 template <typename T>
 T &List<T>::setLast(const T &x) {
+  assert(!isEmpty());
   return CharInsteadOfBool<T>::cast(_data.back()) = x;
 }
 
@@ -377,6 +383,8 @@ int List<T>::indexOf(const T &x) const {
 
 template <typename T>
 int List<T>::lastIndexOf(const T &x) const {
+  auto it = std::find(_data.rbegin(), _data.rend(), x);
+  return it == _data.rend() ? -1 : count() - 1 - (int)(it - _data.rbegin());
 }
 
 template <typename T>
@@ -453,10 +461,6 @@ void List<T>::reverse() {
 }
 
 template <typename T>
-void List<T>::shuffle() {
-}
-
-template <typename T>
 List<T> *List<T>::slice(int start) const {
   auto result = new List<T>;
   result->_data.insert(result->_data.begin(), _data.begin() + start, _data.end());
@@ -475,11 +479,6 @@ void List<T>::sort(Fn2<int, T, T> *x) {
   std::sort(_data.begin(), _data.end(), [&x](const T &a, const T &b) {
     return x->run(a, b) < 0;
   });
-}
-
-template <typename T>
-void List<T>::swap(int x, int y) {
-  std::swap(_data[x], _data[y]);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -340,6 +340,7 @@ class double {
 
 class List {
   def resize(count int, defaultValue T) {
+    assert(count >= 0)
     while self.count < count { append(defaultValue) }
     while self.count > count { removeLast }
   }

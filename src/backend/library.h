@@ -219,7 +219,6 @@ struct List {
 
   int count() const;
   bool isEmpty() const;
-  void resize(int count, const T &defaultValue);
 
   void append(const T &x);
   void append(const List<T> *x);
@@ -231,9 +230,7 @@ struct List {
   void insert(int x, const T &value);
   void insert(int x, const List<T> *values);
 
-  void removeAll(const T &x);
   void removeAt(int x);
-  void removeDuplicates();
   void removeFirst();
   void removeIf(Fn1<bool, T> *x);
   void removeLast();
@@ -263,11 +260,9 @@ struct List {
   template <typename R>
   List<R> *map(Fn1<R, T> *x) const;
   void reverse();
-  void shuffle();
   List<T> *slice(int start) const;
   List<T> *slice(int start, int end) const;
   void sort(Fn2<int, T, T> *x);
-  void swap(int x, int y);
 
 private:
   std::vector<typename CharInsteadOfBool<T>::Type> _data;
