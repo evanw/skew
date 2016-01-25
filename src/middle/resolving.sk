@@ -843,6 +843,7 @@ namespace Skew.Resolving {
       # Constructors always return the type they construct
       if symbol.kind == .FUNCTION_CONSTRUCTOR {
         returnType = _cache.parameterize(symbol.parent.resolvedType)
+        symbol.returnType = Node.createType(returnType)
       }
 
       # The "<=>" operator must return a numeric value for comparison with zero

@@ -39,6 +39,7 @@ namespace Skew {
           array.type = Node.createName("string[]").withType(.DYNAMIC)
           array.resolvedType = .DYNAMIC
           entryPoint.arguments = [array]
+          entryPoint.resolvedType.argumentTypes = [.DYNAMIC]
 
           # Create the list from the array
           if entryPoint.block != null {

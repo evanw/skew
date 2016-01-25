@@ -26,6 +26,7 @@ namespace Skew {
           var function = symbol.asFunctionSymbol
           function.kind = .FUNCTION_GLOBAL
           function.arguments.prepend(function.this)
+          function.resolvedType.argumentTypes.prepend(function.this.resolvedType)
           function.this = null
 
           # Update all call sites

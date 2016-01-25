@@ -302,6 +302,7 @@ namespace Skew.LambdaConversion {
 
             copy.member = member
             constructor.arguments.append(argument)
+            constructor.resolvedType.argumentTypes.append(argument.resolvedType)
             constructor.block.appendChild(_createAssignment(constructor.this, member, argument))
             constructorCall.appendChild(scope.parent.createReferenceToScope(copy.scope))
           }
@@ -457,7 +458,9 @@ namespace Skew.LambdaConversion {
         function.resolvedType.argumentTypes = []
 
         if hasReturnType {
-          function.resolvedType.returnType = _createParameter(object, "R").resolvedType
+          var returnType = _createParameter(object, "R").resolvedType
+          function.resolvedType.returnType = returnType
+          function.returnType = Node.createType(returnType)
         }
 
         for i in 0..count {
@@ -489,6 +492,7 @@ namespace Skew.LambdaConversion {
     def _createConstructor(object ObjectSymbol) FunctionSymbol {
       var function = _createFunction(object, .FUNCTION_CONSTRUCTOR, "new", .IMPLEMENTED)
       function.resolvedType.returnType = object.resolvedType
+      function.returnType = Node.createType(object.resolvedType)
       return function
     }
 
@@ -501,6 +505,7 @@ namespace Skew.LambdaConversion {
       var function = FunctionSymbol.new(kind, name)
       function.scope = FunctionScope.new(object.scope, function)
       function.resolvedType = Type.new(.SYMBOL, function)
+      function.resolvedType.argumentTypes = []
       function.state = .INITIALIZED
       function.parent = object
 

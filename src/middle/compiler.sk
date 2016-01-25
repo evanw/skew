@@ -287,7 +287,7 @@ namespace Skew {
 
       for function in symbol.functions {
         assert(function.parent == symbol)
-        _verifySymbol(symbol)
+        _verifySymbol(function)
 
         if function.block != null {
           _verifyHierarchy(function.block, null)
@@ -296,10 +296,12 @@ namespace Skew {
 
       for variable in symbol.variables {
         assert(variable.parent == symbol)
-        _verifySymbol(symbol)
+        _verifySymbol(variable)
 
-        var todo = 0
-        # _verifyHierarchy(variable.type, null)
+        assert(variable.state != .INITIALIZED || variable.type != null)
+        if variable.type != null {
+          _verifyHierarchy(variable.type, null)
+        }
 
         if variable.value != null {
           _verifyHierarchy(variable.value, null)
@@ -324,11 +326,15 @@ namespace Skew {
       if node.kind == .VARIABLE {
         assert(node.symbol != null)
         assert(node.symbol.kind == .VARIABLE_LOCAL)
-        assert(node.symbol.asVariableSymbol.value == node.variableValue)
-        _verifySymbol(node.symbol)
 
-        var todo = 0
-        # _verifyHierarchy(node.symbol.asVariableSymbol.type, null)
+        var variable = node.symbol.asVariableSymbol
+        assert(variable.value == node.variableValue)
+        _verifySymbol(variable)
+
+        assert(variable.state != .INITIALIZED || variable.type != null)
+        if variable.type != null {
+          _verifyHierarchy(variable.type, null)
+        }
       }
 
       else if node.kind == .LAMBDA {

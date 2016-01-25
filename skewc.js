@@ -1174,6 +1174,7 @@
         array.type = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('string[]')).withType(Skew.Type.DYNAMIC);
         array.resolvedType = Skew.Type.DYNAMIC;
         entryPoint.$arguments = [array];
+        entryPoint.resolvedType.argumentTypes = [Skew.Type.DYNAMIC];
 
         // Create the list from the array
         if (entryPoint.block != null) {
@@ -12966,7 +12967,7 @@
     for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
       var $function = in_List.get(list2, i2);
       assert($function.parent == symbol);
-      this._verifySymbol(symbol);
+      this._verifySymbol($function);
 
       if ($function.block != null) {
         this._verifyHierarchy2($function.block, null);
@@ -12976,8 +12977,12 @@
     for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
       var variable = in_List.get(list3, i3);
       assert(variable.parent == symbol);
-      this._verifySymbol(symbol);
-      var todo = 0;
+      this._verifySymbol(variable);
+      assert(variable.state != Skew.SymbolState.INITIALIZED || variable.type != null);
+
+      if (variable.type != null) {
+        this._verifyHierarchy2(variable.type, null);
+      }
 
       if (variable.value != null) {
         this._verifyHierarchy2(variable.value, null);
@@ -13003,9 +13008,14 @@
     if (node.kind == Skew.NodeKind.VARIABLE) {
       assert(node.symbol != null);
       assert(node.symbol.kind == Skew.SymbolKind.VARIABLE_LOCAL);
-      assert(node.symbol.asVariableSymbol().value == node.variableValue());
-      this._verifySymbol(node.symbol);
-      var todo = 0;
+      var variable = node.symbol.asVariableSymbol();
+      assert(variable.value == node.variableValue());
+      this._verifySymbol(variable);
+      assert(variable.state != Skew.SymbolState.INITIALIZED || variable.type != null);
+
+      if (variable.type != null) {
+        this._verifyHierarchy2(variable.type, null);
+      }
     }
 
     else if (node.kind == Skew.NodeKind.LAMBDA) {
@@ -14637,6 +14647,7 @@
         var $function = symbol.asFunctionSymbol();
         $function.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
         $function.$arguments.unshift($function.$this);
+        $function.resolvedType.argumentTypes.unshift($function.$this.resolvedType);
         $function.$this = null;
 
         // Update all call sites
@@ -15468,6 +15479,7 @@
           var argument = Skew.LambdaConversion.Converter._createVariable(Skew.SymbolKind.VARIABLE_ARGUMENT, name, member.resolvedType);
           copy1.member = member;
           constructor1.$arguments.push(argument);
+          constructor1.resolvedType.argumentTypes.push(argument.resolvedType);
           constructor1.block.appendChild(Skew.LambdaConversion.Converter._createAssignment(constructor1.$this, member, argument));
           constructorCall1.appendChild(scope2.parent.createReferenceToScope(copy1.scope));
         }
@@ -15629,7 +15641,9 @@
       $function.resolvedType.argumentTypes = [];
 
       if (hasReturnType) {
-        $function.resolvedType.returnType = Skew.LambdaConversion.Converter._createParameter(object, 'R').resolvedType;
+        var returnType = Skew.LambdaConversion.Converter._createParameter(object, 'R').resolvedType;
+        $function.resolvedType.returnType = returnType;
+        $function.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(returnType);
       }
 
       for (var i = 0, count1 = count; i < count1; i = i + 1 | 0) {
@@ -15663,6 +15677,7 @@
   Skew.LambdaConversion.Converter._createConstructor = function(object) {
     var $function = Skew.LambdaConversion.Converter._createFunction(object, Skew.SymbolKind.FUNCTION_CONSTRUCTOR, 'new', Skew.LambdaConversion.Converter.Body.IMPLEMENTED);
     $function.resolvedType.returnType = object.resolvedType;
+    $function.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(object.resolvedType);
     return $function;
   };
 
@@ -15670,6 +15685,7 @@
     var $function = new Skew.FunctionSymbol(kind, name);
     $function.scope = new Skew.FunctionScope(object.scope, $function);
     $function.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, $function);
+    $function.resolvedType.argumentTypes = [];
     $function.state = Skew.SymbolState.INITIALIZED;
     $function.parent = object;
 
@@ -17280,6 +17296,7 @@
     // Constructors always return the type they construct
     if (symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
       returnType = this._cache.parameterize(symbol.parent.resolvedType);
+      symbol.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(returnType);
     }
 
     // The "<=>" operator must return a numeric value for comparison with zero
