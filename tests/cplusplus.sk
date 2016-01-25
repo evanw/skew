@@ -1015,5 +1015,68 @@ struct Bar {
 };
 ").cpp
 
+# Check for accidental mutation of argument types during globalization
+test("
+class Foo {
+  def test(foo Foo) {}
+}
+
+def foo {
+  var visit fn(Foo)
+  visit = foo => visit(foo)
+}
+
+@export
+def test {
+  Foo.new.test(null)
+  foo
+}
+", "
+struct Foo;
+struct Env1;
+struct Lambda1;
+
+struct Foo {
+  static void test(Foo *self, Foo *foo);
+  Foo();
+};
+
+struct Env1 {
+  Env1();
+
+  FnVoid1<Foo *> *visit;
+};
+
+struct Lambda1 : FnVoid1<Foo *> {
+  Lambda1(Env1 *copy);
+
+  Env1 *copy;
+};
+
+void foo() {
+  Env1 *env = new Env1();
+  env->visit = nullptr;
+  env->visit = new Lambda1(env);
+}
+
+void test() {
+  Foo::test(new Foo(), (Foo *)nullptr);
+  foo();
+}
+
+void Foo::test(Foo *self, Foo *foo) {
+}
+
+Foo::Foo() {
+}
+
+Env1::Env1() {
+}
+
+Lambda1::Lambda1(Env1 *copy) {
+  this->copy = copy;
+}
+").cpp.globalizeAllFunctions
+
   }
 }

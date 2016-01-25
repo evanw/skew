@@ -236,7 +236,6 @@ namespace Skew.LambdaConversion {
                 }
               }
 
-
               # Implement the lambda interface with the right type parameters
               var interfaceType = _interfaceTypeForLambdaType(function.resolvedType)
               var interfaceFunction = interfaceType.symbol.asObjectSymbol.functions.first

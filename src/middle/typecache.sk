@@ -263,7 +263,7 @@ namespace Skew {
 
       # Make a new lambda type
       var type = Type.new(.LAMBDA, null)
-      type.argumentTypes = argumentTypes
+      type.argumentTypes = argumentTypes.clone # Make a copy in case the caller mutates this later
       type.returnType = returnType
       bucket.append(type)
       return type

@@ -21589,7 +21589,9 @@
 
     // Make a new lambda type
     var type = new Skew.Type(Skew.TypeKind.LAMBDA, null);
-    type.argumentTypes = argumentTypes;
+
+    // Make a copy in case the caller mutates this later
+    type.argumentTypes = argumentTypes.slice();
     type.returnType = returnType;
     bucket.push(type);
     return type;
