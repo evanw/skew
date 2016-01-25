@@ -101,7 +101,9 @@ namespace Skew {
 
     def _changeContext(symbol Symbol) {
       if context != null {
-        _usages[context.id] = _currentUsages.values
+        var values = _currentUsages.values
+        values.sort(Symbol.SORT_BY_ID) # Sort so the order is deterministic
+        _usages[context.id] = values
       }
       _currentUsages = {}
       if symbol != null {
@@ -294,7 +296,7 @@ if !RELEASE {
 
     def toString string {
       var symbols = _allSymbols.values
-      symbols.sort((a, b) => a.id <=> b.id)
+      symbols.sort(Symbol.SORT_BY_ID) # Sort so the order is deterministic
       var text = ""
       for symbol in symbols {
         var implies = _usages.get(symbol.id, null)

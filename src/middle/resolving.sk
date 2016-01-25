@@ -33,6 +33,10 @@ namespace Skew.Resolving {
     var writeCount = 0
   }
 
+  namespace LocalVariableStatistics {
+    const SORT_BY_ID = (a LocalVariableStatistics, b LocalVariableStatistics) => a.symbol.id <=> b.symbol.id
+  }
+
   class Resolver {
     const _global ObjectSymbol
     const _options CompilerOptions
@@ -277,7 +281,9 @@ namespace Skew.Resolving {
 
           # Copy members from the base type
           var functions List<FunctionSymbol> = []
-          for member in symbol.baseClass.members.values {
+          var members = symbol.baseClass.members.values
+          members.sort(Symbol.SORT_BY_ID) # Sort so the order is deterministic
+          for member in members {
             var memberKind = member.kind
 
             # Separate out functions
@@ -427,8 +433,10 @@ namespace Skew.Resolving {
 
       symbol.hasCheckedInterfacesAndAbstractStatus = true
 
-      # Check to see if this class is abstract (as unimplemented members)
-      for member in symbol.members.values {
+      # Check to see if this class is abstract (has unimplemented members)
+      var members = symbol.members.values
+      members.sort(Symbol.SORT_BY_ID) # Sort so the order is deterministic
+      for member in members {
         if member.kind == .OVERLOADED_INSTANCE {
           _initializeSymbol(member)
           for function in member.asOverloadedFunctionSymbol.symbols {
@@ -747,7 +755,9 @@ namespace Skew.Resolving {
     }
 
     def _scanLocalVariables {
-      for info in _localVariableStatistics.values {
+      var values = _localVariableStatistics.values
+      values.sort(LocalVariableStatistics.SORT_BY_ID) # Sort so the order is deterministic
+      for info in values {
         var symbol = info.symbol
 
         # Variables that are never re-assigned can safely be considered constants for constant folding
@@ -772,7 +782,9 @@ namespace Skew.Resolving {
     }
 
     def _discardUnusedDefines {
-      for key in _defines.keys {
+      var keys = _defines.keys
+      keys.sort((a, b) => a <=> b) # Sort so the order is deterministic
+      for key in keys {
         _log.semanticErrorInvalidDefine(_defines[key].name, key)
       }
     }

@@ -698,14 +698,14 @@ namespace Skew.Tests {
     # keys
     testExpect("{1: 0.5, 2: -0.5}.keys", () List<int> => {
       var x = {1: 0.5, 2: -0.5}.keys
-      x.sort((a, b) => a <=> b)
+      x.sort((a, b) => a <=> b) # Sort so the order is deterministic
       return x
     }, [1, 2])
 
     # values
     testExpect("{1: 0.5, 2: -0.5}.values", () List<double> => {
       var x = {1: 0.5, 2: -0.5}.values
-      x.sort((a, b) => a <=> b)
+      x.sort((a, b) => a <=> b) # Sort so the order is deterministic
       return x
     }, [-0.5, 0.5])
 
@@ -772,14 +772,14 @@ namespace Skew.Tests {
     # keys
     testExpect("{\"\": 0.5, \"\\0\": -0.5}.keys", () List<string> => {
       var x = {"": 0.5, "\0": -0.5}.keys
-      x.sort((a, b) => a <=> b)
+      x.sort((a, b) => a <=> b) # Sort so the order is deterministic
       return x
     }, ["", "\0"])
 
     # values
     testExpect("{\"\": 0.5, \"\\0\": -0.5}.values", () List<double> => {
       var x = {"": 0.5, "\0": -0.5}.values
-      x.sort((a, b) => a <=> b)
+      x.sort((a, b) => a <=> b) # Sort so the order is deterministic
       return x
     }, [-0.5, 0.5])
 

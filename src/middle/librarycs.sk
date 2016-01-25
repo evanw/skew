@@ -203,8 +203,10 @@ class List {
   @rename(\"AddRange\")
   def append(value List<T>)
 
-  @rename(\"Sort\")
-  def sort(x fn(T, T) int)
+  def sort(x fn(T, T) int) {
+    # C# doesn't allow an anonymous function to be passed directly
+    (self as dynamic).Sort((a T, b T) => x(a, b))
+  }
 
   @rename(\"Reverse\")
   def reverse

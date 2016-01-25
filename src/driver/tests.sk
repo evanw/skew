@@ -238,13 +238,13 @@ namespace Skew.Tests {
 
   def toString(value IntMap<double>) string {
     var keys = value.keys
-    keys.sort((a, b) => a <=> b)
+    keys.sort((a, b) => a <=> b) # Sort so the order is deterministic
     return toString(keys.map<string>(k => k.toString), keys.map<string>(k => value[k].toString))
   }
 
   def toString(value StringMap<double>) string {
     var keys = value.keys
-    keys.sort((a, b) => a <=> b)
+    keys.sort((a, b) => a <=> b) # Sort so the order is deterministic
     return toString(keys, keys.map<string>(k => value[k].toString))
   }
 

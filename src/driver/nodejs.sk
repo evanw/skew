@@ -299,7 +299,7 @@ namespace Skew {
   }
 
   def joinKeys(keys List<string>) string {
-    keys.sort((a, b) => a <=> b)
+    keys.sort(SORT_STRINGS)
     return PrettyPrint.joinQuoted(keys, "and")
   }
 
@@ -309,7 +309,7 @@ namespace Skew {
       return map[key]
     }
     var keys = map.keys
-    keys.sort((a, b) => a <=> b)
+    keys.sort(SORT_STRINGS) # Sort so the order is deterministic
     log.commandLineErrorInvalidEnum(range, name, key, keys)
     return defaultValue
   }

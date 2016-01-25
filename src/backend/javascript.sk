@@ -56,6 +56,7 @@ namespace Skew {
     const _isSpecialVariableNeeded IntMap<int> = {}
     const _loopLabels IntMap<VariableSymbol> = {}
     const _specialVariables IntMap<VariableSymbol> = {}
+    var _allSpecialVariables List<VariableSymbol> = null
     var _enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
     var _enclosingLoop Node = null
     var _namespacePrefix = ""
@@ -142,6 +143,10 @@ namespace Skew {
       # The prototype cache doesn't need to be initialized
       _specialVariables[SpecialVariable.PROTOTYPE].value = null
 
+      # Sort these so their order is deterministic
+      _allSpecialVariables = _specialVariables.values
+      _allSpecialVariables.sort(Symbol.SORT_VARIABLES_BY_ID)
+
       # Preprocess the code
       if _mangle {
         _liftGlobals(global)
@@ -159,9 +164,7 @@ namespace Skew {
       _increaseIndent
 
       # Emit special-cased variables that must come first
-      var specialVariables = _specialVariables.values
-      specialVariables.sort((a, b) => a.id <=> b.id)
-      for variable in specialVariables {
+      for variable in _allSpecialVariables {
         if variable.id in _isSpecialVariableNeeded {
           if variable.value != null && variable.value.kind == .LAMBDA {
             _emitFunction(_convertLambdaToFunction(variable))
@@ -184,7 +187,7 @@ namespace Skew {
           _namespacePrefix = _mangleName(o) + "." + _namespacePrefix
         }
         for variable in object.variables {
-          if !(variable in specialVariables) {
+          if !(variable in _allSpecialVariables) {
             if _mangle && _namespacePrefix == "" && !variable.isImportedOrExported {
               statement.appendChild(Node.createVariable(variable))
             } else {
@@ -438,7 +441,7 @@ namespace Skew {
       }
 
       # These will be culled by tree shaking regardless of whether they are needed
-      for variable in _specialVariables.values {
+      for variable in _allSpecialVariables {
         if variable.id in _isSpecialVariableNeeded {
           _allocateNamingGroupIndex(variable)
           _patchNode(variable.value)
@@ -642,7 +645,7 @@ namespace Skew {
       # Sort each resulting group to make builds deterministic when maps use hashing
       var groups = labelToGroup.values
       for group in groups {
-        group.sort((a, b) => a.id <=> b.id)
+        group.sort(Symbol.SORT_BY_ID)
       }
       return groups
     }

@@ -188,7 +188,7 @@ namespace Skew {
       var usings = _usingNames.keys
 
       if !usings.isEmpty {
-        usings.sort((a, b) => a <=> b)
+        usings.sort(SORT_STRINGS) # Sort so the order is deterministic
         for using in usings {
           _emitPrefix("using " + using + ";\n")
         }

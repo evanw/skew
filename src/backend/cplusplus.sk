@@ -1047,7 +1047,7 @@ namespace Skew {
       var includes = _includeNames.keys
 
       if !includes.isEmpty {
-        includes.sort((a, b) => a <=> b)
+        includes.sort(SORT_STRINGS) # Sort so the order is deterministic
         for include in includes {
           _emitPrefix("#include " + (include.startsWith("<") && include.endsWith(">") ? include : "\"" + include + "\"") + "\n")
         }

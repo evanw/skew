@@ -82,19 +82,25 @@ check-cpp: | build
 	diff build/skewc2.cpp build/skewc3.cpp
 
 check-determinism: | build
-	# Debug
+	# Generate JavaScript debug and release builds
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js.js
+	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.js.min.js
+
+	# Check C#
 	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
 	mcs -debug build/skewc.cs
 	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.cs.js
 	diff build/skewc.js.js build/skewc.cs.js
-
-	# Release
-	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.js.min.js
-	node skewc.js $(SOURCES_SKEWC) $(CS_FLAGS) --output-file=build/skewc.cs
-	mcs -debug build/skewc.cs
 	mono --debug build/skewc.exe $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.cs.min.js
 	diff build/skewc.js.min.js build/skewc.cs.min.js
+
+	# Check C++
+	node skewc.js $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc.cpp
+	clang++ -o build/skewc build/skewc.cpp $(CLANG_FLAGS)
+	build/skewc $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.cpp.js
+	diff build/skewc.js.js build/skewc.cpp.js
+	build/skewc $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.cpp.min.js
+	diff build/skewc.js.min.js build/skewc.cpp.min.js
 
 release: compile-api | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --release --output-file=build/skewc.min.js

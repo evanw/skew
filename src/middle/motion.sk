@@ -13,7 +13,9 @@ namespace Skew {
       Motion.symbolMotion(context.global, context.options, namespaces)
 
       # Avoid mutation during the iteration above
-      for object in namespaces.values {
+      var values = namespaces.values
+      values.sort(Symbol.SORT_OBJECTS_BY_ID) # Sort so the order is deterministic
+      for object in values {
         object.parent.asObjectSymbol.objects.append(object)
       }
     }

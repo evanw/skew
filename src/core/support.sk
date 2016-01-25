@@ -1,4 +1,6 @@
 namespace Skew {
+  const SORT_STRINGS = (a string, b string) => a <=> b
+
   def hashCombine(left int, right int) int {
     return left ^ right - 0x61c88647 + (left << 6) + (left >> 2)
   }
