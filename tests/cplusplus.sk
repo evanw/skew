@@ -4,7 +4,7 @@ namespace Skew.Tests {
 # Test entry point
 test("
 @entry
-def main {}
+def test {}
 ", "
 void main() {
 }
@@ -13,7 +13,7 @@ void main() {
 # Test entry point
 test("
 @entry
-def main int {
+def test int {
   return 0
 }
 ", "
@@ -25,22 +25,85 @@ int main() {
 # Test entry point
 test("
 @entry
-def main(x List<string>) {
+def test(x List<string>) {
 }
 ", "
-void main(List<string> *x) {
+void main(int argc, char** argv) {
+  List<string> *x = new List<string>();
+
+  if (*argv++) {
+    while (*argv) {
+      x->append(*argv++);
+    }
+  }
 }
 ").cpp
 
 # Test entry point
 test("
 @entry
-def main(x List<string>) int {
+def test(x List<string>) int {
   return x.count
 }
 ", "
-int main(List<string> *x) {
+int main(int argc, char** argv) {
+  List<string> *x = new List<string>();
+
+  if (*argv++) {
+    while (*argv) {
+      x->append(*argv++);
+    }
+  }
+
   return x->count();
+}
+").cpp
+
+# Test entry point inside a namespace
+test("
+namespace ns {
+  @entry
+  def test(x List<string>) int {
+    test([])
+    return x.count
+  }
+}
+", "
+int main(int argc, char** argv) {
+  List<string> *x = new List<string>();
+
+  if (*argv++) {
+    while (*argv) {
+      x->append(*argv++);
+    }
+  }
+
+  main(new List<string>());
+  return x->count();
+}
+").cpp
+
+# Test entry point name collisions
+test("
+@entry
+def main(x List<string>) int {
+  var argc = 0
+  var argv = 0
+  return argc + argv
+}
+", "
+int main(int argc1, char** argv1) {
+  List<string> *x = new List<string>();
+
+  if (*argv1++) {
+    while (*argv1) {
+      x->append(*argv1++);
+    }
+  }
+
+  int argc = 0;
+  int argv = 0;
+  return argc + argv;
 }
 ").cpp
 
@@ -737,7 +800,7 @@ struct Lambda21 : Fn1<int, int> {
 
 Fn1<Fn1<int, int> *, int> *f = new Lambda1();
 
-int test() {
+int main() {
   return f->run(1)->run(2);
 }
 

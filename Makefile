@@ -66,13 +66,10 @@ check-cs: | build
 
 check-cpp: | build
 	node skewc.js $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc.cpp
-	cat src/backend/main.cpp >> build/skewc.cpp
 	clang++ -o build/skewc build/skewc.cpp -std=c++11 -ferror-limit=0 -Wno-switch -include src/backend/library.h -include src/backend/library.cpp
 	build/skewc $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc2.cpp
-	cat src/backend/main.cpp >> build/skewc2.cpp
 	clang++ -o build/skewc2 build/skewc2.cpp -std=c++11 -ferror-limit=0 -Wno-switch -include src/backend/library.h -include src/backend/library.cpp
 	build/skewc2 $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc3.cpp
-	cat src/backend/main.cpp >> build/skewc3.cpp
 	diff build/skewc2.cpp build/skewc3.cpp
 
 check-determinism: | build

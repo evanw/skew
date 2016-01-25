@@ -24,6 +24,45 @@ namespace Skew {
     var _enclosingFunction FunctionSymbol = null
 
     over visit(global ObjectSymbol) {
+      # Generate the entry point
+      var entryPoint = _cache.entryPointSymbol
+      if entryPoint != null {
+        entryPoint.name = "main"
+
+        # The entry point must not be in a namespace
+        if entryPoint.parent != global {
+          entryPoint.parent.asObjectSymbol.functions.removeOne(entryPoint)
+          entryPoint.parent = global
+          global.functions.append(entryPoint)
+        }
+
+        # The entry point in C++ takes an array, not a list
+        if entryPoint.arguments.count == 1 {
+          var argument = entryPoint.arguments.first
+          var argc = VariableSymbol.new(.VARIABLE_ARGUMENT, entryPoint.scope.generateName("argc"))
+          var argv = VariableSymbol.new(.VARIABLE_ARGUMENT, entryPoint.scope.generateName("argv"))
+          argc.initializeWithType(_cache.intType)
+          argv.type = Node.createName("char**").withType(.DYNAMIC)
+          argv.resolvedType = .DYNAMIC
+          argv.state = .INITIALIZED
+          entryPoint.arguments = [argc, argv]
+          entryPoint.resolvedType.argumentTypes = [argc.resolvedType, argv.resolvedType]
+
+          # Create the list from the array
+          if entryPoint.block != null {
+            var advance = Node.createName("*\(argv.name)++").withType(.DYNAMIC)
+            var block = Node.createBlock.appendChild(Node.createExpression(Node.createCall(Node.createDot(
+              Node.createSymbolReference(argument), "append").withType(.DYNAMIC)).withType(.DYNAMIC).appendChild(advance)))
+            var check = Node.createIf(advance.clone, Node.createBlock.appendChild(
+              Node.createWhile(Node.createName("*\(argv.name)").withType(.DYNAMIC), block)), null)
+            argument.kind = .VARIABLE_LOCAL
+            argument.value = Node.createCall(Node.createDot(Node.createType(argument.resolvedType), "new").withType(.DYNAMIC)).withType(.DYNAMIC)
+            entryPoint.block.prependChild(check)
+            entryPoint.block.prependChild(Node.createVariables.appendChild(Node.createVariable(argument)))
+          }
+        }
+      }
+
       # Avoid emitting unnecessary stuff
       shakingPass(global, _cache.entryPointSymbol, .USE_TYPES)
       _markVirtualFunctions(global)

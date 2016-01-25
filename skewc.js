@@ -1174,7 +1174,7 @@
         array.type = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('string[]')).withType(Skew.Type.DYNAMIC);
         array.resolvedType = Skew.Type.DYNAMIC;
         entryPoint.$arguments = [array];
-        entryPoint.resolvedType.argumentTypes = [Skew.Type.DYNAMIC];
+        entryPoint.resolvedType.argumentTypes = [array.resolvedType];
 
         // Create the list from the array
         if (entryPoint.block != null) {
@@ -2478,6 +2478,44 @@
   __extends(Skew.CPlusPlusEmitter, Skew.Emitter);
 
   Skew.CPlusPlusEmitter.prototype.visit = function(global) {
+    // Generate the entry point
+    var entryPoint = this._cache.entryPointSymbol;
+
+    if (entryPoint != null) {
+      entryPoint.name = 'main';
+
+      // The entry point must not be in a namespace
+      if (entryPoint.parent != global) {
+        in_List.removeOne(entryPoint.parent.asObjectSymbol().functions, entryPoint);
+        entryPoint.parent = global;
+        global.functions.push(entryPoint);
+      }
+
+      // The entry point in C++ takes an array, not a list
+      if (entryPoint.$arguments.length == 1) {
+        var argument = in_List.first(entryPoint.$arguments);
+        var argc = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, entryPoint.scope.generateName('argc'));
+        var argv = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, entryPoint.scope.generateName('argv'));
+        argc.initializeWithType(this._cache.intType);
+        argv.type = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('char**')).withType(Skew.Type.DYNAMIC);
+        argv.resolvedType = Skew.Type.DYNAMIC;
+        argv.state = Skew.SymbolState.INITIALIZED;
+        entryPoint.$arguments = [argc, argv];
+        entryPoint.resolvedType.argumentTypes = [argc.resolvedType, argv.resolvedType];
+
+        // Create the list from the array
+        if (entryPoint.block != null) {
+          var advance = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('*' + argv.name + '++')).withType(Skew.Type.DYNAMIC);
+          var block = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createExpression(Skew.Node.createCall(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('append')).appendChild(Skew.Node.createSymbolReference(argument)).withType(Skew.Type.DYNAMIC)).withType(Skew.Type.DYNAMIC).appendChild(advance)));
+          var check = Skew.Node.createIf(advance.clone(), new Skew.Node(Skew.NodeKind.BLOCK).appendChild(new Skew.Node(Skew.NodeKind.WHILE).appendChild(new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('*' + argv.name)).withType(Skew.Type.DYNAMIC)).appendChild(block)), null);
+          argument.kind = Skew.SymbolKind.VARIABLE_LOCAL;
+          argument.value = Skew.Node.createCall(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('new')).appendChild(new Skew.Node(Skew.NodeKind.TYPE).withType(argument.resolvedType)).withType(Skew.Type.DYNAMIC)).withType(Skew.Type.DYNAMIC);
+          entryPoint.block.prependChild(check);
+          entryPoint.block.prependChild(new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(argument)));
+        }
+      }
+    }
+
     // Avoid emitting unnecessary stuff
     Skew.shakingPass(global, this._cache.entryPointSymbol, Skew.ShakingMode.USE_TYPES);
     this._markVirtualFunctions(global);

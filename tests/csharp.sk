@@ -4,7 +4,7 @@ namespace Skew.Tests {
 # Test entry point
 test("
 @entry
-def main {}
+def test {}
 ", "
 public class Globals
 {
@@ -17,7 +17,7 @@ public class Globals
 # Test entry point
 test("
 @entry
-def main int {
+def test int {
   return 0
 }
 ", "
@@ -33,7 +33,7 @@ public class Globals
 # Test entry point
 test("
 @entry
-def main(x List<string>) {
+def test(x List<string>) {
 }
 ", "
 using System.Collections.Generic;
@@ -50,7 +50,7 @@ public class Globals
 # Test entry point
 test("
 @entry
-def main(x List<string>) int {
+def test(x List<string>) int {
   return x.count
 }
 ", "
@@ -61,6 +61,29 @@ public class Globals
     public static int Main(string[] x1)
     {
         List<string> x = new List<string>(x1);
+        return x.Count;
+    }
+}
+").csharp.inlineAllFunctions
+
+# Test entry point inside a namespace
+test("
+namespace ns {
+  @entry
+  def test(x List<string>) int {
+    test([])
+    return x.count
+  }
+}
+", "
+using System.Collections.Generic;
+
+public class ns
+{
+    public static int Main(string[] x1)
+    {
+        List<string> x = new List<string>(x1);
+        ns.Main(new List<string>());
         return x.Count;
     }
 }
