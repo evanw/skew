@@ -2672,7 +2672,10 @@
         if (symbol.kind == Skew.SymbolKind.OBJECT_FLAGS) {
           this._emit(this._indent + 'struct ' + Skew.CPlusPlusEmitter._mangleName(symbol) + ' {\n');
           this._increaseIndent();
-          this._emit(this._indent + 'enum {\n');
+
+          if (!(symbol.variables.length == 0)) {
+            this._emit(this._indent + 'enum {\n');
+          }
         }
 
         else {
@@ -2689,7 +2692,10 @@
         this._decreaseIndent();
 
         if (symbol.kind == Skew.SymbolKind.OBJECT_FLAGS) {
-          this._emit(this._indent + '};\n');
+          if (!(symbol.variables.length == 0)) {
+            this._emit(this._indent + '};\n');
+          }
+
           this._decreaseIndent();
         }
 
@@ -15568,7 +15574,6 @@
       this._visitObject(object);
     }
 
-    // TODO: Major speedup: skip over functions that don't contain any lambdas (save this as a node flag at parse time)
     for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
       var $function = in_List.get(list1, i1);
       this._visitFunction($function);

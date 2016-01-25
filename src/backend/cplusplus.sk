@@ -199,7 +199,9 @@ namespace Skew {
           if symbol.kind == .OBJECT_FLAGS {
             _emit(_indent + "struct " + _mangleName(symbol) + " {\n")
             _increaseIndent
-            _emit(_indent + "enum {\n")
+            if !symbol.variables.isEmpty {
+              _emit(_indent + "enum {\n")
+            }
           } else {
             _emit(_indent + "enum struct " + _mangleName(symbol) + " {\n")
           }
@@ -209,7 +211,9 @@ namespace Skew {
           }
           _decreaseIndent
           if symbol.kind == .OBJECT_FLAGS {
-            _emit(_indent + "};\n")
+            if !symbol.variables.isEmpty {
+              _emit(_indent + "};\n")
+            }
             _decreaseIndent
           }
           _emit(_indent + "};\n")

@@ -340,7 +340,6 @@ namespace Skew.LambdaConversion {
         _visitObject(object)
       }
 
-      # TODO: Major speedup: skip over functions that don't contain any lambdas (save this as a node flag at parse time)
       for function in symbol.functions {
         _visitFunction(function)
       }

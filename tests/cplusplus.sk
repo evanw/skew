@@ -998,5 +998,22 @@ void test(int x, bool y) {
 }
 ").cpp
 
+# Avoid emitting an empty anonymous enum to avoid a clang warning
+test("
+@export {
+  flags Foo { FOO }
+  flags Bar {}
+}
+", "
+struct Foo {
+  enum {
+    FOO = 1,
+  };
+};
+
+struct Bar {
+};
+").cpp
+
   }
 }

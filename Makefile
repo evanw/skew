@@ -38,6 +38,7 @@ CLANG_FLAGS += -Wall
 CLANG_FLAGS += -Wextra
 CLANG_FLAGS += -Wno-switch
 CLANG_FLAGS += -Wno-unused-parameter
+CLANG_FLAGS += -Wno-unused-variable
 CLANG_FLAGS += -include src/backend/library.h
 CLANG_FLAGS += -include src/backend/library.cpp
 
@@ -107,6 +108,10 @@ release: compile-api | build
 	node skewc.js $(SOURCES_API) $(JS_FLAGS) --release --output-file=build/skew-api.min.js
 	type zopfli > /dev/null 2>&1 && (zopfli -c build/skew-api.min.js > build/skew-api.min.js.gz) || (gzip -c build/skew-api.min.js > build/skew-api.min.js.gz)
 	ls -l build/skew-api.js build/skew-api.min.js build/skew-api.min.js.gz
+
+release-cpp: | build
+	node skewc.js $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc.cpp --release
+	time clang++ -o build/skewc build/skewc.cpp $(CLANG_FLAGS) -O3 -include src/backend/fast.cpp
 
 watch:
 	node_modules/.bin/watch src 'clear && make compile-api'
