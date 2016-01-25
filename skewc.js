@@ -16032,8 +16032,8 @@
 
     // Avoid mutation during the iteration above
     for (var i = 0, list = in_IntMap.values(namespaces), count = list.length; i < count; i = i + 1 | 0) {
-      var pair = in_List.get(list, i);
-      pair.parent.objects.push(pair.child);
+      var object = in_List.get(list, i);
+      object.parent.asObjectSymbol().objects.push(object);
     }
   };
 
@@ -16094,7 +16094,7 @@
   Skew.Motion.moveSymbolIntoNewNamespace = function(symbol, namespaces) {
     var parent = symbol.parent;
     var namespace = in_IntMap.get(namespaces, parent.id, null);
-    var object = namespace != null ? namespace.child.asObjectSymbol() : null;
+    var object = namespace != null ? namespace.asObjectSymbol() : null;
 
     // Create a parallel namespace next to the parent
     if (namespace == null) {
@@ -16104,8 +16104,7 @@
       object.state = Skew.SymbolState.INITIALIZED;
       object.scope = new Skew.ObjectScope(common.scope, object);
       object.parent = common;
-      namespace = new Skew.Motion.Namespace(common, object);
-      namespaces[parent.id] = namespace;
+      namespaces[parent.id] = object;
     }
 
     // Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)
@@ -16122,11 +16121,6 @@
     // Move this function into that parallel namespace
     symbol.parent = object;
     return object;
-  };
-
-  Skew.Motion.Namespace = function(parent, child) {
-    this.parent = parent;
-    this.child = child;
   };
 
   Skew.RenamingPass = function() {

@@ -9,24 +9,19 @@ namespace Skew {
     }
 
     over run(context PassContext) {
-      var namespaces = IntMap<Motion.Namespace>.new
+      var namespaces = IntMap<ObjectSymbol>.new
       Motion.symbolMotion(context.global, context.options, namespaces)
 
       # Avoid mutation during the iteration above
-      for pair in namespaces.values {
-        pair.parent.objects.append(pair.child)
+      for object in namespaces.values {
+        object.parent.asObjectSymbol.objects.append(object)
       }
     }
   }
 }
 
 namespace Skew.Motion {
-  class Namespace {
-    const parent ObjectSymbol
-    const child ObjectSymbol
-  }
-
-  def symbolMotion(symbol ObjectSymbol, options CompilerOptions, namespaces IntMap<Namespace>) {
+  def symbolMotion(symbol ObjectSymbol, options CompilerOptions, namespaces IntMap<ObjectSymbol>) {
     # Move non-imported objects off imported objects
     symbol.objects.removeIf(object => {
       symbolMotion(object, options, namespaces)
@@ -68,10 +63,10 @@ namespace Skew.Motion {
     }
   }
 
-  def moveSymbolIntoNewNamespace(symbol Symbol, namespaces IntMap<Namespace>) ObjectSymbol {
+  def moveSymbolIntoNewNamespace(symbol Symbol, namespaces IntMap<ObjectSymbol>) ObjectSymbol {
     var parent = symbol.parent
     var namespace = namespaces.get(parent.id, null)
-    var object = namespace?.child.asObjectSymbol
+    var object = namespace?.asObjectSymbol
 
     # Create a parallel namespace next to the parent
     if namespace == null {
@@ -81,8 +76,7 @@ namespace Skew.Motion {
       object.state = .INITIALIZED
       object.scope = ObjectScope.new(common.scope, object)
       object.parent = common
-      namespace = Namespace.new(common, object)
-      namespaces[parent.id] = namespace
+      namespaces[parent.id] = object
     }
 
     # Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)
