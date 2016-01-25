@@ -32,6 +32,15 @@ CS_FLAGS += --target=cs
 CPP_FLAGS += $(FLAGS)
 CPP_FLAGS += --target=cpp
 
+CLANG_FLAGS += -std=c++11
+CLANG_FLAGS += -ferror-limit=0
+CLANG_FLAGS += -Wall
+CLANG_FLAGS += -Wextra
+CLANG_FLAGS += -Wno-switch
+CLANG_FLAGS += -Wno-unused-parameter
+CLANG_FLAGS += -include src/backend/library.h
+CLANG_FLAGS += -include src/backend/library.cpp
+
 default: compile-skewc compile-api
 
 compile-skewc: | build
@@ -66,9 +75,9 @@ check-cs: | build
 
 check-cpp: | build
 	node skewc.js $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc.cpp
-	clang++ -o build/skewc build/skewc.cpp -std=c++11 -ferror-limit=0 -Wno-switch -include src/backend/library.h -include src/backend/library.cpp
+	clang++ -o build/skewc build/skewc.cpp $(CLANG_FLAGS)
 	build/skewc $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc2.cpp
-	clang++ -o build/skewc2 build/skewc2.cpp -std=c++11 -ferror-limit=0 -Wno-switch -include src/backend/library.h -include src/backend/library.cpp
+	clang++ -o build/skewc2 build/skewc2.cpp $(CLANG_FLAGS)
 	build/skewc2 $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc3.cpp
 	diff build/skewc2.cpp build/skewc3.cpp
 
@@ -121,6 +130,12 @@ test-cs: | build
 	node build/skewc.js $(SOURCES_TEST) $(CS_FLAGS) --output-dir=build/cs
 	mcs -debug build/cs/*.cs -out:build/test.exe
 	mono --debug build/test.exe
+
+test-cpp: | build
+	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js
+	node build/skewc.js $(SOURCES_TEST) $(CPP_FLAGS) --output-file=build/test.cpp
+	clang++ -o build/test build/test.cpp $(CLANG_FLAGS)
+	build/test
 
 clean:
 	rm -fr build
