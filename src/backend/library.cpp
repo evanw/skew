@@ -68,7 +68,7 @@ bool string::endsWith(const string &x) const {
 }
 
 int string::operator [] (int x) const {
-  return _data[x];
+  return (int)(unsigned char)_data[x]; // Code units should not be negative
 }
 
 string string::get(int x) const {
