@@ -1,5 +1,7 @@
 #include <dirent.h>
+#include <stdio.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 string::string() : _isNull(true) {
 }
@@ -722,7 +724,9 @@ void Terminal::write(const string &text) {
 ////////////////////////////////////////////////////////////////////////////////
 
 double Timestamp::seconds() {
-  return 0;
+  timeval data;
+  gettimeofday(&data, nullptr);
+  return data.tv_sec + data.tv_usec / 1.0e6;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -733,8 +737,17 @@ double parseDoubleLiteral(const string &x) {
   return y;
 }
 
-string doubleToString(double x) {
-  return std::to_string(x);
+// Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
+string doubleToString(double value) {
+  char buffer[64];
+  std::snprintf(&buffer[0], sizeof(buffer), "%.15g", value);
+  if (std::stod(&buffer[0]) != value) {
+    std::snprintf(&buffer[0], sizeof(buffer), "%.16g", value);
+    if (std::stod(&buffer[0]) != value) {
+      std::snprintf(&buffer[0], sizeof(buffer), "%.17g", value);
+    }
+  }
+  return buffer;
 }
 
 string intToString(int x) {
