@@ -905,5 +905,35 @@ List<int> *Lambda1::run() {
 }
 ").cpp
 
+# Test break statements inside a switch
+test("
+@export
+def test(x int, y bool) {
+  while true {
+    switch x {
+      case 0 {
+        if y {
+          break
+        }
+      }
+    }
+  }
+}
+", "
+void test(int x, bool y) {
+  while (true) {
+    switch (x) {
+      case 0: {
+        if (y) {
+          goto label;
+        }
+        break;
+      }
+    }
+  }
+  label:;
+}
+").cpp
+
   }
 }

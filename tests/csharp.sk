@@ -769,5 +769,43 @@ public class Foo
 }
 ").csharp
 
+# Test break statements inside a switch
+test("
+@export
+def test(x int, y bool) {
+  while true {
+    switch x {
+      case 0 {
+        if y {
+          break
+        }
+      }
+    }
+  }
+}
+", "
+public class Globals
+{
+    public static void test(int x, bool y)
+    {
+        while (true)
+        {
+            switch (x)
+            {
+                case 0:
+                {
+                    if (y)
+                    {
+                        goto label;
+                    }
+                    break;
+                }
+            }
+        }
+        label:;
+    }
+}
+").csharp
+
   }
 }

@@ -2470,6 +2470,8 @@
     this._namespaceStack = [];
     this._symbolsCheckedForInclude = {};
     this._includeNames = Object.create(null);
+    this._loopLabels = {};
+    this._enclosingFunction = null;
   };
 
   __extends(Skew.CPlusPlusEmitter, Skew.Emitter);
@@ -2748,6 +2750,7 @@
       symbol.$this.flags |= Skew.SymbolFlags.IS_EXPORTED;
     }
 
+    this._enclosingFunction = symbol;
     this._emitNewlineBeforeSymbol(symbol, mode);
     this._emitComments(symbol.comments);
 
@@ -2829,6 +2832,7 @@
     }
 
     this._emitNewlineAfterSymbol(symbol);
+    this._enclosingFunction = null;
   };
 
   Skew.CPlusPlusEmitter.prototype._emitTypeParameters = function(parameters) {
@@ -2933,7 +2937,36 @@
     this._emit(this._indent + '}');
   };
 
+  Skew.CPlusPlusEmitter.prototype._scanForSwitchBreak = function(node, loop) {
+    if (node.kind == Skew.NodeKind.BREAK) {
+      for (var parent = node.parent(); parent != loop; parent = parent.parent()) {
+        if (parent.kind == Skew.NodeKind.SWITCH) {
+          var label = in_IntMap.get(this._loopLabels, loop.id, null);
+
+          if (label == null) {
+            label = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, this._enclosingFunction.scope.generateName('label'));
+            this._loopLabels[loop.id] = label;
+          }
+
+          this._loopLabels[node.id] = label;
+          break;
+        }
+      }
+    }
+
+    // Stop at nested loops since those will be tested later
+    else if (node == loop || !Skew.in_NodeKind.isLoop(node.kind)) {
+      for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+        this._scanForSwitchBreak(child, loop);
+      }
+    }
+  };
+
   Skew.CPlusPlusEmitter.prototype._emitStatement = function(node) {
+    if (Skew.in_NodeKind.isLoop(node.kind)) {
+      this._scanForSwitchBreak(node, node);
+    }
+
     switch (node.kind) {
       case Skew.NodeKind.VARIABLES: {
         for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
@@ -2950,7 +2983,15 @@
       }
 
       case Skew.NodeKind.BREAK: {
-        this._emit(this._indent + 'break;\n');
+        var label = in_IntMap.get(this._loopLabels, node.id, null);
+
+        if (label != null) {
+          this._emit(this._indent + 'goto ' + Skew.CPlusPlusEmitter._mangleName(label) + ';\n');
+        }
+
+        else {
+          this._emit(this._indent + 'break;\n');
+        }
         break;
       }
 
@@ -3159,6 +3200,14 @@
       default: {
         assert(false);
         break;
+      }
+    }
+
+    if (Skew.in_NodeKind.isLoop(node.kind)) {
+      var label1 = in_IntMap.get(this._loopLabels, node.id, null);
+
+      if (label1 != null) {
+        this._emit(this._indent + Skew.CPlusPlusEmitter._mangleName(label1) + (node.nextSibling() != null ? ':\n' : ':;\n'));
       }
     }
   };

@@ -20,6 +20,8 @@ namespace Skew {
     var _namespaceStack List<Symbol> = []
     var _symbolsCheckedForInclude IntMap<int> = {}
     var _includeNames StringMap<int> = {}
+    var _loopLabels IntMap<VariableSymbol> = {}
+    var _enclosingFunction FunctionSymbol = null
 
     over visit(global ObjectSymbol) {
       # Avoid emitting unnecessary stuff
@@ -247,6 +249,7 @@ namespace Skew {
         symbol.this.flags |= .IS_EXPORTED
       }
 
+      _enclosingFunction = symbol
       _emitNewlineBeforeSymbol(symbol, mode)
       _emitComments(symbol.comments)
       if mode == .IMPLEMENT {
@@ -309,6 +312,7 @@ namespace Skew {
       }
 
       _emitNewlineAfterSymbol(symbol)
+      _enclosingFunction = null
     }
 
     def _emitTypeParameters(parameters List<ParameterSymbol>) {
@@ -391,7 +395,34 @@ namespace Skew {
       _emit(_indent + "}")
     }
 
+    def _scanForSwitchBreak(node Node, loop Node) {
+      if node.kind == .BREAK {
+        for parent = node.parent; parent != loop; parent = parent.parent {
+          if parent.kind == .SWITCH {
+            var label = _loopLabels.get(loop.id, null)
+            if label == null {
+              label = VariableSymbol.new(.VARIABLE_LOCAL, _enclosingFunction.scope.generateName("label"))
+              _loopLabels[loop.id] = label
+            }
+            _loopLabels[node.id] = label
+            break
+          }
+        }
+      }
+
+      # Stop at nested loops since those will be tested later
+      else if node == loop || !node.kind.isLoop {
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          _scanForSwitchBreak(child, loop)
+        }
+      }
+    }
+
     def _emitStatement(node Node) {
+      if node.kind.isLoop {
+        _scanForSwitchBreak(node, node)
+      }
+
       switch node.kind {
         case .VARIABLES {
           for child = node.firstChild; child != null; child = child.nextSibling {
@@ -406,7 +437,12 @@ namespace Skew {
         }
 
         case .BREAK {
-          _emit(_indent + "break;\n")
+          var label = _loopLabels.get(node.id, null)
+          if label != null {
+            _emit(_indent + "goto " + _mangleName(label) + ";\n")
+          } else {
+            _emit(_indent + "break;\n")
+          }
         }
 
         case .CONTINUE {
@@ -570,6 +606,13 @@ namespace Skew {
 
         default {
           assert(false)
+        }
+      }
+
+      if node.kind.isLoop {
+        var label = _loopLabels.get(node.id, null)
+        if label != null {
+          _emit(_indent + _mangleName(label) + (node.nextSibling != null ? ":\n" : ":;\n"))
         }
       }
     }
