@@ -1,7 +1,10 @@
+#include <codecvt>
 #include <dirent.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 string::string() : _isNull(true) {
 }
@@ -83,11 +86,6 @@ string string::slice(int start, int end) const {
   return _data.substr(start, end - start);
 }
 
-List<int> *string::codePoints() const {
-  auto result = new List<int>;
-  return result;
-}
-
 List<int> *string::codeUnits() const {
   auto result = new List<int>;
   for (unsigned char x : _data) {
@@ -98,6 +96,16 @@ List<int> *string::codeUnits() const {
 
 List<string> *string::split(const string &x) const {
   auto result = new List<string>;
+  size_t start = 0;
+  while (true) {
+    auto it = _data.find(x._data, start);
+    if (it == std::string::npos) {
+      break;
+    }
+    result->append(_data.substr(start, it - start));
+    start = it + x._data.size();
+  }
+  result->append(_data.substr(start));
   return result;
 }
 
@@ -122,7 +130,18 @@ string string::repeat(int x) const {
 }
 
 string string::replaceAll(const string &before, const string &after) const {
-  auto result = *this;
+  string result;
+  size_t start = 0;
+  while (true) {
+    auto it = _data.find(before._data, start);
+    if (it == std::string::npos) {
+      break;
+    }
+    result._data += _data.substr(start, it - start);
+    result._data += after._data;
+    start = it + before._data.size();
+  }
+  result._data += _data.substr(start);
   return result;
 }
 
@@ -148,16 +167,6 @@ string string::fromCodeUnits(const List<int> *x) {
   for (char y : *x) {
     result += y;
   }
-  return result;
-}
-
-string string::fromCodePoint(int x) {
-  string result;
-  return result;
-}
-
-string string::fromCodePoint(const List<int> *x) {
-  string result;
   return result;
 }
 
@@ -701,12 +710,43 @@ List<string> *IO::readDirectory(const string &path) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+struct __TerminalInfo {
+  int width;
+  int height;
+  bool isTTY;
+  bool isValid;
+};
+
+static __TerminalInfo &__getTerminalInfo() {
+  static __TerminalInfo info;
+
+  if (!info.isValid) {
+    winsize size;
+
+    if (!ioctl(2, TIOCGWINSZ, &size)) {
+      info.width = size.ws_col;
+      info.height = size.ws_row;
+    }
+
+    info.isTTY = isatty(STDOUT_FILENO);
+    info.isValid = true;
+  }
+
+  return info;
+}
+
+void Terminal::_setColor(int escapeCode) {
+  if (__getTerminalInfo().isTTY) {
+    std::cout << "\x1B[0;" << escapeCode << 'm';
+  }
+}
+
 int Terminal::width() {
-  return 0;
+  return __getTerminalInfo().width;
 }
 
 int Terminal::height() {
-  return 0;
+  return __getTerminalInfo().height;
 }
 
 void Terminal::print(const string &text) {

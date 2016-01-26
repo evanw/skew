@@ -145,7 +145,6 @@ struct string {
   string get(int x) const;
   string slice(int start) const;
   string slice(int start, int end) const;
-  List<int> *codePoints() const;
   List<int> *codeUnits() const;
 
   List<string> *split(const string &x) const;
@@ -158,8 +157,6 @@ struct string {
 
   static string fromCodeUnit(int x);
   static string fromCodeUnits(const List<int> *x);
-  static string fromCodePoint(int x);
-  static string fromCodePoint(const List<int> *x);
 
 private:
   friend struct std::hash<string>;
@@ -329,9 +326,7 @@ namespace IO {
 }
 
 namespace Terminal {
-  enum struct Color;
-
-  void setColor(Color color);
+  void _setColor(int escapeCode);
   int width();
   int height();
   void print(const string &text);

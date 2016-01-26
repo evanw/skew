@@ -95,10 +95,11 @@ namespace Terminal {
 
   else {
     def setColor(color Color) {
-      write("\x1B[0;\(color.toEscapeCode)m")
+      _setColor(color.toEscapeCode)
     }
 
     @import {
+      def _setColor(escapeCode int)
       def width int
       def height int
       def print(text string)

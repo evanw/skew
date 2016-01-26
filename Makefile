@@ -5,7 +5,7 @@ SOURCES += src/lib/timestamp.sk
 SOURCES += src/middle
 
 SOURCES_SKEWC += $(SOURCES)
-SOURCES_SKEWC += src/driver/nodejs.sk
+SOURCES_SKEWC += src/driver/terminal.sk
 SOURCES_SKEWC += src/driver/options.sk
 SOURCES_SKEWC += src/lib/io.sk
 SOURCES_SKEWC += src/lib/terminal.sk
