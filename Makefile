@@ -126,6 +126,9 @@ build:
 flex:
 	sh -c 'cd src/frontend && python build.py'
 
+version:
+	sh -c 'cd src/frontend && python version.py'
+
 test: test-js test-cs
 
 test-js: | build
@@ -156,13 +159,15 @@ clean:
 	rm -fr build
 
 publish: test check
+	sh -c 'cd npm && npm version patch'
+	make version
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.min.js --release
 	node skewc.js $(SOURCES_API) $(JS_FLAGS) --output-file=build/skew-api.min.js --release
 	cp build/skew-api.min.js npm/skew.js
 	echo '#!/usr/bin/env node' > npm/skewc
 	cat build/skewc.min.js >> npm/skewc
 	chmod +x npm/skewc
-	sh -c 'cd npm && npm version patch && npm publish'
+	sh -c 'cd npm && npm publish'
 
 benchmark: | build
 	cat $(SOURCES_API) > build/benchmark.sk

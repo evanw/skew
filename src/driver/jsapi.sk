@@ -289,6 +289,7 @@ namespace Skew.API {
     # JavaScript API
     var this = (=> dynamic.this)()
     var api = dynamic.typeof(dynamic.exports) != "undefined" ? dynamic.exports : this.Skew ? this.Skew : this.Skew = {}
+    api.VERSION = VERSION
     api.create = createCompilerInstance
 
     # Web Worker API (only installed if no other code in the worker sets "Skew.handleWorkerMessages" to false first)

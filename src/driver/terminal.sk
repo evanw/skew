@@ -15,6 +15,7 @@ namespace Skew {
     RELEASE
     TARGET
     VERBOSE
+    VERSION
   }
 
   const DEFAULT_MESSAGE_LIMIT = 10
@@ -184,6 +185,7 @@ namespace Skew {
     parser.define(.BOOL, .NO_OUTPUT, "--no-output", "Stops after the type checking pass and does not generate any output.")
     parser.define(.BOOL, .RELEASE, "--release", "Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.")
     parser.define(.BOOL, .VERBOSE, "--verbose", "Prints out information about the compilation.")
+    parser.define(.BOOL, .VERSION, "--version", "Prints the current npm version (\(VERSION)) and exits.")
     parser.define(.INT, .MESSAGE_LIMIT, "--message-limit", "Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is \(DEFAULT_MESSAGE_LIMIT).")
     parser.define(.STRING_LIST, .DEFINE, "--define", "Override variable values at compile time.")
     parser.define(.BOOL, .JS_MANGLE, "--js-mangle", "Transforms emitted JavaScript to be as small as possible. The \"@export\" annotation prevents renaming a symbol.")
@@ -202,6 +204,12 @@ namespace Skew {
     # Early-out when printing the usage text
     if parser.boolForOption(.HELP, arguments.isEmpty) {
       printUsage(parser)
+      return null
+    }
+
+    # Early-out when printing the version
+    if parser.boolForOption(.VERSION, false) {
+      Terminal.print(VERSION)
       return null
     }
 
