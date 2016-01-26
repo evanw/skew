@@ -21005,8 +21005,8 @@
   };
 
   Skew.UsageGraph.prototype._visitObject = function(symbol) {
-    for (var i1 = 0, list1 = symbol.objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-      var object = in_List.get(list1, i1);
+    for (var i3 = 0, list3 = symbol.objects, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
+      var object = in_List.get(list3, i3);
       this._changeContext(object);
       this._recordUsage(symbol);
 
@@ -21026,32 +21026,46 @@
         }
       }
 
+      // If an imported type is used, automatically assume all functions and
+      // variables for that type are used too
+      if (object.isImported()) {
+        for (var i1 = 0, list1 = object.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+          var $function = in_List.get(list1, i1);
+          this._recordUsage($function);
+        }
+
+        for (var i2 = 0, list2 = object.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
+          var variable = in_List.get(list2, i2);
+          this._recordUsage(variable);
+        }
+      }
+
       this._visitObject(object);
     }
 
-    for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-      var $function = in_List.get(list2, i2);
-      this._changeContext($function);
+    for (var i4 = 0, list4 = symbol.functions, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
+      var function1 = in_List.get(list4, i4);
+      this._changeContext(function1);
 
       // Instance functions shouldn't cause their instance type to be emitted for dynamically-typed targets
-      if (this._mode != Skew.ShakingMode.IGNORE_TYPES || $function.kind != Skew.SymbolKind.FUNCTION_INSTANCE) {
+      if (this._mode != Skew.ShakingMode.IGNORE_TYPES || function1.kind != Skew.SymbolKind.FUNCTION_INSTANCE) {
         this._recordUsage(symbol);
       }
 
-      this._visitFunction($function);
+      this._visitFunction(function1);
     }
 
-    for (var i3 = 0, list3 = symbol.variables, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-      var variable = in_List.get(list3, i3);
-      this._changeContext(variable);
+    for (var i5 = 0, list5 = symbol.variables, count5 = list5.length; i5 < count5; i5 = i5 + 1 | 0) {
+      var variable1 = in_List.get(list5, i5);
+      this._changeContext(variable1);
 
       // Instance variables shouldn't require the class to be present because
       // accessing an instance variable already requires a constructed instance
-      if (variable.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
+      if (variable1.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
         this._recordUsage(symbol);
       }
 
-      this._visitVariable(variable);
+      this._visitVariable(variable1);
     }
   };
 

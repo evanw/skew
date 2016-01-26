@@ -1672,30 +1672,32 @@ def main {
 }
 ", "
 (function() {
-  function e(a) {
+  var b;
+
+  function f(a) {
     return a === (a | 0);
   }
 
-  function f(a) {
+  function g(a) {
     return a === !!a;
   }
 
-  function g(a) {
+  function h(a) {
     return a === +a || isNaN(a);
   }
 
-  function h(a) {
+  function i(a) {
     return typeof a === 'string';
   }
 
   main = function() {
-    foo(bar), foo(bar instanceof Function), foo(f(bar)), foo(g(bar)), foo(e(bar)), foo(e(bar)), foo(e(bar)), foo(h(bar)), foo(bar instanceof b), foo(bar instanceof Dynamic);
+    foo(bar), foo(bar instanceof Function), foo(g(bar)), foo(h(bar)), foo(f(bar)), foo(f(bar)), foo(f(bar)), foo(i(bar)), foo(bar instanceof c), foo(bar instanceof Dynamic);
   };
 
-  var b = {};
   var c = {};
-
   var d = {};
+
+  var e = {};
 })();
 ").jsMangle
 

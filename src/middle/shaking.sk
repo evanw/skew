@@ -148,6 +148,17 @@ namespace Skew {
           }
         }
 
+        # If an imported type is used, automatically assume all functions and
+        # variables for that type are used too
+        if object.isImported {
+          for function in object.functions {
+            _recordUsage(function)
+          }
+          for variable in object.functions {
+            _recordUsage(variable)
+          }
+        }
+
         _visitObject(object)
       }
 

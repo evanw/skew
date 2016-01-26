@@ -1049,6 +1049,7 @@ struct Env1 {
 
 struct Lambda1 : FnVoid1<Foo *> {
   Lambda1(Env1 *copy);
+  virtual void run(Foo *foo);
 
   Env1 *copy;
 };
@@ -1076,7 +1077,104 @@ Env1::Env1() {
 Lambda1::Lambda1(Env1 *copy) {
   this->copy = copy;
 }
+
+void Lambda1::run(Foo *foo) {
+  this->copy->visit->run(foo);
+}
 ").cpp.globalizeAllFunctions
+
+# Test dead code elimination and imports
+test("
+@import {
+  var a fn()
+  def b(x fn(int))
+}
+
+var c fn(int, int)
+def d(x fn(int, int, int)) {}
+
+@export
+def test {
+  a = => {}
+  b(x => {})
+  c = (x, y) => {}
+  d((x, y, z) => {})
+}
+", "
+struct Lambda1;
+struct Lambda21;
+struct Lambda31;
+struct Lambda41;
+
+struct Lambda1 : FnVoid0 {
+  Lambda1();
+  virtual void run();
+};
+
+struct Lambda21 : FnVoid1<int> {
+  Lambda21();
+  virtual void run(int x);
+};
+
+struct Lambda31 : FnVoid2<int, int> {
+  Lambda31();
+  virtual void run(int x, int y);
+};
+
+struct Lambda41 : FnVoid3<int, int, int> {
+  Lambda41();
+  virtual void run(int x, int y, int z);
+};
+
+FnVoid2<int, int> *c = nullptr;
+
+void d(FnVoid3<int, int, int> *x) {
+}
+
+void test() {
+  a = new Lambda1();
+  b(new Lambda21());
+  c = new Lambda31();
+  d(new Lambda41());
+}
+
+Lambda1::Lambda1() {
+}
+
+void Lambda1::run() {
+}
+
+Lambda21::Lambda21() {
+}
+
+void Lambda21::run(int x) {
+}
+
+Lambda31::Lambda31() {
+}
+
+void Lambda31::run(int x, int y) {
+}
+
+Lambda41::Lambda41() {
+}
+
+void Lambda41::run(int x, int y, int z) {
+}
+").cpp
+
+# Test lambda conversion in loops
+test("
+@export
+def test(list List<int>) {
+  (=> list)()
+  for i in list {
+    (=> i)()
+  }
+}
+", "
+TODO
+").cpp.skip # Not working yet
 
   }
 }
