@@ -286,22 +286,16 @@ namespace Skew.API {
 
   @entry
   def main {
-    # Web Worker API
-    if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && dynamic.self is dynamic.WorkerGlobalScope {
+    # JavaScript API
+    var this = (=> dynamic.this)()
+    var api = dynamic.typeof(dynamic.exports) != "undefined" ? dynamic.exports : this.Skew ? this.Skew : this.Skew = {}
+    api.create = createCompilerInstance
+
+    # Web Worker API (only installed if no other code in the worker sets "Skew.handleWorkerMessages" to false first)
+    if dynamic.typeof(dynamic.WorkerGlobalScope) != "undefined" && this is dynamic.WorkerGlobalScope && api.handleWorkerMessages != true {
       var instance = createCompilerInstance()
       dynamic.onmessage = (event dynamic) => {
         dynamic.postMessage(instance.message(event.data))
-      }
-    }
-
-    # JavaScript API
-    else {
-      if dynamic.typeof(dynamic.exports) != "undefined" {
-        dynamic.exports.create = createCompilerInstance
-      } else {
-        (=> dynamic.this)().Skew = {
-          "create": createCompilerInstance
-        }
       }
     }
   }

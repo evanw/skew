@@ -1,8 +1,8 @@
-SOURCES += src/backend
-SOURCES += src/core
-SOURCES += src/frontend
+SOURCES += src/backend/*.sk
+SOURCES += src/core/*.sk
+SOURCES += src/frontend/*.sk
 SOURCES += src/lib/timestamp.sk
-SOURCES += src/middle
+SOURCES += src/middle/*.sk
 
 SOURCES_SKEWC += $(SOURCES)
 SOURCES_SKEWC += src/driver/terminal.sk

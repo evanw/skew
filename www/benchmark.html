@@ -73,6 +73,8 @@
       var data = e.data;
 
       // Load the API
+      Skew = {};
+      Skew.handleWorkerMessages = false;
       eval(data.api);
 
       function compile() {
@@ -86,7 +88,7 @@
         options.jsMangle = false;
         options.jsMinify = true;
         options.defines = {RELEASE: 'true'};
-        var result = Skew.compile(options);
+        var result = compiler.compile(options);
 
         // Compilation must succeed
         if (result.log.diagnostics.length > 0 || result.outputs.length !== 1) {
@@ -101,6 +103,7 @@
         postMessage('done');
       }
 
+      var compiler = Skew.create();
       for (var i = 0; i < data.count; i++) {
         compile();
       }
