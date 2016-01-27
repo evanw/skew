@@ -180,7 +180,7 @@ namespace Skew.LambdaConversion {
       for scope in _scopes {
         if scope.hasCapturedDefinitions || scope.kind == .LAMBDA {
           # Create an object to store the environment
-          var object = _createObject(.OBJECT_CLASS, _global.scope.generateName(scope.kind == .LAMBDA ? "Lambda" : "Env"))
+          var object = _createObject(.OBJECT_CLASS, _generateEnvironmentName(scope))
           var constructor = _createConstructor(object)
           var constructorCall = Node.createCall(Node.createMemberReference(Node.createSymbolReference(object), constructor)).withType(object.resolvedType)
 
@@ -295,7 +295,7 @@ namespace Skew.LambdaConversion {
 
         if object != null {
           for copy in scope.copies {
-            var name = object.scope.generateName("copy")
+            var name = object.scope.generateName(copy.scope.kind == .LAMBDA ? "lambda" : "env")
             var member = _createInstanceVariable(name, copy.scope.environmentObject.resolvedType, object)
             var argument = _createVariable(.VARIABLE_ARGUMENT, name, member.resolvedType)
 
@@ -487,6 +487,21 @@ namespace Skew.LambdaConversion {
   }
 
   namespace Converter {
+    def _generateEnvironmentName(scope Scope) string {
+      var name = ""
+      var root = scope
+      while root.parent != null {
+        root = root.parent
+      }
+      for symbol Symbol = root.enclosingFunction; symbol != null && symbol.kind != .OBJECT_GLOBAL; symbol = symbol.parent {
+        if symbol.kind != .OBJECT_GLOBAL && !Renaming.isInvalidIdentifier(symbol.name) {
+          name = withUppercaseFirstLetter(symbol.name) + name
+        }
+      }
+      name += scope.kind == .LAMBDA ? "Lambda" : "Env"
+      return name
+    }
+
     def _createConstructor(object ObjectSymbol) FunctionSymbol {
       var function = _createFunction(object, .FUNCTION_CONSTRUCTOR, "new", .IMPLEMENTED)
       function.resolvedType.returnType = object.resolvedType

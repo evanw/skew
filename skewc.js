@@ -271,6 +271,10 @@
     return slashIndex == -1 ? new Skew.SplitPath('.', path) : new Skew.SplitPath(in_string.slice2(path, 0, slashIndex), in_string.slice1(path, slashIndex + 1 | 0));
   };
 
+  Skew.withUppercaseFirstLetter = function(text) {
+    return text == '' ? text : in_string.get(text, 0).toUpperCase() + in_string.slice1(text, 1);
+  };
+
   Skew.bytesToString = function(bytes) {
     var KB = 1 << 10;
     var MB = 1 << 20;
@@ -2936,6 +2940,7 @@
     }
 
     this._emitNewlineBeforeSymbol(symbol, mode);
+    this._emitComments(symbol.comments);
 
     if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
       this._emit(this._indent + Skew.CPlusPlusEmitter._mangleName(symbol) + (' = ' + symbol.value.asInt().toString() + ',\n'));
@@ -15416,7 +15421,7 @@
 
       if (scope1.hasCapturedDefinitions || scope1.kind == Skew.LambdaConversion.CaptureKind.LAMBDA) {
         // Create an object to store the environment
-        var object = this._createObject(Skew.SymbolKind.OBJECT_CLASS, this._global.scope.generateName(scope1.kind == Skew.LambdaConversion.CaptureKind.LAMBDA ? 'Lambda' : 'Env'));
+        var object = this._createObject(Skew.SymbolKind.OBJECT_CLASS, Skew.LambdaConversion.Converter._generateEnvironmentName(scope1));
         var $constructor = Skew.LambdaConversion.Converter._createConstructor(object);
         var constructorCall = Skew.Node.createCall(Skew.Node.createMemberReference(Skew.Node.createSymbolReference(object), $constructor)).withType(object.resolvedType);
 
@@ -15547,7 +15552,7 @@
       if (object1 != null) {
         for (var i6 = 0, list6 = scope2.copies, count6 = list6.length; i6 < count6; i6 = i6 + 1 | 0) {
           var copy1 = in_List.get(list6, i6);
-          var name = object1.scope.generateName('copy');
+          var name = object1.scope.generateName(copy1.scope.kind == Skew.LambdaConversion.CaptureKind.LAMBDA ? 'lambda' : 'env');
           var member = Skew.LambdaConversion.Converter._createInstanceVariable(name, copy1.scope.environmentObject.resolvedType, object1);
           var argument = Skew.LambdaConversion.Converter._createVariable(Skew.SymbolKind.VARIABLE_ARGUMENT, name, member.resolvedType);
           copy1.member = member;
@@ -15744,6 +15749,24 @@
     }
 
     return interfaceType;
+  };
+
+  Skew.LambdaConversion.Converter._generateEnvironmentName = function(scope) {
+    var name = '';
+    var root = scope;
+
+    while (root.parent != null) {
+      root = root.parent;
+    }
+
+    for (var symbol = root.enclosingFunction; symbol != null && symbol.kind != Skew.SymbolKind.OBJECT_GLOBAL; symbol = symbol.parent) {
+      if (symbol.kind != Skew.SymbolKind.OBJECT_GLOBAL && !Skew.Renaming.isInvalidIdentifier(symbol.name)) {
+        name = Skew.withUppercaseFirstLetter(symbol.name) + name;
+      }
+    }
+
+    name += scope.kind == Skew.LambdaConversion.CaptureKind.LAMBDA ? 'Lambda' : 'Env';
+    return name;
   };
 
   Skew.LambdaConversion.Converter._createConstructor = function(object) {
@@ -16384,7 +16407,7 @@
     }
 
     if (text != '' && in_string.endsWith(name, '=')) {
-      return 'set' + in_string.slice2(text, 0, 1).toUpperCase() + in_string.slice1(text, 1);
+      return 'set' + Skew.withUppercaseFirstLetter(text);
     }
 
     return text == '' || !Skew.Renaming.isAlpha(in_string.get1(text, 0)) ? '_' + text : text;

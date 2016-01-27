@@ -662,11 +662,11 @@ class Foo {
 }
 ", "
 struct Foo;
-struct Env1;
-struct Lambda1;
-struct Lambda21;
-struct Lambda31;
-struct Lambda41;
+struct FooTestEnv;
+struct FooTestLambda;
+struct FooTestLambda1;
+struct FooTestLambda2;
+struct FooTestLambda3;
 
 struct Foo {
   int test(int x);
@@ -675,54 +675,54 @@ struct Foo {
   int value;
 };
 
-struct Env1 {
-  Env1();
+struct FooTestEnv {
+  FooTestEnv();
 
   Foo *self;
   int x;
   int y;
 };
 
-struct Lambda1 : Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> {
-  Lambda1(Env1 *copy);
+struct FooTestLambda : Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> {
+  FooTestLambda(FooTestEnv *env);
   virtual Fn0<Fn1<Fn0<int> *, int> *> *run(int a);
 
   int a;
-  Env1 *copy;
+  FooTestEnv *env;
 };
 
-struct Lambda21 : Fn0<Fn1<Fn0<int> *, int> *> {
-  Lambda21(Env1 *copy, Lambda1 *copy1);
+struct FooTestLambda1 : Fn0<Fn1<Fn0<int> *, int> *> {
+  FooTestLambda1(FooTestEnv *env, FooTestLambda *lambda);
   virtual Fn1<Fn0<int> *, int> *run();
 
-  Env1 *copy;
-  Lambda1 *copy1;
+  FooTestEnv *env;
+  FooTestLambda *lambda;
 };
 
-struct Lambda31 : Fn1<Fn0<int> *, int> {
-  Lambda31(Env1 *copy, Lambda1 *copy1);
+struct FooTestLambda2 : Fn1<Fn0<int> *, int> {
+  FooTestLambda2(FooTestEnv *env, FooTestLambda *lambda);
   virtual Fn0<int> *run(int b);
 
   int b;
-  Env1 *copy;
-  Lambda1 *copy1;
+  FooTestEnv *env;
+  FooTestLambda *lambda;
 };
 
-struct Lambda41 : Fn0<int> {
-  Lambda41(Env1 *copy, Lambda1 *copy1, Lambda31 *copy2);
+struct FooTestLambda3 : Fn0<int> {
+  FooTestLambda3(FooTestEnv *env, FooTestLambda *lambda, FooTestLambda2 *lambda1);
   virtual int run();
 
-  Env1 *copy;
-  Lambda1 *copy1;
-  Lambda31 *copy2;
+  FooTestEnv *env;
+  FooTestLambda *lambda;
+  FooTestLambda2 *lambda1;
 };
 
 int Foo::test(int x) {
-  Env1 *env = new Env1();
+  FooTestEnv *env = new FooTestEnv();
   env->self = this;
   env->x = x;
   env->y = 0;
-  Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> *f = new Lambda1(env);
+  Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> *f = new FooTestLambda(env);
   return f->run(1)->run()->run(2)->run();
 }
 
@@ -730,45 +730,45 @@ Foo::Foo() {
   this->value = 0;
 }
 
-Env1::Env1() {
+FooTestEnv::FooTestEnv() {
 }
 
-Lambda1::Lambda1(Env1 *copy) {
-  this->copy = copy;
+FooTestLambda::FooTestLambda(FooTestEnv *env) {
+  this->env = env;
 }
 
-Fn0<Fn1<Fn0<int> *, int> *> *Lambda1::run(int a) {
+Fn0<Fn1<Fn0<int> *, int> *> *FooTestLambda::run(int a) {
   this->a = a;
-  return new Lambda21(this->copy, this);
+  return new FooTestLambda1(this->env, this);
 }
 
-Lambda21::Lambda21(Env1 *copy, Lambda1 *copy1) {
-  this->copy = copy;
-  this->copy1 = copy1;
+FooTestLambda1::FooTestLambda1(FooTestEnv *env, FooTestLambda *lambda) {
+  this->env = env;
+  this->lambda = lambda;
 }
 
-Fn1<Fn0<int> *, int> *Lambda21::run() {
-  return new Lambda31(this->copy, this->copy1);
+Fn1<Fn0<int> *, int> *FooTestLambda1::run() {
+  return new FooTestLambda2(this->env, this->lambda);
 }
 
-Lambda31::Lambda31(Env1 *copy, Lambda1 *copy1) {
-  this->copy = copy;
-  this->copy1 = copy1;
+FooTestLambda2::FooTestLambda2(FooTestEnv *env, FooTestLambda *lambda) {
+  this->env = env;
+  this->lambda = lambda;
 }
 
-Fn0<int> *Lambda31::run(int b) {
+Fn0<int> *FooTestLambda2::run(int b) {
   this->b = b;
-  return new Lambda41(this->copy, this->copy1, this);
+  return new FooTestLambda3(this->env, this->lambda, this);
 }
 
-Lambda41::Lambda41(Env1 *copy, Lambda1 *copy1, Lambda31 *copy2) {
-  this->copy = copy;
-  this->copy1 = copy1;
-  this->copy2 = copy2;
+FooTestLambda3::FooTestLambda3(FooTestEnv *env, FooTestLambda *lambda, FooTestLambda2 *lambda1) {
+  this->env = env;
+  this->lambda = lambda;
+  this->lambda1 = lambda1;
 }
 
-int Lambda41::run() {
-  return this->copy->self->value + this->copy->x + this->copy->y + this->copy1->a + this->copy2->b;
+int FooTestLambda3::run() {
+  return this->env->self->value + this->env->x + this->env->y + this->lambda->a + this->lambda1->b;
 }
 ").cpp
 
@@ -781,43 +781,43 @@ def test int {
   return f(1)(2)
 }
 ", "
-struct Lambda1;
-struct Lambda21;
+struct Lambda;
+struct LambdaRunLambda;
 
-struct Lambda1 : Fn1<Fn1<int, int> *, int> {
-  Lambda1();
+struct Lambda : Fn1<Fn1<int, int> *, int> {
+  Lambda();
   virtual Fn1<int, int> *run(int x);
 
   int x;
 };
 
-struct Lambda21 : Fn1<int, int> {
-  Lambda21(Lambda1 *copy);
+struct LambdaRunLambda : Fn1<int, int> {
+  LambdaRunLambda(Lambda *lambda);
   virtual int run(int y);
 
-  Lambda1 *copy;
+  Lambda *lambda;
 };
 
-Fn1<Fn1<int, int> *, int> *f = new Lambda1();
+Fn1<Fn1<int, int> *, int> *f = new Lambda();
 
 int main() {
   return f->run(1)->run(2);
 }
 
-Lambda1::Lambda1() {
+Lambda::Lambda() {
 }
 
-Fn1<int, int> *Lambda1::run(int x) {
+Fn1<int, int> *Lambda::run(int x) {
   this->x = x;
-  return new Lambda21(this);
+  return new LambdaRunLambda(this);
 }
 
-Lambda21::Lambda21(Lambda1 *copy) {
-  this->copy = copy;
+LambdaRunLambda::LambdaRunLambda(Lambda *lambda) {
+  this->lambda = lambda;
 }
 
-int Lambda21::run(int y) {
-  return this->copy->x + y;
+int LambdaRunLambda::run(int y) {
+  return this->lambda->x + y;
 }
 ").cpp
 
@@ -836,40 +836,40 @@ def test {
   bar()
 }
 ", "
-struct Env1;
-struct Lambda1;
+struct TestEnv;
+struct TestLambda;
 
-struct Env1 {
-  Env1();
+struct TestEnv {
+  TestEnv();
 
   int foo;
 };
 
-struct Lambda1 : Fn0<int> {
-  Lambda1(Env1 *copy);
+struct TestLambda : Fn0<int> {
+  TestLambda(TestEnv *env);
   virtual int run();
 
-  Env1 *copy;
+  TestEnv *env;
 };
 
 void test() {
-  Env1 *env = new Env1();
+  TestEnv *env = new TestEnv();
   env->foo = 0;
-  Fn0<int> *bar = new Lambda1(env);
+  Fn0<int> *bar = new TestLambda(env);
   bar->run();
 }
 
-Env1::Env1() {
+TestEnv::TestEnv() {
 }
 
-Lambda1::Lambda1(Env1 *copy) {
-  this->copy = copy;
+TestLambda::TestLambda(TestEnv *env) {
+  this->env = env;
 }
 
-int Lambda1::run() {
+int TestLambda::run() {
   while (true) {
     for (int baz : *new List<int>({1})) {
-      return this->copy->foo + baz;
+      return this->env->foo + baz;
     }
   }
 }
@@ -884,38 +884,38 @@ def main {
   f()
 }
 ", "
-struct Env1;
-struct Lambda1;
+struct MainEnv;
+struct MainLambda;
 
-struct Env1 {
-  Env1();
+struct MainEnv {
+  MainEnv();
 
   FnVoid0 *f;
 };
 
-struct Lambda1 : FnVoid0 {
-  Lambda1(Env1 *copy);
+struct MainLambda : FnVoid0 {
+  MainLambda(MainEnv *env);
   virtual void run();
 
-  Env1 *copy;
+  MainEnv *env;
 };
 
 void main() {
-  Env1 *env = new Env1();
+  MainEnv *env = new MainEnv();
   env->f = nullptr;
-  env->f = new Lambda1(env);
+  env->f = new MainLambda(env);
   env->f->run();
 }
 
-Env1::Env1() {
+MainEnv::MainEnv() {
 }
 
-Lambda1::Lambda1(Env1 *copy) {
-  this->copy = copy;
+MainLambda::MainLambda(MainEnv *env) {
+  this->env = env;
 }
 
-void Lambda1::run() {
-  this->copy->f->run();
+void MainLambda::run() {
+  this->env->f->run();
 }
 ").cpp
 
@@ -929,26 +929,26 @@ def main {
   f()
 }
 ", "
-struct Env1;
-struct Lambda1;
+struct MainEnv;
+struct MainLambda;
 
-struct Env1 {
-  Env1();
+struct MainEnv {
+  MainEnv();
 
   List<int> *x;
 };
 
-struct Lambda1 : Fn0<List<int> *> {
-  Lambda1(Env1 *copy);
+struct MainLambda : Fn0<List<int> *> {
+  MainLambda(MainEnv *env);
   virtual List<int> *run();
 
-  Env1 *copy;
+  MainEnv *env;
 };
 
 void main() {
-  Env1 *env = new Env1();
+  MainEnv *env = new MainEnv();
   env->x = new List<int>({1});
-  Fn0<List<int> *> *f = new Lambda1(env);
+  Fn0<List<int> *> *f = new MainLambda(env);
 
   for (int y : *env->x) {
   }
@@ -956,15 +956,15 @@ void main() {
   f->run();
 }
 
-Env1::Env1() {
+MainEnv::MainEnv() {
 }
 
-Lambda1::Lambda1(Env1 *copy) {
-  this->copy = copy;
+MainLambda::MainLambda(MainEnv *env) {
+  this->env = env;
 }
 
-List<int> *Lambda1::run() {
-  return this->copy->x;
+List<int> *MainLambda::run() {
+  return this->env->x;
 }
 ").cpp
 
@@ -1001,13 +1001,24 @@ void test(int x, bool y) {
 # Avoid emitting an empty anonymous enum to avoid a clang warning
 test("
 @export {
-  flags Foo { FOO }
+  flags Foo {
+    FOO # Comment 1
+
+    # Comment 2
+    BAR
+    BAZ
+  }
   flags Bar {}
 }
 ", "
 struct Foo {
   enum {
+    // Comment 1
     FOO = 1,
+
+    // Comment 2
+    BAR = 2,
+    BAZ = 4,
   };
 };
 
@@ -1033,31 +1044,31 @@ def test {
 }
 ", "
 struct Foo;
-struct Env1;
-struct Lambda1;
+struct FooEnv;
+struct FooLambda;
 
 struct Foo {
   static void test(Foo *self, Foo *foo);
   Foo();
 };
 
-struct Env1 {
-  Env1();
+struct FooEnv {
+  FooEnv();
 
   FnVoid1<Foo *> *visit;
 };
 
-struct Lambda1 : FnVoid1<Foo *> {
-  Lambda1(Env1 *copy);
+struct FooLambda : FnVoid1<Foo *> {
+  FooLambda(FooEnv *env);
   virtual void run(Foo *foo);
 
-  Env1 *copy;
+  FooEnv *env;
 };
 
 void foo() {
-  Env1 *env = new Env1();
+  FooEnv *env = new FooEnv();
   env->visit = nullptr;
-  env->visit = new Lambda1(env);
+  env->visit = new FooLambda(env);
 }
 
 void test() {
@@ -1071,15 +1082,15 @@ void Foo::test(Foo *self, Foo *foo) {
 Foo::Foo() {
 }
 
-Env1::Env1() {
+FooEnv::FooEnv() {
 }
 
-Lambda1::Lambda1(Env1 *copy) {
-  this->copy = copy;
+FooLambda::FooLambda(FooEnv *env) {
+  this->env = env;
 }
 
-void Lambda1::run(Foo *foo) {
-  this->copy->visit->run(foo);
+void FooLambda::run(Foo *foo) {
+  this->env->visit->run(foo);
 }
 ").cpp.globalizeAllFunctions
 
@@ -1101,28 +1112,28 @@ def test {
   d((x, y, z) => {})
 }
 ", "
-struct Lambda1;
-struct Lambda21;
-struct Lambda31;
-struct Lambda41;
+struct TestLambda;
+struct TestLambda1;
+struct TestLambda2;
+struct TestLambda3;
 
-struct Lambda1 : FnVoid0 {
-  Lambda1();
+struct TestLambda : FnVoid0 {
+  TestLambda();
   virtual void run();
 };
 
-struct Lambda21 : FnVoid1<int> {
-  Lambda21();
+struct TestLambda1 : FnVoid1<int> {
+  TestLambda1();
   virtual void run(int x);
 };
 
-struct Lambda31 : FnVoid2<int, int> {
-  Lambda31();
+struct TestLambda2 : FnVoid2<int, int> {
+  TestLambda2();
   virtual void run(int x, int y);
 };
 
-struct Lambda41 : FnVoid3<int, int, int> {
-  Lambda41();
+struct TestLambda3 : FnVoid3<int, int, int> {
+  TestLambda3();
   virtual void run(int x, int y, int z);
 };
 
@@ -1132,34 +1143,34 @@ void d(FnVoid3<int, int, int> *x) {
 }
 
 void test() {
-  a = new Lambda1();
-  b(new Lambda21());
-  c = new Lambda31();
-  d(new Lambda41());
+  a = new TestLambda();
+  b(new TestLambda1());
+  c = new TestLambda2();
+  d(new TestLambda3());
 }
 
-Lambda1::Lambda1() {
+TestLambda::TestLambda() {
 }
 
-void Lambda1::run() {
+void TestLambda::run() {
 }
 
-Lambda21::Lambda21() {
+TestLambda1::TestLambda1() {
 }
 
-void Lambda21::run(int x) {
+void TestLambda1::run(int x) {
 }
 
-Lambda31::Lambda31() {
+TestLambda2::TestLambda2() {
 }
 
-void Lambda31::run(int x, int y) {
+void TestLambda2::run(int x, int y) {
 }
 
-Lambda41::Lambda41() {
+TestLambda3::TestLambda3() {
 }
 
-void Lambda41::run(int x, int y, int z) {
+void TestLambda3::run(int x, int y, int z) {
 }
 ").cpp
 

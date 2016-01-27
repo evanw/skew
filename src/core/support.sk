@@ -48,6 +48,10 @@ namespace Skew {
       : SplitPath.new(path.slice(0, slashIndex), path.slice(slashIndex + 1))
   }
 
+  def withUppercaseFirstLetter(text string) string {
+    return text == "" ? text : text.get(0).toUpperCase + text.slice(1)
+  }
+
   def formatNumber(number double) string {
     return (Math.round(number * 10) / 10).toString
   }

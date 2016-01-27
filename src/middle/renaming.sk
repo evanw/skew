@@ -179,7 +179,7 @@ namespace Skew.Renaming {
       }
     }
     if text != "" && name.endsWith("=") {
-      return "set" + text.slice(0, 1).toUpperCase + text.slice(1)
+      return "set" + withUppercaseFirstLetter(text)
     }
     return text == "" || !isAlpha(text[0]) ? "_" + text : text
   }
