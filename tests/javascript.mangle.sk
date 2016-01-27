@@ -2448,5 +2448,27 @@ test("
 })();
 ").jsMangle
 
+# Test that the number shorterer that turns "33554432" into "1 << 25" doesn't cause a crash for enum values
+test("
+flags Foo {
+  A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
+}
+
+@export
+def test int {
+  return Foo.Z
+}
+", "
+(function() {
+  test = function() {
+    return b.a;
+  };
+
+  var b = {
+    a: 1 << 25
+  };
+})();
+").jsMangle
+
   }
 }

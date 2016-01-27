@@ -4659,7 +4659,7 @@
             this._emitNewlineBeforeSymbol(variable);
             this._emitComments(variable.comments);
             this._emit(this._indent + Skew.JavaScriptEmitter._mangleName(variable) + ':' + this._space);
-            this._emitContent(variable.value.content);
+            this._emitExpression(variable.value, Skew.Precedence.COMMA);
             this._emitNewlineAfterSymbol(variable);
           }
         }

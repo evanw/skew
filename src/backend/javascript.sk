@@ -760,7 +760,7 @@ namespace Skew {
               _emitNewlineBeforeSymbol(variable)
               _emitComments(variable.comments)
               _emit(_indent + _mangleName(variable) + ":" + _space)
-              _emitContent(variable.value.content)
+              _emitExpression(variable.value, .COMMA)
               _emitNewlineAfterSymbol(variable)
             }
           }
