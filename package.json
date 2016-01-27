@@ -1,5 +1,8 @@
 {
-  "dependencies": {
+  "scripts": {
+    "test": "make test-js"
+  },
+  "devDependencies": {
     "fast-watch": "1.0.0"
   }
 }
