@@ -2340,6 +2340,7 @@ namespace Skew.Resolving {
       if symbol == null {
         symbol = _findMember(target.resolvedType, name)
         if symbol == null {
+          # Symbol lookup failure
           if target.resolvedType != .DYNAMIC {
             var type = target.resolvedType
             var correction = type.kind != .SYMBOL || !type.symbol.kind.isObject ? null :
@@ -2347,10 +2348,19 @@ namespace Skew.Resolving {
             _reportGuardMergingFailure(node)
             _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType, correction?.name, correction?.range)
           }
-          if target.kind == .TYPE && target.resolvedType == .DYNAMIC {
+
+          # "dynamic.foo" => "foo"
+          else if target.kind == .TYPE {
             node.kind = .NAME
             node.removeChildren
           }
+
+          # "Foo.new" => "Foo.new()"
+          # "Foo.new()" => "Foo.new()"
+          else if name == "new" && !_isCallValue(node) {
+            node.become(Node.createCall(node.cloneAndStealChildren).withType(.DYNAMIC).withRange(node.range))
+          }
+
           return
         }
       }

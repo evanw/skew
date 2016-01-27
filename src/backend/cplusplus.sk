@@ -870,7 +870,7 @@ namespace Skew {
               if child.previousSibling != value {
                 _emit(", ")
               }
-              _emitType(child.resolvedType, .NORMAL)
+              _emitExpressionOrType(child, child.resolvedType, .NORMAL)
             }
             _emit(">")
           }

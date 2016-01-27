@@ -3343,5 +3343,42 @@ class Foo {
 })();
 ").js
 
+# Constructors on dynamic types shouldn't need parentheses
+test("
+@export
+def test {
+  dynamic.Foo.new
+  dynamic.Foo.new()
+  dynamic.Foo.new.test
+  dynamic.Foo.new().test
+  dynamic.Foo<dynamic.Bar>.new.test
+  dynamic.Foo<dynamic.Bar>.new().test
+
+  var a = dynamic.Foo.new
+  var b = dynamic.Foo.new()
+  var c = dynamic.Foo.new.test
+  var d = dynamic.Foo.new().test
+  var e = dynamic.Foo<dynamic.Bar>.new.test
+  var f = dynamic.Foo<dynamic.Bar>.new().test
+}
+", "
+(function() {
+  test = function() {
+    new Foo();
+    new Foo();
+    new Foo().test;
+    new Foo().test;
+    new Foo().test;
+    new Foo().test;
+    var a = new Foo();
+    var b = new Foo();
+    var c = new Foo().test;
+    var d = new Foo().test;
+    var e = new Foo().test;
+    var f = new Foo().test;
+  };
+})();
+").js
+
   }
 }

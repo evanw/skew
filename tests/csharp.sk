@@ -830,5 +830,44 @@ public class Globals
 }
 ").csharp
 
+# Constructors on dynamic types shouldn't need parentheses
+test("
+@export
+def test {
+  dynamic.Foo.new
+  dynamic.Foo.new()
+  dynamic.Foo.new.test
+  dynamic.Foo.new().test
+  dynamic.Foo<dynamic.Bar>.new.test
+  dynamic.Foo<dynamic.Bar>.new().test
+
+  var a = dynamic.Foo.new
+  var b = dynamic.Foo.new()
+  var c = dynamic.Foo.new.test
+  var d = dynamic.Foo.new().test
+  var e = dynamic.Foo<dynamic.Bar>.new.test
+  var f = dynamic.Foo<dynamic.Bar>.new().test
+}
+", "
+public class Globals
+{
+    public static void test()
+    {
+        new Foo();
+        new Foo();
+        new Foo().test;
+        new Foo().test;
+        new Foo<Bar>().test;
+        new Foo<Bar>().test;
+        dynamic a = new Foo();
+        dynamic b = new Foo();
+        dynamic c = new Foo().test;
+        dynamic d = new Foo().test;
+        dynamic e = new Foo<Bar>().test;
+        dynamic f = new Foo<Bar>().test;
+    }
+}
+").csharp
+
   }
 }
