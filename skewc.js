@@ -6136,12 +6136,12 @@
   Skew.JavaScriptEmitter.prototype._assignSourceIfNoSideEffects = function(node) {
     if (node.kind == Skew.NodeKind.ASSIGN) {
       var right = node.binaryRight();
-      return node.binaryLeft().hasNoSideEffects() && right.hasNoSideEffects() ? right : null;
+      return !node.binaryLeft().hasNoSideEffects() ? null : right.kind == Skew.NodeKind.ASSIGN || right.kind == Skew.NodeKind.ASSIGN_INDEX ? this._assignSourceIfNoSideEffects(right) : right.hasNoSideEffects() ? right : null;
     }
 
     if (node.kind == Skew.NodeKind.ASSIGN_INDEX) {
       var right1 = node.assignIndexRight();
-      return node.assignIndexLeft().hasNoSideEffects() && node.assignIndexCenter().hasNoSideEffects() && right1.hasNoSideEffects() ? right1 : null;
+      return !node.assignIndexLeft().hasNoSideEffects() || !node.assignIndexCenter().hasNoSideEffects() ? null : right1.kind == Skew.NodeKind.ASSIGN || right1.kind == Skew.NodeKind.ASSIGN_INDEX ? this._assignSourceIfNoSideEffects(right1) : right1.hasNoSideEffects() ? right1 : null;
     }
 
     return null;
@@ -6150,6 +6150,7 @@
   Skew.JavaScriptEmitter.prototype._peepholeMangleSequence = function(node) {
     assert(node.kind == Skew.NodeKind.SEQUENCE);
 
+    // "a = 0, b = 0, c = 0;" => "a = b = c = 0;"
     // "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
     // "a = 0, b = 0, c = 1, d = 1;" => "a = b = 0, c = d = 1;"
     for (var child = node.lastChild(); child != null; child = child.previousSibling()) {

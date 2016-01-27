@@ -2387,5 +2387,66 @@ def main {
 })();
 ").jsMangle
 
+# Test assignment collapsing
+test("
+@export {
+  def foo(a int, b int, c int, f fn() int) {
+    a = 1
+    b = 1
+    c = 1
+
+    a = 1
+    b = 2
+    c = 3
+
+    a = f()
+    b = f()
+    c = f()
+  }
+
+  def bar(a dynamic, f fn() int) {
+    a[0] = 1
+    a[1] = 1
+    a[2] = 1
+
+    a[0] = 1
+    a[1] = 2
+    a[2] = 3
+
+    a[0] = f()
+    a[1] = f()
+    a[2] = f()
+  }
+
+  def baz(a dynamic, f fn() int) {
+    a.x = 1
+    a[1] = 1
+    a[\"y\"] = 1
+
+    a.x = 1
+    a[1] = 2
+    a[\"y\"] = 3
+
+    a.x = f()
+    a[1] = f()
+    a[\"y\"] = f()
+  }
+}
+", "
+(function() {
+  foo = function(a, b, c, d) {
+    a = b = c = a = 1, b = 2, c = 3, a = d(), b = d(), c = d();
+  };
+
+  bar = function(a, b) {
+    a[0] = a[1] = a[2] = a[0] = 1, a[1] = 2, a[2] = 3, a[0] = b(), a[1] = b(), a[2] = b();
+  };
+
+  baz = function(a, b) {
+    a.x = a[1] = a.y = a.x = 1, a[1] = 2, a.y = 3, a.x = b(), a[1] = b(), a.y = b();
+  };
+})();
+").jsMangle
+
   }
 }
