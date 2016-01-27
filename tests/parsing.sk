@@ -813,5 +813,177 @@ enum Bar { A, B, }
                []
 ")
 
+# Test comment removal inside expressions
+test("
+def test {
+  0
+    .foo
+
+  0 # x
+    .foo
+
+  0
+    # x
+    .foo
+
+  0 # x
+    # x
+    .foo
+
+  true
+    ? 0
+    : 0
+
+  true # x
+    ? 0 # x
+    : 0
+
+  true
+    # x
+    ? 0
+    # x
+    : 0
+
+  true # x
+    # x
+    ? 0 # x
+    # x
+    : 0
+
+  foo(
+    0
+    , 1
+    )
+
+  foo(
+    0 # x
+    , 1 # x
+    )
+
+  foo(
+    0
+    # x
+    , 1
+    # x
+    )
+
+  foo(
+    0 # x
+    # x
+    , 1 # x
+    # x
+    )
+
+  [
+    null
+    , 1
+    ]
+
+  [
+    null # x
+    , 1 # x
+    ]
+
+  [
+    null
+    # x
+    , 1
+    # x
+    ]
+
+  [
+    null # x
+    # x
+    , 1 # x
+    # x
+    ]
+}
+", "
+<stdin>:3:6: error: \"foo\" is not declared on type \"int\"
+    .foo
+     ~~~
+<stdin>:6:6: error: \"foo\" is not declared on type \"int\"
+    .foo
+     ~~~
+<stdin>:10:6: error: \"foo\" is not declared on type \"int\"
+    .foo
+     ~~~
+<stdin>:14:6: error: \"foo\" is not declared on type \"int\"
+    .foo
+     ~~~
+<stdin>:17:7: warning: Both sides of \":\" are identical, is this a bug?
+    ? 0
+      ^
+<stdin>:17:7: warning: Unused expression
+    ? 0
+      ^
+<stdin>:18:7: warning: Unused expression
+    : 0
+      ^
+<stdin>:21:7: warning: Both sides of \":\" are identical, is this a bug?
+    ? 0 # x
+      ~~~~~
+<stdin>:21:7: warning: Unused expression
+    ? 0 # x
+      ^
+<stdin>:22:7: warning: Unused expression
+    : 0
+      ^
+<stdin>:26:7: warning: Both sides of \":\" are identical, is this a bug?
+    ? 0
+      ^
+<stdin>:26:7: warning: Unused expression
+    ? 0
+      ^
+<stdin>:28:7: warning: Unused expression
+    : 0
+      ^
+<stdin>:32:7: warning: Both sides of \":\" are identical, is this a bug?
+    ? 0 # x
+      ~~~~~
+<stdin>:32:7: warning: Unused expression
+    ? 0 # x
+      ^
+<stdin>:34:7: warning: Unused expression
+    : 0
+      ^
+<stdin>:36:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:41:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:46:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:53:3: error: \"foo\" is not declared
+  foo(
+  ~~~
+<stdin>:62:7: error: No common type for \"null\" and \"int\"
+    , 1
+      ^
+<stdin>:60:3: warning: Unused expression
+  [
+  ^
+<stdin>:67:7: error: No common type for \"null\" and \"int\"
+    , 1 # x
+      ^
+<stdin>:65:3: warning: Unused expression
+  [
+  ^
+<stdin>:73:7: error: No common type for \"null\" and \"int\"
+    , 1
+      ^
+<stdin>:70:3: warning: Unused expression
+  [
+  ^
+<stdin>:80:7: error: No common type for \"null\" and \"int\"
+    , 1 # x
+      ^
+<stdin>:77:3: warning: Unused expression
+  [
+  ^
+")
+
   }
 }

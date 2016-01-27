@@ -20,11 +20,10 @@ namespace Skew {
     var kind TokenKind
   }
 
-  const REMOVE_NEWLINE_BEFORE = {
+  const REMOVE_WHITESPACE_BEFORE = {
     TokenKind.COLON: 0,
     TokenKind.COMMA: 0,
     TokenKind.DOT: 0,
-    TokenKind.NEWLINE: 0,
     TokenKind.QUESTION_MARK: 0,
     TokenKind.RIGHT_BRACKET: 0,
     TokenKind.RIGHT_PARENTHESIS: 0,
@@ -267,8 +266,19 @@ namespace Skew {
       # Remove newlines based on the previous token to enable line continuations.
       # Make sure to be conservative. We want to be like Python, not like
       # JavaScript ASI! Anything that is at all ambiguous should be disallowed.
-      if previousKind == .NEWLINE && token.kind in REMOVE_NEWLINE_BEFORE {
-        tokens.removeLast
+      #
+      # Examples:
+      # - "var x = 0 \n .toString"
+      # - "var x = 0 # comment \n .toString"
+      # - "var x = 0 \n # comment \n .toString"
+      #
+      if (previousKind == .NEWLINE || previousKind == .COMMENT) && token.kind in REMOVE_WHITESPACE_BEFORE {
+        while true {
+          tokens.removeLast
+          if tokens.isEmpty || tokens.last.kind != .NEWLINE && tokens.last.kind != .COMMENT {
+            break
+          }
+        }
       }
       previousKind = token.kind
 
