@@ -261,6 +261,16 @@ namespace Skew.LambdaConversion {
                 node.kind == .WHILE ? node.whileBlock :
                 null
               block.prependChild(variables)
+
+              # Assign captured loop variables
+              var previous = variables
+              for definition in scope.definitions {
+                if definition.isCaptured && definition.symbol.isLoopVariable {
+                  var assignment = _createAssignment(variable, definition.member, definition.symbol)
+                  block.insertChildAfter(previous, assignment)
+                  previous = assignment
+                }
+              }
             }
 
             default {
@@ -387,8 +397,15 @@ namespace Skew.LambdaConversion {
       }
 
       else if kind == .FOREACH {
+        # Visit loop header
+        _visit(node.foreachValue)
+
+        # Visit loop body
         var scope = _pushScope(.LOOP, node, _stack.last)
         scope.recordDefinition(symbol.asVariableSymbol, null)
+        _visit(node.foreachBlock)
+        _stack.removeLast
+        return
       }
 
       else if kind == .FOR || kind == .WHILE {

@@ -1,38 +1,5 @@
 namespace Skew {
   const NATIVE_LIBRARY_CPP = "
-namespace Math {
-  @import {
-    def abs(x double) double
-    def abs(x int) int
-
-    def acos(x double) double
-    def asin(x double) double
-    def atan(x double) double
-    def atan2(x double, y double) double
-
-    def sin(x double) double
-    def cos(x double) double
-    def tan(x double) double
-
-    def floor(x double) double
-    def ceil(x double) double
-    def round(x double) double
-
-    def exp(x double) double
-    def log(x double) double
-    def pow(x double, y double) double
-    def sqrt(x double) double
-
-    def max(x double, y double) double
-    def max(x int, y int) int
-
-    def min(x double, y double) double
-    def min(x int, y int) int
-
-    def random double
-  }
-}
-
 class bool {
   def toString string {
     return self ? \"true\" : \"false\"

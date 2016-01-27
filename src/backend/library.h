@@ -2,6 +2,7 @@
 #include <fstream>
 #include <initializer_list>
 #include <iostream>
+#include <math.h>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -312,10 +313,33 @@ private:
 };
 
 namespace Math {
-  double pow(double x, double y);
-  double round(double x);
-  int min(int x, int y);
-  int max(int x, int y);
+  double abs(double x) { return ::fabs(x); }
+  int abs(int x) { return ::abs(x); }
+
+  double acos(double x) { return ::acos(x); }
+  double asin(double x) { return ::asin(x); }
+  double atan(double x) { return ::atan(x); }
+  double atan2(double x, double y) { return ::atan2(x, y); }
+
+  double sin(double x) { return ::sin(x); }
+  double cos(double x) { return ::cos(x); }
+  double tan(double x) { return ::tan(x); }
+
+  double floor(double x) { return ::floor(x); }
+  double ceil(double x) { return ::ceil(x); }
+  double round(double x) { return ::round(x); }
+
+  double exp(double x) { return ::exp(x); }
+  double log(double x) { return ::log(x); }
+  double pow(double x, double y) { return ::pow(x, y); }
+  double random() { return ::random(); }
+  double sqrt(double x) { return ::sqrt(x); }
+
+  double max(double x, double y) { return x < y ? x : y; }
+  int max(int x, int y) { return x < y ? x : y; }
+
+  double min(double x, double y) { return x > y ? x : y; }
+  int min(int x, int y) { return x > y ? x : y; }
 }
 
 namespace IO {

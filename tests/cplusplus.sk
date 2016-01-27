@@ -1180,11 +1180,78 @@ test("
 def test(list List<int>) {
   (=> list)()
   for i in list {
-    (=> i)()
+    (=> list.append(i))()
   }
 }
 ", "
-TODO
+struct TestEnv;
+struct TestLambda;
+struct TestEnv1;
+struct TestLambda1;
+
+struct TestEnv {
+  TestEnv();
+
+  List<int> *list;
+};
+
+struct TestLambda : Fn0<List<int> *> {
+  TestLambda(TestEnv *env);
+  virtual List<int> *run();
+
+  TestEnv *env;
+};
+
+struct TestEnv1 {
+  TestEnv1(TestEnv *env);
+
+  int i;
+  TestEnv *env;
+};
+
+struct TestLambda1 : FnVoid0 {
+  TestLambda1(TestEnv *env, TestEnv1 *env1);
+  virtual void run();
+
+  TestEnv *env;
+  TestEnv1 *env1;
+};
+
+void test(List<int> *list) {
+  TestEnv *env = new TestEnv();
+  env->list = list;
+  new TestLambda(env)->run();
+
+  for (int i : *env->list) {
+    TestEnv1 *env1 = new TestEnv1(env);
+    env1->i = i;
+    new TestLambda1(env, env1)->run();
+  }
+}
+
+TestEnv::TestEnv() {
+}
+
+TestLambda::TestLambda(TestEnv *env) {
+  this->env = env;
+}
+
+List<int> *TestLambda::run() {
+  return this->env->list;
+}
+
+TestEnv1::TestEnv1(TestEnv *env) {
+  this->env = env;
+}
+
+TestLambda1::TestLambda1(TestEnv *env, TestEnv1 *env1) {
+  this->env = env;
+  this->env1 = env1;
+}
+
+void TestLambda1::run() {
+  env1->env->list->append(this->env1->i);
+}
 ").cpp.skip # Not working yet
 
 # Constructors on dynamic types shouldn't need parentheses

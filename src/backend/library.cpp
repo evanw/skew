@@ -339,7 +339,7 @@ T List<T>::takeLast() {
 
 template <typename T>
 T List<T>::takeAt(int x) {
-  assert(0 <= index && index < count());
+  assert(0 <= x && x < count());
   T result = std::move(_data[x]);
   _data.erase(_data.begin() + x);
   return result;
@@ -656,24 +656,6 @@ bool IntMap<T>::contains(int key) const {
 template <typename T>
 void IntMap<T>::remove(int key) {
   _data.erase(key);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-double Math::pow(double x, double y) {
-  return std::pow(x, y);
-}
-
-double Math::round(double x) {
-  return std::round(x);
-}
-
-int Math::min(int x, int y) {
-  return std::min(x, y);
-}
-
-int Math::max(int x, int y) {
-  return std::max(x, y);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
