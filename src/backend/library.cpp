@@ -41,7 +41,7 @@ string &string::operator += (const string &x) {
 }
 
 int string::compare(const string &x) const {
-  return (_data < x._data) - (_data > x._data);
+  return (_data > x._data) - (_data < x._data);
 }
 
 int string::count() const {
@@ -71,18 +71,22 @@ bool string::endsWith(const string &x) const {
 }
 
 int string::operator [] (int x) const {
+  assert(0 <= x && x < count());
   return (int)(unsigned char)_data[x]; // Code units should not be negative
 }
 
 string string::get(int x) const {
+  assert(0 <= x && x < count());
   return std::string(1, _data[x]);
 }
 
 string string::slice(int start) const {
+  assert(0 <= start && start <= count());
   return _data.substr(start);
 }
 
 string string::slice(int start, int end) const {
+  assert(0 <= start && start <= end && end <= count());
   return _data.substr(start, end - start);
 }
 
@@ -121,6 +125,7 @@ string string::join(const List<string> *x) const {
 }
 
 string string::repeat(int x) const {
+  assert(x >= 0);
   std::string result;
   result.reserve(_data.size() * x);
   while (x-- > 0) {
@@ -514,6 +519,7 @@ void List<T>::reverse() {
 
 template <typename T>
 List<T> *List<T>::slice(int start) const {
+  assert(0 <= start && start <= count());
   auto result = new List<T>;
   result->_data.insert(result->_data.begin(), _data.begin() + start, _data.end());
   return result;
@@ -521,6 +527,7 @@ List<T> *List<T>::slice(int start) const {
 
 template <typename T>
 List<T> *List<T>::slice(int start, int end) const {
+  assert(0 <= start && start <= end && end <= count());
   auto result = new List<T>;
   result->_data.insert(result->_data.begin(), _data.begin() + start, _data.begin() + end);
   return result;
