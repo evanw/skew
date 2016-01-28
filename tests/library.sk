@@ -5,6 +5,14 @@ namespace Skew.Tests {
     testExpect("sanity check", => toString({1: 0.5, 2: -0.5}), "{1: 0.5, 2: -0.5}")
     testExpect("sanity check", => toString({"a": 0.5, "b": -0.5}), "{a: 0.5, b: -0.5}")
 
+    # Verify lambda environment capture
+    testExpect("sanity check", () string => {
+      var x = (y int) => => y
+      var a = x(1)
+      var b = x(2)
+      return (a() + b()).toString
+    }, "3")
+
     ################################################################################
     # Math
 
