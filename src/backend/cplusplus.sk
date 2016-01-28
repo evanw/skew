@@ -770,6 +770,10 @@ namespace Skew {
           }
 
           else if value.kind == .DOT && value.asString == "new" {
+            wrap = precedence == Precedence.MEMBER
+            if wrap {
+              _emit("(")
+            }
             _emit("new ")
             _emitExpression(value.dotTarget, .MEMBER)
           }
@@ -902,6 +906,10 @@ namespace Skew {
         }
 
         case .INITIALIZER_LIST, .INITIALIZER_MAP {
+          var wrap = precedence == Precedence.MEMBER
+          if wrap {
+            _emit("(")
+          }
           _emit("new ")
           _emitType(node.resolvedType, .BARE)
           if node.hasChildren {
@@ -910,6 +918,9 @@ namespace Skew {
             _emit("})")
           } else {
             _emit("()")
+          }
+          if wrap {
+            _emit(")")
           }
         }
 
@@ -923,11 +934,17 @@ namespace Skew {
         case .COMPLEMENT, .NEGATIVE, .NOT, .POSITIVE, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT, .PREFIX_DECREMENT, .PREFIX_INCREMENT {
           var value = node.unaryValue
           var info = operatorInfo[kind]
+          var sign = node.sign
           if info.precedence < precedence {
             _emit("(")
           }
           if !kind.isUnaryPostfix {
             _emit(info.text)
+
+            # Prevent "x - -1" from becoming "x--1"
+            if sign != .NULL && sign == value.sign {
+              _emit(" ")
+            }
           }
           _emitExpression(value, info.precedence)
           if kind.isUnaryPostfix {

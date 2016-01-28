@@ -189,6 +189,47 @@ string StringBuilder::toString() const {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+static uint64_t __MurmurHash3(uint64_t h) {
+  h ^= h >> 33;
+  h *= 0xFF51AFD7ED558CCDull;
+  h ^= h >> 33;
+  h *= 0xC4CEB9FE1A85EC53ull;
+  h ^= h >> 33;
+  return h;
+}
+
+// This implementation is from V8: http://v8project.blogspot.com/2015/12/theres-mathrandom-and-then-theres.html
+double Math::random() {
+  static uint64_t state0;
+  static uint64_t state1;
+  static bool setup;
+
+  if (!setup) {
+    timeval data;
+    gettimeofday(&data, nullptr);
+    state0 = __MurmurHash3(((uint64_t)data.tv_sec << 32) | (uint64_t)data.tv_usec);
+    state1 = __MurmurHash3(state0);
+    setup = true;
+  }
+
+  uint64_t s1 = state0;
+  uint64_t s0 = state1;
+  state0 = s0;
+  s1 ^= s1 << 23;
+  s1 ^= s1 >> 17;
+  s1 ^= s0;
+  s1 ^= s0 >> 26;
+  state1 = s1;
+
+  // Exponent for double values for [1.0 .. 2.0)
+  static const uint64_t kExponentBits = 0x3FF0000000000000ull;
+  static const uint64_t kMantissaMask = 0x000FFFFFFFFFFFFFull;
+  uint64_t random = ((state0 + state1) & kMantissaMask) | kExponentBits;
+  return *reinterpret_cast<double *>(&random) - 1;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 template <typename T>
 List<T>::List() {
 }
@@ -459,7 +500,7 @@ List<T> *List<T>::filter(Fn1<bool, T> *x) const {
 template <typename T>
 template <typename R>
 List<R> *List<T>::map(Fn1<R, T> *x) const {
-  auto result = new List<T>;
+  auto result = new List<R>;
   for (const auto &it : _data) {
     result->append(x->run(it));
   }
@@ -519,7 +560,7 @@ T &StringMap<T>::operator [] (const string &x) {
 
 template <typename T>
 int StringMap<T>::count() const {
-  return _data.size();
+  return (int)_data.size();
 }
 
 template <typename T>
@@ -602,7 +643,7 @@ T &IntMap<T>::operator [] (int x) {
 
 template <typename T>
 int IntMap<T>::count() const {
-  return _data.size();
+  return (int)_data.size();
 }
 
 template <typename T>
@@ -768,6 +809,9 @@ string doubleToString(double value) {
     if (std::stod(&buffer[0]) != value) {
       std::snprintf(&buffer[0], sizeof(buffer), "%.17g", value);
     }
+  }
+  if (!strcmp(buffer, "-0")) {
+    return "0";
   }
   return buffer;
 }

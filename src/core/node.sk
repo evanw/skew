@@ -886,6 +886,12 @@ namespace Skew {
         parent.parent.insertChildAfter(parent, variables)
       }
     }
+
+    def sign NodeKind {
+      if kind == .NEGATIVE || kind == .PREFIX_DECREMENT || isNumberLessThanZero { return .NEGATIVE }
+      if kind == .POSITIVE || kind == .PREFIX_INCREMENT { return .POSITIVE }
+      return .NULL
+    }
   }
 
   # Factory functions

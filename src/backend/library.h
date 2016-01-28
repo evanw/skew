@@ -332,14 +332,14 @@ namespace Math {
   double exp(double x) { return ::exp(x); }
   double log(double x) { return ::log(x); }
   double pow(double x, double y) { return ::pow(x, y); }
-  double random() { return ::random(); }
+  double random();
   double sqrt(double x) { return ::sqrt(x); }
 
-  double max(double x, double y) { return x < y ? x : y; }
-  int max(int x, int y) { return x < y ? x : y; }
+  double max(double x, double y) { return x > y ? x : y; }
+  int max(int x, int y) { return x > y ? x : y; }
 
-  double min(double x, double y) { return x > y ? x : y; }
-  int min(int x, int y) { return x > y ? x : y; }
+  double min(double x, double y) { return x < y ? x : y; }
+  int min(int x, int y) { return x < y ? x : y; }
 }
 
 namespace IO {

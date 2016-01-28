@@ -1004,7 +1004,7 @@ namespace Skew {
         case .COMPLEMENT, .NEGATIVE, .NOT, .POSITIVE, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT, .PREFIX_DECREMENT, .PREFIX_INCREMENT {
           var value = node.unaryValue
           var info = operatorInfo[kind]
-          var sign = _sign(node)
+          var sign = node.sign
           if info.precedence < precedence {
             _emit("(")
           }
@@ -1012,7 +1012,7 @@ namespace Skew {
             _emit(info.text)
 
             # Prevent "x - -1" from becoming "x--1"
-            if sign != .NULL && sign == _sign(value) {
+            if sign != .NULL && sign == value.sign {
               _emit(" ")
             }
           }
@@ -1068,13 +1068,6 @@ namespace Skew {
   }
 
   namespace CSharpEmitter {
-    def _sign(node Node) NodeKind {
-      var kind = node.kind
-      if kind == .NEGATIVE || kind == .PREFIX_DECREMENT || node.isNumberLessThanZero { return .NEGATIVE }
-      if kind == .POSITIVE || kind == .PREFIX_INCREMENT { return .POSITIVE }
-      return .NULL
-    }
-
     def _isCompactNodeKind(kind NodeKind) bool {
       return kind == .EXPRESSION || kind == .VARIABLES || kind.isJump
     }

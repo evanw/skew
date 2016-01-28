@@ -2365,7 +2365,7 @@
       case Skew.NodeKind.PREFIX_INCREMENT: {
         var value3 = node.unaryValue();
         var info = in_IntMap.get1(Skew.operatorInfo, kind);
-        var sign = Skew.CSharpEmitter._sign(node);
+        var sign = node.sign();
 
         if (info.precedence < precedence) {
           this._emit('(');
@@ -2375,7 +2375,7 @@
           this._emit(info.text);
 
           // Prevent "x - -1" from becoming "x--1"
-          if (sign != Skew.NodeKind.NULL && sign == Skew.CSharpEmitter._sign(value3)) {
+          if (sign != Skew.NodeKind.NULL && sign == value3.sign()) {
             this._emit(' ');
           }
         }
@@ -2436,20 +2436,6 @@
         break;
       }
     }
-  };
-
-  Skew.CSharpEmitter._sign = function(node) {
-    var kind = node.kind;
-
-    if (kind == Skew.NodeKind.NEGATIVE || kind == Skew.NodeKind.PREFIX_DECREMENT || node.isNumberLessThanZero()) {
-      return Skew.NodeKind.NEGATIVE;
-    }
-
-    if (kind == Skew.NodeKind.POSITIVE || kind == Skew.NodeKind.PREFIX_INCREMENT) {
-      return Skew.NodeKind.POSITIVE;
-    }
-
-    return Skew.NodeKind.NULL;
   };
 
   Skew.CSharpEmitter._isCompactNodeKind = function(kind) {
@@ -3416,6 +3402,12 @@
         }
 
         else if (value.kind == Skew.NodeKind.DOT && value.asString() == 'new') {
+          wrap = precedence == Skew.Precedence.MEMBER;
+
+          if (wrap) {
+            this._emit('(');
+          }
+
           this._emit('new ');
           this._emitExpression(value.dotTarget(), Skew.Precedence.MEMBER);
         }
@@ -3578,6 +3570,12 @@
 
       case Skew.NodeKind.INITIALIZER_LIST:
       case Skew.NodeKind.INITIALIZER_MAP: {
+        var wrap1 = precedence == Skew.Precedence.MEMBER;
+
+        if (wrap1) {
+          this._emit('(');
+        }
+
         this._emit('new ');
         this._emitType(node.resolvedType, Skew.CPlusPlusEmitter.CppEmitMode.BARE);
 
@@ -3589,6 +3587,10 @@
 
         else {
           this._emit('()');
+        }
+
+        if (wrap1) {
+          this._emit(')');
         }
         break;
       }
@@ -3611,6 +3613,7 @@
       case Skew.NodeKind.PREFIX_INCREMENT: {
         var value3 = node.unaryValue();
         var info = in_IntMap.get1(Skew.operatorInfo, kind);
+        var sign = node.sign();
 
         if (info.precedence < precedence) {
           this._emit('(');
@@ -3618,6 +3621,11 @@
 
         if (!Skew.in_NodeKind.isUnaryPostfix(kind)) {
           this._emit(info.text);
+
+          // Prevent "x - -1" from becoming "x--1"
+          if (sign != Skew.NodeKind.NULL && sign == value3.sign()) {
+            this._emit(' ');
+          }
         }
 
         this._emitExpression(value3, info.precedence);
@@ -8282,6 +8290,18 @@
 
       this.parent().parent().insertChildAfter(this.parent(), variables1);
     }
+  };
+
+  Skew.Node.prototype.sign = function() {
+    if (this.kind == Skew.NodeKind.NEGATIVE || this.kind == Skew.NodeKind.PREFIX_DECREMENT || this.isNumberLessThanZero()) {
+      return Skew.NodeKind.NEGATIVE;
+    }
+
+    if (this.kind == Skew.NodeKind.POSITIVE || this.kind == Skew.NodeKind.PREFIX_INCREMENT) {
+      return Skew.NodeKind.POSITIVE;
+    }
+
+    return Skew.NodeKind.NULL;
   };
 
   Skew.Node.createAnnotation = function(value, test) {

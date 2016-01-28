@@ -1220,12 +1220,12 @@ struct TestLambda1 : FnVoid0 {
 void test(List<int> *list) {
   TestEnv *env = new TestEnv();
   env->list = list;
-  new TestLambda(env)->run();
+  (new TestLambda(env))->run();
 
   for (int i : *env->list) {
     TestEnv1 *env1 = new TestEnv1(env);
     env1->i = i;
-    new TestLambda1(env, env1)->run();
+    (new TestLambda1(env1->env, env1))->run();
   }
 }
 
@@ -1252,7 +1252,7 @@ TestLambda1::TestLambda1(TestEnv *env, TestEnv1 *env1) {
 void TestLambda1::run() {
   env1->env->list->append(this->env1->i);
 }
-").cpp.skip # Not working yet
+").cpp
 
 # Constructors on dynamic types shouldn't need parentheses
 test("
@@ -1276,16 +1276,16 @@ def test {
 void test() {
   new Foo();
   new Foo();
-  new Foo()->test;
-  new Foo()->test;
-  new Foo<Bar>()->test;
-  new Foo<Bar>()->test;
+  (new Foo())->test;
+  (new Foo())->test;
+  (new Foo<Bar>())->test;
+  (new Foo<Bar>())->test;
   void *a = new Foo();
   void *b = new Foo();
-  void *c = new Foo()->test;
-  void *d = new Foo()->test;
-  void *e = new Foo<Bar>()->test;
-  void *f = new Foo<Bar>()->test;
+  void *c = (new Foo())->test;
+  void *d = (new Foo())->test;
+  void *e = (new Foo<Bar>())->test;
+  void *f = (new Foo<Bar>())->test;
 }
 ").cpp
 
