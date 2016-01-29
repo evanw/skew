@@ -704,7 +704,11 @@ namespace Skew {
             value == -Math.INFINITY ? "-INFINITY" :
             doubleToStringWithDot(value))
         }
-        case .STRING { _emit(quoteString(content.asString, .DOUBLE, .OCTAL_WORKAROUND) + "_s") }
+        case .STRING {
+          var text = content.asString
+          var quoted = quoteString(text, .DOUBLE, .OCTAL_WORKAROUND)
+          _emit("\0" in text ? "string(\(quoted), \(text.count))" : quoted + "_s") # TODO: This needs to work with UTF8
+        }
       }
     }
 

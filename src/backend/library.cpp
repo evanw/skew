@@ -12,6 +12,9 @@ string::string() : _isNull(true) {
 string::string(const char *x) : _data(x ? x : ""), _isNull(!x) {
 }
 
+string::string(const char *x, int count) : _data(x, x + count), _isNull(false) {
+}
+
 string::string(const std::string &x) : _data(x), _isNull(false) {
 }
 
@@ -32,15 +35,21 @@ const std::string &string::std_str() const {
 }
 
 string string::operator + (const string &x) const {
+  assert(!_isNull);
+  assert(!x._isNull);
   return _data + x._data;
 }
 
 string &string::operator += (const string &x) {
+  assert(!_isNull);
+  assert(!x._isNull);
   _data += x._data;
   return *this;
 }
 
 int string::compare(const string &x) const {
+  assert(!_isNull);
+  assert(!x._isNull);
   return (_data > x._data) - (_data < x._data);
 }
 
@@ -49,24 +58,34 @@ int string::count() const {
 }
 
 bool string::contains(const string &x) const {
+  assert(!_isNull);
+  assert(!x._isNull);
   return _data.find(x._data) != std::string::npos;
 }
 
 int string::indexOf(const string &x) const {
+  assert(!_isNull);
+  assert(!x._isNull);
   auto it = _data.find(x._data);
   return it != std::string::npos ? (int)it : -1;
 }
 
 int string::lastIndexOf(const string &x) const {
+  assert(!_isNull);
+  assert(!x._isNull);
   auto it = _data.rfind(x._data);
   return it != std::string::npos ? (int)it : -1;
 }
 
 bool string::startsWith(const string &x) const {
+  assert(!_isNull);
+  assert(!x._isNull);
   return _data.size() >= x._data.size() && !memcmp(_data.data(), x._data.data(), x._data.size());
 }
 
 bool string::endsWith(const string &x) const {
+  assert(!_isNull);
+  assert(!x._isNull);
   return _data.size() >= x._data.size() && !memcmp(_data.data() + _data.size() - x._data.size(), x._data.data(), x._data.size());
 }
 
@@ -99,6 +118,8 @@ List<int> *string::codeUnits() const {
 }
 
 List<string> *string::split(const string &x) const {
+  assert(!_isNull);
+  assert(!x._isNull);
   auto result = new List<string>;
   size_t start = 0;
   while (true) {
@@ -114,11 +135,13 @@ List<string> *string::split(const string &x) const {
 }
 
 string string::join(const List<string> *x) const {
-  std::string result;
+  assert(!_isNull);
+  std::string result("");
   for (auto b = x->begin(), e = x->end(), it = b; it != e; it++) {
     if (it != b) {
       result += _data;
     }
+    assert(!it->_isNull);
     result += it->_data;
   }
   return result;
@@ -126,7 +149,7 @@ string string::join(const List<string> *x) const {
 
 string string::repeat(int x) const {
   assert(x >= 0);
-  std::string result;
+  std::string result("");
   result.reserve(_data.size() * x);
   while (x-- > 0) {
     result += _data;
@@ -135,7 +158,10 @@ string string::repeat(int x) const {
 }
 
 string string::replaceAll(const string &before, const string &after) const {
-  string result;
+  assert(!_isNull);
+  assert(!before._isNull);
+  assert(!after._isNull);
+  string result("");
   size_t start = 0;
   while (true) {
     auto it = _data.find(before._data, start);
@@ -167,7 +193,7 @@ string string::fromCodeUnit(int x) {
 }
 
 string string::fromCodeUnits(const List<int> *x) {
-  std::string result;
+  std::string result("");
   result.reserve(x->count());
   for (char y : *x) {
     result += y;
@@ -176,7 +202,7 @@ string string::fromCodeUnits(const List<int> *x) {
 }
 
 string operator ""_s (const char *data, unsigned long count) {
-  return std::string(data, data + count);
+  return string(data, count);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

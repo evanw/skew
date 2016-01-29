@@ -63,7 +63,7 @@ replace: | build
 	mv build/skewc3.js skewc.js
 	rm build/skewc2.js
 
-check: check-js check-cs check-determinism
+check: check-js check-cs check-cpp check-determinism
 
 check-js: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.min.js --release
@@ -134,7 +134,7 @@ flex:
 version:
 	sh -c 'cd src/frontend && python version.py'
 
-test: test-js test-cs
+test: test-js test-cs test-cpp
 
 test-js: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js

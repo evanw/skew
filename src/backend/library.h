@@ -124,6 +124,7 @@ struct List;
 struct string {
   string();
   string(const char *x);
+  string(const char *x, int count);
   string(const std::string &x);
 
   bool operator == (const string &x) const;

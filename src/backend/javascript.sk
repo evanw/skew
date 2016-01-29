@@ -223,7 +223,7 @@ namespace Skew {
       _emit(_indent + "})();\n")
 
       var codeName = _options.outputDirectory != null ? _options.outputDirectory + "/compiled.js" : _options.outputFile
-      var mapName = codeName + ".map"
+      var mapName = codeName != null ? codeName + ".map" : null
 
       # Obfuscate the sourceMappingURL so it's not incorrectly picked up as the
       # sourceMappingURL for the compiled JavaScript compiler file
