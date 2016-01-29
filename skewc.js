@@ -1217,10 +1217,10 @@
     var emitIndividualFiles = this._options.outputDirectory != null;
     var objects = this._collectObjects(global);
 
-    // Convert "flags" types to wrapped types
     for (var i1 = 0, list1 = objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
       var object = in_List.get(list1, i1);
 
+      // Convert "flags" types to wrapped types
       if (object.kind == Skew.SymbolKind.OBJECT_FLAGS) {
         object.kind = Skew.SymbolKind.OBJECT_WRAPPED;
         object.wrappedType = this._cache.intType;
@@ -1572,6 +1572,8 @@
       this._emit(this._indent + Skew.CSharpEmitter._mangleName(symbol));
 
       if (symbol.value != null) {
+        // Enum values are initialized with integers
+        symbol.value.resolvedType = this._cache.intType;
         this._emit(' = ');
         this._emitExpression(symbol.value, Skew.Precedence.COMMA);
       }
@@ -2158,6 +2160,12 @@
 
         if (wrap) {
           this._emit('(');
+        }
+
+        if (node.resolvedType.isEnumOrFlags()) {
+          this._emit('(');
+          this._emitType(node.resolvedType);
+          this._emit(')');
         }
 
         this._emitContent(node.content);
@@ -2941,7 +2949,11 @@
     this._emitComments(symbol.comments);
 
     if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
-      this._emit(this._indent + Skew.CPlusPlusEmitter._mangleName(symbol) + (' = ' + symbol.value.asInt().toString() + ',\n'));
+      // Enum values are initialized with integers, so avoid any casts
+      symbol.value.resolvedType = this._cache.intType;
+      this._emit(this._indent + Skew.CPlusPlusEmitter._mangleName(symbol) + ' = ');
+      this._emitExpression(symbol.value, Skew.Precedence.COMMA);
+      this._emit(',\n');
     }
 
     else {
@@ -15381,13 +15393,7 @@
 
     // Reference a parent scope
     var copy = in_IntMap.get1(target.copyLookup, scope.id);
-
-    if (copy.scope == target.parent) {
-      return Skew.Node.createMemberReference(Skew.Node.createSymbolReference(target.environmentVariable), copy.member);
-    }
-
-    // Reference a grandparent scope
-    return Skew.Node.createMemberReference(Skew.Node.createSymbolReference(target.parent.environmentVariable), in_IntMap.get1(target.parent.copyLookup, copy.scope.id).member);
+    return Skew.Node.createMemberReference(Skew.Node.createSymbolReference(target.environmentVariable), copy.member);
   };
 
   Skew.LambdaConversion.Converter = function(_global, _cache) {
@@ -15448,8 +15454,8 @@
       }
     }
 
-    for (var i6 = 0, list6 = this._scopes, count6 = list6.length; i6 < count6; i6 = i6 + 1 | 0) {
-      var scope1 = in_List.get(list6, i6);
+    for (var i5 = 0, list5 = this._scopes, count5 = list5.length; i5 < count5; i5 = i5 + 1 | 0) {
+      var scope1 = in_List.get(list5, i5);
 
       if (scope1.hasCapturedDefinitions || scope1.kind == Skew.LambdaConversion.CaptureKind.LAMBDA) {
         // Create an object to store the environment
@@ -15498,7 +15504,6 @@
 
           case Skew.LambdaConversion.CaptureKind.LAMBDA: {
             var $function = scope1.node.symbol.asFunctionSymbol();
-            var block = scope1.node.lambdaBlock().remove();
             $function.kind = Skew.SymbolKind.FUNCTION_INSTANCE;
             $function.name = 'run';
             $function.$this = Skew.LambdaConversion.Converter._createVariable(Skew.SymbolKind.VARIABLE_LOCAL, 'self', object.resolvedType);
@@ -15508,17 +15513,11 @@
             scope1.environmentVariable = $function.$this;
             constructorCall = scope1.node;
 
-            // Assign captured arguments to the environment
-            var first = block.firstChild();
-
-            for (var i4 = 0, list4 = scope1.definitions, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
-              var definition2 = in_List.get(list4, i4);
-
-              if (definition2.isCaptured && definition2.symbol.kind == Skew.SymbolKind.VARIABLE_ARGUMENT) {
-                var assignment1 = Skew.LambdaConversion.Converter._createAssignment($function.$this, definition2.member, definition2.symbol);
-                block.insertChildBefore(first, assignment1);
-              }
-            }
+            // Lambdas introduce two scopes instead of one. All captured
+            // definitions for that lambda have to be in the nested scope,
+            // even lambda function arguments, because that nested scope
+            // needs to be different for each invocation of the lambda.
+            assert(!scope1.hasCapturedDefinitions);
 
             // Implement the lambda interface with the right type parameters
             var interfaceType = this._interfaceTypeForLambdaType($function.resolvedType);
@@ -15544,19 +15543,19 @@
             // Define the variable at the top of the function body
             var variables1 = new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(variable1));
             var node = scope1.node;
-            var block1 = node.kind == Skew.NodeKind.FOR ? node.forBlock() : node.kind == Skew.NodeKind.FOREACH ? node.foreachBlock() : node.kind == Skew.NodeKind.WHILE ? node.whileBlock() : null;
-            block1.prependChild(variables1);
+            var block = node.kind == Skew.NodeKind.FOR ? node.forBlock() : node.kind == Skew.NodeKind.FOREACH ? node.foreachBlock() : node.kind == Skew.NodeKind.WHILE ? node.whileBlock() : null;
+            block.prependChild(variables1);
 
             // Assign captured loop variables
             var previous1 = variables1;
 
-            for (var i5 = 0, list5 = scope1.definitions, count5 = list5.length; i5 < count5; i5 = i5 + 1 | 0) {
-              var definition3 = in_List.get(list5, i5);
+            for (var i4 = 0, list4 = scope1.definitions, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
+              var definition2 = in_List.get(list4, i4);
 
-              if (definition3.isCaptured && definition3.symbol.isLoopVariable()) {
-                var assignment2 = Skew.LambdaConversion.Converter._createAssignment(variable1, definition3.member, definition3.symbol);
-                block1.insertChildAfter(previous1, assignment2);
-                previous1 = assignment2;
+              if (definition2.isCaptured && definition2.symbol.isLoopVariable()) {
+                var assignment1 = Skew.LambdaConversion.Converter._createAssignment(variable1, definition2.member, definition2.symbol);
+                block.insertChildAfter(previous1, assignment1);
+                previous1 = assignment1;
               }
             }
             break;
@@ -15588,15 +15587,15 @@
     }
 
     // Make sure each environment has a copy of each parent environment that it or its children needs
-    for (var i8 = 0, list8 = this._scopes, count8 = list8.length; i8 < count8; i8 = i8 + 1 | 0) {
-      var scope2 = in_List.get(list8, i8);
+    for (var i7 = 0, list7 = this._scopes, count7 = list7.length; i7 < count7; i7 = i7 + 1 | 0) {
+      var scope2 = in_List.get(list7, i7);
       var object1 = scope2.environmentObject;
       var constructor1 = scope2.environmentConstructor;
       var constructorCall1 = scope2.environmentConstructorCall;
 
       if (object1 != null) {
-        for (var i7 = 0, list7 = scope2.copies, count7 = list7.length; i7 < count7; i7 = i7 + 1 | 0) {
-          var copy1 = in_List.get(list7, i7);
+        for (var i6 = 0, list6 = scope2.copies, count6 = list6.length; i6 < count6; i6 = i6 + 1 | 0) {
+          var copy1 = in_List.get(list6, i6);
           var name = object1.scope.generateName(copy1.scope.kind == Skew.LambdaConversion.CaptureKind.LAMBDA ? 'lambda' : 'env');
           var member = Skew.LambdaConversion.Converter._createInstanceVariable(name, copy1.scope.environmentObject.resolvedType, object1);
           var argument = Skew.LambdaConversion.Converter._createVariable(Skew.SymbolKind.VARIABLE_ARGUMENT, name, member.resolvedType);
@@ -15609,26 +15608,26 @@
       }
     }
 
-    for (var i11 = 0, list11 = this._scopes, count11 = list11.length; i11 < count11; i11 = i11 + 1 | 0) {
-      var scope3 = in_List.get(list11, i11);
+    for (var i10 = 0, list10 = this._scopes, count10 = list10.length; i10 < count10; i10 = i10 + 1 | 0) {
+      var scope3 = in_List.get(list10, i10);
 
       // Replace variable definitions of captured symbols with assignments to their environment
       if (scope3.hasCapturedDefinitions) {
-        for (var i9 = 0, list9 = scope3.definitions, count9 = list9.length; i9 < count9; i9 = i9 + 1 | 0) {
-          var definition4 = in_List.get(list9, i9);
+        for (var i8 = 0, list8 = scope3.definitions, count8 = list8.length; i8 < count8; i8 = i8 + 1 | 0) {
+          var definition3 = in_List.get(list8, i8);
 
-          if (definition4.isCaptured && definition4.node != null) {
-            assert(definition4.node.kind == Skew.NodeKind.VARIABLE);
-            assert(definition4.node.parent().kind == Skew.NodeKind.VARIABLES);
-            definition4.node.extractVariableFromVariables();
-            definition4.node.parent().replaceWith(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(scope3.environmentVariable), definition4.member), definition4.symbol.value.remove()).withType(definition4.member.resolvedType)));
+          if (definition3.isCaptured && definition3.node != null) {
+            assert(definition3.node.kind == Skew.NodeKind.VARIABLE);
+            assert(definition3.node.parent().kind == Skew.NodeKind.VARIABLES);
+            definition3.node.extractVariableFromVariables();
+            definition3.node.parent().replaceWith(Skew.Node.createExpression(Skew.Node.createBinary(Skew.NodeKind.ASSIGN, Skew.Node.createMemberReference(Skew.Node.createSymbolReference(scope3.environmentVariable), definition3.member), definition3.symbol.value.remove()).withType(definition3.member.resolvedType)));
           }
         }
       }
 
       // Replace all references to captured variables with a member access from the appropriate environment
-      for (var i10 = 0, list10 = scope3.uses, count10 = list10.length; i10 < count10; i10 = i10 + 1 | 0) {
-        var use1 = in_List.get(list10, i10);
+      for (var i9 = 0, list9 = scope3.uses, count9 = list9.length; i9 < count9; i9 = i9 + 1 | 0) {
+        var use1 = in_List.get(list9, i9);
 
         if (use1.definition.isCaptured) {
           use1.node.become(Skew.Node.createMemberReference(scope3.createReferenceToScope(use1.definition.scope), use1.definition.member));
@@ -15687,7 +15686,8 @@
 
     if (kind == Skew.NodeKind.LAMBDA) {
       this._enclosingFunction = symbol.asFunctionSymbol();
-      var scope = this._pushScope(Skew.LambdaConversion.CaptureKind.LAMBDA, node, this._stack.length == 0 ? null : in_List.last(this._stack));
+      var lambdaScope = this._pushScope(Skew.LambdaConversion.CaptureKind.LAMBDA, node, this._stack.length == 0 ? null : in_List.last(this._stack));
+      var scope = this._pushScope(Skew.LambdaConversion.CaptureKind.FUNCTION, node.lambdaBlock(), lambdaScope);
 
       for (var i = 0, list = symbol.asFunctionSymbol().$arguments, count = list.length; i < count; i = i + 1 | 0) {
         var argument = in_List.get(list, i);
@@ -15731,6 +15731,7 @@
     }
 
     if (kind == Skew.NodeKind.LAMBDA) {
+      in_List.removeLast(this._stack);
       in_List.removeLast(this._stack);
       this._enclosingFunction = oldEnclosingFunction;
     }
@@ -21190,6 +21191,11 @@
     if (node.kind == Skew.NodeKind.CAST) {
       this._visitNode(node.castValue());
       this._visitType(node.castType().resolvedType);
+    }
+
+    // This is necessary to preserve the types of constant-folded enums in typed languages
+    else if (node.kind == Skew.NodeKind.CONSTANT && this._mode == Skew.ShakingMode.USE_TYPES) {
+      this._visitType(node.resolvedType);
     }
 
     else {

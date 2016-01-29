@@ -42,6 +42,11 @@ CLANG_FLAGS += -Wno-unused-variable
 CLANG_FLAGS += -include src/backend/library.h
 CLANG_FLAGS += -include src/backend/library.cpp
 
+CLANG_RELEASE_FLAGS += -O3
+CLANG_RELEASE_FLAGS += -DNDEBUG
+CLANG_RELEASE_FLAGS += -fomit-frame-pointer
+CLANG_RELEASE_FLAGS += -include src/backend/fast.cpp
+
 default: compile-skewc compile-api
 
 compile-skewc: | build
@@ -115,7 +120,7 @@ debug-cpp: | build
 
 release-cpp: | build
 	node skewc.js $(SOURCES_SKEWC) $(CPP_FLAGS) --output-file=build/skewc.cpp --release
-	time clang++ -o build/skewc build/skewc.cpp $(CLANG_FLAGS) -O3 -DNDEBUG -include src/backend/fast.cpp
+	time clang++ -o build/skewc build/skewc.cpp $(CLANG_FLAGS) $(CLANG_RELEASE_FLAGS)
 
 watch:
 	node_modules/.bin/watch src 'clear && make compile-api'
@@ -153,6 +158,9 @@ test-cpp: | build
 	node skewc.js $(SOURCES_SKEWC) $(JS_FLAGS) --output-file=build/skewc.js
 	node build/skewc.js $(SOURCES_TEST) $(CPP_FLAGS) --output-file=build/test.cpp
 	clang++ -o build/test build/test.cpp $(CLANG_FLAGS)
+	build/test
+	node build/skewc.js $(SOURCES_TEST) $(CPP_FLAGS) --output-file=build/test.cpp --release
+	clang++ -o build/test build/test.cpp $(CLANG_FLAGS) $(CLANG_RELEASE_FLAGS)
 	build/test
 
 clean:

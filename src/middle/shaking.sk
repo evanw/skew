@@ -221,7 +221,14 @@ namespace Skew {
       if node.kind == .CAST {
         _visitNode(node.castValue)
         _visitType(node.castType.resolvedType)
-      } else {
+      }
+
+      # This is necessary to preserve the types of constant-folded enums in typed languages
+      else if node.kind == .CONSTANT && _mode == .USE_TYPES {
+        _visitType(node.resolvedType)
+      }
+
+      else {
         for child = node.firstChild; child != null; child = child.nextSibling {
           _visitNode(child)
         }

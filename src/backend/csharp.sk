@@ -59,8 +59,8 @@ namespace Skew {
       var emitIndividualFiles = _options.outputDirectory != null
       var objects = _collectObjects(global)
 
-      # Convert "flags" types to wrapped types
       for object in objects {
+        # Convert "flags" types to wrapped types
         if object.kind == .OBJECT_FLAGS {
           object.kind = .OBJECT_WRAPPED
           object.wrappedType = _cache.intType
@@ -342,6 +342,7 @@ namespace Skew {
       if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
         _emit(_indent + _mangleName(symbol))
         if symbol.value != null {
+          symbol.value.resolvedType = _cache.intType # Enum values are initialized with integers
           _emit(" = ")
           _emitExpression(symbol.value, .COMMA)
         }
@@ -831,6 +832,11 @@ namespace Skew {
             _emit("(")
           }
 
+          if node.resolvedType.isEnumOrFlags {
+            _emit("(")
+            _emitType(node.resolvedType)
+            _emit(")")
+          }
           _emitContent(node.content)
 
           if wrap {

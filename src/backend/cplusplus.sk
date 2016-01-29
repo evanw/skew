@@ -397,7 +397,10 @@ namespace Skew {
       _emitNewlineBeforeSymbol(symbol, mode)
       _emitComments(symbol.comments)
       if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
-        _emit(_indent + _mangleName(symbol) + " = \(symbol.value.asInt),\n")
+        symbol.value.resolvedType = _cache.intType # Enum values are initialized with integers, so avoid any casts
+        _emit(_indent + _mangleName(symbol) + " = ")
+        _emitExpression(symbol.value, .COMMA)
+        _emit(",\n")
       } else {
         _emit(_indent)
         if mode == .DEFINE && symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {

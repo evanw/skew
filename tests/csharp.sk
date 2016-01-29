@@ -869,5 +869,37 @@ public class Globals
 }
 ").csharp
 
+# Check preserving enum types for constant-folded enum values
+test("
+enum Foo {
+  FOO
+  BAR
+}
+
+def foo(x Foo) {
+  bar(x)
+}
+
+@import
+def bar(x int)
+
+@export
+def test(x bool) {
+  foo(x ? .BAR : .FOO)
+}
+", "
+public enum Foo
+{
+}
+
+public class Globals
+{
+    public static void test(bool x)
+    {
+        bar((int)(x ? (Foo)1 : (Foo)0));
+    }
+}
+").csharp.foldAllConstants.inlineAllFunctions
+
   }
 }
