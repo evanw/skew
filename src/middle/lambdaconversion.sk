@@ -110,16 +110,9 @@ namespace Skew.LambdaConversion {
 
       # Reference a parent scope
       var copy = target.copyLookup[scope.id]
-      if copy.scope == target.parent {
-        return Node.createMemberReference(
-          Node.createSymbolReference(target.environmentVariable),
-          copy.member)
-      }
-
-      # Reference a grandparent scope
       return Node.createMemberReference(
-        Node.createSymbolReference(target.parent.environmentVariable),
-        target.parent.copyLookup[copy.scope.id].member)
+        Node.createSymbolReference(target.environmentVariable),
+        copy.member)
     }
   }
 
@@ -217,7 +210,6 @@ namespace Skew.LambdaConversion {
 
             case .LAMBDA {
               var function = scope.node.symbol.asFunctionSymbol
-              var block = scope.node.lambdaBlock.remove
               function.kind = .FUNCTION_INSTANCE
               function.name = "run"
               function.this = _createVariable(.VARIABLE_LOCAL, "self", object.resolvedType)
@@ -227,14 +219,11 @@ namespace Skew.LambdaConversion {
               scope.environmentVariable = function.this
               constructorCall = scope.node
 
-              # Assign captured arguments to the environment
-              var first = block.firstChild
-              for definition in scope.definitions {
-                if definition.isCaptured && definition.symbol.kind == .VARIABLE_ARGUMENT {
-                  var assignment = _createAssignment(function.this, definition.member, definition.symbol)
-                  block.insertChildBefore(first, assignment)
-                }
-              }
+              # Lambdas introduce two scopes instead of one. All captured
+              # definitions for that lambda have to be in the nested scope,
+              # even lambda function arguments, because that nested scope
+              # needs to be different for each invocation of the lambda.
+              assert(!scope.hasCapturedDefinitions)
 
               # Implement the lambda interface with the right type parameters
               var interfaceType = _interfaceTypeForLambdaType(function.resolvedType)
@@ -390,7 +379,8 @@ namespace Skew.LambdaConversion {
 
       if kind == .LAMBDA {
         _enclosingFunction = symbol.asFunctionSymbol
-        var scope = _pushScope(.LAMBDA, node, _stack.isEmpty ? null : _stack.last)
+        var lambdaScope = _pushScope(.LAMBDA, node, _stack.isEmpty ? null : _stack.last)
+        var scope = _pushScope(.FUNCTION, node.lambdaBlock, lambdaScope)
         for argument in symbol.asFunctionSymbol.arguments {
           scope.recordDefinition(argument, null)
         }
@@ -433,6 +423,7 @@ namespace Skew.LambdaConversion {
       }
 
       if kind == .LAMBDA {
+        _stack.removeLast
         _stack.removeLast
         _enclosingFunction = oldEnclosingFunction
       }

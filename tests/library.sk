@@ -12,6 +12,12 @@ namespace Skew.Tests {
       var b = x(2)
       return (a() + b()).toString
     }, "3")
+    testExpect("sanity check", () string => {
+      var x = (y int) => => => => y
+      var a = x(1)
+      var b = x(2)
+      return (a()()() + b()()()).toString
+    }, "3")
 
     ################################################################################
     # Math

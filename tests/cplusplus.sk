@@ -664,8 +664,10 @@ class Foo {
 struct Foo;
 struct FooTestEnv;
 struct FooTestLambda;
+struct FooTestEnv1;
 struct FooTestLambda1;
 struct FooTestLambda2;
+struct FooTestEnv2;
 struct FooTestLambda3;
 
 struct Foo {
@@ -687,34 +689,47 @@ struct FooTestLambda : Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> {
   FooTestLambda(FooTestEnv *env);
   virtual Fn0<Fn1<Fn0<int> *, int> *> *run(int a);
 
+  FooTestEnv *env;
+};
+
+struct FooTestEnv1 {
+  FooTestEnv1(FooTestEnv *env);
+
   int a;
   FooTestEnv *env;
 };
 
 struct FooTestLambda1 : Fn0<Fn1<Fn0<int> *, int> *> {
-  FooTestLambda1(FooTestEnv *env, FooTestLambda *lambda);
+  FooTestLambda1(FooTestEnv *env, FooTestEnv1 *env1);
   virtual Fn1<Fn0<int> *, int> *run();
 
   FooTestEnv *env;
-  FooTestLambda *lambda;
+  FooTestEnv1 *env1;
 };
 
 struct FooTestLambda2 : Fn1<Fn0<int> *, int> {
-  FooTestLambda2(FooTestEnv *env, FooTestLambda *lambda);
+  FooTestLambda2(FooTestEnv *env, FooTestEnv1 *env1);
   virtual Fn0<int> *run(int b);
+
+  FooTestEnv *env;
+  FooTestEnv1 *env1;
+};
+
+struct FooTestEnv2 {
+  FooTestEnv2(FooTestEnv *env, FooTestEnv1 *env1);
 
   int b;
   FooTestEnv *env;
-  FooTestLambda *lambda;
+  FooTestEnv1 *env1;
 };
 
 struct FooTestLambda3 : Fn0<int> {
-  FooTestLambda3(FooTestEnv *env, FooTestLambda *lambda, FooTestLambda2 *lambda1);
+  FooTestLambda3(FooTestEnv *env, FooTestEnv1 *env1, FooTestEnv2 *env2);
   virtual int run();
 
   FooTestEnv *env;
-  FooTestLambda *lambda;
-  FooTestLambda2 *lambda1;
+  FooTestEnv1 *env1;
+  FooTestEnv2 *env2;
 };
 
 int Foo::test(int x) {
@@ -738,37 +753,48 @@ FooTestLambda::FooTestLambda(FooTestEnv *env) {
 }
 
 Fn0<Fn1<Fn0<int> *, int> *> *FooTestLambda::run(int a) {
-  this->a = a;
-  return new FooTestLambda1(this->env, this);
+  FooTestEnv1 *env1 = new FooTestEnv1(this->env);
+  env1->a = a;
+  return new FooTestLambda1(env1->env, env1);
 }
 
-FooTestLambda1::FooTestLambda1(FooTestEnv *env, FooTestLambda *lambda) {
+FooTestEnv1::FooTestEnv1(FooTestEnv *env) {
   this->env = env;
-  this->lambda = lambda;
+}
+
+FooTestLambda1::FooTestLambda1(FooTestEnv *env, FooTestEnv1 *env1) {
+  this->env = env;
+  this->env1 = env1;
 }
 
 Fn1<Fn0<int> *, int> *FooTestLambda1::run() {
-  return new FooTestLambda2(this->env, this->lambda);
+  return new FooTestLambda2(this->env, this->env1);
 }
 
-FooTestLambda2::FooTestLambda2(FooTestEnv *env, FooTestLambda *lambda) {
+FooTestLambda2::FooTestLambda2(FooTestEnv *env, FooTestEnv1 *env1) {
   this->env = env;
-  this->lambda = lambda;
+  this->env1 = env1;
 }
 
 Fn0<int> *FooTestLambda2::run(int b) {
-  this->b = b;
-  return new FooTestLambda3(this->env, this->lambda, this);
+  FooTestEnv2 *env2 = new FooTestEnv2(this->env, this->env1);
+  env2->b = b;
+  return new FooTestLambda3(env2->env, env2->env1, env2);
 }
 
-FooTestLambda3::FooTestLambda3(FooTestEnv *env, FooTestLambda *lambda, FooTestLambda2 *lambda1) {
+FooTestEnv2::FooTestEnv2(FooTestEnv *env, FooTestEnv1 *env1) {
   this->env = env;
-  this->lambda = lambda;
-  this->lambda1 = lambda1;
+  this->env1 = env1;
+}
+
+FooTestLambda3::FooTestLambda3(FooTestEnv *env, FooTestEnv1 *env1, FooTestEnv2 *env2) {
+  this->env = env;
+  this->env1 = env1;
+  this->env2 = env2;
 }
 
 int FooTestLambda3::run() {
-  return this->env->self->value + this->env->x + this->env->y + this->lambda->a + this->lambda1->b;
+  return this->env->self->value + this->env->x + this->env->y + this->env1->a + this->env2->b;
 }
 ").cpp
 
@@ -782,20 +808,25 @@ def test int {
 }
 ", "
 struct Lambda;
+struct LambdaRunEnv;
 struct LambdaRunLambda;
 
 struct Lambda : Fn1<Fn1<int, int> *, int> {
   Lambda();
   virtual Fn1<int, int> *run(int x);
+};
+
+struct LambdaRunEnv {
+  LambdaRunEnv();
 
   int x;
 };
 
 struct LambdaRunLambda : Fn1<int, int> {
-  LambdaRunLambda(Lambda *lambda);
+  LambdaRunLambda(LambdaRunEnv *env);
   virtual int run(int y);
 
-  Lambda *lambda;
+  LambdaRunEnv *env;
 };
 
 Fn1<Fn1<int, int> *, int> *f = new Lambda();
@@ -808,16 +839,20 @@ Lambda::Lambda() {
 }
 
 Fn1<int, int> *Lambda::run(int x) {
-  this->x = x;
-  return new LambdaRunLambda(this);
+  LambdaRunEnv *env = new LambdaRunEnv();
+  env->x = x;
+  return new LambdaRunLambda(env);
 }
 
-LambdaRunLambda::LambdaRunLambda(Lambda *lambda) {
-  this->lambda = lambda;
+LambdaRunEnv::LambdaRunEnv() {
+}
+
+LambdaRunLambda::LambdaRunLambda(LambdaRunEnv *env) {
+  this->env = env;
 }
 
 int LambdaRunLambda::run(int y) {
-  return this->lambda->x + y;
+  return this->env->x + y;
 }
 ").cpp
 
@@ -1250,7 +1285,7 @@ TestLambda1::TestLambda1(TestEnv *env, TestEnv1 *env1) {
 }
 
 void TestLambda1::run() {
-  env1->env->list->append(this->env1->i);
+  this->env->list->append(this->env1->i);
 }
 ").cpp
 
