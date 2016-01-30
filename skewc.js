@@ -9889,6 +9889,7 @@
 
   Skew.Log.prototype.semanticErrorUndeclaredSelfSymbol = function(range, name) {
     this.error(range, '"' + name + '" is not declared (use "self" to refer to the object instance)');
+    this.fix(range, 'Replace "' + name + '" with "self"', 'self');
   };
 
   Skew.Log.prototype.semanticErrorUnknownMemberSymbol = function(range, name, type, correction, correctionRange) {

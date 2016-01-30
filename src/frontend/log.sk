@@ -276,6 +276,7 @@ namespace Skew {
 
     def semanticErrorUndeclaredSelfSymbol(range Range, name string) {
       error(range, "\"\(name)\" is not declared (use \"self\" to refer to the object instance)")
+      fix(range, "Replace \"\(name)\" with \"self\"", "self")
     }
 
     def semanticErrorUnknownMemberSymbol(range Range, name string, type Type, correction string, correctionRange Range) {
