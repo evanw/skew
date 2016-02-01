@@ -22,10 +22,39 @@ namespace Skew {
 
   @entry
   def main(arguments List<string>) int {
-    # Translate frontend flags to compiler options
+    # Print diagnostics immediately when generated to improve perceived speed
     var log = Log.new
+    var diagnosticLimit = 0
+    log.appendCallback = diagnostic => {
+      var terminalWidth = Terminal.width
+      if diagnosticLimit > 0 && log.diagnostics.count >= diagnosticLimit {
+        return
+      }
+      if diagnostic.range != null {
+        printWithColor(.BOLD, diagnostic.range.locationString + ": ")
+      }
+      switch diagnostic.kind {
+        case .WARNING { printWarning(diagnostic.text) }
+        case .ERROR { printError(diagnostic.text) }
+      }
+      if diagnostic.range != null {
+        var formatted = diagnostic.range.format(terminalWidth)
+        Terminal.print(formatted.line)
+        printWithColor(.GREEN, formatted.range + "\n")
+      }
+      if diagnostic.noteRange != null {
+        var formatted = diagnostic.noteRange.format(terminalWidth)
+        printWithColor(.BOLD, diagnostic.noteRange.locationString + ": ")
+        printNote(diagnostic.noteText)
+        Terminal.print(formatted.line)
+        printWithColor(.GREEN, formatted.range + "\n")
+      }
+    }
+
+    # Translate frontend flags to compiler options
     var parser = Options.Parser.new
     var options = parseOptions(log, parser, arguments)
+    diagnosticLimit = parser.intForOption(.MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT)
     var inputs = readSources(log, parser.normalArguments)
 
     # Run the compilation
@@ -51,7 +80,7 @@ namespace Skew {
     }
 
     # Print any errors and warnings
-    printLogWithColor(log, parser.intForOption(.MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT))
+    printLogSummary(log, diagnosticLimit)
     return log.hasErrors ? 1 : 0
   }
 
@@ -82,41 +111,7 @@ namespace Skew {
     Terminal.write(parser.usageText(Math.min(Terminal.width, 80)))
   }
 
-  def printLogWithColor(log Log, diagnosticLimit int) {
-    var terminalWidth = Terminal.width
-    var diagnosticCount = 0
-
-    for diagnostic in log.diagnostics {
-      if diagnosticLimit > 0 && diagnosticCount == diagnosticLimit {
-        break
-      }
-      if diagnostic.range != null {
-        printWithColor(.BOLD, diagnostic.range.locationString + ": ")
-      }
-      switch diagnostic.kind {
-        case .WARNING {
-          printWarning(diagnostic.text)
-        }
-        case .ERROR {
-          printError(diagnostic.text)
-        }
-      }
-      if diagnostic.range != null {
-        var formatted = diagnostic.range.format(terminalWidth)
-        Terminal.print(formatted.line)
-        printWithColor(.GREEN, formatted.range + "\n")
-      }
-      if diagnostic.noteRange != null {
-        printWithColor(.BOLD, diagnostic.noteRange.locationString + ": ")
-        printNote(diagnostic.noteText)
-        var formatted = diagnostic.noteRange.format(terminalWidth)
-        Terminal.print(formatted.line)
-        printWithColor(.GREEN, formatted.range + "\n")
-      }
-      diagnosticCount++
-    }
-
-    # Print the summary
+  def printLogSummary(log Log, diagnosticLimit int) {
     var hasErrors = log.hasErrors
     var hasWarnings = log.hasWarnings
     var summary = ""
@@ -131,7 +126,7 @@ namespace Skew {
     }
     if hasWarnings || hasErrors {
       Terminal.write(summary + " generated")
-      printWithColor(.GRAY, diagnosticCount >= log.diagnostics.count ? "\n" :
+      printWithColor(.GRAY, diagnosticLimit == 0 || log.diagnostics.count <= diagnosticLimit ? "\n" :
         " (only showing \(PrettyPrint.plural(diagnosticLimit, "message")), use \"--message-limit=0\" to see all)\n")
     }
   }
@@ -274,35 +269,35 @@ namespace Skew {
 
   class Log {
     def commandLineErrorExpectedDefineValue(range Range, name string) {
-      error(range, "Use \"--define:\(name)=___\" to provide a value")
+      append(Diagnostic.error(range, "Use \"--define:\(name)=___\" to provide a value"))
     }
 
     def commandLineErrorMissingOutput(range Range, first string, second string) {
-      error(range, "Specify the output location using either \"\(first)\" or \"\(second)\"")
+      append(Diagnostic.error(range, "Specify the output location using either \"\(first)\" or \"\(second)\""))
     }
 
     def commandLineErrorDuplicateOutput(range Range, first string, second string) {
-      error(range, "Cannot specify both \"\(first)\" and \"\(second)\"")
+      append(Diagnostic.error(range, "Cannot specify both \"\(first)\" and \"\(second)\""))
     }
 
     def commandLineErrorUnreadableFile(range Range, name string) {
-      error(range, "Could not read from \"\(name)\"")
+      append(Diagnostic.error(range, "Could not read from \"\(name)\""))
     }
 
     def commandLineErrorUnwritableFile(range Range, name string) {
-      error(range, "Could not write to \"\(name)\"")
+      append(Diagnostic.error(range, "Could not write to \"\(name)\""))
     }
 
     def commandLineErrorNoInputFiles(range Range) {
-      error(range, "Missing input files")
+      append(Diagnostic.error(range, "Missing input files"))
     }
 
     def commandLineErrorMissingTarget(range Range) {
-      error(range, "Specify the target format using \"--target\"")
+      append(Diagnostic.error(range, "Specify the target format using \"--target\""))
     }
 
     def commandLineErrorInvalidEnum(range Range, name string, found string, expected List<string>) {
-      error(range, "Invalid \(name) \"\(found)\", must be either \(PrettyPrint.joinQuoted(expected, "or"))")
+      append(Diagnostic.error(range, "Invalid \(name) \"\(found)\", must be either \(PrettyPrint.joinQuoted(expected, "or"))"))
     }
   }
 

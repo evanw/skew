@@ -1457,7 +1457,7 @@ namespace Skew.Resolving {
             if value.kind == .CALL && value.hasTwoChildren {
               var last = value.lastChild
               if last.kind == .CONSTANT && last.content.kind == .STRING {
-                _log.warning(range, last.content.asString)
+                _log.append(Diagnostic.warning(range, last.content.asString))
                 return
               }
             }
