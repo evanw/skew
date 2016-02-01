@@ -21,14 +21,12 @@ class double {
     return dynamic.doubleToString(self)
   }
 
-  @include(\"<math.h>\") {
-    def isNaN bool {
-      return dynamic.isnan(self)
-    }
+  def isNaN bool {
+    return dynamic.doubleIsNaN(self)
+  }
 
-    def isFinite bool {
-      return dynamic.isfinite(self)
-    }
+  def isFinite bool {
+    return dynamic.doubleIsFinite(self)
   }
 }
 

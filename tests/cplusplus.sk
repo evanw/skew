@@ -1351,5 +1351,55 @@ void test(bool x) {
 }
 ").cpp.foldAllConstants.inlineAllFunctions
 
+# Test parentheses generation to avoid C++ compiler warnings
+test("
+@export
+def test(x int, y int) {
+  x = x == 0 && y == 1 || x == 2 ? 1 : 0
+  x = x & y | x
+
+  # ^
+  x = x + y ^ x
+  x = x - y ^ x
+  x = x * y ^ x
+  x = x / y ^ x
+
+  # |
+  x = x + y | x
+  x = x - y | x
+  x = x * y | x
+  x = x / y | x
+
+  # &
+  x = x + y & x
+  x = x - y & x
+  x = x * y & x
+  x = x / y & x
+}
+", "
+void test(int x, int y) {
+  x = (x == 0 && y == 1) || x == 2 ? 1 : 0;
+  x = (x & y) | x;
+
+  // ^
+  x = (x + y) ^ x;
+  x = (x - y) ^ x;
+  x = x * y ^ x;
+  x = x / y ^ x;
+
+  // |
+  x = (x + y) | x;
+  x = (x - y) | x;
+  x = x * y | x;
+  x = x / y | x;
+
+  // &
+  x = (x + y) & x;
+  x = (x - y) & x;
+  x = x * y & x;
+  x = x / y & x;
+}
+").cpp
+
   }
 }

@@ -1,8 +1,8 @@
+#include <algorithm>
 #include <assert.h>
 #include <fstream>
 #include <initializer_list>
 #include <iostream>
-#include <math.h>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -365,6 +365,8 @@ namespace Timestamp {
 
 double parseDoubleLiteral(const string &x);
 string doubleToString(double x);
+bool doubleIsNaN(double x);
+bool doubleIsFinite(double x);
 string intToString(int x);
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -1,5 +1,5 @@
-#include <algorithm>
 #include <dirent.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -455,6 +455,14 @@ string doubleToString(double value) {
     return "0";
   }
   return buffer;
+}
+
+bool doubleIsNaN(double x) {
+  return std::isnan(x);
+}
+
+bool doubleIsFinite(double x) {
+  return std::isfinite(x);
 }
 
 string intToString(int x) {

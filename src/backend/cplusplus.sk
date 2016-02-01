@@ -964,11 +964,15 @@ namespace Skew {
 
         default {
           if kind.isBinary {
-            # Clang warns about "&&" inside "||" or "&" inside "|" without parentheses
             var parent = node.parent
             if parent != null && (
+                # Clang warns about "&&" inside "||" or "&" inside "|" without parentheses
                 parent.kind == .LOGICAL_OR && kind == .LOGICAL_AND ||
-                parent.kind == .BITWISE_OR && kind == .BITWISE_AND) {
+                parent.kind == .BITWISE_OR && kind == .BITWISE_AND ||
+
+                # GCC also warns about add/subtract inside bitwise operations without parentheses
+                (parent.kind == .BITWISE_AND || parent.kind == .BITWISE_OR || parent.kind == .BITWISE_XOR) && (kind == .ADD || kind == .SUBTRACT)) {
+
               precedence = .MEMBER
             }
 
