@@ -3207,7 +3207,8 @@ namespace Skew.Resolving {
 
       # Handle index expressions
       if node.kind == .INDEX {
-        return Node.createIndex(_extractExpression(node.indexLeft, scope), _extractExpression(node.indexRight, scope)).withRange(node.range)
+        var left = _extractExpression(node.indexLeft, scope)
+        return Node.createIndex(left, _extractExpression(node.indexRight, scope)).withRange(node.range)
       }
 
       # Handle name expressions

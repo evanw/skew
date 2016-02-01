@@ -20244,7 +20244,8 @@
 
     // Handle index expressions
     if (node.kind == Skew.NodeKind.INDEX) {
-      return Skew.Node.createIndex(this._extractExpression(node.indexLeft(), scope), this._extractExpression(node.indexRight(), scope)).withRange(node.range);
+      var left = this._extractExpression(node.indexLeft(), scope);
+      return Skew.Node.createIndex(left, this._extractExpression(node.indexRight(), scope)).withRange(node.range);
     }
 
     // Handle name expressions
