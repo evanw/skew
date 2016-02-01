@@ -317,7 +317,10 @@ double Math::random() {
   static const uint64_t kExponentBits = 0x3FF0000000000000ull;
   static const uint64_t kMantissaMask = 0x000FFFFFFFFFFFFFull;
   uint64_t random = ((state0 + state1) & kMantissaMask) | kExponentBits;
-  return *reinterpret_cast<double *>(&random) - 1;
+  double result = 0;
+  static_assert(sizeof(result) == sizeof(random), "");
+  memcpy(&result, &random, sizeof(result)); // Use this instead of reinterpret_cast to avoid type-punning
+  return result - 1;
 }
 
 double Math::sqrt(double x) {

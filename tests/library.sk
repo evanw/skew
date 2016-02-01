@@ -61,7 +61,16 @@ namespace Skew.Tests {
     testExpect("Math.log(Math.E)", => Math.log(Math.E), 1)
     testExpect("Math.pow(2, 3)", => Math.pow(2, 3), 8)
     testExpect("Math.sqrt(4)", => Math.sqrt(4), 2)
-    testExpect("Math.random >= 0 && Math.random < 1", => Math.random >= 0 && Math.random < 1, true)
+
+    testExpect("Math.random >= 0 && Math.random < 1", () bool => {
+      for i in 0..1000 {
+        var value = Math.random
+        if value < 0 || value >= 1 {
+          return false
+        }
+      }
+      return true
+    }, true)
 
     testExpect("Math.max(-2.0, 3.0)", => Math.max(-2.0, 3.0), 3)
     testExpect("Math.max(-2, 3)", => Math.max(-2, 3), 3)
