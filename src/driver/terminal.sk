@@ -1,6 +1,7 @@
 namespace Skew {
   enum Option {
     DEFINE
+    FIX_ALL
     FOLD_CONSTANTS
     GLOBALIZE_FUNCTIONS
     HELP
@@ -77,6 +78,11 @@ namespace Skew {
           printWithColor(.GRAY, result.statistics(inputs, options.verbose ? .LONG : .SHORT) + "\n")
         }
       }
+    }
+
+    # Attempt to automatically fix warnings and errors
+    if !log.isEmpty && parser.boolForOption(.FIX_ALL, false) {
+      applyFixes(log, parser.rangeForOption(.FIX_ALL))
     }
 
     # Print any errors and warnings
@@ -189,6 +195,7 @@ namespace Skew {
     parser.define(.BOOL, .FOLD_CONSTANTS, "--fold-constants", "Evaluates constants at compile time and removes dead code inside functions.")
     parser.define(.BOOL, .INLINE_FUNCTIONS, "--inline-functions", "Uses heuristics to automatically inline simple global functions.")
     parser.define(.BOOL, .GLOBALIZE_FUNCTIONS, "--globalize-functions", "Convert instance functions to global functions for better inlining.")
+    parser.define(.BOOL, .FIX_ALL, "--fix-all", "Attempt to fix all errors in place. THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.")
 
     # Parse the command line arguments
     parser.parse(log, arguments)
@@ -265,6 +272,50 @@ namespace Skew {
     }
 
     return options
+  }
+
+  def applyFixes(log Log, range Range) {
+    # Collect diagnostics by source file
+    var map StringMap<List<Diagnostic>> = {}
+    for diagnostic in log.diagnostics {
+      if diagnostic.range != null {
+        var name = diagnostic.range.source.name
+        var diagnostics = map.get(name, null)
+        if diagnostics == null {
+          map[name] = diagnostics = []
+        }
+        diagnostics.append(diagnostic)
+      }
+    }
+
+    # Apply for each source file
+    for diagnostics in map.values {
+      var source = diagnostics.first.range.source
+      var contents = source.contents
+      diagnostics.sort((a, b) => b.range.start <=> a.range.start)
+
+      # Apply fixes in reverse to avoid issues with changing offsets
+      var last = contents.count
+      for i in 0..diagnostics.count {
+        var diagnostic = diagnostics[i]
+        if diagnostic.fixes == null || diagnostic.fixes.count != 1 {
+          continue
+        }
+        var fix = diagnostic.fixes.first
+
+        # Typo correction isn't robust enough right now to fix automatically
+        if fix.kind == .SYMBOL_TYPO || fix.range.end > last {
+          continue
+        }
+        contents = contents.slice(0, fix.range.start) + fix.replacement + contents.slice(fix.range.end)
+        last = fix.range.start
+      }
+
+      # Write over the source file in place
+      if !IO.writeFile(source.name, contents) {
+        log.commandLineErrorUnwritableFile(range, source.name)
+      }
+    }
   }
 
   class Log {

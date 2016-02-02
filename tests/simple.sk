@@ -4337,6 +4337,7 @@ def main {
   foo()
   (foo)()
   bar()
+  bar(1)
   bar
 }
 ", "
@@ -4352,6 +4353,16 @@ def foo fn() { return null }
 <stdin>:2:5: note: The function declaration is here
 def bar {}
     ~~~
+<stdin>:8:6: error: Cannot call the value returned from the function \"bar\" (this function was called automatically because it takes no arguments)
+  bar(1)
+     ~~~
+<stdin>:2:5: note: The function declaration is here
+def bar {}
+    ~~~
+<stdin>:7:6: fix: Remove the unnecessary \"()\"
+  bar()
+     ~~
+     []
 ")
 
 test("

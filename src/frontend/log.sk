@@ -13,10 +13,11 @@ namespace Skew {
 
   enum FixKind {
     ARRAY_SYNTAX
+    EXTRA_CALL_PARENTHESES
     EXTRA_CAST
     EXTRA_COLON
     EXTRA_COMMA
-    EXTRA_PARENTHESES
+    EXTRA_DEF_PARENTHESES
     EXTRA_SEMICOLON
     FOR_LOOP_VAR
     NEED_VAR
@@ -247,7 +248,7 @@ namespace Skew {
     def syntaxErrorEmptyFunctionParentheses(range Range) {
       append(Diagnostic
         .error(range, "Functions without arguments do not use parentheses")
-        .withFix(.EXTRA_PARENTHESES, range, "Remove parentheses", ""))
+        .withFix(.EXTRA_DEF_PARENTHESES, range, "Remove parentheses", ""))
     }
 
     def syntaxErrorBadDeclarationInsideType(range Range) {
@@ -409,9 +410,13 @@ namespace Skew {
     }
 
     def semanticErrorGetterCalledTwice(range Range, name string, function Range) {
-      append(Diagnostic
+      var diagnostic = Diagnostic
         .error(range, "Cannot call the value returned from the function \"\(name)\" (this function was called automatically because it takes no arguments)")
-        .withNote(function, "The function declaration is here"))
+        .withNote(function, "The function declaration is here")
+      if range.toString == "()" {
+        diagnostic.withFix(.EXTRA_CALL_PARENTHESES, range, "Remove the unnecessary \"()\"", "")
+      }
+      append(diagnostic)
     }
 
     def semanticErrorUseOfVoidFunction(range Range, name string, function Range) {
