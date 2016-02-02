@@ -15,6 +15,7 @@ namespace Skew.API {
         "range": rangeToJSON(diagnostic.range),
         "text": diagnostic.text,
         "fixes": diagnostic.fixes == null ? [] : diagnostic.fixes.map<dynamic>(fix => ({
+          "kind": fix.kind, # Only useful for telling which fixes are related
           "range": rangeToJSON(fix.range),
           "expected": fix.range.toString,
           "description": fix.description,

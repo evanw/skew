@@ -5,9 +5,31 @@ namespace Skew {
   }
 
   class Fix {
+    const kind FixKind
     const range Range
     const description string
     const replacement string
+  }
+
+  enum FixKind {
+    ARRAY_SYNTAX
+    EXTRA_CAST
+    EXTRA_COLON
+    EXTRA_COMMA
+    EXTRA_PARENTHESES
+    EXTRA_SEMICOLON
+    FOR_LOOP_VAR
+    NEED_VAR
+    NEW_OPERATOR
+    NEW_RETURN_TYPE
+    OCTAL_ADD_PREFIX
+    OCTAL_REMOVE_ZEROS
+    OPERATOR_TYPO
+    SELF_VS_THIS
+    SINGLE_QUOTES
+    SLASH_COMMENT
+    SYMBOL_TYPO
+    UNNECESSARY_PARENTHESES
   }
 
   class Diagnostic {
@@ -18,9 +40,9 @@ namespace Skew {
     var noteText = ""
     var fixes List<Fix> = null
 
-    def withFix(range Range, description string, replacement string) Diagnostic {
+    def withFix(kind FixKind, range Range, description string, replacement string) Diagnostic {
       if range != null && replacement != null {
-        (fixes ?= []).append(Fix.new(range, description, replacement))
+        (fixes ?= []).append(Fix.new(kind, range, description, replacement))
       }
       return self
     }
@@ -134,21 +156,21 @@ namespace Skew {
         text = text.slice(1)
       }
       append(Diagnostic.warning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)")
-        .withFix(range, "Remove the leading zeros to avoid confusion", text)
-        .withFix(range, "Add the prefix \"0o\" to interpret the number as octal", "0o" + text))
+        .withFix(.OCTAL_REMOVE_ZEROS, range, "Remove the leading zeros to avoid confusion", text)
+        .withFix(.OCTAL_ADD_PREFIX, range, "Add the prefix \"0o\" to interpret the number as octal", "0o" + text))
     }
 
     def syntaxWarningExtraParentheses(range Range) {
       var text = range.toString
       append(Diagnostic
         .warning(range, "Unnecessary parentheses")
-        .withFix(range, "Remove parentheses", text.slice(1, text.count - 1)))
+        .withFix(.UNNECESSARY_PARENTHESES, range, "Remove parentheses", text.slice(1, text.count - 1)))
     }
 
     def syntaxWarningExtraComma(range Range) {
       append(Diagnostic
         .warning(range, "Unnecessary comma")
-        .withFix(range, "Remove comma", ""))
+        .withFix(.EXTRA_COMMA, range, "Remove comma", ""))
     }
   }
 
@@ -160,7 +182,7 @@ namespace Skew {
     def syntaxErrorInvalidCharacter(range Range) {
       append(Diagnostic
         .error(range, "Use double quotes for strings (single quotes are for character literals)")
-        .withFix(range, "Replace single quotes with double quotes", replaceSingleQuotesWithDoubleQuotes(range.toString)))
+        .withFix(.SINGLE_QUOTES, range, "Replace single quotes with double quotes", replaceSingleQuotesWithDoubleQuotes(range.toString)))
     }
 
     def syntaxErrorExtraData(range Range, text string) {
@@ -170,31 +192,31 @@ namespace Skew {
     def syntaxErrorExtraColonBeforeType(range Range) {
       append(Diagnostic
         .error(range, "Do not use a colon before a type expression")
-        .withFix(range, "Remove the colon", ""))
+        .withFix(.EXTRA_COLON, range, "Remove the colon", ""))
     }
 
     def syntaxErrorNewOperator(range Range, correction string) {
       append(Diagnostic
         .error(range, "There is no \"new\" operator, use \"\(correction)\" instead")
-        .withFix(range, "Replace with \"\(correction)\"", correction))
+        .withFix(.NEW_OPERATOR, range, "Replace with \"\(correction)\"", correction))
     }
 
     def syntaxErrorOperatorTypo(range Range, correction string) {
       append(Diagnostic
         .error(range, "Use the \"\(correction)\" operator instead")
-        .withFix(range, "Replace with \"\(correction)\"", correction))
+        .withFix(.OPERATOR_TYPO, range, "Replace with \"\(correction)\"", correction))
     }
 
     def syntaxErrorExtraVarInForLoop(range Range) {
       append(Diagnostic
         .error(range, "The \"var\" keyword is unnecessary here since for loops automatically declare their variables")
-        .withFix(range?.rangeIncludingLeftWhitespace, "Remove \"var\"", ""))
+        .withFix(.FOR_LOOP_VAR, range?.rangeIncludingLeftWhitespace, "Remove \"var\"", ""))
     }
 
     def syntaxErrorWrongListSyntax(range Range, correction string) {
       append(Diagnostic
         .error(range, "The array type is \"List<T>\"")
-        .withFix(range, "Replace with \"\(correction)\"", correction))
+        .withFix(.ARRAY_SYNTAX, range, "Replace with \"\(correction)\"", correction))
     }
 
     def syntaxErrorSlashComment(range Range) {
@@ -207,7 +229,7 @@ namespace Skew {
       }
       append(Diagnostic
         .error(range, "Comments start with \"#\" instead of \"//\"")
-        .withFix(range, "Replace \"//\" with \"#\"", "#" + text.slice(2)))
+        .withFix(.SLASH_COMMENT, range, "Replace \"//\" with \"#\"", "#" + text.slice(2)))
     }
 
     def syntaxErrorUnexpectedToken(token Token) {
@@ -217,7 +239,7 @@ namespace Skew {
     def syntaxErrorExpectedToken(range Range, found TokenKind, expected TokenKind) {
       var diagnostic = Diagnostic.error(range, "Expected \(expected) but found \(found)")
       if found == .SEMICOLON && expected == .NEWLINE {
-        diagnostic.withFix(range, "Remove \";\"", "")
+        diagnostic.withFix(.EXTRA_SEMICOLON, range, "Remove \";\"", "")
       }
       append(diagnostic)
     }
@@ -225,7 +247,7 @@ namespace Skew {
     def syntaxErrorEmptyFunctionParentheses(range Range) {
       append(Diagnostic
         .error(range, "Functions without arguments do not use parentheses")
-        .withFix(range, "Remove parentheses", ""))
+        .withFix(.EXTRA_PARENTHESES, range, "Remove parentheses", ""))
     }
 
     def syntaxErrorBadDeclarationInsideType(range Range) {
@@ -239,7 +261,7 @@ namespace Skew {
     def syntaxErrorVariableDeclarationNeedsVar(range Range, name Range) {
       append(Diagnostic
         .error(range, "Declare variables using \"var\" and put the type after the variable name")
-        .withFix(Range.span(range, name), "Declare \"\(name)\" correctly", "var \(name) \(range)"))
+        .withFix(.NEED_VAR, Range.span(range, name), "Declare \"\(name)\" correctly", "var \(name) \(range)"))
     }
 
     def syntaxErrorXMLClosingTagMismatch(range Range, found string, expected string, openingRange Range) {
@@ -327,8 +349,8 @@ namespace Skew {
       var diagnostic = Diagnostic.error(range, "\"\(name)\" is not declared" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
       if correction != null && correctionRange != null {
         diagnostic
-          .withFix(range, "Replace with \"\(correction)\"", correction)
           .withNote(correctionRange, "\"\(correction)\" is defined here")
+          .withFix(.SYMBOL_TYPO, range, "Replace with \"\(correction)\"", correction)
       }
       append(diagnostic)
     }
@@ -336,15 +358,15 @@ namespace Skew {
     def semanticErrorUndeclaredSelfSymbol(range Range, name string) {
       append(Diagnostic
         .error(range, "\"\(name)\" is not declared (use \"self\" to refer to the object instance)")
-        .withFix(range, "Replace \"\(name)\" with \"self\"", "self"))
+        .withFix(.SELF_VS_THIS, range, "Replace \"\(name)\" with \"self\"", "self"))
     }
 
     def semanticErrorUnknownMemberSymbol(range Range, name string, type Type, correction string, correctionRange Range) {
       var diagnostic = Diagnostic.error(range, "\"\(name)\" is not declared on type \"\(type)\"" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
       if correction != null && correctionRange != null {
         diagnostic
-          .withFix(range, "Replace with \"\(correction)\"", correction)
           .withNote(correctionRange, "\"\(correction)\" is defined here")
+          .withFix(.SYMBOL_TYPO, range, "Replace with \"\(correction)\"", correction)
       }
       append(diagnostic)
     }
@@ -425,7 +447,7 @@ namespace Skew {
     def semanticErrorConstructorReturnType(range Range) {
       append(Diagnostic
         .error(range, "Constructors cannot have a return type")
-        .withFix(range?.rangeIncludingLeftWhitespace, "Remove the return type", ""))
+        .withFix(.NEW_RETURN_TYPE, range?.rangeIncludingLeftWhitespace, "Remove the return type", ""))
     }
 
     def semanticErrorNoMatchingOverload(range Range, name string, count int, types List<Type>) {
@@ -455,7 +477,7 @@ namespace Skew {
     def semanticWarningExtraCast(range Range, from Type, to Type) {
       append(Diagnostic
         .warning(range, "Unnecessary cast from type \"\(from)\" to type \"\(to)\"")
-        .withFix(range?.rangeIncludingLeftWhitespace, "Remove the cast", ""))
+        .withFix(.EXTRA_CAST, range?.rangeIncludingLeftWhitespace, "Remove the cast", ""))
     }
 
     def semanticWarningExtraTypeCheck(range Range, from Type, to Type) {
