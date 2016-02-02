@@ -1783,6 +1783,14 @@ namespace Skew.Parsing {
       return node.withRange(context.spanSince(token.range))
     }
 
+    # The "Foo[]" syntax is an error but parse it anyway
+    pratt.parselet(.INDEX, .MEMBER).infix = (context, left) => {
+      context.next
+      var range = context.spanSince(left.range)
+      context.log.syntaxErrorWrongListSyntax(range, "List<\(left.range)>")
+      return Node.createParseError.withRange(range)
+    }
+
     return pratt
   }
 

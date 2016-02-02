@@ -7785,5 +7785,42 @@ var y = 0 !== 1
           [!=]
 ")
 
+# Check List<T> corrections
+test("
+var a int[] = []
+var b Foo.Bar.Baz[] = []
+var c Foo<T, fn() int>[] = []
+var d fn() int[] = null
+", "
+<stdin>:1:7: error: The array type is \"List<T>\"
+var a int[] = []
+      ~~~~~
+<stdin>:2:7: error: The array type is \"List<T>\"
+var b Foo.Bar.Baz[] = []
+      ~~~~~~~~~~~~~
+<stdin>:3:7: error: The array type is \"List<T>\"
+var c Foo<T, fn() int>[] = []
+      ~~~~~~~~~~~~~~~~~~
+<stdin>:4:12: error: The array type is \"List<T>\"
+var d fn() int[] = null
+           ~~~~~
+<stdin>:1:7: fix: Replace with \"List<int>\"
+var a int[] = []
+      ~~~~~
+      [List<int>]
+<stdin>:2:7: fix: Replace with \"List<Foo.Bar.Baz>\"
+var b Foo.Bar.Baz[] = []
+      ~~~~~~~~~~~~~
+      [List<Foo.Bar.Baz>]
+<stdin>:3:7: fix: Replace with \"List<Foo<T, fn() int>>\"
+var c Foo<T, fn() int>[] = []
+      ~~~~~~~~~~~~~~~~~~
+      [List<Foo<T, fn() int>>]
+<stdin>:4:12: fix: Replace with \"List<int>\"
+var d fn() int[] = null
+           ~~~~~
+           [List<int>]
+")
+
   }
 }

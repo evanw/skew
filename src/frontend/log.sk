@@ -19,7 +19,7 @@ namespace Skew {
     var fixes List<Fix> = null
 
     def withFix(range Range, description string, replacement string) Diagnostic {
-      if range != null {
+      if range != null && replacement != null {
         (fixes ?= []).append(Fix.new(range, description, replacement))
       }
       return self
@@ -167,10 +167,16 @@ namespace Skew {
       append(Diagnostic.error(range, "Syntax error \"\(text == "\"" ? "\\\"": text)\""))
     }
 
-    def syntaxErrorOperatorTypo(range Range, correct string) {
+    def syntaxErrorOperatorTypo(range Range, correction string) {
       append(Diagnostic
-        .error(range, "Use the \"\(correct)\" operator instead")
-        .withFix(range, "Replace with \"\(correct)\"", correct))
+        .error(range, "Use the \"\(correction)\" operator instead")
+        .withFix(range, "Replace with \"\(correction)\"", correction))
+    }
+
+    def syntaxErrorWrongListSyntax(range Range, correction string) {
+      append(Diagnostic
+        .error(range, "The array type is \"List<T>\"")
+        .withFix(range, "Replace with \"\(correction)\"", correction))
     }
 
     def syntaxErrorSlashComment(range Range) {

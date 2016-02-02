@@ -9681,7 +9681,7 @@
   };
 
   Skew.Diagnostic.prototype.withFix = function(range, description, replacement) {
-    if (range != null) {
+    if (range != null && replacement != null) {
       (this.fixes != null ? this.fixes : this.fixes = []).push(new Skew.Fix(range, description, replacement));
     }
 
@@ -9768,8 +9768,12 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Syntax error "' + (text == '"' ? '\\"' : text) + '"'));
   };
 
-  Skew.Log.prototype.syntaxErrorOperatorTypo = function(range, correct) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use the "' + correct + '" operator instead').withFix(range, 'Replace with "' + correct + '"', correct));
+  Skew.Log.prototype.syntaxErrorOperatorTypo = function(range, correction) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use the "' + correction + '" operator instead').withFix(range, 'Replace with "' + correction + '"', correction));
+  };
+
+  Skew.Log.prototype.syntaxErrorWrongListSyntax = function(range, correction) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The array type is "List<T>"').withFix(range, 'Replace with "' + correction + '"', correction));
   };
 
   Skew.Log.prototype.syntaxErrorSlashComment = function(range) {
@@ -12138,6 +12142,14 @@
       }
 
       return node.withRange(context.spanSince(token.range));
+    };
+
+    // The "Foo[]" syntax is an error but parse it anyway
+    pratt.parselet(Skew.TokenKind.INDEX, Skew.Precedence.MEMBER).infix = function(context, left) {
+      context.next();
+      var range = context.spanSince(left.range);
+      context.log.syntaxErrorWrongListSyntax(range, 'List<' + left.range.toString() + '>');
+      return new Skew.Node(Skew.NodeKind.PARSE_ERROR).withRange(range);
     };
     return pratt;
   };
