@@ -314,16 +314,22 @@ namespace Skew.Parsing {
 
   def parseFor(context ParserContext) Node {
     var token = context.next
-    var range = context.current.range
+    var parentheses = context.peek(.LEFT_PARENTHESIS) ? context.next : null
 
+    # Doing "for var i = ..." is an error
+    if context.peek(.VAR) {
+      context.log.syntaxErrorExtraVarInForLoop(context.next.range)
+    }
+
+    var initialNameRange = context.current.range
     if !context.expect(.IDENTIFIER) {
       return null
     }
 
     # for a in b {}
     if context.eat(.IN) {
-      var symbol = VariableSymbol.new(.VARIABLE_LOCAL, range.toString)
-      symbol.range = range
+      var symbol = VariableSymbol.new(.VARIABLE_LOCAL, initialNameRange.toString)
+      symbol.range = initialNameRange
 
       var value = expressionParser.parse(context, .LOWEST)
 
@@ -332,6 +338,14 @@ namespace Skew.Parsing {
         value = Node.createPair(value, second).withRange(Range.span(value.range, second.range))
       }
       checkExtraParentheses(context, value)
+
+      # Allow parentheses around the loop header
+      if parentheses != null {
+        if !context.expect(.RIGHT_PARENTHESIS) {
+          return null
+        }
+        context.log.syntaxWarningExtraParentheses(context.spanSince(parentheses.range))
+      }
 
       var block = parseBlock(context)
       if block == null {
@@ -370,7 +384,7 @@ namespace Skew.Parsing {
         break
       }
     }
-    setup.range = context.spanSince(range)
+    setup.range = context.spanSince(initialNameRange)
 
     if !context.expect(.SEMICOLON) {
       return null
@@ -394,6 +408,14 @@ namespace Skew.Parsing {
           break
         }
       }
+    }
+
+    # Allow parentheses around the loop header
+    if parentheses != null {
+      if !context.expect(.RIGHT_PARENTHESIS) {
+        return null
+      }
+      context.log.syntaxWarningExtraParentheses(context.spanSince(parentheses.range))
     }
 
     var block = parseBlock(context)

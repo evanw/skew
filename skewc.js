@@ -9772,6 +9772,10 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use the "' + correction + '" operator instead').withFix(range, 'Replace with "' + correction + '"', correction));
   };
 
+  Skew.Log.prototype.syntaxErrorExtraVarInForLoop = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The "var" keyword is unnecessary here since for loops automatically declare their variables').withFix(range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove "var"', ''));
+  };
+
   Skew.Log.prototype.syntaxErrorWrongListSyntax = function(range, correction) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The array type is "List<T>"').withFix(range, 'Replace with "' + correction + '"', correction));
   };
@@ -10658,7 +10662,14 @@
 
   Skew.Parsing.parseFor = function(context) {
     var token = context.next();
-    var range = context.current().range;
+    var parentheses = context.peek(Skew.TokenKind.LEFT_PARENTHESIS) ? context.next() : null;
+
+    // Doing "for var i = ..." is an error
+    if (context.peek(Skew.TokenKind.VAR)) {
+      context.log.syntaxErrorExtraVarInForLoop(context.next().range);
+    }
+
+    var initialNameRange = context.current().range;
 
     if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
       return null;
@@ -10666,8 +10677,8 @@
 
     // for a in b {}
     if (context.eat(Skew.TokenKind.IN)) {
-      var symbol = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, range.toString());
-      symbol.range = range;
+      var symbol = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_LOCAL, initialNameRange.toString());
+      symbol.range = initialNameRange;
       var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
 
       if (context.eat(Skew.TokenKind.DOT_DOT)) {
@@ -10676,6 +10687,16 @@
       }
 
       Skew.Parsing.checkExtraParentheses(context, value);
+
+      // Allow parentheses around the loop header
+      if (parentheses != null) {
+        if (!context.expect(Skew.TokenKind.RIGHT_PARENTHESIS)) {
+          return null;
+        }
+
+        context.log.syntaxWarningExtraParentheses(context.spanSince(parentheses.range));
+      }
+
       var block = Skew.Parsing.parseBlock(context);
 
       if (block == null) {
@@ -10715,7 +10736,7 @@
       }
     }
 
-    setup.range = context.spanSince(range);
+    setup.range = context.spanSince(initialNameRange);
 
     if (!context.expect(Skew.TokenKind.SEMICOLON)) {
       return null;
@@ -10741,6 +10762,15 @@
           break;
         }
       }
+    }
+
+    // Allow parentheses around the loop header
+    if (parentheses != null) {
+      if (!context.expect(Skew.TokenKind.RIGHT_PARENTHESIS)) {
+        return null;
+      }
+
+      context.log.syntaxWarningExtraParentheses(context.spanSince(parentheses.range));
     }
 
     var block1 = Skew.Parsing.parseBlock(context);
