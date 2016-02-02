@@ -241,9 +241,21 @@ namespace Skew {
         text = text.slice(0, last)
         range = range.fromStart(last)
       }
+
+      # Change a run of "////" into "####"
+      var replacement = ""
+      for i in 1..text.count {
+        if text[i] == '/' {
+          replacement += "#"
+        } else {
+          replacement += text.slice(i)
+          break
+        }
+      }
+
       append(Diagnostic
         .error(range, "Comments start with \"#\" instead of \"//\"")
-        .withFix(.SLASH_COMMENT, range, "Replace \"//\" with \"#\"", "#" + text.slice(2)))
+        .withFix(.SLASH_COMMENT, range, "Replace \"//\" with \"#\"", replacement))
     }
 
     def syntaxErrorUnexpectedToken(token Token) {

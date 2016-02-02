@@ -9896,7 +9896,21 @@
       range = range.fromStart(last);
     }
 
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Comments start with "#" instead of "//"').withFix(Skew.FixKind.SLASH_COMMENT, range, 'Replace "//" with "#"', '#' + in_string.slice1(text, 2)));
+    // Change a run of "////" into "####"
+    var replacement = '';
+
+    for (var i = 1, count = text.length; i < count; i = i + 1 | 0) {
+      if (in_string.get1(text, i) == 47) {
+        replacement += '#';
+      }
+
+      else {
+        replacement += in_string.slice1(text, i);
+        break;
+      }
+    }
+
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Comments start with "#" instead of "//"').withFix(Skew.FixKind.SLASH_COMMENT, range, 'Replace "//" with "#"', replacement));
   };
 
   Skew.Log.prototype.syntaxErrorUnexpectedToken = function(token) {
