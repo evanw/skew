@@ -238,10 +238,18 @@ namespace Skew.Parsing {
   def parseReturn(context ParserContext) Node {
     var token = context.next
     var value Node = null
-    if !context.peek(.NEWLINE) && !context.peek(.COMMENT) && !context.peek(.RIGHT_BRACE) {
+
+    # Parse "return;" explicitly for a better error message
+    if context.peek(.SEMICOLON) {
+      context.expect(.NEWLINE)
+      context.next
+    }
+
+    else if !context.peek(.NEWLINE) && !context.peek(.COMMENT) && !context.peek(.RIGHT_BRACE) {
       value = expressionParser.parse(context, .LOWEST)
       checkExtraParentheses(context, value)
     }
+
     return Node.createReturn(value).withRange(context.spanSince(token.range))
   }
 

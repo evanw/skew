@@ -9798,7 +9798,13 @@
   };
 
   Skew.Log.prototype.syntaxErrorExpectedToken = function(range, found, expected) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected ' + Skew.in_TokenKind.toString(expected) + ' but found ' + Skew.in_TokenKind.toString(found)));
+    var diagnostic = new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected ' + Skew.in_TokenKind.toString(expected) + ' but found ' + Skew.in_TokenKind.toString(found));
+
+    if (found == Skew.TokenKind.SEMICOLON && expected == Skew.TokenKind.NEWLINE) {
+      diagnostic.withFix(range, 'Remove ";"', '');
+    }
+
+    this.append(diagnostic);
   };
 
   Skew.Log.prototype.syntaxErrorEmptyFunctionParentheses = function(range) {
@@ -10578,7 +10584,13 @@
     var token = context.next();
     var value = null;
 
-    if (!context.peek(Skew.TokenKind.NEWLINE) && !context.peek(Skew.TokenKind.COMMENT) && !context.peek(Skew.TokenKind.RIGHT_BRACE)) {
+    // Parse "return;" explicitly for a better error message
+    if (context.peek(Skew.TokenKind.SEMICOLON)) {
+      context.expect(Skew.TokenKind.NEWLINE);
+      context.next();
+    }
+
+    else if (!context.peek(Skew.TokenKind.NEWLINE) && !context.peek(Skew.TokenKind.COMMENT) && !context.peek(Skew.TokenKind.RIGHT_BRACE)) {
       value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
       Skew.Parsing.checkExtraParentheses(context, value);
     }

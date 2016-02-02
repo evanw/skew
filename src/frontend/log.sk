@@ -203,7 +203,11 @@ namespace Skew {
     }
 
     def syntaxErrorExpectedToken(range Range, found TokenKind, expected TokenKind) {
-      append(Diagnostic.error(range, "Expected \(expected) but found \(found)"))
+      var diagnostic = Diagnostic.error(range, "Expected \(expected) but found \(found)")
+      if found == .SEMICOLON && expected == .NEWLINE {
+        diagnostic.withFix(range, "Remove \";\"", "")
+      }
+      append(diagnostic)
     }
 
     def syntaxErrorEmptyFunctionParentheses(range Range) {

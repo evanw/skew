@@ -43,18 +43,31 @@ def foo {
 <stdin>:5:13: error: Expected newline but found \";\"
   if true {};
             ^
-<stdin>:6:9: error: Unexpected \";\"
+<stdin>:6:9: error: Expected newline but found \";\"
   return;
         ^
 <stdin>:2:3: warning: Unused expression
   0;
   ^
-<stdin>:6:9: error: Cannot return a value inside a function without a return type
-  return;
-        ^
 <stdin>:3:7: warning: Local variable \"x\" is never read
   var x = 0;
       ^
+<stdin>:2:4: fix: Remove \";\"
+  0;
+   ^
+   []
+<stdin>:3:12: fix: Remove \";\"
+  var x = 0;
+           ^
+           []
+<stdin>:5:13: fix: Remove \";\"
+  if true {};
+            ^
+            []
+<stdin>:6:9: fix: Remove \";\"
+  return;
+        ^
+        []
 ")
 
 test("
