@@ -1325,5 +1325,99 @@ class Foo extends Bar implements Baz {}
                       [::]
 ")
 
+# Check for TypeScript-style variable and function declarations
+test("
+class Foo {
+  a = 0
+  b: int
+  c = 0
+
+  d() {}
+  e(): int {}
+  f() {}
+}
+", "
+<stdin>:2:3: error: Use \"var\" before variable declarations
+  a = 0
+  ^
+<stdin>:3:3: error: Use \"var\" before variable declarations
+  b: int
+  ^
+<stdin>:3:4: error: Do not use a colon before a type expression
+  b: int
+   ^
+<stdin>:4:3: error: Use \"var\" before variable declarations
+  c = 0
+  ^
+<stdin>:6:3: error: Use \"def\" before function declarations
+  d() {}
+  ^
+<stdin>:6:4: error: Functions without arguments do not use parentheses
+  d() {}
+   ~~
+<stdin>:7:3: error: Use \"def\" before function declarations
+  e(): int {}
+  ^
+<stdin>:7:4: error: Functions without arguments do not use parentheses
+  e(): int {}
+   ~~
+<stdin>:7:6: error: Do not use a colon before a type expression
+  e(): int {}
+     ^
+<stdin>:8:3: error: Use \"def\" before function declarations
+  f() {}
+  ^
+<stdin>:8:4: error: Functions without arguments do not use parentheses
+  f() {}
+   ~~
+<stdin>:7:3: error: All control paths for \"e\" must return a value of type \"int\"
+  e(): int {}
+  ^
+<stdin>:2:3: fix: Insert \"var\"
+  a = 0
+  ^
+  [var a]
+<stdin>:3:3: fix: Insert \"var\"
+  b: int
+  ^
+  [var b]
+<stdin>:3:4: fix: Remove the colon
+  b: int
+   ^
+   []
+<stdin>:4:3: fix: Insert \"var\"
+  c = 0
+  ^
+  [var c]
+<stdin>:6:3: fix: Insert \"def\"
+  d() {}
+  ^
+  [def d]
+<stdin>:6:4: fix: Remove parentheses
+  d() {}
+   ~~
+   []
+<stdin>:7:3: fix: Insert \"def\"
+  e(): int {}
+  ^
+  [def e]
+<stdin>:7:4: fix: Remove parentheses
+  e(): int {}
+   ~~
+   []
+<stdin>:7:6: fix: Remove the colon
+  e(): int {}
+     ^
+     []
+<stdin>:8:3: fix: Insert \"def\"
+  f() {}
+  ^
+  [def f]
+<stdin>:8:4: fix: Remove parentheses
+  f() {}
+   ~~
+   []
+")
+
   }
 }

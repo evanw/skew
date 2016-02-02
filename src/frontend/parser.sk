@@ -967,11 +967,30 @@ namespace Skew.Parsing {
     }
 
     var token = context.current
+    var tokenKind = token.kind
     var text = token.range.toString
+    var wasCorrected = false
     var symbol Symbol = null
 
+    # Special-case a top-level "x = 0" and "x: int = 0" but avoid trying to make "def =() {}" into a variable
+    if tokenKind == .IDENTIFIER && (
+        context.peek(.ASSIGN, 1) && (!context.peek(.LEFT_PARENTHESIS, 2) || text != "def") ||
+        context.peek(.COLON, 1) && context.peek(.IDENTIFIER, 2)) {
+      context.log.syntaxErrorMissingVar(token.range)
+      tokenKind = .VAR
+      wasCorrected = true
+    }
+
+    # Special-case a top-level "x() {}"
+    if tokenKind == .IDENTIFIER && context.peek(.LEFT_PARENTHESIS, 1) {
+      context.log.syntaxErrorMissingDef(token.range)
+      tokenKind = .IDENTIFIER
+      text = "def"
+      wasCorrected = true
+    }
+
     # Special-case enum and flags symbols
-    if parent.kind.isEnumOrFlags && token.kind == .IDENTIFIER && !(text in identifierToSymbolKind) {
+    if parent.kind.isEnumOrFlags && tokenKind == .IDENTIFIER && !(text in identifierToSymbolKind) {
       while true {
         if text in identifierToSymbolKind || !context.expect(.IDENTIFIER) {
           break
@@ -1004,7 +1023,7 @@ namespace Skew.Parsing {
     else {
       # Parse the symbol kind
       var kind SymbolKind
-      switch token.kind {
+      switch tokenKind {
         case .CONST, .VAR {
           kind = parent.kind.hasInstances ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL
         }
@@ -1035,7 +1054,10 @@ namespace Skew.Parsing {
           return false
         }
       }
-      context.next
+
+      if !wasCorrected {
+        context.next
+      }
 
       var nameToken = context.current
       var range = nameToken.range
@@ -1101,7 +1123,7 @@ namespace Skew.Parsing {
             variable.range = range
             variable.parent = parent
 
-            if token.kind == .CONST {
+            if tokenKind == .CONST {
               variable.flags |= .IS_CONST
             }
 

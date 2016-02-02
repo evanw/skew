@@ -21,6 +21,8 @@ namespace Skew {
     EXTRA_DEF_PARENTHESES
     EXTRA_SEMICOLON
     FOR_LOOP_VAR
+    MISSING_DEF
+    MISSING_VAR
     NEED_VAR
     NEW_OPERATOR
     NEW_RETURN_TYPE
@@ -214,6 +216,18 @@ namespace Skew {
       append(Diagnostic
         .error(range, "Use \"::\" instead of \"implements\" to indicate implemented interfaces")
         .withFix(.EXTENDS_IMPLEMENTS, range, "Replace \"implements\" with \"::\"", "::"))
+    }
+
+    def syntaxErrorMissingVar(range Range) {
+      append(Diagnostic
+        .error(range, "Use \"var\" before variable declarations")
+        .withFix(.MISSING_VAR, range, "Insert \"var\"", "var \(range)"))
+    }
+
+    def syntaxErrorMissingDef(range Range) {
+      append(Diagnostic
+        .error(range, "Use \"def\" before function declarations")
+        .withFix(.MISSING_DEF, range, "Insert \"def\"", "def \(range)"))
     }
 
     def syntaxErrorOperatorTypo(range Range, correction string) {

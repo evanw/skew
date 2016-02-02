@@ -56,6 +56,11 @@ namespace Skew {
       return current.kind == kind
     }
 
+    def peek(kind TokenKind, skip int) bool {
+      assert(skip >= 1)
+      return _tokens[Math.min(_index + skip, _tokens.count - 1)].kind == kind
+    }
+
     def eat(kind TokenKind) bool {
       if peek(kind) {
         next
