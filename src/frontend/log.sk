@@ -167,6 +167,12 @@ namespace Skew {
       append(Diagnostic.error(range, "Syntax error \"\(text == "\"" ? "\\\"": text)\""))
     }
 
+    def syntaxErrorOperatorTypo(range Range, correct string) {
+      append(Diagnostic
+        .error(range, "Use the \"\(correct)\" operator instead")
+        .withFix(range, "Replace with \"\(correct)\"", correct))
+    }
+
     def syntaxErrorSlashComment(range Range) {
       var text = range.toString
       var last = text.count - 1

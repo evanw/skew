@@ -7764,5 +7764,26 @@ var y int = false // this is also a test
                   [# this is also a test]
 ")
 
+# Check == and != corrections
+test("
+var x = 0 === 1
+var y = 0 !== 1
+", "
+<stdin>:1:11: error: Use the \"==\" operator instead
+var x = 0 === 1
+          ~~~
+<stdin>:2:11: error: Use the \"!=\" operator instead
+var y = 0 !== 1
+          ~~~
+<stdin>:1:11: fix: Replace with \"==\"
+var x = 0 === 1
+          ~~~
+          [==]
+<stdin>:2:11: fix: Replace with \"!=\"
+var y = 0 !== 1
+          ~~~
+          [!=]
+")
+
   }
 }

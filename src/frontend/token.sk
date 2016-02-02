@@ -174,10 +174,16 @@ namespace Skew {
 
       var token = Token.new(Range.new(source, yy_bp, yy_cp), yy_act)
 
-      # Have a nice error message for "//" comments
-      if token.kind == .COMMENT_ERROR {
+      # Have a nice error message for certain tokens
+      if yy_act == .COMMENT_ERROR {
         log.syntaxErrorSlashComment(token.range)
         token.kind = .COMMENT
+      } else if yy_act == .NOT_EQUAL_ERROR {
+        log.syntaxErrorOperatorTypo(token.range, "!=")
+        token.kind = .NOT_EQUAL
+      } else if yy_act == .EQUAL_ERROR {
+        log.syntaxErrorOperatorTypo(token.range, "==")
+        token.kind = .EQUAL
       }
 
       # Tokens that start with a greater than may need to be split, potentially multiple times

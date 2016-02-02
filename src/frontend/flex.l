@@ -85,6 +85,8 @@
 "<<"                              SHIFT_LEFT;
 ">>>"                             UNSIGNED_SHIFT_RIGHT;
 ">>"                              SHIFT_RIGHT;
+"!=="                             NOT_EQUAL_ERROR;
+"==="                             EQUAL_ERROR;
 "!="                              NOT_EQUAL;
 "=="                              EQUAL;
 "<=>"                             COMPARE;
