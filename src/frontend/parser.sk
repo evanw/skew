@@ -1631,6 +1631,8 @@ namespace Skew.Parsing {
     pratt.parselet(.IDENTIFIER, .LOWEST).prefix = (context) => {
       var range = context.next.range
       var name = range.toString
+
+      # Lambda expression
       if context.peek(.ARROW) {
         var symbol = FunctionSymbol.new(.FUNCTION_LOCAL, "<lambda>")
         var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, name)
@@ -1641,6 +1643,13 @@ namespace Skew.Parsing {
         }
         symbol.range = context.spanSince(range)
         return Node.createLambda(symbol).withRange(symbol.range)
+      }
+
+      # New expression (an error, but still parsed for a better error message)
+      if context.peek(.IDENTIFIER) && name == "new" {
+        var type = parseType(context)
+        context.log.syntaxErrorNewOperator(context.spanSince(range), "\(type.range).new")
+        return Node.createParseError.withRange(context.spanSince(range))
       }
 
       return Node.createName(name).withRange(range)

@@ -173,6 +173,12 @@ namespace Skew {
         .withFix(range, "Remove the colon", ""))
     }
 
+    def syntaxErrorNewOperator(range Range, correction string) {
+      append(Diagnostic
+        .error(range, "There is no \"new\" operator, use \"\(correction)\" instead")
+        .withFix(range, "Replace with \"\(correction)\"", correction))
+    }
+
     def syntaxErrorOperatorTypo(range Range, correction string) {
       append(Diagnostic
         .error(range, "Use the \"\(correction)\" operator instead")

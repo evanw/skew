@@ -1231,5 +1231,45 @@ def c(d: int, e: int): int {
                     []
 ")
 
+# Check for colon-before-type corrections
+test("
+def test {
+  var a = new Foo
+  var b = new Foo().foo
+  var c = new Foo.Bar<T>.Baz().foo
+}
+", "
+<stdin>:2:11: error: There is no \"new\" operator, use \"Foo.new\" instead
+  var a = new Foo
+          ~~~~~~~
+<stdin>:3:11: error: There is no \"new\" operator, use \"Foo.new\" instead
+  var b = new Foo().foo
+          ~~~~~~~
+<stdin>:4:11: error: There is no \"new\" operator, use \"Foo.Bar<T>.Baz.new\" instead
+  var c = new Foo.Bar<T>.Baz().foo
+          ~~~~~~~~~~~~~~~~~~
+<stdin>:2:7: warning: Local variable \"a\" is never read
+  var a = new Foo
+      ^
+<stdin>:3:7: warning: Local variable \"b\" is never read
+  var b = new Foo().foo
+      ^
+<stdin>:4:7: warning: Local variable \"c\" is never read
+  var c = new Foo.Bar<T>.Baz().foo
+      ^
+<stdin>:2:11: fix: Replace with \"Foo.new\"
+  var a = new Foo
+          ~~~~~~~
+          [Foo.new]
+<stdin>:3:11: fix: Replace with \"Foo.new\"
+  var b = new Foo().foo
+          ~~~~~~~
+          [Foo.new]
+<stdin>:4:11: fix: Replace with \"Foo.Bar<T>.Baz.new\"
+  var c = new Foo.Bar<T>.Baz().foo
+          ~~~~~~~~~~~~~~~~~~
+          [Foo.Bar<T>.Baz.new]
+")
+
   }
 }

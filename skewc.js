@@ -9772,6 +9772,10 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Do not use a colon before a type expression').withFix(range, 'Remove the colon', ''));
   };
 
+  Skew.Log.prototype.syntaxErrorNewOperator = function(range, correction) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no "new" operator, use "' + correction + '" instead').withFix(range, 'Replace with "' + correction + '"', correction));
+  };
+
   Skew.Log.prototype.syntaxErrorOperatorTypo = function(range, correction) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use the "' + correction + '" operator instead').withFix(range, 'Replace with "' + correction + '"', correction));
   };
@@ -11975,6 +11979,7 @@
       var range = context.next().range;
       var name = range.toString();
 
+      // Lambda expression
       if (context.peek(Skew.TokenKind.ARROW)) {
         var symbol = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_LOCAL, '<lambda>');
         var argument = new Skew.VariableSymbol(Skew.SymbolKind.VARIABLE_ARGUMENT, name);
@@ -11987,6 +11992,13 @@
 
         symbol.range = context.spanSince(range);
         return Skew.Node.createLambda(symbol).withRange(symbol.range);
+      }
+
+      // New expression (an error, but still parsed for a better error message)
+      if (context.peek(Skew.TokenKind.IDENTIFIER) && name == 'new') {
+        var type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
+        context.log.syntaxErrorNewOperator(context.spanSince(range), type.range.toString() + '.new');
+        return new Skew.Node(Skew.NodeKind.PARSE_ERROR).withRange(context.spanSince(range));
       }
 
       return new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(name)).withRange(range);
