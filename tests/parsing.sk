@@ -71,6 +71,26 @@ def foo {
 ")
 
 test("
+var x = 0;
+var y = 0;
+", "
+<stdin>:1:10: error: Expected newline but found \";\"
+var x = 0;
+         ^
+<stdin>:2:10: error: Expected newline but found \";\"
+var y = 0;
+         ^
+<stdin>:1:10: fix: Remove \";\"
+var x = 0;
+         ^
+         []
+<stdin>:2:10: fix: Remove \";\"
+var y = 0;
+         ^
+         []
+")
+
+test("
 def main {
   while true {} else {}
 }

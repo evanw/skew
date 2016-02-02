@@ -882,6 +882,12 @@ namespace Skew.Parsing {
   }
 
   def parseAfterBlock(context ParserContext) bool {
+    # Parse ";" explicitly for a better error message
+    if context.peek(.SEMICOLON) {
+      context.expect(.NEWLINE)
+      context.next
+    }
+
     return context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE)
   }
 

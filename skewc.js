@@ -11345,6 +11345,12 @@
   };
 
   Skew.Parsing.parseAfterBlock = function(context) {
+    // Parse ";" explicitly for a better error message
+    if (context.peek(Skew.TokenKind.SEMICOLON)) {
+      context.expect(Skew.TokenKind.NEWLINE);
+      context.next();
+    }
+
     return context.peek(Skew.TokenKind.END_OF_FILE) || context.peek(Skew.TokenKind.RIGHT_BRACE) || context.expect(Skew.TokenKind.NEWLINE);
   };
 
