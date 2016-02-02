@@ -1271,5 +1271,31 @@ def test {
           [Foo.Bar<T>.Baz.new]
 ")
 
+# Check for Java-style class keyword corrections
+test("
+class Foo extends Bar implements Baz {}
+", "
+<stdin>:1:11: error: Use \":\" instead of \"extends\" to indicate a base class
+class Foo extends Bar implements Baz {}
+          ~~~~~~~
+<stdin>:1:23: error: Use \"::\" instead of \"implements\" to indicate implemented interfaces
+class Foo extends Bar implements Baz {}
+                      ~~~~~~~~~~
+<stdin>:1:19: error: \"Bar\" is not declared
+class Foo extends Bar implements Baz {}
+                  ~~~
+<stdin>:1:34: error: \"Baz\" is not declared
+class Foo extends Bar implements Baz {}
+                                 ~~~
+<stdin>:1:11: fix: Replace \"extends\" with \":\"
+class Foo extends Bar implements Baz {}
+          ~~~~~~~
+          [:]
+<stdin>:1:23: fix: Replace \"implements\" with \"::\"
+class Foo extends Bar implements Baz {}
+                      ~~~~~~~~~~
+                      [::]
+")
+
   }
 }

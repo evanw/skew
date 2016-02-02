@@ -1206,7 +1206,11 @@ namespace Skew.Parsing {
           # Regular block structure "type Foo : int {}"
           else {
             # Base class
-            if context.eat(.COLON) {
+            var isExtends = context.peek(.IDENTIFIER) && context.current.range.toString == "extends"
+            if isExtends {
+              context.log.syntaxErrorExtendsKeyword(context.next.range)
+            }
+            if isExtends || context.eat(.COLON) {
               object.extends = parseType(context)
               if object.extends == null {
                 return false
@@ -1214,7 +1218,11 @@ namespace Skew.Parsing {
             }
 
             # Interfaces
-            if context.eat(.DOUBLE_COLON) {
+            var isImplements = context.peek(.IDENTIFIER) && context.current.range.toString == "implements"
+            if isImplements {
+              context.log.syntaxErrorImplementsKeyword(context.next.range)
+            }
+            if isImplements || context.eat(.DOUBLE_COLON) {
               object.implements = []
               while true {
                 var type = parseType(context)

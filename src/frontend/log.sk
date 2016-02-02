@@ -13,6 +13,7 @@ namespace Skew {
 
   enum FixKind {
     ARRAY_SYNTAX
+    EXTENDS_IMPLEMENTS
     EXTRA_CALL_PARENTHESES
     EXTRA_CAST
     EXTRA_COLON
@@ -200,6 +201,18 @@ namespace Skew {
       append(Diagnostic
         .error(range, "There is no \"new\" operator, use \"\(correction)\" instead")
         .withFix(.NEW_OPERATOR, range, "Replace with \"\(correction)\"", correction))
+    }
+
+    def syntaxErrorExtendsKeyword(range Range) {
+      append(Diagnostic
+        .error(range, "Use \":\" instead of \"extends\" to indicate a base class")
+        .withFix(.EXTENDS_IMPLEMENTS, range, "Replace \"extends\" with \":\"", ":"))
+    }
+
+    def syntaxErrorImplementsKeyword(range Range) {
+      append(Diagnostic
+        .error(range, "Use \"::\" instead of \"implements\" to indicate implemented interfaces")
+        .withFix(.EXTENDS_IMPLEMENTS, range, "Replace \"implements\" with \"::\"", "::"))
     }
 
     def syntaxErrorOperatorTypo(range Range, correction string) {

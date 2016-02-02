@@ -9736,24 +9736,25 @@
 
   Skew.FixKind = {
     ARRAY_SYNTAX: 0,
-    EXTRA_CALL_PARENTHESES: 1,
-    EXTRA_CAST: 2,
-    EXTRA_COLON: 3,
-    EXTRA_COMMA: 4,
-    EXTRA_DEF_PARENTHESES: 5,
-    EXTRA_SEMICOLON: 6,
-    FOR_LOOP_VAR: 7,
-    NEED_VAR: 8,
-    NEW_OPERATOR: 9,
-    NEW_RETURN_TYPE: 10,
-    OCTAL_ADD_PREFIX: 11,
-    OCTAL_REMOVE_ZEROS: 12,
-    OPERATOR_TYPO: 13,
-    SELF_VS_THIS: 14,
-    SINGLE_QUOTES: 15,
-    SLASH_COMMENT: 16,
-    SYMBOL_TYPO: 17,
-    UNNECESSARY_PARENTHESES: 18
+    EXTENDS_IMPLEMENTS: 1,
+    EXTRA_CALL_PARENTHESES: 2,
+    EXTRA_CAST: 3,
+    EXTRA_COLON: 4,
+    EXTRA_COMMA: 5,
+    EXTRA_DEF_PARENTHESES: 6,
+    EXTRA_SEMICOLON: 7,
+    FOR_LOOP_VAR: 8,
+    NEED_VAR: 9,
+    NEW_OPERATOR: 10,
+    NEW_RETURN_TYPE: 11,
+    OCTAL_ADD_PREFIX: 12,
+    OCTAL_REMOVE_ZEROS: 13,
+    OPERATOR_TYPO: 14,
+    SELF_VS_THIS: 15,
+    SINGLE_QUOTES: 16,
+    SLASH_COMMENT: 17,
+    SYMBOL_TYPO: 18,
+    UNNECESSARY_PARENTHESES: 19
   };
 
   Skew.Diagnostic = function(kind, range, text) {
@@ -9863,6 +9864,14 @@
 
   Skew.Log.prototype.syntaxErrorNewOperator = function(range, correction) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no "new" operator, use "' + correction + '" instead').withFix(Skew.FixKind.NEW_OPERATOR, range, 'Replace with "' + correction + '"', correction));
+  };
+
+  Skew.Log.prototype.syntaxErrorExtendsKeyword = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use ":" instead of "extends" to indicate a base class').withFix(Skew.FixKind.EXTENDS_IMPLEMENTS, range, 'Replace "extends" with ":"', ':'));
+  };
+
+  Skew.Log.prototype.syntaxErrorImplementsKeyword = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use "::" instead of "implements" to indicate implemented interfaces').withFix(Skew.FixKind.EXTENDS_IMPLEMENTS, range, 'Replace "implements" with "::"', '::'));
   };
 
   Skew.Log.prototype.syntaxErrorOperatorTypo = function(range, correction) {
@@ -11677,7 +11686,13 @@
           // Regular block structure "type Foo : int {}"
           else {
             // Base class
-            if (context.eat(Skew.TokenKind.COLON)) {
+            var isExtends = context.peek(Skew.TokenKind.IDENTIFIER) && context.current().range.toString() == 'extends';
+
+            if (isExtends) {
+              context.log.syntaxErrorExtendsKeyword(context.next().range);
+            }
+
+            if (isExtends || context.eat(Skew.TokenKind.COLON)) {
               object.$extends = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
 
               if (object.$extends == null) {
@@ -11686,7 +11701,13 @@
             }
 
             // Interfaces
-            if (context.eat(Skew.TokenKind.DOUBLE_COLON)) {
+            var isImplements = context.peek(Skew.TokenKind.IDENTIFIER) && context.current().range.toString() == 'implements';
+
+            if (isImplements) {
+              context.log.syntaxErrorImplementsKeyword(context.next().range);
+            }
+
+            if (isImplements || context.eat(Skew.TokenKind.DOUBLE_COLON)) {
               object.$implements = [];
 
               while (true) {
