@@ -212,8 +212,16 @@ namespace Skew.Parsing {
 
       if type != null {
         symbol.type = type.clone
-      } else if peekType(context) {
-        symbol.type = parseType(context)
+      }
+
+      else {
+        if context.peek(.COLON) {
+          context.log.syntaxErrorExtraColonBeforeType(context.next.range)
+        }
+
+        if peekType(context) {
+          symbol.type = parseType(context)
+        }
       }
 
       if context.eat(.ASSIGN) {
@@ -740,7 +748,10 @@ namespace Skew.Parsing {
       arg.range = range
 
       # Parse argument type
-      if symbol.kind != .FUNCTION_LOCAL || (symbol.arguments.isEmpty ? peekType(context) : usingTypes) {
+      if symbol.kind != .FUNCTION_LOCAL || (symbol.arguments.isEmpty ? peekType(context) || context.peek(.COLON) : usingTypes) {
+        if context.peek(.COLON) {
+          context.log.syntaxErrorExtraColonBeforeType(context.next.range)
+        }
         arg.type = parseType(context)
         usingTypes = true
       }
@@ -758,12 +769,18 @@ namespace Skew.Parsing {
   }
 
   def parseFunctionReturnTypeAndBlock(context ParserContext, symbol FunctionSymbol) bool {
+    if context.peek(.COLON) {
+      context.log.syntaxErrorExtraColonBeforeType(context.next.range)
+    }
+
     if peekType(context) {
       symbol.returnType = parseType(context)
     }
+
     if context.eat(.NEWLINE) && !context.peek(.LEFT_BRACE) {
       context.undo
     }
+
     return parseFunctionBlock(context, symbol)
   }
 
@@ -1080,6 +1097,10 @@ namespace Skew.Parsing {
 
             if token.kind == .CONST {
               variable.flags |= .IS_CONST
+            }
+
+            if context.peek(.COLON) {
+              context.log.syntaxErrorExtraColonBeforeType(context.next.range)
             }
 
             if peekType(context) {

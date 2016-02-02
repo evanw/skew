@@ -167,6 +167,12 @@ namespace Skew {
       append(Diagnostic.error(range, "Syntax error \"\(text == "\"" ? "\\\"": text)\""))
     }
 
+    def syntaxErrorExtraColonBeforeType(range Range) {
+      append(Diagnostic
+        .error(range, "Do not use a colon before a type expression")
+        .withFix(range, "Remove the colon", ""))
+    }
+
     def syntaxErrorOperatorTypo(range Range, correction string) {
       append(Diagnostic
         .error(range, "Use the \"\(correction)\" operator instead")

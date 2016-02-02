@@ -9768,6 +9768,10 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Syntax error "' + (text == '"' ? '\\"' : text) + '"'));
   };
 
+  Skew.Log.prototype.syntaxErrorExtraColonBeforeType = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Do not use a colon before a type expression').withFix(range, 'Remove the colon', ''));
+  };
+
   Skew.Log.prototype.syntaxErrorOperatorTypo = function(range, correction) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use the "' + correction + '" operator instead').withFix(range, 'Replace with "' + correction + '"', correction));
   };
@@ -10557,8 +10561,14 @@
         symbol.type = type.clone();
       }
 
-      else if (Skew.Parsing.peekType(context)) {
-        symbol.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
+      else {
+        if (context.peek(Skew.TokenKind.COLON)) {
+          context.log.syntaxErrorExtraColonBeforeType(context.next().range);
+        }
+
+        if (Skew.Parsing.peekType(context)) {
+          symbol.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
+        }
       }
 
       if (context.eat(Skew.TokenKind.ASSIGN)) {
@@ -11160,7 +11170,11 @@
       arg.range = range;
 
       // Parse argument type
-      if (symbol.kind != Skew.SymbolKind.FUNCTION_LOCAL || (symbol.$arguments.length == 0 ? Skew.Parsing.peekType(context) : usingTypes)) {
+      if (symbol.kind != Skew.SymbolKind.FUNCTION_LOCAL || (symbol.$arguments.length == 0 ? Skew.Parsing.peekType(context) || context.peek(Skew.TokenKind.COLON) : usingTypes)) {
+        if (context.peek(Skew.TokenKind.COLON)) {
+          context.log.syntaxErrorExtraColonBeforeType(context.next().range);
+        }
+
         arg.type = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
         usingTypes = true;
       }
@@ -11180,6 +11194,10 @@
   };
 
   Skew.Parsing.parseFunctionReturnTypeAndBlock = function(context, symbol) {
+    if (context.peek(Skew.TokenKind.COLON)) {
+      context.log.syntaxErrorExtraColonBeforeType(context.next().range);
+    }
+
     if (Skew.Parsing.peekType(context)) {
       symbol.returnType = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
     }
@@ -11438,6 +11456,10 @@
 
             if (token.kind == Skew.TokenKind.CONST) {
               variable1.flags |= Skew.SymbolFlags.IS_CONST;
+            }
+
+            if (context.peek(Skew.TokenKind.COLON)) {
+              context.log.syntaxErrorExtraColonBeforeType(context.next().range);
             }
 
             if (Skew.Parsing.peekType(context)) {
