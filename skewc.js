@@ -9754,7 +9754,8 @@
     SINGLE_QUOTES: 16,
     SLASH_COMMENT: 17,
     SYMBOL_TYPO: 18,
-    UNNECESSARY_PARENTHESES: 19
+    UNNECESSARY_PARENTHESES: 19,
+    VOID_RETURN: 20
   };
 
   Skew.Diagnostic = function(kind, range, text) {
@@ -10204,6 +10205,10 @@
 
   Skew.Log.prototype.semanticErrorBadReturnType = function(range, type) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot create a function with a return type of "' + type.toString() + '"'));
+  };
+
+  Skew.Log.prototype.semanticErrorVoidReturnType = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no explicit "void" return type (to indicate that there\'s nothing to return, just don\'t put a return type)').withFix(Skew.FixKind.VOID_RETURN, range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove "void"', ''));
   };
 
   Skew.Log.prototype.semanticErrorExpectedReturnValue = function(range, type) {
@@ -17617,6 +17622,11 @@
     if (symbol.returnType != null) {
       if (symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
         this._log.semanticErrorConstructorReturnType(symbol.returnType.range);
+      }
+
+      // Explicitly handle a "void" return type for better error messages
+      else if (symbol.returnType.kind == Skew.NodeKind.NAME && symbol.returnType.asString() == 'void' && symbol.scope.find('void', Skew.ScopeSearch.NORMAL) == null) {
+        this._log.semanticErrorVoidReturnType(symbol.returnType.range);
       }
 
       else {

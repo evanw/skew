@@ -7748,5 +7748,34 @@ var e = BAR
         [bar]
 ")
 
+# Check the "void" correction
+test("
+def foo void {}
+def bar(x int) void {}
+", "
+<stdin>:1:9: error: There is no explicit \"void\" return type (to indicate that there's nothing to return, just don't put a return type)
+def foo void {}
+        ~~~~
+<stdin>:2:16: error: There is no explicit \"void\" return type (to indicate that there's nothing to return, just don't put a return type)
+def bar(x int) void {}
+               ~~~~
+<stdin>:1:8: fix: Remove \"void\"
+def foo void {}
+       ~~~~~
+       []
+<stdin>:2:15: fix: Remove \"void\"
+def bar(x int) void {}
+              ~~~~~
+              []
+")
+
+# Check the "void" correction
+test("
+class void {}
+def foo void { return null }
+def bar(x int) void { return null }
+", "
+")
+
   }
 }

@@ -846,7 +846,14 @@ namespace Skew.Resolving {
       if symbol.returnType != null {
         if symbol.kind == .FUNCTION_CONSTRUCTOR {
           _log.semanticErrorConstructorReturnType(symbol.returnType.range)
-        } else {
+        }
+
+        # Explicitly handle a "void" return type for better error messages
+        else if symbol.returnType.kind == .NAME && symbol.returnType.asString == "void" && symbol.scope.find("void", .NORMAL) == null {
+          _log.semanticErrorVoidReturnType(symbol.returnType.range)
+        }
+
+        else {
           _resolveAsParameterizedType(symbol.returnType, symbol.scope)
           returnType = symbol.returnType.resolvedType
         }

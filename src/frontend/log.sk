@@ -32,6 +32,7 @@ namespace Skew {
     SLASH_COMMENT
     SYMBOL_TYPO
     UNNECESSARY_PARENTHESES
+    VOID_RETURN
   }
 
   class Diagnostic {
@@ -572,6 +573,12 @@ namespace Skew {
 
     def semanticErrorBadReturnType(range Range, type Type) {
       append(Diagnostic.error(range, "Cannot create a function with a return type of \"\(type)\""))
+    }
+
+    def semanticErrorVoidReturnType(range Range) {
+      append(Diagnostic
+        .error(range, "There is no explicit \"void\" return type (to indicate that there's nothing to return, just don't put a return type)")
+        .withFix(.VOID_RETURN, range?.rangeIncludingLeftWhitespace, "Remove \"void\"", ""))
     }
 
     def semanticErrorExpectedReturnValue(range Range, type Type) {
