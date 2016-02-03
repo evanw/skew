@@ -1419,5 +1419,24 @@ class Foo {
    []
 ")
 
+# Don't stop the whole parse if a function argument has invalid syntax
+test("
+def x(a b c) {}
+def y(a b c) {}
+", "
+<stdin>:1:11: error: Expected \",\" but found identifier
+def x(a b c) {}
+          ^
+<stdin>:2:11: error: Expected \",\" but found identifier
+def y(a b c) {}
+          ^
+<stdin>:1:9: error: \"b\" is not declared
+def x(a b c) {}
+        ^
+<stdin>:2:9: error: \"b\" is not declared
+def y(a b c) {}
+        ^
+")
+
   }
 }

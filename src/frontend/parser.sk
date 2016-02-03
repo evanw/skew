@@ -734,14 +734,16 @@ namespace Skew.Parsing {
     var usingTypes = false
     while !context.eat(.RIGHT_PARENTHESIS) {
       if !symbol.arguments.isEmpty && !context.expect(.COMMA) {
-        return false
+        scanForToken(context, .RIGHT_PARENTHESIS)
+        break
       }
 
       context.skipWhitespace
 
       var range = context.current.range
       if !context.expect(.IDENTIFIER) {
-        return false
+        scanForToken(context, .RIGHT_PARENTHESIS)
+        break
       }
 
       var arg = VariableSymbol.new(.VARIABLE_ARGUMENT, range.toString)
@@ -982,7 +984,7 @@ namespace Skew.Parsing {
     }
 
     # Special-case a top-level "x() {}"
-    if tokenKind == .IDENTIFIER && context.peek(.LEFT_PARENTHESIS, 1) {
+    else if tokenKind == .IDENTIFIER && context.peek(.LEFT_PARENTHESIS, 1) {
       context.log.syntaxErrorMissingDef(token.range)
       tokenKind = .IDENTIFIER
       text = "def"
