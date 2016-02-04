@@ -275,6 +275,24 @@
     return text == '' ? text : in_string.get(text, 0).toUpperCase() + in_string.slice1(text, 1);
   };
 
+  Skew.indentIndex = function(text) {
+    var i = 0;
+
+    while (i < text.length && (in_string.get1(text, i) == 32 || in_string.get1(text, i) == 9)) {
+      i = i + 1 | 0;
+    }
+
+    return i;
+  };
+
+  Skew.indentOfLine = function(line) {
+    return in_string.slice2(line, 0, Skew.indentIndex(line));
+  };
+
+  Skew.lineWithoutIndent = function(line) {
+    return in_string.slice1(line, Skew.indentIndex(line));
+  };
+
   Skew.bytesToString = function(bytes) {
     var KB = 1 << 10;
     var MB = 1 << 20;
@@ -9736,28 +9754,30 @@
 
   Skew.FixKind = {
     ARRAY_SYNTAX: 0,
-    EXTENDS_IMPLEMENTS: 1,
-    EXTRA_CALL_PARENTHESES: 2,
-    EXTRA_CAST: 3,
-    EXTRA_COLON: 4,
-    EXTRA_COMMA: 5,
-    EXTRA_DEF_PARENTHESES: 6,
-    EXTRA_SEMICOLON: 7,
-    FOR_LOOP_VAR: 8,
-    MISSING_DEF: 9,
-    MISSING_VAR: 10,
-    NEED_VAR: 11,
-    NEW_OPERATOR: 12,
-    NEW_RETURN_TYPE: 13,
-    OCTAL_ADD_PREFIX: 14,
-    OCTAL_REMOVE_ZEROS: 15,
-    OPERATOR_TYPO: 16,
-    SELF_VS_THIS: 17,
-    SINGLE_QUOTES: 18,
-    SLASH_COMMENT: 19,
-    SYMBOL_TYPO: 20,
-    UNNECESSARY_PARENTHESES: 21,
-    VOID_RETURN: 22
+    CASE_BRACES: 1,
+    CASE_COMMA: 2,
+    EXTENDS_IMPLEMENTS: 3,
+    EXTRA_CALL_PARENTHESES: 4,
+    EXTRA_CAST: 5,
+    EXTRA_COLON: 6,
+    EXTRA_COMMA: 7,
+    EXTRA_DEF_PARENTHESES: 8,
+    EXTRA_SEMICOLON: 9,
+    FOR_LOOP_VAR: 10,
+    MISSING_DEF: 11,
+    MISSING_VAR: 12,
+    NEED_VAR: 13,
+    NEW_OPERATOR: 14,
+    NEW_RETURN_TYPE: 15,
+    OCTAL_ADD_PREFIX: 16,
+    OCTAL_REMOVE_ZEROS: 17,
+    OPERATOR_TYPO: 18,
+    SELF_VS_THIS: 19,
+    SINGLE_QUOTES: 20,
+    SLASH_COMMENT: 21,
+    SYMBOL_TYPO: 22,
+    UNNECESSARY_PARENTHESES: 23,
+    VOID_RETURN: 24
   };
 
   Skew.Diagnostic = function(kind, range, text) {
@@ -9895,6 +9915,30 @@
 
   Skew.Log.prototype.syntaxErrorPrivateOrProtected = function(range) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no "' + range.toString() + '" keyword (to give something protected access, use a name starting with "_" instead)'));
+  };
+
+  Skew.Log.prototype.syntaxErrorExpectedCommaBetweenCases = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use a comma between multiple values in a case statement (example: "case 1, 2, 3 { ... }")').withFix(Skew.FixKind.CASE_COMMA, range, 'Replace this with a comma', ','));
+  };
+
+  Skew.Log.prototype.syntaxErrorColonAfterCaseOrDefault = function(range, breakRange) {
+    var diagnostic = new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Surround the body of case and default statements with "{" and "}" instead of ":" and "break"');
+
+    if (breakRange != null) {
+      assert(range.source == breakRange.source);
+      var start = range.source.indexToLineColumn(range.end);
+      var end = range.source.indexToLineColumn(breakRange.start);
+      var text = in_string.slice2(range.source.contents, range.end, breakRange.start);
+
+      // Use the indentation of the case statement for the "}"
+      if (start.line < end.line) {
+        text = in_string.slice2(text, 0, text.length - end.column | 0) + Skew.indentOfLine(range.source.contentsOfLine(start.line)) + Skew.lineWithoutIndent(in_string.slice2(range.source.contentsOfLine(end.line), 0, end.column));
+      }
+
+      diagnostic.withFix(Skew.FixKind.CASE_BRACES, Skew.Range.span(range.rangeIncludingLeftWhitespace(), breakRange), 'Replace ":" and "break" with "{" and "}"', ' {' + text + '}');
+    }
+
+    this.append(diagnostic);
   };
 
   Skew.Log.prototype.syntaxErrorOperatorTypo = function(range, correction) {
@@ -10743,13 +10787,8 @@
     var token = context.next();
     var value = null;
 
-    // Parse "return;" explicitly for a better error message
-    if (context.peek1(Skew.TokenKind.SEMICOLON)) {
-      context.expect(Skew.TokenKind.NEWLINE);
-      context.next();
-    }
-
-    else if (!context.peek1(Skew.TokenKind.NEWLINE) && !context.peek1(Skew.TokenKind.COMMENT) && !context.peek1(Skew.TokenKind.RIGHT_BRACE)) {
+    // Check for "return;" explicitly for a better error message
+    if (!context.skipSemicolon() && !context.peek1(Skew.TokenKind.NEWLINE) && !context.peek1(Skew.TokenKind.COMMENT) && !context.peek1(Skew.TokenKind.RIGHT_BRACE)) {
       value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
       Skew.Parsing.checkExtraParentheses(context, value);
     }
@@ -10781,6 +10820,7 @@
       // Parse a new case
       var child = new Skew.Node(Skew.NodeKind.CASE);
       var start = context.current();
+      var colon = null;
 
       if (context.eat(Skew.TokenKind.CASE)) {
         while (true) {
@@ -10788,23 +10828,74 @@
           Skew.Parsing.checkExtraParentheses(context, constant);
           child.appendChild(constant);
 
-          if (!context.eat(Skew.TokenKind.COMMA)) {
+          // A colon isn't valid syntax here, but try to have a nice error message
+          if (context.peek1(Skew.TokenKind.COLON)) {
+            colon = context.next().range;
+            context.skipWhitespace();
+
+            if (context.eat(Skew.TokenKind.CASE)) {
+              context.log.syntaxErrorExpectedCommaBetweenCases(context.spanSince(colon));
+              colon = null;
+            }
+
+            else {
+              break;
+            }
+          }
+
+          // Commas separate multiple values
+          else if (!context.eat(Skew.TokenKind.COMMA)) {
             break;
           }
         }
       }
 
       // Default cases have no values
-      else if (!context.eat(Skew.TokenKind.DEFAULT)) {
-        context.expect(Skew.TokenKind.CASE);
-        return null;
+      else {
+        if (!context.eat(Skew.TokenKind.DEFAULT)) {
+          context.expect(Skew.TokenKind.CASE);
+          return null;
+        }
+
+        // A colon isn't valid syntax here, but try to have a nice error message
+        if (context.peek1(Skew.TokenKind.COLON)) {
+          colon = context.next().range;
+        }
       }
 
-      // Use a block instead of requiring "break" at the end
-      var block = Skew.Parsing.parseBlock(context);
+      var block = null;
 
-      if (block == null) {
-        return null;
+      // Use a block instead of requiring "break" at the end
+      if (colon == null) {
+        block = Skew.Parsing.parseBlock(context);
+
+        if (block == null) {
+          return null;
+        }
+      }
+
+      // If there was a syntax error, try to parse a C-style block
+      else {
+        var range = context.current().range;
+        block = new Skew.Node(Skew.NodeKind.BLOCK);
+
+        if (!Skew.Parsing.parseStatements(context, block, Skew.Parsing.StatementsMode.C_STYLE_SWITCH)) {
+          return null;
+        }
+
+        var breakRange = null;
+
+        if (context.peek1(Skew.TokenKind.BREAK)) {
+          breakRange = context.next().range;
+
+          if (context.skipSemicolon()) {
+            breakRange = context.spanSince(breakRange);
+          }
+        }
+
+        block.withRange(context.spanSince(range));
+        context.log.syntaxErrorColonAfterCaseOrDefault(colon, breakRange);
+        context.eat(Skew.TokenKind.NEWLINE);
       }
 
       // Create the case
@@ -10819,7 +10910,7 @@
         context.eat(Skew.TokenKind.NEWLINE);
       }
 
-      else if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || !context.expect(Skew.TokenKind.NEWLINE)) {
+      else if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || colon == null && !context.expect(Skew.TokenKind.NEWLINE)) {
         break;
       }
     }
@@ -11058,12 +11149,17 @@
     return kind == Skew.NodeKind.NAME || kind == Skew.NodeKind.TYPE || kind == Skew.NodeKind.LAMBDA_TYPE || kind == Skew.NodeKind.DOT && node.dotTarget() != null && Skew.Parsing.looksLikeType(node.dotTarget()) || kind == Skew.NodeKind.PARAMETERIZE && Skew.Parsing.looksLikeType(node.parameterizeValue());
   };
 
-  Skew.Parsing.parseStatements = function(context, parent) {
+  Skew.Parsing.parseStatements = function(context, parent, mode) {
     var previous = null;
     context.eat(Skew.TokenKind.NEWLINE);
 
     while (!context.peek1(Skew.TokenKind.RIGHT_BRACE) && !context.peek1(Skew.TokenKind.XML_START_CLOSE)) {
       var comments = Skew.Parsing.parseLeadingComments(context);
+
+      // When parsing a C-style switch, stop if it looks like the end of the case
+      if (mode == Skew.Parsing.StatementsMode.C_STYLE_SWITCH && (context.peek1(Skew.TokenKind.CASE) || context.peek1(Skew.TokenKind.DEFAULT) || context.peek1(Skew.TokenKind.BREAK))) {
+        break;
+      }
 
       // Ignore trailing comments
       if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.peek1(Skew.TokenKind.XML_START_CLOSE) || context.peek1(Skew.TokenKind.END_OF_FILE)) {
@@ -11223,6 +11319,9 @@
         }
       }
 
+      // Special-case semicolons before comments for better parser recovery
+      var semicolon = context.skipSemicolon();
+
       // Parse trailing comments and/or newline
       comments = Skew.Parsing.parseTrailingComment(context, comments);
 
@@ -11239,7 +11338,13 @@
       }
 
       else if (!context.peek1(Skew.TokenKind.ELSE) && !context.peek1(Skew.TokenKind.CATCH) && !context.peek1(Skew.TokenKind.FINALLY)) {
-        context.expect(Skew.TokenKind.NEWLINE);
+        if (semicolon) {
+          context.eat(Skew.TokenKind.NEWLINE);
+        }
+
+        else {
+          context.expect(Skew.TokenKind.NEWLINE);
+        }
       }
     }
 
@@ -11256,7 +11361,7 @@
 
     var block = new Skew.Node(Skew.NodeKind.BLOCK);
 
-    if (!Skew.Parsing.parseStatements(context, block) || !context.expect(Skew.TokenKind.RIGHT_BRACE)) {
+    if (!Skew.Parsing.parseStatements(context, block, Skew.Parsing.StatementsMode.NORMAL) || !context.expect(Skew.TokenKind.RIGHT_BRACE)) {
       return null;
     }
 
@@ -11388,12 +11493,8 @@
   };
 
   Skew.Parsing.parseAfterBlock = function(context) {
-    // Parse ";" explicitly for a better error message
-    if (context.peek1(Skew.TokenKind.SEMICOLON)) {
-      context.expect(Skew.TokenKind.NEWLINE);
-      context.next();
-    }
-
+    // Check for  ";" explicitly for a better error message
+    context.skipSemicolon();
     return context.peek1(Skew.TokenKind.END_OF_FILE) || context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.expect(Skew.TokenKind.NEWLINE);
   };
 
@@ -12332,7 +12433,7 @@
         // Parse children
         context.skipWhitespace();
 
-        if (!Skew.Parsing.parseStatements(context, block) || !context.expect(Skew.TokenKind.XML_START_CLOSE)) {
+        if (!Skew.Parsing.parseStatements(context, block, Skew.Parsing.StatementsMode.NORMAL) || !context.expect(Skew.TokenKind.XML_START_CLOSE)) {
           return context.createParseError();
         }
 
@@ -12467,6 +12568,11 @@
     return Skew.Parsing.createStringNode(context.log, token.range);
   };
 
+  Skew.Parsing.StatementsMode = {
+    NORMAL: 0,
+    C_STYLE_SWITCH: 1
+  };
+
   Skew.Parsing.ForbiddenGroup = {
     ASSIGN: 0,
     COMPARE: 1,
@@ -12522,6 +12628,16 @@
   Skew.ParserContext.prototype.skipWhitespace = function() {
     while (this.eat(Skew.TokenKind.COMMENT) || this.eat(Skew.TokenKind.NEWLINE)) {
     }
+  };
+
+  Skew.ParserContext.prototype.skipSemicolon = function() {
+    if (this.peek1(Skew.TokenKind.SEMICOLON)) {
+      this.expect(Skew.TokenKind.NEWLINE);
+      this.next();
+      return true;
+    }
+
+    return false;
   };
 
   Skew.ParserContext.prototype.undo = function() {
@@ -12992,44 +13108,6 @@
     return null;
   };
 
-  Skew.CSharpTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.CSharpTarget, Skew.CompilerTarget);
-
-  Skew.CSharpTarget.prototype.stopAfterResolve = function() {
-    return false;
-  };
-
-  Skew.CSharpTarget.prototype.requiresIntegerSwitchStatements = function() {
-    return true;
-  };
-
-  Skew.CSharpTarget.prototype.supportsListForeach = function() {
-    return true;
-  };
-
-  Skew.CSharpTarget.prototype.supportsNestedTypes = function() {
-    return true;
-  };
-
-  Skew.CSharpTarget.prototype.stringEncoding = function() {
-    return Unicode.Encoding.UTF16;
-  };
-
-  Skew.CSharpTarget.prototype.editOptions = function(options) {
-    options.define('TARGET', 'CSHARP');
-  };
-
-  Skew.CSharpTarget.prototype.includeSources = function(sources) {
-    sources.unshift(new Skew.Source('<native-cs>', Skew.NATIVE_LIBRARY_CS));
-  };
-
-  Skew.CSharpTarget.prototype.createEmitter = function(context) {
-    return new Skew.CSharpEmitter(context.options, context.cache);
-  };
-
   Skew.CPlusPlusTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -13110,6 +13188,44 @@
 
   Skew.JavaScriptTarget.prototype.createEmitter = function(context) {
     return new Skew.JavaScriptEmitter(context, context.options, context.cache);
+  };
+
+  Skew.CSharpTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.CSharpTarget, Skew.CompilerTarget);
+
+  Skew.CSharpTarget.prototype.stopAfterResolve = function() {
+    return false;
+  };
+
+  Skew.CSharpTarget.prototype.requiresIntegerSwitchStatements = function() {
+    return true;
+  };
+
+  Skew.CSharpTarget.prototype.supportsListForeach = function() {
+    return true;
+  };
+
+  Skew.CSharpTarget.prototype.supportsNestedTypes = function() {
+    return true;
+  };
+
+  Skew.CSharpTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF16;
+  };
+
+  Skew.CSharpTarget.prototype.editOptions = function(options) {
+    options.define('TARGET', 'CSHARP');
+  };
+
+  Skew.CSharpTarget.prototype.includeSources = function(sources) {
+    sources.unshift(new Skew.Source('<native-cs>', Skew.NATIVE_LIBRARY_CS));
+  };
+
+  Skew.CSharpTarget.prototype.createEmitter = function(context) {
+    return new Skew.CSharpEmitter(context.options, context.cache);
   };
 
   Skew.Define = function(name, value) {
@@ -13417,23 +13533,6 @@
     return this;
   };
 
-  Skew.ParsingPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.ParsingPass, Skew.Pass);
-
-  Skew.ParsingPass.prototype.kind = function() {
-    return Skew.PassKind.PARSING;
-  };
-
-  Skew.ParsingPass.prototype.run = function(context) {
-    for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
-      var tokens = in_List.get(list, i);
-      Skew.Parsing.parseFile(context.log, tokens, context.global);
-    }
-  };
-
   Skew.LexingPass = function() {
     Skew.Pass.call(this);
   };
@@ -13449,20 +13548,6 @@
       var source = in_List.get(list, i);
       context.tokens.push(Skew.tokenize(context.log, source));
     }
-  };
-
-  Skew.CallGraphPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.CallGraphPass, Skew.Pass);
-
-  Skew.CallGraphPass.prototype.kind = function() {
-    return Skew.PassKind.CALL_GRAPH;
-  };
-
-  Skew.CallGraphPass.prototype.run = function(context) {
-    context.callGraph = new Skew.CallGraph(context.global);
   };
 
   Skew.EmittingPass = function() {
@@ -13481,6 +13566,37 @@
     if (emitter != null) {
       emitter.visit(context.global);
       context.outputs = emitter.sources();
+    }
+  };
+
+  Skew.CallGraphPass = function() {
+    Skew.Pass.call(this);
+  };
+
+  __extends(Skew.CallGraphPass, Skew.Pass);
+
+  Skew.CallGraphPass.prototype.kind = function() {
+    return Skew.PassKind.CALL_GRAPH;
+  };
+
+  Skew.CallGraphPass.prototype.run = function(context) {
+    context.callGraph = new Skew.CallGraph(context.global);
+  };
+
+  Skew.ParsingPass = function() {
+    Skew.Pass.call(this);
+  };
+
+  __extends(Skew.ParsingPass, Skew.Pass);
+
+  Skew.ParsingPass.prototype.kind = function() {
+    return Skew.PassKind.PARSING;
+  };
+
+  Skew.ParsingPass.prototype.run = function(context) {
+    for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
+      var tokens = in_List.get(list, i);
+      Skew.Parsing.parseFile(context.log, tokens, context.global);
     }
   };
 

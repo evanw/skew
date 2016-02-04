@@ -74,6 +74,15 @@ namespace Skew {
       }
     }
 
+    def skipSemicolon bool {
+      if peek(.SEMICOLON) {
+        expect(.NEWLINE)
+        next
+        return true
+      }
+      return false
+    }
+
     def undo {
       assert(_index > 0)
       _index--

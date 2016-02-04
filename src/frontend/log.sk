@@ -13,6 +13,8 @@ namespace Skew {
 
   enum FixKind {
     ARRAY_SYNTAX
+    CASE_BRACES
+    CASE_COMMA
     EXTENDS_IMPLEMENTS
     EXTRA_CALL_PARENTHESES
     EXTRA_CAST
@@ -243,6 +245,36 @@ namespace Skew {
 
     def syntaxErrorPrivateOrProtected(range Range) {
       append(Diagnostic.error(range, "There is no \"\(range)\" keyword (to give something protected access, use a name starting with \"_\" instead)"))
+    }
+
+    def syntaxErrorExpectedCommaBetweenCases(range Range) {
+      append(Diagnostic
+        .error(range, "Use a comma between multiple values in a case statement (example: \"case 1, 2, 3 { ... }\")")
+        .withFix(.CASE_COMMA, range, "Replace this with a comma", ","))
+    }
+
+    def syntaxErrorColonAfterCaseOrDefault(range Range, breakRange Range) {
+      var diagnostic = Diagnostic.error(range, "Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"")
+
+      if breakRange != null {
+        assert(range.source == breakRange.source)
+
+        var start = range.source.indexToLineColumn(range.end)
+        var end = range.source.indexToLineColumn(breakRange.start)
+        var text = range.source.contents.slice(range.end, breakRange.start)
+
+        # Use the indentation of the case statement for the "}"
+        if start.line < end.line {
+          text = text.slice(0, text.count - end.column) +
+            indentOfLine(range.source.contentsOfLine(start.line)) +
+            lineWithoutIndent(range.source.contentsOfLine(end.line).slice(0, end.column))
+        }
+
+        diagnostic.withFix(.CASE_BRACES, Range.span(range.rangeIncludingLeftWhitespace, breakRange),
+          "Replace \":\" and \"break\" with \"{\" and \"}\"", " {" + text + "}")
+      }
+
+      append(diagnostic)
     }
 
     def syntaxErrorOperatorTypo(range Range, correction string) {

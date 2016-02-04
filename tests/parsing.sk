@@ -1515,5 +1515,210 @@ class Foo {
              []
 ")
 
+# Check for parser recovery on a C-style switch statement
+test("
+def test {
+  switch 0 {
+    case 1: x = 0; y = 0; break;
+    case 2: case 3: x = 0; y = 0; break;
+    case 4:
+    case 5:
+      x = 0;
+      y = 0;
+      break;
+    default:
+      x = 0;
+      y = 0;
+  }
+}
+", "
+<stdin>:3:18: error: Expected newline but found \";\"
+    case 1: x = 0; y = 0; break;
+                 ^
+<stdin>:3:25: error: Expected newline but found \";\"
+    case 1: x = 0; y = 0; break;
+                        ^
+<stdin>:3:32: error: Expected newline but found \";\"
+    case 1: x = 0; y = 0; break;
+                               ^
+<stdin>:3:11: error: Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"
+    case 1: x = 0; y = 0; break;
+          ^
+<stdin>:4:11: error: Use a comma between multiple values in a case statement (example: \"case 1, 2, 3 { ... }\")
+    case 2: case 3: x = 0; y = 0; break;
+          ~~~~~~
+<stdin>:4:26: error: Expected newline but found \";\"
+    case 2: case 3: x = 0; y = 0; break;
+                         ^
+<stdin>:4:33: error: Expected newline but found \";\"
+    case 2: case 3: x = 0; y = 0; break;
+                                ^
+<stdin>:4:40: error: Expected newline but found \";\"
+    case 2: case 3: x = 0; y = 0; break;
+                                       ^
+<stdin>:4:19: error: Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"
+    case 2: case 3: x = 0; y = 0; break;
+                  ^
+<stdin>:5:11: error: Use a comma between multiple values in a case statement (example: \"case 1, 2, 3 { ... }\")
+    case 4:
+          ^
+<stdin>:7:12: error: Expected newline but found \";\"
+      x = 0;
+           ^
+<stdin>:8:12: error: Expected newline but found \";\"
+      y = 0;
+           ^
+<stdin>:9:12: error: Expected newline but found \";\"
+      break;
+           ^
+<stdin>:6:11: error: Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"
+    case 5:
+          ^
+<stdin>:11:12: error: Expected newline but found \";\"
+      x = 0;
+           ^
+<stdin>:12:12: error: Expected newline but found \";\"
+      y = 0;
+           ^
+<stdin>:10:12: error: Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"
+    default:
+           ^
+<stdin>:3:13: error: \"x\" is not declared
+    case 1: x = 0; y = 0; break;
+            ^
+<stdin>:3:20: error: \"y\" is not declared
+    case 1: x = 0; y = 0; break;
+                   ^
+<stdin>:4:21: error: \"x\" is not declared
+    case 2: case 3: x = 0; y = 0; break;
+                    ^
+<stdin>:4:28: error: \"y\" is not declared
+    case 2: case 3: x = 0; y = 0; break;
+                           ^
+<stdin>:7:7: error: \"x\" is not declared
+      x = 0;
+      ^
+<stdin>:8:7: error: \"y\" is not declared
+      y = 0;
+      ^
+<stdin>:11:7: error: \"x\" is not declared
+      x = 0;
+      ^
+<stdin>:12:7: error: \"y\" is not declared
+      y = 0;
+      ^
+<stdin>:3:18: fix: Remove \";\"
+    case 1: x = 0; y = 0; break;
+                 ^
+                 []
+<stdin>:3:25: fix: Remove \";\"
+    case 1: x = 0; y = 0; break;
+                        ^
+                        []
+<stdin>:3:32: fix: Remove \";\"
+    case 1: x = 0; y = 0; break;
+                               ^
+                               []
+<stdin>:3:11: fix: Replace \":\" and \"break\" with \"{\" and \"}\"
+    case 1: x = 0; y = 0; break;
+          ~~~~~~~~~~~~~~~~~~~~~~
+          [ { x = 0; y = 0; }]
+<stdin>:4:11: fix: Replace this with a comma
+    case 2: case 3: x = 0; y = 0; break;
+          ~~~~~~
+          [,]
+<stdin>:4:26: fix: Remove \";\"
+    case 2: case 3: x = 0; y = 0; break;
+                         ^
+                         []
+<stdin>:4:33: fix: Remove \";\"
+    case 2: case 3: x = 0; y = 0; break;
+                                ^
+                                []
+<stdin>:4:40: fix: Remove \";\"
+    case 2: case 3: x = 0; y = 0; break;
+                                       ^
+                                       []
+<stdin>:4:19: fix: Replace \":\" and \"break\" with \"{\" and \"}\"
+    case 2: case 3: x = 0; y = 0; break;
+                  ~~~~~~~~~~~~~~~~~~~~~~
+                  [ { x = 0; y = 0; }]
+<stdin>:5:11: fix: Replace this with a comma
+    case 4:
+          ^
+          [,]
+<stdin>:7:12: fix: Remove \";\"
+      x = 0;
+           ^
+           []
+<stdin>:8:12: fix: Remove \";\"
+      y = 0;
+           ^
+           []
+<stdin>:9:12: fix: Remove \";\"
+      break;
+           ^
+           []
+<stdin>:6:11: fix: Replace \":\" and \"break\" with \"{\" and \"}\"
+    case 5:
+          ^
+          [ {
+      x = 0;
+      y = 0;
+    }]
+<stdin>:11:12: fix: Remove \";\"
+      x = 0;
+           ^
+           []
+<stdin>:12:12: fix: Remove \";\"
+      y = 0;
+           ^
+           []
+")
+
+# Check for an infinite loop due to a parse error
+test("
+def test {
+  switch 0 {
+    case 1: blah;
+    case 2: case 3: blah;
+  }
+}
+", "
+<stdin>:3:17: error: Expected newline but found \";\"
+    case 1: blah;
+                ^
+<stdin>:3:11: error: Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"
+    case 1: blah;
+          ^
+<stdin>:4:11: error: Use a comma between multiple values in a case statement (example: \"case 1, 2, 3 { ... }\")
+    case 2: case 3: blah;
+          ~~~~~~
+<stdin>:4:25: error: Expected newline but found \";\"
+    case 2: case 3: blah;
+                        ^
+<stdin>:4:19: error: Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"
+    case 2: case 3: blah;
+                  ^
+<stdin>:3:13: error: \"blah\" is not declared
+    case 1: blah;
+            ~~~~
+<stdin>:4:21: error: \"blah\" is not declared
+    case 2: case 3: blah;
+                    ~~~~
+<stdin>:3:17: fix: Remove \";\"
+    case 1: blah;
+                ^
+                []
+<stdin>:4:11: fix: Replace this with a comma
+    case 2: case 3: blah;
+          ~~~~~~
+          [,]
+<stdin>:4:25: fix: Remove \";\"
+    case 2: case 3: blah;
+                        ^
+                        []
+")
+
   }
 }

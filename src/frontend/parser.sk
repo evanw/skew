@@ -247,13 +247,8 @@ namespace Skew.Parsing {
     var token = context.next
     var value Node = null
 
-    # Parse "return;" explicitly for a better error message
-    if context.peek(.SEMICOLON) {
-      context.expect(.NEWLINE)
-      context.next
-    }
-
-    else if !context.peek(.NEWLINE) && !context.peek(.COMMENT) && !context.peek(.RIGHT_BRACE) {
+    # Check for "return;" explicitly for a better error message
+    if !context.skipSemicolon && !context.peek(.NEWLINE) && !context.peek(.COMMENT) && !context.peek(.RIGHT_BRACE) {
       value = expressionParser.parse(context, .LOWEST)
       checkExtraParentheses(context, value)
     }
@@ -284,27 +279,72 @@ namespace Skew.Parsing {
       # Parse a new case
       var child = Node.createCase
       var start = context.current
+      var colon Range = null
       if context.eat(.CASE) {
         while true {
           var constant = expressionParser.parse(context, .LOWEST)
           checkExtraParentheses(context, constant)
           child.appendChild(constant)
-          if !context.eat(.COMMA) {
+
+          # A colon isn't valid syntax here, but try to have a nice error message
+          if context.peek(.COLON) {
+            colon = context.next.range
+            context.skipWhitespace
+            if context.eat(.CASE) {
+              context.log.syntaxErrorExpectedCommaBetweenCases(context.spanSince(colon))
+              colon = null
+            } else {
+              break
+            }
+          }
+
+          # Commas separate multiple values
+          else if !context.eat(.COMMA) {
             break
           }
         }
       }
 
       # Default cases have no values
-      else if !context.eat(.DEFAULT) {
-        context.expect(.CASE)
-        return null
+      else {
+        if !context.eat(.DEFAULT) {
+          context.expect(.CASE)
+          return null
+        }
+
+        # A colon isn't valid syntax here, but try to have a nice error message
+        if context.peek(.COLON) {
+          colon = context.next.range
+        }
       }
 
+      var block Node
+
       # Use a block instead of requiring "break" at the end
-      var block = parseBlock(context)
-      if block == null {
-        return null
+      if colon == null {
+        block = parseBlock(context)
+        if block == null {
+          return null
+        }
+      }
+
+      # If there was a syntax error, try to parse a C-style block
+      else {
+        var range = context.current.range
+        block = Node.createBlock
+        if !parseStatements(context, block, .C_STYLE_SWITCH) {
+          return null
+        }
+        var breakRange Range = null
+        if context.peek(.BREAK) {
+          breakRange = context.next.range
+          if context.skipSemicolon {
+            breakRange = context.spanSince(breakRange)
+          }
+        }
+        block.withRange(context.spanSince(range))
+        context.log.syntaxErrorColonAfterCaseOrDefault(colon, breakRange)
+        context.eat(.NEWLINE)
       }
 
       # Create the case
@@ -316,7 +356,7 @@ namespace Skew.Parsing {
       if comments != null {
         child.comments = comments
         context.eat(.NEWLINE)
-      } else if context.peek(.RIGHT_BRACE) || !context.expect(.NEWLINE) {
+      } else if context.peek(.RIGHT_BRACE) || colon == null && !context.expect(.NEWLINE) {
         break
       }
     }
@@ -522,12 +562,22 @@ namespace Skew.Parsing {
       kind == .PARAMETERIZE && looksLikeType(node.parameterizeValue)
   }
 
-  def parseStatements(context ParserContext, parent Node) bool {
+  enum StatementsMode {
+    NORMAL
+    C_STYLE_SWITCH
+  }
+
+  def parseStatements(context ParserContext, parent Node, mode StatementsMode) bool {
     var previous Node = null
     context.eat(.NEWLINE)
 
     while !context.peek(.RIGHT_BRACE) && !context.peek(.XML_START_CLOSE) {
       var comments = parseLeadingComments(context)
+
+      # When parsing a C-style switch, stop if it looks like the end of the case
+      if mode == .C_STYLE_SWITCH && (context.peek(.CASE) || context.peek(.DEFAULT) || context.peek(.BREAK)) {
+        break
+      }
 
       # Ignore trailing comments
       if context.peek(.RIGHT_BRACE) || context.peek(.XML_START_CLOSE) || context.peek(.END_OF_FILE) {
@@ -664,6 +714,9 @@ namespace Skew.Parsing {
         }
       }
 
+      # Special-case semicolons before comments for better parser recovery
+      var semicolon = context.skipSemicolon
+
       # Parse trailing comments and/or newline
       comments = parseTrailingComment(context, comments)
       if comments != null {
@@ -674,7 +727,11 @@ namespace Skew.Parsing {
       } else if context.peek(.RIGHT_BRACE) || context.peek(.XML_START_CLOSE) {
         break
       } else if !context.peek(.ELSE) && !context.peek(.CATCH) && !context.peek(.FINALLY) {
-        context.expect(.NEWLINE)
+        if semicolon {
+          context.eat(.NEWLINE)
+        } else {
+          context.expect(.NEWLINE)
+        }
       }
     }
 
@@ -688,7 +745,7 @@ namespace Skew.Parsing {
       return null
     }
     var block = Node.createBlock
-    if !parseStatements(context, block) || !context.expect(.RIGHT_BRACE) {
+    if !parseStatements(context, block, .NORMAL) || !context.expect(.RIGHT_BRACE) {
       return null
     }
     return block.withRange(context.spanSince(token.range))
@@ -884,12 +941,7 @@ namespace Skew.Parsing {
   }
 
   def parseAfterBlock(context ParserContext) bool {
-    # Parse ";" explicitly for a better error message
-    if context.peek(.SEMICOLON) {
-      context.expect(.NEWLINE)
-      context.next
-    }
-
+    context.skipSemicolon # Check for  ";" explicitly for a better error message
     return context.peek(.END_OF_FILE) || context.peek(.RIGHT_BRACE) || context.expect(.NEWLINE)
   }
 
@@ -1809,7 +1861,7 @@ namespace Skew.Parsing {
 
         # Parse children
         context.skipWhitespace
-        if !parseStatements(context, block) || !context.expect(.XML_START_CLOSE) {
+        if !parseStatements(context, block, .NORMAL) || !context.expect(.XML_START_CLOSE) {
           return context.createParseError
         }
         block.withRange(context.spanSince(token.range))

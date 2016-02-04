@@ -52,6 +52,22 @@ namespace Skew {
     return text == "" ? text : text.get(0).toUpperCase + text.slice(1)
   }
 
+  def indentIndex(text string) int {
+    var i = 0
+    while i < text.count && (text[i] == ' ' || text[i] == '\t') {
+      i++
+    }
+    return i
+  }
+
+  def indentOfLine(line string) string {
+    return line.slice(0, indentIndex(line))
+  }
+
+  def lineWithoutIndent(line string) string {
+    return line.slice(indentIndex(line))
+  }
+
   def formatNumber(number double) string {
     return (Math.round(number * 10) / 10).toString
   }
