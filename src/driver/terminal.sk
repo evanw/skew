@@ -23,10 +23,9 @@ namespace Skew {
 
   @entry
   def main(arguments List<string>) int {
-    # Print diagnostics immediately when generated to improve perceived speed
     var log = Log.new
     var diagnosticLimit = 0
-    log.appendCallback = diagnostic => {
+    var printDiagnostic = (diagnostic Diagnostic) => {
       var terminalWidth = Terminal.width
       if diagnosticLimit > 0 && log.diagnostics.count >= diagnosticLimit {
         return
@@ -56,33 +55,60 @@ namespace Skew {
     var parser = Options.Parser.new
     var options = parseOptions(log, parser, arguments)
     diagnosticLimit = parser.intForOption(.MESSAGE_LIMIT, DEFAULT_MESSAGE_LIMIT)
-    var inputs = readSources(log, parser.normalArguments)
+    var fixAll = parser.boolForOption(.FIX_ALL, false)
+    var fixCount = 0
 
-    # Run the compilation
-    if !log.hasErrors && options != null {
-      var result = compile(log, options, inputs)
-
-      # Write all outputs
-      if !log.hasErrors {
-        for output in result.outputs {
-          if output.name != null && !IO.writeFile(output.name, output.contents) {
-            var outputFile = parser.rangeForOption(.OUTPUT_FILE)
-            var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
-            log.commandLineErrorUnwritableFile(outputFile ?? outputDirectory, output.name)
-            break
-          }
-        }
-
-        # Print compilation statistics
-        if !log.hasErrors {
-          printWithColor(.GRAY, result.statistics(inputs, options.verbose ? .LONG : .SHORT) + "\n")
-        }
-      }
+    # Print diagnostics immediately when generated to improve perceived speed
+    if !fixAll {
+      log.appendCallback = printDiagnostic
     }
 
-    # Attempt to automatically fix warnings and errors
-    if !log.isEmpty && parser.boolForOption(.FIX_ALL, false) {
-      applyFixes(log, parser.rangeForOption(.FIX_ALL))
+    # Iterate until fixed point when applying fixes
+    while true {
+      var inputs = readSources(log, parser.normalArguments)
+
+      # Run the compilation
+      if !log.hasErrors && options != null {
+        var result = compile(log, options, inputs)
+
+        # Write all outputs
+        if !log.hasErrors {
+          for output in result.outputs {
+            if output.name != null && !IO.writeFile(output.name, output.contents) {
+              var outputFile = parser.rangeForOption(.OUTPUT_FILE)
+              var outputDirectory = parser.rangeForOption(.OUTPUT_DIRECTORY)
+              log.commandLineErrorUnwritableFile(outputFile ?? outputDirectory, output.name)
+              break
+            }
+          }
+
+          # Print compilation statistics
+          if !log.hasErrors {
+            printWithColor(.GRAY, result.statistics(inputs, options.verbose ? .LONG : .SHORT) + "\n")
+          }
+        }
+      }
+
+      if !fixAll {
+        break
+      }
+
+      # Attempt to automatically fix warnings and errors
+      var count = applyFixes(log, parser.rangeForOption(.FIX_ALL))
+      if count == 0 {
+        break
+      }
+
+      fixCount += count
+      log = Log.new
+    }
+
+    # Print diagnostics afterward when applying fixes since they aren't printed earlier
+    if fixAll {
+      for diagnostic in log.diagnostics {
+        printDiagnostic(diagnostic)
+      }
+      Terminal.print("\(fixCount) \(fixCount == 1 ? "fix" : "fixes") applied")
     }
 
     # Print any errors and warnings
@@ -274,11 +300,13 @@ namespace Skew {
     return options
   }
 
-  def applyFixes(log Log, range Range) {
+  def applyFixes(log Log, range Range) int {
+    var fixCount = 0
+
     # Collect diagnostics by source file
     var map StringMap<List<Diagnostic>> = {}
     for diagnostic in log.diagnostics {
-      if diagnostic.range != null {
+      if diagnostic.range != null && diagnostic.fixes != null && diagnostic.fixes.count == 1 {
         var name = diagnostic.range.source.name
         var diagnostics = map.get(name, null)
         if diagnostics == null {
@@ -297,11 +325,7 @@ namespace Skew {
       # Apply fixes in reverse to avoid issues with changing offsets
       var last = contents.count
       for i in 0..diagnostics.count {
-        var diagnostic = diagnostics[i]
-        if diagnostic.fixes == null || diagnostic.fixes.count != 1 {
-          continue
-        }
-        var fix = diagnostic.fixes.first
+        var fix = diagnostics[i].fixes.first
 
         # Typo correction isn't robust enough right now to fix automatically
         if fix.kind == .SYMBOL_TYPO || fix.range.end > last {
@@ -309,6 +333,7 @@ namespace Skew {
         }
         contents = contents.slice(0, fix.range.start) + fix.replacement + contents.slice(fix.range.end)
         last = fix.range.start
+        fixCount++
       }
 
       # Write over the source file in place
@@ -316,6 +341,8 @@ namespace Skew {
         log.commandLineErrorUnwritableFile(range, source.name)
       }
     }
+
+    return fixCount
   }
 
   class Log {
