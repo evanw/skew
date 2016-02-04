@@ -947,15 +947,15 @@
     parser.define(Skew.Options.Type.BOOL, Skew.Option.RELEASE, '--release', 'Implies --js-mangle, --js-minify, --fold-constants, --inline-functions, --globalize-functions, and --define:RELEASE=true.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.VERBOSE, '--verbose', 'Prints out information about the compilation.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.VERSION, '--version', 'Prints the current compiler version (' + Skew.VERSION + ') and exits.');
-    parser.define(Skew.Options.Type.INT, Skew.Option.MESSAGE_LIMIT, '--message-limit', 'Sets the maximum number of messages to report. Pass 0 to disable the message limit. The default is ' + Skew.DEFAULT_MESSAGE_LIMIT.toString() + '.');
+    parser.define(Skew.Options.Type.INT, Skew.Option.MESSAGE_LIMIT, '--message-limit', 'Sets the maximum number of messages to report. ' + ('Pass 0 to disable the message limit. The default is ' + Skew.DEFAULT_MESSAGE_LIMIT.toString() + '.'));
     parser.define(Skew.Options.Type.STRING_LIST, Skew.Option.DEFINE, '--define', 'Override variable values at compile time.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_MANGLE, '--js-mangle', 'Transforms emitted JavaScript to be as small as possible. The "@export" annotation prevents renaming a symbol.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_MINIFY, '--js-minify', 'Remove whitespace when compiling to JavaScript.');
-    parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_SOURCE_MAP, '--js-source-map', 'Generates a source map when targeting JavaScript. The source map is saved with the ".map" extension in the same directory as the main output file.');
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.JS_SOURCE_MAP, '--js-source-map', 'Generates a source map when targeting JavaScript. ' + 'The source map is saved with the ".map" extension in the same directory as the main output file.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.FOLD_CONSTANTS, '--fold-constants', 'Evaluates constants at compile time and removes dead code inside functions.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.INLINE_FUNCTIONS, '--inline-functions', 'Uses heuristics to automatically inline simple global functions.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.GLOBALIZE_FUNCTIONS, '--globalize-functions', 'Convert instance functions to global functions for better inlining.');
-    parser.define(Skew.Options.Type.BOOL, Skew.Option.FIX_ALL, '--fix-all', "Attempt to fix all errors in place. THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.FIX_ALL, '--fix-all', 'Attempt to automatically fix as many errors and warnings as possible. ' + "THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.");
 
     // Parse the command line arguments
     parser.parse(log, $arguments);
