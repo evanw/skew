@@ -286,6 +286,7 @@ namespace Skew.Tests {
     testLibrary
     testNode
     testQuoteReplacement
+    testRanges
     testUnicode
 
     var report = Unit.TerminalReport.new

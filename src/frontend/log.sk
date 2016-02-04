@@ -230,6 +230,21 @@ namespace Skew {
         .withFix(.MISSING_DEF, range, "Insert \"def\"", "def \(range)"))
     }
 
+    def syntaxErrorStaticKeyword(range Range, parentKind SymbolKind, parentName string) {
+      append(Diagnostic
+        .error(range, parentKind == .OBJECT_GLOBAL || parentKind == .OBJECT_NAMESPACE
+          ? "There is no \"static\" keyword"
+          : "There is no \"static\" keyword (declare this symbol in a namespace called \"\(parentName)\" instead)"))
+    }
+
+    def syntaxErrorPublicKeyword(range Range) {
+      append(Diagnostic.error(range, "There is no \"public\" keyword"))
+    }
+
+    def syntaxErrorPrivateOrProtected(range Range) {
+      append(Diagnostic.error(range, "There is no \"\(range)\" keyword (to give something protected access, use a name starting with \"_\" instead)"))
+    }
+
     def syntaxErrorOperatorTypo(range Range, correction string) {
       append(Diagnostic
         .error(range, "Use the \"\(correction)\" operator instead")

@@ -67,4 +67,24 @@ namespace Skew.Tests {
     check("'abc\\nxyz'", "\"abc\\nxyz\"")
     check("'abc\\x20xyz'", "\"abc\\x20xyz\"")
   }
+
+  def testRanges {
+    testExpect("Range('abc', 0, 3).toString", => Range.new(Source.new("", "abc"), 0, 3).toString, "abc")
+    testExpect("Range('abc', 1, 2).toString", => Range.new(Source.new("", "abc"), 1, 2).toString, "b")
+
+    testExpect("Range('abc', 0, 3).rangeIncludingLeftWhitespace.toString", => Range.new(Source.new("", "abc"), 0, 3).rangeIncludingLeftWhitespace.toString, "abc")
+    testExpect("Range('abc', 0, 3).rangeIncludingRightWhitespace.toString", => Range.new(Source.new("", "abc"), 0, 3).rangeIncludingRightWhitespace.toString, "abc")
+
+    testExpect("Range('abc', 0, 3).rangeIncludingLeftWhitespace.toString", => Range.new(Source.new("", "abc"), 0, 3).rangeIncludingLeftWhitespace.toString, "abc")
+    testExpect("Range('abc', 1, 2).rangeIncludingRightWhitespace.toString", => Range.new(Source.new("", "abc"), 1, 2).rangeIncludingRightWhitespace.toString, "b")
+
+    testExpect("Range(' abc ', 1, 4).rangeIncludingLeftWhitespace.toString", => Range.new(Source.new("", " abc "), 1, 4).rangeIncludingLeftWhitespace.toString, " abc")
+    testExpect("Range(' abc ', 1, 4).rangeIncludingRightWhitespace.toString", => Range.new(Source.new("", " abc "), 1, 4).rangeIncludingRightWhitespace.toString, "abc ")
+
+    testExpect("Range('[ abc ]', 2, 5).rangeIncludingLeftWhitespace.toString", => Range.new(Source.new("", "[ abc ]"), 2, 5).rangeIncludingLeftWhitespace.toString, " abc")
+    testExpect("Range('[ abc ]', 2, 5).rangeIncludingRightWhitespace.toString", => Range.new(Source.new("", "[ abc ]"), 2, 5).rangeIncludingRightWhitespace.toString, "abc ")
+
+    testExpect("Range('[  abc  ]', 3, 6).rangeIncludingLeftWhitespace.toString", => Range.new(Source.new("", "[  abc  ]"), 3, 6).rangeIncludingLeftWhitespace.toString, "  abc")
+    testExpect("Range('[  abc  ]', 3, 6).rangeIncludingRightWhitespace.toString", => Range.new(Source.new("", "[  abc  ]"), 3, 6).rangeIncludingRightWhitespace.toString, "abc  ")
+  }
 }

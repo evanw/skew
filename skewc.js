@@ -9885,6 +9885,18 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use "def" before function declarations').withFix(Skew.FixKind.MISSING_DEF, range, 'Insert "def"', 'def ' + range.toString()));
   };
 
+  Skew.Log.prototype.syntaxErrorStaticKeyword = function(range, parentKind, parentName) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, parentKind == Skew.SymbolKind.OBJECT_GLOBAL || parentKind == Skew.SymbolKind.OBJECT_NAMESPACE ? 'There is no "static" keyword' : 'There is no "static" keyword (declare this symbol in a namespace called "' + parentName + '" instead)'));
+  };
+
+  Skew.Log.prototype.syntaxErrorPublicKeyword = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no "public" keyword'));
+  };
+
+  Skew.Log.prototype.syntaxErrorPrivateOrProtected = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no "' + range.toString() + '" keyword (to give something protected access, use a name starting with "_" instead)'));
+  };
+
   Skew.Log.prototype.syntaxErrorOperatorTypo = function(range, correction) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use the "' + correction + '" operator instead').withFix(Skew.FixKind.OPERATOR_TYPO, range, 'Replace with "' + correction + '"', correction));
   };
@@ -11463,6 +11475,39 @@
     var text = token.range.toString();
     var wasCorrected = false;
     var symbol = null;
+    var kind = in_StringMap.get(Skew.Parsing.identifierToSymbolKind, text, Skew.SymbolKind.OBJECT_GLOBAL);
+
+    // Skip extra identifiers such as "public" in "public var x = 0"
+    while (tokenKind == Skew.TokenKind.IDENTIFIER && kind == Skew.SymbolKind.OBJECT_GLOBAL && (context.peek2(Skew.TokenKind.IDENTIFIER, 1) || context.peek2(Skew.TokenKind.VAR, 1) || context.peek2(Skew.TokenKind.CONST, 1))) {
+      switch (text) {
+        case 'static': {
+          context.log.syntaxErrorStaticKeyword(token.range, parent.kind, parent.name);
+          break;
+        }
+
+        case 'public': {
+          context.log.syntaxErrorPublicKeyword(token.range);
+          break;
+        }
+
+        case 'protected':
+        case 'private': {
+          context.log.syntaxErrorPrivateOrProtected(token.range);
+          break;
+        }
+
+        default: {
+          context.unexpectedToken();
+          break;
+        }
+      }
+
+      context.next();
+      token = context.current();
+      tokenKind = token.kind;
+      text = token.range.toString();
+      kind = in_StringMap.get(Skew.Parsing.identifierToSymbolKind, text, Skew.SymbolKind.OBJECT_GLOBAL);
+    }
 
     // Special-case a top-level "x = 0" and "x: int = 0" but avoid trying to make "def =() {}" into a variable
     if (tokenKind == Skew.TokenKind.IDENTIFIER && (context.peek2(Skew.TokenKind.ASSIGN, 1) && (!context.peek2(Skew.TokenKind.LEFT_PARENTHESIS, 2) || text != 'def') || context.peek2(Skew.TokenKind.COLON, 1) && context.peek2(Skew.TokenKind.IDENTIFIER, 2))) {
@@ -11475,12 +11520,13 @@
     else if (tokenKind == Skew.TokenKind.IDENTIFIER && context.peek2(Skew.TokenKind.LEFT_PARENTHESIS, 1)) {
       context.log.syntaxErrorMissingDef(token.range);
       tokenKind = Skew.TokenKind.IDENTIFIER;
+      kind = Skew.SymbolKind.FUNCTION_GLOBAL;
       text = 'def';
       wasCorrected = true;
     }
 
     // Special-case enum and flags symbols
-    if (Skew.in_SymbolKind.isEnumOrFlags(parent.kind) && tokenKind == Skew.TokenKind.IDENTIFIER && !(text in Skew.Parsing.identifierToSymbolKind)) {
+    if (Skew.in_SymbolKind.isEnumOrFlags(parent.kind) && tokenKind == Skew.TokenKind.IDENTIFIER && kind == Skew.SymbolKind.OBJECT_GLOBAL) {
       while (true) {
         if (text in Skew.Parsing.identifierToSymbolKind || !context.expect(Skew.TokenKind.IDENTIFIER)) {
           break;
@@ -11512,8 +11558,6 @@
 
     else {
       // Parse the symbol kind
-      var kind = 0;
-
       switch (tokenKind) {
         case Skew.TokenKind.CONST:
         case Skew.TokenKind.VAR: {
@@ -11522,8 +11566,6 @@
         }
 
         case Skew.TokenKind.IDENTIFIER: {
-          kind = in_StringMap.get(Skew.Parsing.identifierToSymbolKind, text, Skew.SymbolKind.OBJECT_GLOBAL);
-
           if (kind == Skew.SymbolKind.OBJECT_GLOBAL) {
             context.unexpectedToken();
             return false;

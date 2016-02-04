@@ -127,6 +127,19 @@ namespace Skew {
       }
       return new(source, index, end)
     }
+
+    def rangeIncludingRightWhitespace Range {
+      var index = end
+      var contents = source.contents
+      while index < contents.count {
+        var c = contents[index]
+        if c != ' ' && c != '\t' {
+          break
+        }
+        index++
+      }
+      return new(source, start, index)
+    }
   }
 
   namespace Range {

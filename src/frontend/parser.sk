@@ -973,6 +973,23 @@ namespace Skew.Parsing {
     var text = token.range.toString
     var wasCorrected = false
     var symbol Symbol = null
+    var kind = identifierToSymbolKind.get(text, .OBJECT_GLOBAL)
+
+    # Skip extra identifiers such as "public" in "public var x = 0"
+    while tokenKind == .IDENTIFIER && kind == .OBJECT_GLOBAL && (
+        context.peek(.IDENTIFIER, 1) || context.peek(.VAR, 1) || context.peek(.CONST, 1)) {
+      switch text {
+        case "static" { context.log.syntaxErrorStaticKeyword(token.range, parent.kind, parent.name) }
+        case "public" { context.log.syntaxErrorPublicKeyword(token.range) }
+        case "protected", "private" { context.log.syntaxErrorPrivateOrProtected(token.range) }
+        default { context.unexpectedToken }
+      }
+      context.next
+      token = context.current
+      tokenKind = token.kind
+      text = token.range.toString
+      kind = identifierToSymbolKind.get(text, .OBJECT_GLOBAL)
+    }
 
     # Special-case a top-level "x = 0" and "x: int = 0" but avoid trying to make "def =() {}" into a variable
     if tokenKind == .IDENTIFIER && (
@@ -987,12 +1004,13 @@ namespace Skew.Parsing {
     else if tokenKind == .IDENTIFIER && context.peek(.LEFT_PARENTHESIS, 1) {
       context.log.syntaxErrorMissingDef(token.range)
       tokenKind = .IDENTIFIER
+      kind = .FUNCTION_GLOBAL
       text = "def"
       wasCorrected = true
     }
 
     # Special-case enum and flags symbols
-    if parent.kind.isEnumOrFlags && tokenKind == .IDENTIFIER && !(text in identifierToSymbolKind) {
+    if parent.kind.isEnumOrFlags && tokenKind == .IDENTIFIER && kind == .OBJECT_GLOBAL {
       while true {
         if text in identifierToSymbolKind || !context.expect(.IDENTIFIER) {
           break
@@ -1024,7 +1042,6 @@ namespace Skew.Parsing {
 
     else {
       # Parse the symbol kind
-      var kind SymbolKind
       switch tokenKind {
         case .CONST, .VAR {
           kind = parent.kind.hasInstances ? .VARIABLE_INSTANCE : .VARIABLE_GLOBAL
@@ -1041,7 +1058,6 @@ namespace Skew.Parsing {
         #   var example = <div class="header"/>
         #
         case .IDENTIFIER {
-          kind = identifierToSymbolKind.get(text, .OBJECT_GLOBAL)
           if kind == .OBJECT_GLOBAL {
             context.unexpectedToken
             return false

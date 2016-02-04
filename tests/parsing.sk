@@ -1438,5 +1438,82 @@ def y(a b c) {}
         ^
 ")
 
+# Skip over top-level identifiers
+test("
+class Foo {
+  nonsense var a = 0
+  static var b = 0
+  public c int = 0
+  private d: int = 0
+  protected e() {}
+
+  var nonsense = 0
+  var static = 0
+  var public = 0
+  var private = 0
+  var protected = 0
+}
+", "
+<stdin>:2:3: error: Unexpected identifier
+  nonsense var a = 0
+  ~~~~~~~~
+<stdin>:3:3: error: There is no \"static\" keyword (declare this symbol in a namespace called \"Foo\" instead)
+  static var b = 0
+  ~~~~~~
+<stdin>:4:3: error: There is no \"public\" keyword
+  public c int = 0
+  ~~~~~~
+<stdin>:4:10: error: Unexpected identifier
+  public c int = 0
+         ^
+<stdin>:4:12: error: Use \"var\" before variable declarations
+  public c int = 0
+           ~~~
+<stdin>:5:3: error: There is no \"private\" keyword (to give something protected access, use a name starting with \"_\" instead)
+  private d: int = 0
+  ~~~~~~~
+<stdin>:5:11: error: Use \"var\" before variable declarations
+  private d: int = 0
+          ^
+<stdin>:5:12: error: Do not use a colon before a type expression
+  private d: int = 0
+           ^
+<stdin>:6:3: error: There is no \"protected\" keyword (to give something protected access, use a name starting with \"_\" instead)
+  protected e() {}
+  ~~~~~~~~~
+<stdin>:6:13: error: Use \"def\" before function declarations
+  protected e() {}
+            ^
+<stdin>:6:14: error: Functions without arguments do not use parentheses
+  protected e() {}
+             ~~
+<stdin>:5:14: error: Cannot access instance member \"int\" from a global context
+  private d: int = 0
+             ~~~
+<stdin>:5:14: error: Unexpected expression of type \"int\"
+  private d: int = 0
+             ~~~
+<stdin>:4:12: fix: Insert \"var\"
+  public c int = 0
+           ~~~
+           [var int]
+<stdin>:5:11: fix: Insert \"var\"
+  private d: int = 0
+          ^
+          [var d]
+<stdin>:5:12: fix: Remove the colon
+  private d: int = 0
+           ^
+           []
+<stdin>:6:13: fix: Insert \"def\"
+  protected e() {}
+            ^
+            [def e]
+<stdin>:6:14: fix: Remove parentheses
+  protected e() {}
+             ~~
+             []
+")
+
   }
 }
