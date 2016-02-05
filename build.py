@@ -360,6 +360,6 @@ def main(args):
     if arg in jobs:
       jobs[arg]()
     else:
-      sys.exit('error: unknown job name "%s"', arg)
+      sys.exit('error: unknown job name "%s"' % arg)
 
 main(sys.argv[1:])
