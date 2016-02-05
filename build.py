@@ -338,7 +338,7 @@ def publish():
   version = load_version()
   update_version(version)
   replace()
-  run(['git', 'commit', '-am', 'publish'])
+  run(['git', 'commit', '-am', 'publish ' + version])
   run(['git', 'push'])
   skewc_js('skewc.js', 'build/skewc.min.js', sources=SOURCES_SKEWC, release=True)
   skewc_js('skewc.js', 'npm/skew.js', sources=SOURCES_API, release=True)
