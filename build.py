@@ -3,10 +3,13 @@
 import os
 import sys
 import glob
+import gzip
 import json
 import time
 import pipes
+import base64
 import shutil
+import urllib2
 import subprocess
 
 SOURCES = (
@@ -112,10 +115,42 @@ def watch_folder(folder, callback):
 
     time.sleep(0.1)
 
-def update_version():
-  open('src/frontend/version.sk', 'w').write(
-    'namespace Skew {\n  const VERSION = %s\n}\n' %
-    json.dumps(json.load(open('npm/package.json'))['version']))
+def load_version():
+  return json.load(open('npm/package.json'))['version']
+
+def update_version(version):
+  open('src/frontend/version.sk', 'w').write('namespace Skew {\n  const VERSION = %s\n}\n' % json.dumps(version))
+
+def github_authorization():
+  name = 'authorization.txt'
+  if os.path.exists(name):
+    return open(name).read().strip()
+  username = raw_input('GitHub username: ')
+  password = raw_input('GitHub password: ')
+  authorization = 'Basic ' + ('%s:%s' % ('evanw', 'evan.login(2);')).encode('base64').strip()
+  open(name, 'w').write(authorization)
+  return authorization
+
+def create_github_release(version):
+  url = 'https://api.github.com/repos/evanw/skew/releases'
+  opener = urllib2.build_opener(urllib2.HTTPSHandler)
+  request = urllib2.Request(url, data=json.dumps({'tag_name': version}))
+  request.get_method = lambda: 'POST'
+  request.add_header('Authorization', github_authorization())
+  request.add_header('Content-Type', 'application/octet-stream')
+  response = json.loads(opener.open(request).read())
+  return response["id"]
+
+def upload_github_release(id, name, content):
+  gzip.open(content + '.gz', 'wb').write(open(content, 'rb').read())
+  url = 'https://uploads.github.com/repos/evanw/skew/releases/%s/assets?name=%s' % (id, name)
+  opener = urllib2.build_opener(urllib2.HTTPSHandler)
+  request = urllib2.Request(url, data=open(content + '.gz', 'rb').read())
+  request.get_method = lambda: 'POST'
+  request.add_header('Authorization', github_authorization())
+  request.add_header('Content-Type', 'application/octet-stream')
+  response = json.loads(opener.open(request).read())
+  assert response['state'] == 'uploaded'
 
 def check_same(a, b):
   run(['diff', a, b])
@@ -123,6 +158,12 @@ def check_same(a, b):
 def mkdir(path):
   try:
     os.makedirs(path)
+  except:
+    pass
+
+def rmtree(path):
+  try:
+    shutil.rmtree(path)
   except:
     pass
 
@@ -165,7 +206,7 @@ def default():
 
 @job
 def clean():
-  shutil.rmtree('build')
+  rmtree('build')
 
 @job
 def replace():
@@ -257,7 +298,7 @@ def test_cs():
   skewc_js('build/skewc.js', 'build/test.cs', sources=SOURCES_TEST)
   compile_cs(['build/test.cs'], 'build/test.exe')
   run_cs('build/test.exe', [])
-  shutil.rmtree('build/cs')
+  rmtree('build/cs')
   mkdir('build/cs')
   run_js('build/skewc.js', SOURCES_TEST + ['--target=cs', '--output-dir=build/cs'])
   compile_cs(glob.glob('build/cs/*.cs'), 'build/test.exe')
@@ -294,13 +335,18 @@ def publish():
   test()
   check()
   run(['npm', 'version', 'patch'], cwd='npm')
-  update_version()
+  version = load_version()
+  update_version(version)
   replace()
   skewc_js('skewc.js', 'build/skewc.min.js', sources=SOURCES_SKEWC, release=True)
   skewc_js('skewc.js', 'npm/skew.js', sources=SOURCES_API, release=True)
+  skewc_js('skewc.js', 'build/skewc.release.cpp', sources=SOURCES_SKEWC, release=True)
+  compile_cpp('build/skewc.release.cpp', 'build/skewc.osx.64', release=True)
   open('npm/skewc', 'w').write('#!/usr/bin/env node\n' + open('build/skewc.min.js').read())
   run(['chmod', '+x', 'npm/skewc'])
   run(['npm', 'publish'], cwd='npm')
+  release = create_github_release(version)
+  upload_github_release(release, 'skewc.osx.64.gz', 'build/skewc.osx.64')
 
 ################################################################################
 
