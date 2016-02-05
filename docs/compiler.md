@@ -6,7 +6,7 @@ This documents the internals of the compiler.
 
 Development on the compiler itself is straightforward since the compiler compiles itself. The current build of the compiler in JavaScript is included in the repo as `skewc.js` and is used by `build.py`. Here are some useful commands (see `Makefile` for a complete list):
 
-* `./build.py`: Build the compiler into `build/browser.js` which can be tested using `www/index.html`
+* `./build.py`: Build the compiler into `out/browser.js` which can be tested using `www/index.html`
 * `./build.py check`: Run various sanity checks including compiling the compiler with itself a few times
 * `./build.py test`: Run all tests using all supported language targets
 * `./build.py replace`: Replace the top-level `skewc.js` file with a newer version of itself
