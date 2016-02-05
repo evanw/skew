@@ -1,8 +1,5 @@
 {
   "scripts": {
-    "test": "make test-js"
-  },
-  "devDependencies": {
-    "fast-watch": "1.0.0"
+    "test": "python build.py test_js"
   }
 }

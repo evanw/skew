@@ -51,6 +51,9 @@ namespace Skew {
       }
     }
 
+    # Print diagnostics immediately when generated to improve perceived speed
+    log.appendCallback = printDiagnostic
+
     # Translate frontend flags to compiler options
     var parser = Options.Parser.new
     var options = parseOptions(log, parser, arguments)
@@ -58,9 +61,9 @@ namespace Skew {
     var fixAll = parser.boolForOption(.FIX_ALL, false)
     var fixCount = 0
 
-    # Print diagnostics immediately when generated to improve perceived speed
-    if !fixAll {
-      log.appendCallback = printDiagnostic
+    # Suppress logging during fixes
+    if fixAll {
+      log = Log.new
     }
 
     # Iterate until fixed point when applying fixes

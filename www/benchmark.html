@@ -1,5 +1,4 @@
 <canvas width="800" height="600" style="background:#EEE;"></canvas>
-<script src="../build/skew-api.min.js" id="skew-api"></script>
 <script>
 
 (function() {
@@ -85,7 +84,7 @@
         options.foldAllConstants = true;
         options.inlineAllFunctions = true;
         options.globalizeAllFunctions = true;
-        options.jsMangle = false;
+        options.jsMangle = true;
         options.jsMinify = true;
         options.defines = {RELEASE: 'true'};
         var result = compiler.compile(options);

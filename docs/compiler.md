@@ -4,18 +4,18 @@ This documents the internals of the compiler.
 
 ## Development
 
-Development on the compiler itself is straightforward since the compiler compiles itself. The current build of the compiler in JavaScript is included in the repo as `skewc.js` and is used by `make`. Here are some useful commands (see `Makefile` for a complete list):
+Development on the compiler itself is straightforward since the compiler compiles itself. The current build of the compiler in JavaScript is included in the repo as `skewc.js` and is used by `build.py`. Here are some useful commands (see `Makefile` for a complete list):
 
-* `make`: Build the compiler into `build/browser.js` which can be tested using `www/index.html`
-* `make check`: Run various sanity checks including compiling the compiler with itself a few times
-* `make test`: Run all tests using all supported language targets
-* `make replace`: Replace the top-level `skewc.js` file with a newer version of itself
+* `./build.py`: Build the compiler into `build/browser.js` which can be tested using `www/index.html`
+* `./build.py check`: Run various sanity checks including compiling the compiler with itself a few times
+* `./build.py test`: Run all tests using all supported language targets
+* `./build.py replace`: Replace the top-level `skewc.js` file with a newer version of itself
 
 The core of the compiler is the `compile` method in `src/middle/compiler.sk` and is a good place to start reading for an overview of the compilation process.
 
 ## Lexing
 
-The lexer is split into two files, `src/frontend/token.sk` and `src/frontend/lexer.sk`. It started off as a hand-written lexer but now uses [flex](http://flex.sourceforge.net/) for speed. The `src/frontend/build.py` script takes `src/frontend/flex.l` and generates `lexer.sk` by running flex and extracting the embedded magic constants and lookup tables from its output. Use `make flex` to do this from the root directory. The generated lexer source code is checked in because it changes infrequently and because it avoids requiring flex as a dependency. The output of flex is awful for a number of reasons but it's really fast.
+The lexer is split into two files, `src/frontend/token.sk` and `src/frontend/lexer.sk`. It started off as a hand-written lexer but now uses [flex](http://flex.sourceforge.net/) for speed. The `src/frontend/build.py` script takes `src/frontend/flex.l` and generates `lexer.sk` by running flex and extracting the embedded magic constants and lookup tables from its output. Use `./build.py flex` to do this from the root directory. The generated lexer source code is checked in because it changes infrequently and because it avoids requiring flex as a dependency. The output of flex is awful for a number of reasons but it's really fast.
 
 Lexing technically requires infinite lookahead due to the generic type syntax. Like C#, angle brackets are matched using syntactic structure alone without a symbol table. When a `<` token is encountered, it's only considered the start of a parameterization expression if there's a matching `>` ahead in the token stream and the tokens in between meet certain conditions. This lookahead may sound expensive, but it can be done efficiently without backtracking by storing information in a stack. This is done during the lexing pass in `token.sk` and means the lexer is still O(n). Using angle brackets for generics adds the additional complexity of needing to split tokens that start with a `>`. For example, the type `Foo<Bar<T>>` should end with two `>` tokens, not one `>>` token.
 
