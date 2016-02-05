@@ -52,13 +52,20 @@ CPP_FLAGS = [
   '-Wno-unused-parameter',
   '-Wno-unused-variable',
   '-include', 'src/backend/library.h',
-  '-include', 'src/backend/library.cpp',
+  '-include', 'src/backend/support.h',
+]
+
+CPP_DEBUG_FLAGS = [
+  'src/backend/library.cpp',
+  'src/backend/support.cpp',
 ]
 
 CPP_RELEASE_FLAGS = [
   '-O3',
   '-DNDEBUG',
   '-fomit-frame-pointer',
+  '-include', 'src/backend/library.cpp',
+  '-include', 'src/backend/support.cpp',
   '-include', 'src/backend/fast.cpp',
 ]
 
@@ -192,7 +199,7 @@ def compile_cs(sources, target):
   run(['mcs', '-debug'] + sources + ['-out:' + target])
 
 def compile_cpp(source, target, release=False):
-  run(['c++', source, '-o', target] + CPP_FLAGS + (CPP_RELEASE_FLAGS if release else []))
+  run(['c++', source, '-o', target] + CPP_FLAGS + (CPP_RELEASE_FLAGS if release else CPP_DEBUG_FLAGS))
 
 ################################################################################
 
@@ -244,8 +251,8 @@ def check_cs():
 @job
 def check_cpp():
   mkdir('out')
-  skewc_js('skewc.js', 'out/skewc.cpp', sources=SOURCES_SKEWC)
-  compile_cpp('out/skewc.cpp', 'out/skewc')
+  skewc_js('skewc.js', 'out/skewc.cpp', sources=SOURCES_SKEWC, release=True)
+  compile_cpp('out/skewc.cpp', 'out/skewc', release=True)
   skewc_cpp('out/skewc', 'out/skewc2.cpp', sources=SOURCES_SKEWC)
   compile_cpp('out/skewc2.cpp', 'out/skewc2')
   skewc_cpp('out/skewc2', 'out/skewc3.cpp', sources=SOURCES_SKEWC)
