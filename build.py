@@ -131,25 +131,23 @@ def github_authorization():
   open(name, 'w').write(authorization)
   return authorization
 
-def create_github_release(version):
-  url = 'https://api.github.com/repos/evanw/skew/releases'
+def https_post(url, data):
   opener = urllib2.build_opener(urllib2.HTTPSHandler)
-  request = urllib2.Request(url, data=json.dumps({'tag_name': version}))
+  request = urllib2.Request(url, data=data)
   request.get_method = lambda: 'POST'
   request.add_header('Authorization', github_authorization())
   request.add_header('Content-Type', 'application/octet-stream')
-  response = json.loads(opener.open(request).read())
+  return json.loads(opener.open(request).read())
+
+def create_github_release(version):
+  url = 'https://api.github.com/repos/evanw/skew/releases'
+  response = https_post(url, json.dumps({'tag_name': version}))
   return response["id"]
 
 def upload_github_release(id, name, content):
   gzip.open(content + '.gz', 'wb').write(open(content, 'rb').read())
   url = 'https://uploads.github.com/repos/evanw/skew/releases/%s/assets?name=%s' % (id, name)
-  opener = urllib2.build_opener(urllib2.HTTPSHandler)
-  request = urllib2.Request(url, data=open(content + '.gz', 'rb').read())
-  request.get_method = lambda: 'POST'
-  request.add_header('Authorization', github_authorization())
-  request.add_header('Content-Type', 'application/octet-stream')
-  response = json.loads(opener.open(request).read())
+  response = https_post(url, open(content + '.gz', 'rb').read())
   assert response['state'] == 'uploaded'
 
 def check_same(a, b):
@@ -200,24 +198,24 @@ def compile_cpp(source, target, release=False):
 
 @job
 def default():
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.js', sources=SOURCES_SKEWC)
-  skewc_js('skewc.js', 'build/skewc-api.js', sources=SOURCES_API)
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.min.js', sources=SOURCES_SKEWC, release=True)
+  skewc_js('skewc.js', 'out/skew-api.min.js', sources=SOURCES_API, release=True)
 
 @job
 def clean():
-  rmtree('build')
+  rmtree('out')
 
 @job
 def replace():
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.js', sources=SOURCES_SKEWC)
-  skewc_js('build/skewc.js', 'build/skewc2.js', sources=SOURCES_SKEWC)
-  skewc_js('build/skewc2.js', 'build/skewc3.js', sources=SOURCES_SKEWC)
-  check_same('build/skewc2.js', 'build/skewc3.js')
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.js', sources=SOURCES_SKEWC)
+  skewc_js('out/skewc.js', 'out/skewc2.js', sources=SOURCES_SKEWC)
+  skewc_js('out/skewc2.js', 'out/skewc3.js', sources=SOURCES_SKEWC)
+  check_same('out/skewc2.js', 'out/skewc3.js')
   os.remove('skewc.js')
-  os.remove('build/skewc2.js')
-  os.rename('build/skewc3.js', 'skewc.js')
+  os.remove('out/skewc2.js')
+  os.rename('out/skewc3.js', 'skewc.js')
 
 @job
 def check():
@@ -227,54 +225,54 @@ def check():
 
 @job
 def check_js():
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.min.js', sources=SOURCES_SKEWC, release=True)
-  skewc_js('build/skewc.min.js', 'build/skewc2.min.js', sources=SOURCES_SKEWC, release=True)
-  skewc_js('build/skewc2.min.js', 'build/skewc3.min.js', sources=SOURCES_SKEWC, release=True)
-  check_same('build/skewc2.min.js', 'build/skewc3.min.js')
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.min.js', sources=SOURCES_SKEWC, release=True)
+  skewc_js('out/skewc.min.js', 'out/skewc2.min.js', sources=SOURCES_SKEWC, release=True)
+  skewc_js('out/skewc2.min.js', 'out/skewc3.min.js', sources=SOURCES_SKEWC, release=True)
+  check_same('out/skewc2.min.js', 'out/skewc3.min.js')
 
 @job
 def check_cs():
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.cs', sources=SOURCES_SKEWC)
-  compile_cs(['build/skewc.cs'], 'build/skewc.exe')
-  skewc_cs('build/skewc.exe', 'build/skewc2.cs', sources=SOURCES_SKEWC)
-  compile_cs(['build/skewc2.cs'], 'build/skewc2.exe')
-  skewc_cs('build/skewc2.exe', 'build/skewc3.cs', sources=SOURCES_SKEWC)
-  check_same('build/skewc2.cs', 'build/skewc3.cs')
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.cs', sources=SOURCES_SKEWC)
+  compile_cs(['out/skewc.cs'], 'out/skewc.exe')
+  skewc_cs('out/skewc.exe', 'out/skewc2.cs', sources=SOURCES_SKEWC)
+  compile_cs(['out/skewc2.cs'], 'out/skewc2.exe')
+  skewc_cs('out/skewc2.exe', 'out/skewc3.cs', sources=SOURCES_SKEWC)
+  check_same('out/skewc2.cs', 'out/skewc3.cs')
 
 @job
 def check_cpp():
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.cpp', sources=SOURCES_SKEWC)
-  compile_cpp('build/skewc.cpp', 'build/skewc')
-  skewc_cpp('build/skewc', 'build/skewc2.cpp', sources=SOURCES_SKEWC)
-  compile_cpp('build/skewc2.cpp', 'build/skewc2')
-  skewc_cpp('build/skewc2', 'build/skewc3.cpp', sources=SOURCES_SKEWC)
-  check_same('build/skewc2.cpp', 'build/skewc3.cpp')
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.cpp', sources=SOURCES_SKEWC)
+  compile_cpp('out/skewc.cpp', 'out/skewc')
+  skewc_cpp('out/skewc', 'out/skewc2.cpp', sources=SOURCES_SKEWC)
+  compile_cpp('out/skewc2.cpp', 'out/skewc2')
+  skewc_cpp('out/skewc2', 'out/skewc3.cpp', sources=SOURCES_SKEWC)
+  check_same('out/skewc2.cpp', 'out/skewc3.cpp')
 
 @job
 def check_determinism():
   # Generate JavaScript debug and release builds
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.js.js', sources=SOURCES_SKEWC)
-  skewc_js('skewc.js', 'build/skewc.js.min.js', sources=SOURCES_SKEWC, release=True)
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.js.js', sources=SOURCES_SKEWC)
+  skewc_js('skewc.js', 'out/skewc.js.min.js', sources=SOURCES_SKEWC, release=True)
 
   # Check C#
-  skewc_js('skewc.js', 'build/skewc.cs', sources=SOURCES_SKEWC)
-  compile_cs(['build/skewc.cs'], 'build/skewc.exe')
-  skewc_cs('build/skewc.exe', 'build/skewc.cs.js', sources=SOURCES_SKEWC)
-  check_same('build/skewc.js.js', 'build/skewc.cs.js')
-  skewc_cs('build/skewc.exe', 'build/skewc.cs.min.js', sources=SOURCES_SKEWC, release=True)
-  check_same('build/skewc.js.min.js', 'build/skewc.cs.min.js')
+  skewc_js('skewc.js', 'out/skewc.cs', sources=SOURCES_SKEWC)
+  compile_cs(['out/skewc.cs'], 'out/skewc.exe')
+  skewc_cs('out/skewc.exe', 'out/skewc.cs.js', sources=SOURCES_SKEWC)
+  check_same('out/skewc.js.js', 'out/skewc.cs.js')
+  skewc_cs('out/skewc.exe', 'out/skewc.cs.min.js', sources=SOURCES_SKEWC, release=True)
+  check_same('out/skewc.js.min.js', 'out/skewc.cs.min.js')
 
   # Check C++
-  skewc_js('skewc.js', 'build/skewc.cpp', sources=SOURCES_SKEWC)
-  compile_cpp('build/skewc.cpp', 'build/skewc')
-  skewc_cpp('build/skewc', 'build/skewc.cpp.js', sources=SOURCES_SKEWC)
-  check_same('build/skewc.js.js', 'build/skewc.cpp.js')
-  skewc_cpp('build/skewc', 'build/skewc.cpp.min.js', sources=SOURCES_SKEWC, release=True)
-  check_same('build/skewc.js.min.js', 'build/skewc.cpp.min.js')
+  skewc_js('skewc.js', 'out/skewc.cpp', sources=SOURCES_SKEWC)
+  compile_cpp('out/skewc.cpp', 'out/skewc')
+  skewc_cpp('out/skewc', 'out/skewc.cpp.js', sources=SOURCES_SKEWC)
+  check_same('out/skewc.js.js', 'out/skewc.cpp.js')
+  skewc_cpp('out/skewc', 'out/skewc.cpp.min.js', sources=SOURCES_SKEWC, release=True)
+  check_same('out/skewc.js.min.js', 'out/skewc.cpp.min.js')
 
 @job
 def test():
@@ -284,47 +282,47 @@ def test():
 
 @job
 def test_js():
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.js', sources=SOURCES_SKEWC)
-  skewc_js('build/skewc.js', 'build/test.js', sources=SOURCES_TEST)
-  run_js('build/test.js', [])
-  skewc_js('build/skewc.js', 'build/test.min.js', sources=SOURCES_TEST, release=True)
-  run_js('build/test.min.js', [])
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.js', sources=SOURCES_SKEWC)
+  skewc_js('out/skewc.js', 'out/test.js', sources=SOURCES_TEST)
+  run_js('out/test.js', [])
+  skewc_js('out/skewc.js', 'out/test.min.js', sources=SOURCES_TEST, release=True)
+  run_js('out/test.min.js', [])
 
 @job
 def test_cs():
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.js', sources=SOURCES_SKEWC)
-  skewc_js('build/skewc.js', 'build/test.cs', sources=SOURCES_TEST)
-  compile_cs(['build/test.cs'], 'build/test.exe')
-  run_cs('build/test.exe', [])
-  rmtree('build/cs')
-  mkdir('build/cs')
-  run_js('build/skewc.js', SOURCES_TEST + ['--target=cs', '--output-dir=build/cs'])
-  compile_cs(glob.glob('build/cs/*.cs'), 'build/test.exe')
-  run_cs('build/test.exe', [])
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.js', sources=SOURCES_SKEWC)
+  skewc_js('out/skewc.js', 'out/test.cs', sources=SOURCES_TEST)
+  compile_cs(['out/test.cs'], 'out/test.exe')
+  run_cs('out/test.exe', [])
+  rmtree('out/cs')
+  mkdir('out/cs')
+  run_js('out/skewc.js', SOURCES_TEST + ['--target=cs', '--output-dir=out/cs'])
+  compile_cs(glob.glob('out/cs/*.cs'), 'out/test.exe')
+  run_cs('out/test.exe', [])
 
 @job
 def test_cpp():
-  mkdir('build')
-  skewc_js('skewc.js', 'build/skewc.js', sources=SOURCES_SKEWC)
-  skewc_js('skewc.js', 'build/test.debug.cpp', sources=SOURCES_TEST)
-  compile_cpp('build/test.debug.cpp', 'build/test.debug')
-  run_cpp('build/test.debug', [])
-  skewc_js('skewc.js', 'build/test.release.cpp', sources=SOURCES_TEST, release=True)
-  compile_cpp('build/test.release.cpp', 'build/test.release', release=True)
-  run_cpp('build/test.release', [])
+  mkdir('out')
+  skewc_js('skewc.js', 'out/skewc.js', sources=SOURCES_SKEWC)
+  skewc_js('skewc.js', 'out/test.debug.cpp', sources=SOURCES_TEST)
+  compile_cpp('out/test.debug.cpp', 'out/test.debug')
+  run_cpp('out/test.debug', [])
+  skewc_js('skewc.js', 'out/test.release.cpp', sources=SOURCES_TEST, release=True)
+  compile_cpp('out/test.release.cpp', 'out/test.release', release=True)
+  run_cpp('out/test.release', [])
 
 @job
 def benchmark():
-  mkdir('build')
-  open('build/benchmark.sk', 'w').write('\n'.join(open(f).read() for f in SOURCES_API))
-  skewc_js('skewc.js', 'build/benchmark.js', sources=['build/benchmark.sk'], release=True)
+  mkdir('out')
+  open('out/benchmark.sk', 'w').write('\n'.join(open(f).read() for f in SOURCES_API))
+  skewc_js('skewc.js', 'out/benchmark.js', sources=['out/benchmark.sk'], release=True)
 
 @job
 def watch():
-  mkdir('build')
-  watch_folder('src', lambda: skewc_js('skewc.js', 'build/skewc-api.js', sources=SOURCES_API))
+  mkdir('out')
+  watch_folder('src', lambda: skewc_js('skewc.js', 'out/skew-api.js', sources=SOURCES_API))
 
 @job
 def flex():
@@ -340,15 +338,15 @@ def publish():
   replace()
   run(['git', 'commit', '-am', 'publish ' + version])
   run(['git', 'push'])
-  skewc_js('skewc.js', 'build/skewc.min.js', sources=SOURCES_SKEWC, release=True)
+  skewc_js('skewc.js', 'out/skewc.min.js', sources=SOURCES_SKEWC, release=True)
   skewc_js('skewc.js', 'npm/skew.js', sources=SOURCES_API, release=True)
-  skewc_js('skewc.js', 'build/skewc.release.cpp', sources=SOURCES_SKEWC, release=True)
-  compile_cpp('build/skewc.release.cpp', 'build/skewc.osx.64', release=True)
-  open('npm/skewc', 'w').write('#!/usr/bin/env node\n' + open('build/skewc.min.js').read())
+  skewc_js('skewc.js', 'out/skewc.release.cpp', sources=SOURCES_SKEWC, release=True)
+  compile_cpp('out/skewc.release.cpp', 'out/skewc.osx.64', release=True)
+  open('npm/skewc', 'w').write('#!/usr/bin/env node\n' + open('out/skewc.min.js').read())
   run(['chmod', '+x', 'npm/skewc'])
   run(['npm', 'publish'], cwd='npm')
   release = create_github_release(version)
-  upload_github_release(release, 'skewc.osx.64.gz', 'build/skewc.osx.64')
+  upload_github_release(release, 'skewc.osx.64.gz', 'out/skewc.osx.64')
 
 ################################################################################
 
