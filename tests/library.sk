@@ -62,7 +62,7 @@ namespace Skew.Tests {
     testExpect("Math.pow(2, 3)", => Math.pow(2, 3), 8)
     testExpect("Math.sqrt(4)", => Math.sqrt(4), 2)
 
-    testExpect("Math.random >= 0 && Math.random < 1", () bool => {
+    testExpect("0 <= Math.random < 1", () bool => {
       for i in 0..1000 {
         var value = Math.random
         if value < 0 || value >= 1 {
@@ -72,10 +72,68 @@ namespace Skew.Tests {
       return true
     }, true)
 
+    testExpect("a <= Math.randomInRange(a, b) <= b", () bool => {
+      for i in 0..1000 {
+        var a = Math.random
+        var b = a + Math.random
+        var value = Math.randomInRange(a, b)
+        if value < a || value > b {
+          return false
+        }
+      }
+      return true
+    }, true)
+
+    testExpect("a <= Math.randomInRange(a, b) < b", () bool => {
+      for i in 0..1000 {
+        var a = (Math.random * 100) as int
+        var b = a + (Math.random * 100) as int
+        var value int = Math.randomInRange(a, b)
+        if value < a || (a != b ? value >= b : value != b) {
+          return false
+        }
+      }
+      return true
+    }, true)
+
     testExpect("Math.max(-2.0, 3.0)", => Math.max(-2.0, 3.0), 3)
-    testExpect("Math.max(-2, 3)", => Math.max(-2, 3), 3)
     testExpect("Math.min(-2.0, 3.0)", => Math.min(-2.0, 3.0), -2)
+    testExpect("Math.max(3.0, -2.0)", => Math.max(3.0, -2.0), 3)
+    testExpect("Math.min(3.0, -2.0)", => Math.min(3.0, -2.0), -2)
+    testExpect("Math.max(-2, 3)", => Math.max(-2, 3), 3)
     testExpect("Math.min(-2, 3)", => Math.min(-2, 3), -2)
+    testExpect("Math.max(3, -2)", => Math.max(3, -2), 3)
+    testExpect("Math.min(3, -2)", => Math.min(3, -2), -2)
+
+    testExpect("Math.max(-2.0, 0.0, 3.0)", => Math.max(-2.0, 0.0, 3.0), 3)
+    testExpect("Math.min(-2.0, 0.0, 3.0)", => Math.min(-2.0, 0.0, 3.0), -2)
+    testExpect("Math.max(3.0, -2.0, 0.0)", => Math.max(3.0, -2.0, 0.0), 3)
+    testExpect("Math.min(3.0, -2.0, 0.0)", => Math.min(3.0, -2.0, 0.0), -2)
+    testExpect("Math.max(0.0, 3.0, -2.0)", => Math.max(0.0, 3.0, -2.0), 3)
+    testExpect("Math.min(0.0, 3.0, -2.0)", => Math.min(0.0, 3.0, -2.0), -2)
+    testExpect("Math.max(-2, 0, 3)", => Math.max(-2, 0, 3), 3)
+    testExpect("Math.min(-2, 0, 3)", => Math.min(-2, 0, 3), -2)
+    testExpect("Math.max(3, -2, 0)", => Math.max(3, -2, 0), 3)
+    testExpect("Math.min(3, -2, 0)", => Math.min(3, -2, 0), -2)
+    testExpect("Math.max(0, 3, -2)", => Math.max(0, 3, -2), 3)
+    testExpect("Math.min(0, 3, -2)", => Math.min(0, 3, -2), -2)
+
+    testExpect("Math.max(-1.0, 2.0, -3.0, 4.0)", => Math.max(-1.0, 2.0, -3.0, 4.0), 4)
+    testExpect("Math.min(-1.0, 2.0, -3.0, 4.0)", => Math.min(-1.0, 2.0, -3.0, 4.0), -3)
+    testExpect("Math.max(4.0, -1.0, 2.0, -3.0)", => Math.max(4.0, -1.0, 2.0, -3.0), 4)
+    testExpect("Math.min(4.0, -1.0, 2.0, -3.0)", => Math.min(4.0, -1.0, 2.0, -3.0), -3)
+    testExpect("Math.max(-3.0, 4.0, -1.0, 2.0)", => Math.max(-3.0, 4.0, -1.0, 2.0), 4)
+    testExpect("Math.min(-3.0, 4.0, -1.0, 2.0)", => Math.min(-3.0, 4.0, -1.0, 2.0), -3)
+    testExpect("Math.max(2.0, -3.0, 4.0, -1.0)", => Math.max(2.0, -3.0, 4.0, -1.0), 4)
+    testExpect("Math.min(2.0, -3.0, 4.0, -1.0)", => Math.min(2.0, -3.0, 4.0, -1.0), -3)
+    testExpect("Math.max(-1, 2, -3, 4)", => Math.max(-1, 2, -3, 4), 4)
+    testExpect("Math.min(-1, 2, -3, 4)", => Math.min(-1, 2, -3, 4), -3)
+    testExpect("Math.max(4, -1, 2, -3)", => Math.max(4, -1, 2, -3), 4)
+    testExpect("Math.min(4, -1, 2, -3)", => Math.min(4, -1, 2, -3), -3)
+    testExpect("Math.max(-3, 4, -1, 2)", => Math.max(-3, 4, -1, 2), 4)
+    testExpect("Math.min(-3, 4, -1, 2)", => Math.min(-3, 4, -1, 2), -3)
+    testExpect("Math.max(2, -3, 4, -1)", => Math.max(2, -3, 4, -1), 4)
+    testExpect("Math.min(2, -3, 4, -1)", => Math.min(2, -3, 4, -1), -3)
 
     testExpect("Math.clamp(-3.0, -1.0, 2.0)", => Math.clamp(-3.0, -1.0, 2.0), -1)
     testExpect("Math.clamp(3.0, -1.0, 2.0)", => Math.clamp(3.0, -1.0, 2.0), 2)

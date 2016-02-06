@@ -56,18 +56,26 @@ namespace Math {
   def log(x double) double
   def pow(x double, y double) double
   def random double
+  def randomInRange(min double, max double) double
+  def randomInRange(minInclusive int, maxExclusive int) int
   def sqrt(x double) double
 
-  @prefer
-  def max(x double, y double) double
+  @prefer {
+    def max(x double, y double) double
+    def min(x double, y double) double
+    def max(x double, y double, z double) double
+    def min(x double, y double, z double) double
+    def max(x double, y double, z double, w double) double
+    def min(x double, y double, z double, w double) double
+    def clamp(x double, min double, max double) double
+  }
+
   def max(x int, y int) int
-
-  @prefer
-  def min(x double, y double) double
   def min(x int, y int) int
-
-  @prefer
-  def clamp(x double, min double, max double) double
+  def max(x int, y int, z int) int
+  def min(x int, y int, z int) int
+  def max(x int, y int, z int, w int) int
+  def min(x int, y int, z int, w int) int
   def clamp(x int, min int, max int) int
 
   def E double        { return 2.718281828459045 }
@@ -408,6 +416,54 @@ class List {
 }
 
 namespace Math {
+  def randomInRange(min double, max double) double {
+    assert(min <= max)
+    var value = min + (max - min) * random
+    assert(min <= value && value <= max)
+    return value
+  }
+
+  def randomInRange(minInclusive int, maxExclusive int) int {
+    assert(minInclusive <= maxExclusive)
+    var value = minInclusive + ((maxExclusive - minInclusive) * random) as int
+    assert(minInclusive <= value && (minInclusive != maxExclusive ? value < maxExclusive : value == maxExclusive))
+    return value
+  }
+
+  if TARGET != .JAVASCRIPT {
+    def max(x double, y double, z double) double {
+      return max(max(x, y), z)
+    }
+
+    def min(x double, y double, z double) double {
+      return min(min(x, y), z)
+    }
+
+    def max(x int, y int, z int) int {
+      return max(max(x, y), z)
+    }
+
+    def min(x int, y int, z int) int {
+      return min(min(x, y), z)
+    }
+
+    def max(x double, y double, z double, w double) double {
+      return max(max(x, y), max(z, w))
+    }
+
+    def min(x double, y double, z double, w double) double {
+      return min(min(x, y), min(z, w))
+    }
+
+    def max(x int, y int, z int, w int) int {
+      return max(max(x, y), max(z, w))
+    }
+
+    def min(x int, y int, z int, w int) int {
+      return min(min(x, y), min(z, w))
+    }
+  }
+
   def clamp(x double, min double, max double) double {
     return x < min ? min : x > max ? max : x
   }
