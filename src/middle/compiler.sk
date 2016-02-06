@@ -201,6 +201,7 @@ namespace Skew {
   }
 
   def compile(log Log, options CompilerOptions, inputs List<Source>) CompilerResult {
+    inputs = inputs.clone
     options.target.includeSources(inputs)
     options.target.editOptions(options)
     inputs.prepend(Source.new("<unicode>", UNICODE_LIBRARY))
