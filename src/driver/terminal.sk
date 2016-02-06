@@ -68,7 +68,9 @@ namespace Skew {
 
     # Iterate until fixed point when applying fixes
     while true {
-      var inputs = readSources(log, parser.normalArguments)
+      var inputs List<Source> = []
+      var inputRanges List<Range> = []
+      readSources(log, parser.normalArguments, inputs, inputRanges)
 
       # Run the compilation
       if !log.hasErrors && options != null {
@@ -97,13 +99,22 @@ namespace Skew {
       }
 
       # Attempt to automatically fix warnings and errors
-      var count = applyFixes(log, parser.rangeForOption(.FIX_ALL))
-      if count == 0 {
-        break
-      }
+      var applyLog = Log.new
+      var count = applyFixes(log, applyLog, source => {
+        for i in 0..inputs.count {
+          if source.name == inputs[i].name {
+            return inputRanges[i]
+          }
+        }
+        return parser.rangeForOption(.FIX_ALL)
+      })
 
       fixCount += count
-      log = Log.new
+      log = applyLog
+
+      if count == 0 || applyLog.hasErrors {
+        break
+      }
     }
 
     # Print diagnostics afterward when applying fixes since they aren't printed earlier
@@ -166,11 +177,10 @@ namespace Skew {
     }
   }
 
-  def readSources(log Log, inputs List<Range>) List<Source> {
-    var result List<Source> = []
-    var visit fn(Range, string)
+  def readSources(log Log, normalArguments List<Range>, inputs List<Source>, inputRanges List<Range>) {
+    var visit fn(Range, string, bool)
 
-    visit = (range, path) => {
+    visit = (range, path, isExplicit) => {
       if path.startsWith(".") {
         return
       }
@@ -183,27 +193,27 @@ namespace Skew {
         }
         for entry in entries {
           if !entry.startsWith(".") {
-            visit(null, path + "/" + entry)
+            visit(range, path + "/" + entry, false)
           }
         }
       }
 
       # Files (ignore non-skew files that aren't explicitly specified)
-      else if range != null || path.endsWith(".sk") {
+      else if isExplicit || path.endsWith(".sk") {
         var contents = IO.readFile(path)
         if contents == null {
           log.commandLineErrorUnreadableFile(range, path)
         } else {
-          result.append(Source.new(path, contents))
+          inputs.append(Source.new(path, contents))
+          inputRanges.append(range)
         }
       }
     }
 
     # Recursively visit input directories
-    for range in inputs {
-      visit(range, range.toString)
+    for range in normalArguments {
+      visit(range, range.toString, true)
     }
-    return result
   }
 
   def parseOptions(log Log, parser Options.Parser, arguments List<string>) CompilerOptions {
@@ -306,7 +316,7 @@ namespace Skew {
     return options
   }
 
-  def applyFixes(log Log, range Range) int {
+  def applyFixes(log Log, applyLog Log, rangeForSource fn(Source) Range) int {
     var fixCount = 0
 
     # Collect diagnostics by source file
@@ -344,7 +354,7 @@ namespace Skew {
 
       # Write over the source file in place
       if !IO.writeFile(source.name, contents) {
-        log.commandLineErrorUnwritableFile(range, source.name)
+        applyLog.commandLineErrorUnwritableFile(rangeForSource(source), source.name)
       }
     }
 

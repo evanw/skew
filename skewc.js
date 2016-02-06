@@ -682,6 +682,7 @@
   };
 
   Skew.compile = function(log, options, inputs) {
+    inputs = inputs.slice();
     options.target.includeSources(inputs);
     options.target.editOptions(options);
     inputs.unshift(new Skew.Source('<unicode>', Skew.UNICODE_LIBRARY));
@@ -786,7 +787,9 @@
 
     // Iterate until fixed point when applying fixes
     while (true) {
-      var inputs = Skew.readSources(log, parser.normalArguments);
+      var inputs = [];
+      var inputRanges = [];
+      Skew.readSources(log, parser.normalArguments, inputs, inputRanges);
 
       // Run the compilation
       if (!log.hasErrors() && options != null) {
@@ -817,14 +820,22 @@
       }
 
       // Attempt to automatically fix warnings and errors
-      var count = Skew.applyFixes(log, parser.rangeForOption(Skew.Option.FIX_ALL));
+      var applyLog = new Skew.Log();
+      var count = Skew.applyFixes(log, applyLog, function(source) {
+        for (var i = 0, count2 = inputs.length; i < count2; i = i + 1 | 0) {
+          if (source.name == in_List.get(inputs, i).name) {
+            return in_List.get(inputRanges, i);
+          }
+        }
 
-      if (count == 0) {
+        return parser.rangeForOption(Skew.Option.FIX_ALL);
+      });
+      fixCount = fixCount + count | 0;
+      log = applyLog;
+
+      if (count == 0 || applyLog.hasErrors()) {
         break;
       }
-
-      fixCount = fixCount + count | 0;
-      log = new Skew.Log();
     }
 
     // Print diagnostics afterward when applying fixes since they aren't printed earlier
@@ -892,10 +903,9 @@
     }
   };
 
-  Skew.readSources = function(log, inputs) {
-    var result = [];
+  Skew.readSources = function(log, normalArguments, inputs, inputRanges) {
     var visit = null;
-    visit = function(range, path) {
+    visit = function(range, path, isExplicit) {
       if (in_string.startsWith(path, '.')) {
         return;
       }
@@ -912,13 +922,13 @@
           var entry = in_List.get(list, i);
 
           if (!in_string.startsWith(entry, '.')) {
-            visit(null, path + '/' + entry);
+            visit(range, path + '/' + entry, false);
           }
         }
       }
 
       // Files (ignore non-skew files that aren't explicitly specified)
-      else if (range != null || in_string.endsWith(path, '.sk')) {
+      else if (isExplicit || in_string.endsWith(path, '.sk')) {
         var contents = IO.readFile(path);
 
         if (contents == null) {
@@ -926,18 +936,17 @@
         }
 
         else {
-          result.push(new Skew.Source(path, contents));
+          inputs.push(new Skew.Source(path, contents));
+          inputRanges.push(range);
         }
       }
     };
 
     // Recursively visit input directories
-    for (var i = 0, list = inputs, count = list.length; i < count; i = i + 1 | 0) {
+    for (var i = 0, list = normalArguments, count = list.length; i < count; i = i + 1 | 0) {
       var range = in_List.get(list, i);
-      visit(range, range.toString());
+      visit(range, range.toString(), true);
     }
-
-    return result;
   };
 
   Skew.parseOptions = function(log, parser, $arguments) {
@@ -1053,7 +1062,7 @@
     return options;
   };
 
-  Skew.applyFixes = function(log, range) {
+  Skew.applyFixes = function(log, applyLog, rangeForSource) {
     var fixCount = 0;
 
     // Collect diagnostics by source file
@@ -1101,7 +1110,7 @@
 
       // Write over the source file in place
       if (!IO.writeFile(source.name, contents)) {
-        log.commandLineErrorUnwritableFile(range, source.name);
+        applyLog.commandLineErrorUnwritableFile(rangeForSource(source), source.name);
       }
     }
 
