@@ -5892,6 +5892,12 @@
     return Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, node, this._cache.createInt(0)).withType(this._cache.intType).withRange(node.range);
   };
 
+  Skew.JavaScriptEmitter.prototype._removeIntCast = function(node) {
+    if (node.kind == Skew.NodeKind.BITWISE_OR && node.binaryRight().isInt() && node.binaryRight().asInt() == 0) {
+      node.replaceWith(node.binaryLeft().remove());
+    }
+  };
+
   Skew.JavaScriptEmitter.prototype._patchUnaryArithmetic = function(node) {
     if (node.resolvedType == this._cache.intType && !Skew.JavaScriptEmitter._alwaysConvertsOperandsToInt(node.parent())) {
       var value = node.unaryValue();
@@ -6441,8 +6447,11 @@
 
         // "if (a != b) c;" => "if (a ^ b) c;"
         // "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
+        // "if ((a + b | 0) != (c + d | 0)) e;" => "if (a + b ^ c + d) e;"
         else {
           node.kind = Skew.NodeKind.BITWISE_XOR;
+          this._removeIntCast(node.binaryLeft());
+          this._removeIntCast(node.binaryRight());
         }
 
         return kind == Skew.NodeKind.EQUAL ? Skew.JavaScriptEmitter.BooleanSwap.SWAP : Skew.JavaScriptEmitter.BooleanSwap.NO_SWAP;
