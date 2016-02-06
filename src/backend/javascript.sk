@@ -1658,6 +1658,12 @@ namespace Skew {
       return Node.createBinary(.BITWISE_OR, node, _cache.createInt(0)).withType(_cache.intType).withRange(node.range)
     }
 
+    def _removeIntCast(node Node) {
+      if node.kind == .BITWISE_OR && node.binaryRight.isInt && node.binaryRight.asInt == 0 {
+        node.replaceWith(node.binaryLeft.remove)
+      }
+    }
+
     def _patchUnaryArithmetic(node Node) {
       if node.resolvedType == _cache.intType && !_alwaysConvertsOperandsToInt(node.parent) {
         var value = node.unaryValue
@@ -2108,8 +2114,11 @@ namespace Skew {
 
           # "if (a != b) c;" => "if (a ^ b) c;"
           # "if (a == b) c; else d;" => "if (a ^ b) d; else c;"
+          # "if ((a + b | 0) != (c + d | 0)) e;" => "if (a + b ^ c + d) e;"
           else {
             node.kind = .BITWISE_XOR
+            _removeIntCast(node.binaryLeft)
+            _removeIntCast(node.binaryRight)
           }
 
           return kind == .EQUAL ? .SWAP : .NO_SWAP

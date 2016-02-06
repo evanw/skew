@@ -2470,5 +2470,32 @@ def test int {
 })();
 ").jsMangle
 
+# Check that int casts aren't inserted when != turns into ^
+test("
+@export
+def test(a int, b int, c int, d int) {
+  while a - b != c - d {}
+  while ((a - b) ^ (c - d)) != 0 {}
+  while (a - b | 0) != (c - d | 0) {}
+  while (a - b | 1) != (c - d | 1) {}
+}
+", "
+(function() {
+  test = function(a, b, c, d) {
+    for (; a - b ^ c - d;) {
+    }
+
+    for (; a - b ^ c - d;) {
+    }
+
+    for (; a - b ^ c - d;) {
+    }
+
+    for (; (a - b | 1) ^ (c - d | 1);) {
+    }
+  };
+})();
+").jsMangle
+
   }
 }
