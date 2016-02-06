@@ -7777,5 +7777,22 @@ def bar(x int) void { return null }
 ", "
 ")
 
+# Check for type context with the "??" operator
+test("
+class Foo {}
+
+namespace Foo {
+  const FOO = new
+}
+
+def test(foo Foo) {
+  (foo ?? .FOO) + 2
+}
+", "
+<stdin>:8:17: error: \"+\" is not declared on type \"Foo\"
+  (foo ?? .FOO) + 2
+                ^
+")
+
   }
 }

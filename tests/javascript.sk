@@ -2301,7 +2301,7 @@ def main(foo Foo) {
     foo != null ? foo : bar();
     foo.x != null ? foo.x : foo.x;
     (ref = bar()).x != null ? ref.x : bar().x;
-    (ref1 = bar()).x != null ? ref1.x : (ref2 = bar()) != null ? ref2 : foo.x != null ? foo.x : foo;
+    (ref2 = bar()).x != null ? ref2.x : (ref1 = bar()) != null ? ref1 : foo.x != null ? foo.x : foo;
   };
 
   function Foo() {

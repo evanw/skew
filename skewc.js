@@ -20482,6 +20482,7 @@
     // Special-case the "??" operator
     if (kind == Skew.NodeKind.NULL_JOIN) {
       this._resolveAsParameterizedExpressionWithTypeContext(left, scope, context);
+      this._resolveAsParameterizedExpressionWithTypeContext(right, scope, context != null ? context : left.resolvedType);
       var test = Skew.Node.createBinary(Skew.NodeKind.NOT_EQUAL, this._extractExpressionForAssignment(left, scope), new Skew.Node(Skew.NodeKind.NULL)).withRange(left.range);
       node.become(Skew.Node.createHook(test, left.remove(), right.remove()).withRange(node.range).withFlags(Skew.NodeFlags.WAS_NULL_JOIN));
       this._resolveAsParameterizedExpressionWithTypeContext(node, scope, context);
