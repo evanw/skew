@@ -108,6 +108,60 @@ namespace Skew.Tests {
     }
   }
 
+  class CompletionTest : Unit.Test {
+    var _input string
+    var _line int
+    var _column int
+    var _expected string
+
+    over run {
+      rename(compactWhitespace(_input))
+      var log = Log.new
+      var source = Source.new("<stdin>", _input)
+      var index = source.lineColumnToIndex(_line, _column)
+
+      if index == -1 {
+        expectString(trimNewlines(_expected), "error: The location \"\(_line):\(_column)\" could not be found in the input")
+      }
+
+      else {
+        var options = CompilerOptions.new
+        options.stopAfterResolve = true
+        options.completionContext = CompletionContext.new(source, index)
+        compile(log, options, [source])
+
+        var builder = StringBuilder.new
+        var range = options.completionContext.range
+        builder.append(trimNewlines(log.toString))
+
+        if range != null {
+          var formatted = range.format(0)
+          var lastSpace = formatted.range.lastIndexOf(" ")
+          var indent = lastSpace != -1 ? formatted.range.slice(0, lastSpace + 1) : ""
+          builder.append("\n\(range.locationString): completions:\n\(formatted.line)\n\(formatted.range)")
+
+          for symbol in options.completionContext.completions {
+            builder.append("\n\(indent)[\(symbol.name)]")
+
+            var type = IDE.completionType(symbol)
+            if type != null {
+              builder.append(" # \"\(IDE.completionType(symbol))\"")
+            }
+
+            if symbol.comments != null {
+              var nested = "\n" + indent + " ".repeat(symbol.name.count + 2) + " #"
+              for comment in symbol.comments {
+                builder.append(nested + (comment.endsWith("\n") ? comment.slice(0, comment.count - 1) : comment))
+              }
+            }
+          }
+        }
+
+        expectString(trimNewlines(_expected), builder.toString)
+      }
+    }
+  }
+
   class FormatTest : Unit.Test {
     over run {
       rename(compactWhitespace(_input))
@@ -169,6 +223,10 @@ namespace Skew.Tests {
 
   def testIDE(input string, callback fn(IDETest, fn(string, string))) IDETest {
     return IDETest.new(trimNewlines(input), callback)
+  }
+
+  def testCompletion(input string, line int, column int, expected string) CompletionTest {
+    return CompletionTest.new(trimNewlines(input), line, column, expected)
   }
 
   def test(name string, callback fn(fn(string, string))) SimpleTest {

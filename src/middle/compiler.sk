@@ -19,6 +19,23 @@ namespace Skew {
     const value Range
   }
 
+  class CompletionContext {
+    const source Source
+    const index int
+    const _completions IntMap<Symbol> = {}
+    var range Range = null
+
+    def completions List<Symbol> {
+      var values = _completions.values
+      values.sort(Symbol.SORT_BY_NAME)
+      return values
+    }
+
+    def addCompletion(symbol Symbol) {
+      _completions[symbol.id] = symbol
+    }
+  }
+
   class CompilerOptions {
     var defines StringMap<Define> = {}
     var foldAllConstants = false
@@ -29,6 +46,7 @@ namespace Skew {
     var jsMinify = false
     var jsSourceMap = false
     var stopAfterResolve = false
+    var completionContext CompletionContext = null
     var verbose = false
     var outputDirectory string = null
     var outputFile string = null

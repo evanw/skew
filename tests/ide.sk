@@ -620,5 +620,274 @@ class Nope {
   expect("<stdin>:2:7, <stdin>:6:7, <stdin>:10:7", ide.renameQuery(1, 6))
 })
 
+# Completion: variable type
+testCompletion("
+var x i
+var y = 0
+", 0, 7, "
+<stdin>:1:7: error: \"i\" is not declared
+var x i
+      ^
+<stdin>:1:7: completions:
+var x i
+      ^
+      [int]
+")
+
+# Completion: variable inside instance function
+testCompletion("
+class Foo {
+  var bar = 0
+
+  def baz {
+    ba
+  }
+}
+", 4, 6, "
+<stdin>:5:5: error: \"ba\" is not declared, did you mean \"bar\"?
+    ba
+    ~~
+<stdin>:2:7: note: \"bar\" is defined here
+  var bar = 0
+      ~~~
+<stdin>:5:5: completions:
+    ba
+    ~~
+    [bar] # \"int\"
+    [baz] # \"()\"
+")
+
+# Completion: global inside instance function
+testCompletion("
+class Foo {
+  var bar = 0
+
+  def baz {
+    n
+  }
+}
+
+namespace Foo {
+  var nox = 0
+}
+", 4, 5, "
+<stdin>:5:5: error: \"n\" is not declared
+    n
+    ^
+<stdin>:5:5: completions:
+    n
+    ^
+    [new] # \"() Foo\"
+    [nox] # \"int\"
+")
+
+# Completion: instance inside global function
+testCompletion("
+class Foo {
+  var bar = 0
+}
+
+namespace Foo {
+  def foo {
+    ba
+  }
+
+  var baz = 0
+}
+", 6, 6, "
+<stdin>:7:5: error: \"ba\" is not declared, did you mean \"baz\"?
+    ba
+    ~~
+<stdin>:10:7: note: \"baz\" is defined here
+  var baz = 0
+      ~~~
+<stdin>:7:5: completions:
+    ba
+    ~~
+    [baz] # \"int\"
+")
+
+# Completion: multi-level instance check
+testCompletion("
+class Foo {
+  var bar = 0
+
+  class Bar {
+    var baz = 0
+
+    def foo {
+      ba
+    }
+  }
+
+  namespace Bar {
+    var ban = 0
+  }
+}
+
+namespace Foo {
+  var bax = 0
+}
+
+var bat = 0
+", 7, 8, "
+<stdin>:8:7: error: \"ba\" is not declared, did you mean \"bat\"?
+      ba
+      ~~
+<stdin>:21:5: note: \"bat\" is defined here
+var bat = 0
+    ~~~
+<stdin>:8:7: completions:
+      ba
+      ~~
+      [ban] # \"int\"
+      [bat] # \"int\"
+      [bax] # \"int\"
+      [baz] # \"int\"
+")
+
+# Completion: empty dot access
+testCompletion("
+def main(foo Foo) {
+  foo.
+}
+
+class Foo {
+  var foo = 0
+  var bar = 0
+  var baz = 0
+}
+", 1, 6, "
+<stdin>:2:7: error: Expected identifier but found newline
+  foo.
+      ^
+<stdin>:2:7: completions:
+  foo.
+      ^
+      [bar] # \"int\"
+      [baz] # \"int\"
+      [foo] # \"int\"
+")
+
+# Completion: partial dot access
+testCompletion("
+def main(foo Foo) {
+  foo.bar
+}
+
+class Foo {
+  var foo = 0
+  var bar = 0
+  var baz = 0
+}
+", 1, 6, "
+<stdin>:2:3: warning: Unused expression
+  foo.bar
+  ~~~~~~~
+<stdin>:2:7: completions:
+  foo.bar
+      ~~~
+      [bar] # \"int\"
+      [baz] # \"int\"
+      [foo] # \"int\"
+")
+
+# Completion: partial dot access
+testCompletion("
+def main(foo Foo) {
+  foo.bar
+}
+
+class Foo {
+  var foo = 0
+  var bar = 0
+  var baz = 0
+}
+", 1, 8, "
+<stdin>:2:3: warning: Unused expression
+  foo.bar
+  ~~~~~~~
+<stdin>:2:7: completions:
+  foo.bar
+      ~~~
+      [bar] # \"int\"
+      [baz] # \"int\"
+")
+
+# Completion: dot access
+testCompletion("
+def main(foo Foo) {
+  foo.bar
+}
+
+class Foo {
+  var foo = 0
+  var bar = 0
+  var baz = 0
+}
+", 1, 9, "
+<stdin>:2:3: warning: Unused expression
+  foo.bar
+  ~~~~~~~
+<stdin>:2:7: completions:
+  foo.bar
+      ~~~
+      [bar] # \"int\"
+")
+
+# Completion: global dot access
+testCompletion("
+def main {
+  Foo.
+}
+
+class Foo {
+  var foo = 0
+  var bar = 0
+}
+
+namespace Foo {
+  var baz = 0
+}
+", 1, 6, "
+<stdin>:2:7: error: Expected identifier but found newline
+  Foo.
+      ^
+<stdin>:2:7: completions:
+  Foo.
+      ^
+      [baz] # \"int\"
+      [new] # \"() Foo\"
+")
+
+# Completion: comments
+testCompletion("
+# This is the
+# first paragraph
+# of text.
+#
+# This is the
+# second paragraph
+# of text.
+def main {
+  ma
+}
+", 8, 4, "
+<stdin>:9:3: error: \"ma\" is not declared
+  ma
+  ~~
+<stdin>:9:3: completions:
+  ma
+  ~~
+  [main] # \"()\"
+         # This is the
+         # first paragraph
+         # of text.
+         #
+         # This is the
+         # second paragraph
+         # of text.
+")
+
   }
 }

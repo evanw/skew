@@ -247,9 +247,9 @@ namespace Skew.API {
           if source.name == name {
             var index = source.lineColumnToIndex(line, column)
             if index != -1 && result != null && result.global != null {
-              var renameQuery = IDE.RenameQuery.new(source, index)
-              renameQuery.run(result.global)
-              ranges = renameQuery.ranges
+              var query = IDE.RenameQuery.new(source, index)
+              query.run(result.global)
+              ranges = query.ranges
             }
             break
           }
@@ -260,7 +260,46 @@ namespace Skew.API {
         "type": "rename-query",
         "id": message.id,
         "source": name,
-        "ranges": ranges.map<dynamic>(rangeToJSON),
+        "ranges": ranges == null ? null : ranges.map<dynamic>(rangeToJSON),
+      }
+    }
+
+    var handleCompletionQuery = (message dynamic) dynamic => {
+      var name string = message.source + ""
+      var line int = message.line | 0
+      var column int = message.column | 0
+      var range Range = null
+      var completions List<Symbol> = null
+      var inputs List<Source> = []
+      var log = Log.new
+      var options = parseOptions(message, inputs)
+
+      # Completion queries involve compiling the source code again because it requires scope information
+      for input in inputs {
+        if input.name == name {
+          var index = input.lineColumnToIndex(line, column)
+          if index != -1 {
+            options.stopAfterResolve = true
+            options.completionContext = CompletionContext.new(input, index)
+            compile(log, options, inputs)
+            range = options.completionContext.range
+            completions = options.completionContext.completions
+          }
+          break
+        }
+      }
+
+      return {
+        "type": "completion-query",
+        "id": message.id,
+        "source": name,
+        "range": rangeToJSON(range),
+        "completions": completions == null ? null : completions.map<dynamic>(symbol => ({
+          "name": symbol.name,
+          "kind": symbol.kind.toString,
+          "type": IDE.completionType(symbol),
+          "comments": symbol.comments?.clone,
+        })),
       }
     }
 
@@ -271,6 +310,7 @@ namespace Skew.API {
         case "definition-query" { return handleDefinitionQuery(message) }
         case "symbols-query" { return handleSymbolsQuery(message) }
         case "rename-query" { return handleRenameQuery(message) }
+        case "completion-query" { return handleCompletionQuery(message) }
         default { throw dynamic.Error.new("Unexpected message type '\(message.type)'") }
       }
     }
@@ -281,6 +321,7 @@ namespace Skew.API {
       "definitionQuery": handleDefinitionQuery,
       "symbolsQuery": handleSymbolsQuery,
       "renameQuery": handleRenameQuery,
+      "completionQuery": handleCompletionQuery,
       "message": handleMessage,
     }
   }

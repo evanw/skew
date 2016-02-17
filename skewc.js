@@ -12846,6 +12846,10 @@
     return this.source.name + ':' + (location.line + 1 | 0).toString() + ':' + (location.column + 1 | 0).toString();
   };
 
+  Skew.Range.prototype.touches = function(index) {
+    return this.start <= index && index <= this.end;
+  };
+
   Skew.Range.prototype.format = function(maxLength) {
     assert(this.source != null);
     var start = this.source.indexToLineColumn(this.start);
@@ -13289,6 +13293,7 @@
     self.jsMinify = false;
     self.jsSourceMap = false;
     self.stopAfterResolve = false;
+    self.completionContext = null;
     self.verbose = false;
     self.outputDirectory = null;
     self.outputFile = null;
@@ -16884,7 +16889,11 @@
   Skew.ResolvingPass.prototype.run = function(context) {
     context.cache.loadGlobals(context.log, context.global);
     new Skew.Resolving.Resolver(context.global, context.options, in_StringMap.clone(context.options.defines), context.cache, context.log).resolve();
-    context.isResolvePassComplete = true;
+
+    // The tree isn't fully resolved for speed reasons if code completion is requested
+    if (context.options.completionContext == null) {
+      context.isResolvePassComplete = true;
+    }
   };
 
   Skew.Resolving = {};
@@ -18087,6 +18096,13 @@
             }
           }
         }
+      }
+
+      // Skip resolving irrelevant function bodies to speed up code completion
+      var context = this._options.completionContext;
+
+      if (context != null && block.range != null && block.range.source != context.source) {
+        return;
       }
 
       this._resolveNode(block, scope, null);
@@ -19657,6 +19673,81 @@
     return hook;
   };
 
+  Skew.Resolving.Resolver.prototype._checkForMemberCompletions = function(type, range, name, check) {
+    assert(type != null);
+    var completionContext = this._options.completionContext;
+
+    if (completionContext != null && range != null && range.source == completionContext.source && range.touches(completionContext.index) && type.kind == Skew.TypeKind.SYMBOL && Skew.in_SymbolKind.isObject(type.symbol.kind)) {
+      var prefix = in_string.slice2(name, 0, completionContext.index - range.start | 0);
+      var object = type.symbol.asObjectSymbol();
+      this._initializeSymbol(object);
+      completionContext.range = range;
+
+      for (var i = 0, list = in_StringMap.values(object.members), count = list.length; i < count; i = i + 1 | 0) {
+        var member = in_List.get(list, i);
+        var isOnInstances = Skew.in_SymbolKind.isOnInstances(member.kind);
+
+        if ((check == Skew.Resolving.Resolver.CompletionCheck.INSTANCE_ONLY ? isOnInstances : check == Skew.Resolving.Resolver.CompletionCheck.GLOBAL_ONLY ? !isOnInstances : true) && in_string.startsWith(member.name, prefix)) {
+          this._initializeSymbol(member);
+          completionContext.addCompletion(member);
+        }
+      }
+    }
+  };
+
+  Skew.Resolving.Resolver.prototype._checkForScopeCompletions = function(scope, range, name, thisObject) {
+    var completionContext = this._options.completionContext;
+
+    if (completionContext != null && range != null && range.source == completionContext.source && range.touches(completionContext.index)) {
+      var prefix = in_string.slice2(name, 0, completionContext.index - range.start | 0);
+      completionContext.range = range;
+
+      while (scope != null) {
+        switch (scope.kind()) {
+          case Skew.ScopeKind.OBJECT: {
+            var object = scope.asObjectScope().symbol;
+
+            for (var i = 0, list = in_StringMap.values(object.members), count = list.length; i < count; i = i + 1 | 0) {
+              var symbol = in_List.get(list, i);
+
+              if (in_string.startsWith(symbol.name, prefix) && (!Skew.in_SymbolKind.isOnInstances(symbol.kind) || object == thisObject)) {
+                this._initializeSymbol(symbol);
+                completionContext.addCompletion(symbol);
+              }
+            }
+            break;
+          }
+
+          case Skew.ScopeKind.FUNCTION: {
+            for (var i1 = 0, list1 = in_StringMap.values(scope.asFunctionScope().parameters), count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+              var symbol1 = in_List.get(list1, i1);
+
+              if (in_string.startsWith(symbol1.name, prefix)) {
+                this._initializeSymbol(symbol1);
+                completionContext.addCompletion(symbol1);
+              }
+            }
+            break;
+          }
+
+          case Skew.ScopeKind.LOCAL: {
+            for (var i2 = 0, list2 = in_StringMap.values(scope.asLocalScope().locals), count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
+              var symbol2 = in_List.get(list2, i2);
+
+              if (in_string.startsWith(symbol2.name, prefix)) {
+                this._initializeSymbol(symbol2);
+                completionContext.addCompletion(symbol2);
+              }
+            }
+            break;
+          }
+        }
+
+        scope = scope.parent;
+      }
+    }
+  };
+
   Skew.Resolving.Resolver.prototype._resolveDot = function(node, scope, context) {
     var hook = this._sinkNullDotIntoHook(node, scope, context);
 
@@ -19669,6 +19760,19 @@
     var target = node.dotTarget();
     var name = node.asString();
 
+    // Resolve the target if present
+    if (target != null) {
+      this._resolveNode(target, scope, null);
+
+      // Support IDE code completion
+      this._checkForMemberCompletions(target.resolvedType, node.internalRange, name, target.isType() ? Skew.Resolving.Resolver.CompletionCheck.GLOBAL_ONLY : Skew.Resolving.Resolver.CompletionCheck.INSTANCE_ONLY);
+    }
+
+    // Ignore parse errors (the syntax tree is kept around for code completion)
+    if (name == '') {
+      return;
+    }
+
     // Infer the target from the type context if it's omitted
     if (target == null) {
       if (context == null) {
@@ -19679,10 +19783,6 @@
       target = new Skew.Node(Skew.NodeKind.TYPE).withType(context);
       node.appendChild(target);
       assert(node.dotTarget() == target);
-    }
-
-    else {
-      this._resolveNode(target, scope, null);
     }
 
     // Search for a setter first, then search for a normal member
@@ -20069,19 +20169,27 @@
 
   Skew.Resolving.Resolver.prototype._resolveName = function(node, scope) {
     var enclosingFunction = scope.findEnclosingFunction();
+    var thisVariable = enclosingFunction != null ? enclosingFunction.symbol.$this : null;
     var name = node.asString();
+
+    // Support IDE code completion
+    this._checkForScopeCompletions(scope, node.range, name, thisVariable != null ? enclosingFunction.symbol.parent.asObjectSymbol() : null);
+
+    if (thisVariable != null) {
+      this._checkForMemberCompletions(thisVariable.resolvedType, node.range, name, Skew.Resolving.Resolver.CompletionCheck.NORMAL);
+    }
+
     var symbol = scope.find(name, Skew.Resolving.Resolver._shouldCheckForSetter(node) ? Skew.ScopeSearch.ALSO_CHECK_FOR_SETTER : Skew.ScopeSearch.NORMAL);
 
     if (symbol == null) {
-      var canAccessSelf = enclosingFunction != null && enclosingFunction.symbol.$this != null;
       this._reportGuardMergingFailure(node);
 
-      if (name == 'this' && canAccessSelf) {
+      if (name == 'this' && thisVariable != null) {
         this._log.semanticErrorUndeclaredSelfSymbol(node.range, name);
       }
 
       else {
-        var correction = scope.findWithFuzzyMatching(name, node.shouldExpectType() ? Skew.FuzzySymbolKind.TYPE_ONLY : canAccessSelf ? Skew.FuzzySymbolKind.EVERYTHING : Skew.FuzzySymbolKind.GLOBAL_ONLY, Skew.FuzzyScopeSearch.SELF_AND_PARENTS);
+        var correction = scope.findWithFuzzyMatching(name, node.shouldExpectType() ? Skew.FuzzySymbolKind.TYPE_ONLY : thisVariable != null ? Skew.FuzzySymbolKind.EVERYTHING : Skew.FuzzySymbolKind.GLOBAL_ONLY, Skew.FuzzyScopeSearch.SELF_AND_PARENTS);
         this._log.semanticErrorUndeclaredSymbol(node.range, name, correction == null ? null : enclosingFunction != null && Skew.Resolving.Resolver._isBaseGlobalReference(enclosingFunction.symbol.parent, correction) ? correction.fullName() : correction.name, correction != null ? correction.range : null);
       }
 
@@ -20114,11 +20222,9 @@
     var resolvedType = symbol.resolvedType;
 
     if (Skew.in_SymbolKind.isOnInstances(symbol.kind)) {
-      var variable = enclosingFunction != null ? enclosingFunction.symbol.$this : null;
-
-      if (variable != null && enclosingFunction.symbol.parent.asObjectSymbol().isSameOrHasBaseClass(symbol.parent)) {
-        node.become(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name)).appendChild(Skew.Node.createSymbolReference(variable)).withRange(node.range).withInternalRange(node.range));
-        resolvedType = this._cache.substitute(resolvedType, variable.resolvedType.environment);
+      if (thisVariable != null && enclosingFunction.symbol.parent.asObjectSymbol().isSameOrHasBaseClass(symbol.parent)) {
+        node.become(new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(name)).appendChild(Skew.Node.createSymbolReference(thisVariable)).withRange(node.range).withInternalRange(node.range));
+        resolvedType = this._cache.substitute(resolvedType, thisVariable.resolvedType.environment);
       }
 
       else {
@@ -20149,8 +20255,8 @@
           }
 
           case Skew.ScopeKind.VARIABLE: {
-            var variable1 = parent.asVariableScope().symbol;
-            isValid = variable1.kind == Skew.SymbolKind.VARIABLE_INSTANCE && variable1.parent == symbol.parent;
+            var variable = parent.asVariableScope().symbol;
+            isValid = variable.kind == Skew.SymbolKind.VARIABLE_INSTANCE && variable.parent == symbol.parent;
             break label;
           }
         }
@@ -21080,6 +21186,12 @@
 
   Skew.Resolving.Resolver._needsTypeContext = function(node) {
     return node.kind == Skew.NodeKind.DOT && node.dotTarget() == null || node.kind == Skew.NodeKind.HOOK && Skew.Resolving.Resolver._needsTypeContext(node.hookTrue()) && Skew.Resolving.Resolver._needsTypeContext(node.hookFalse()) || Skew.in_NodeKind.isInitializer(node.kind);
+  };
+
+  Skew.Resolving.Resolver.CompletionCheck = {
+    NORMAL: 0,
+    INSTANCE_ONLY: 1,
+    GLOBAL_ONLY: 2
   };
 
   Skew.Resolving.Resolver.GuardMergingFailure = function() {
@@ -23327,11 +23439,12 @@
   Skew.Parsing.forbiddenGroupDescription = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.Parsing.ForbiddenGroup.ASSIGN, 'value types are not supported by the language'), Skew.Parsing.ForbiddenGroup.COMPARE, 'it\'s automatically implemented using the "<=>" operator (customize the "<=>" operator instead)'), Skew.Parsing.ForbiddenGroup.EQUAL, "that wouldn't work with generics, which are implemented with type erasure"), Skew.Parsing.ForbiddenGroup.LOGICAL, 'of its special short-circuit evaluation behavior');
   Skew.Parsing.assignmentOperators = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert({}, Skew.TokenKind.ASSIGN, Skew.NodeKind.ASSIGN), Skew.TokenKind.ASSIGN_BITWISE_AND, Skew.NodeKind.ASSIGN_BITWISE_AND), Skew.TokenKind.ASSIGN_BITWISE_OR, Skew.NodeKind.ASSIGN_BITWISE_OR), Skew.TokenKind.ASSIGN_BITWISE_XOR, Skew.NodeKind.ASSIGN_BITWISE_XOR), Skew.TokenKind.ASSIGN_DIVIDE, Skew.NodeKind.ASSIGN_DIVIDE), Skew.TokenKind.ASSIGN_MINUS, Skew.NodeKind.ASSIGN_SUBTRACT), Skew.TokenKind.ASSIGN_MULTIPLY, Skew.NodeKind.ASSIGN_MULTIPLY), Skew.TokenKind.ASSIGN_PLUS, Skew.NodeKind.ASSIGN_ADD), Skew.TokenKind.ASSIGN_POWER, Skew.NodeKind.ASSIGN_POWER), Skew.TokenKind.ASSIGN_REMAINDER, Skew.NodeKind.ASSIGN_REMAINDER), Skew.TokenKind.ASSIGN_SHIFT_LEFT, Skew.NodeKind.ASSIGN_SHIFT_LEFT), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, Skew.NodeKind.ASSIGN_SHIFT_RIGHT), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, Skew.NodeKind.ASSIGN_UNSIGNED_SHIFT_RIGHT);
   Skew.Parsing.dotInfixParselet = function(context, left) {
-    context.next();
+    var token = context.next();
     var range = context.current().range;
 
     if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
-      return context.createParseError();
+      // Create a empty range instead of using createParseError so IDE code completion still works
+      range = new Skew.Range(token.range.source, token.range.end, token.range.end);
     }
 
     return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(range.toString())).appendChild(left).withRange(context.spanSince(left.range)).withInternalRange(range);
