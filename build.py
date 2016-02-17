@@ -172,13 +172,13 @@ def rmtree(path):
   except:
     pass
 
-def run_js(source, args):
+def run_js(source, args, exit_on_failure=True):
   global node_binary
 
   if node_binary is None:
     node_binary = 'nodejs' if run(['which', 'nodejs'], exit_on_failure=False) == 0 else 'node'
 
-  run([node_binary, source] + args)
+  run([node_binary, source] + args, exit_on_failure=exit_on_failure)
 
 def run_cs(source, args):
   run(['mono', '--debug', source] + args)
@@ -186,8 +186,8 @@ def run_cs(source, args):
 def run_cpp(source, args):
   run([source] + args)
 
-def skewc_js(source, target, sources=None, release=False):
-  run_js(source, sources + FLAGS + ['--output-file=' + target] + (['--release'] if release else []))
+def skewc_js(source, target, sources=None, release=False, exit_on_failure=True):
+  run_js(source, sources + FLAGS + ['--output-file=' + target] + (['--release'] if release else []), exit_on_failure=exit_on_failure)
 
 def skewc_cs(source, target, sources=None, release=False):
   run_cs(source, sources + FLAGS + ['--output-file=' + target] + (['--release'] if release else []))
@@ -329,7 +329,7 @@ def benchmark():
 @job
 def watch():
   mkdir('out')
-  watch_folder('src', lambda: skewc_js('skewc.js', 'out/skew-api.js', sources=SOURCES_API))
+  watch_folder('src', lambda: skewc_js('skewc.js', 'out/skew-api.js', sources=SOURCES_API, exit_on_failure=False))
 
 @job
 def flex():
