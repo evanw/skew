@@ -1499,10 +1499,11 @@ namespace Skew.Parsing {
   }
 
   var dotInfixParselet = (context ParserContext, left Node) Node => {
-    context.next
+    var token = context.next
     var range = context.current.range
     if !context.expect(.IDENTIFIER) {
-      return context.createParseError
+      # Create a empty range instead of using createParseError so IDE code completion still works
+      range = Range.new(token.range.source, token.range.end, token.range.end)
     }
     return Node.createDot(left, range.toString).withRange(context.spanSince(left.range)).withInternalRange(range)
   }

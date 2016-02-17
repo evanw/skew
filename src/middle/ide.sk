@@ -451,4 +451,28 @@ namespace Skew.IDE {
       }
     }
   }
+
+  def completionType(symbol Symbol) string {
+    if symbol.kind.isFunction {
+      var text = "("
+      var function = symbol.asFunctionSymbol
+      for argument in function.arguments {
+        if text != "(" {
+          text += ", "
+        }
+        text += "\(argument.name) \(argument.resolvedType)"
+      }
+      text += ")"
+      if function.resolvedType.returnType != null {
+        text += " \(function.resolvedType.returnType)"
+      }
+      return text
+    }
+
+    if symbol.kind.isVariable {
+      return symbol.resolvedType.toString
+    }
+
+    return null
+  }
 }

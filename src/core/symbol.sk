@@ -266,10 +266,19 @@ namespace Skew {
   }
 
   namespace Symbol {
+    var _nextID = 0
+
     const SORT_BY_ID = (a Symbol, b Symbol) => a.id <=> b.id
     const SORT_OBJECTS_BY_ID = (a ObjectSymbol, b ObjectSymbol) => a.id <=> b.id
     const SORT_VARIABLES_BY_ID = (a VariableSymbol, b VariableSymbol) => a.id <=> b.id
-    var _nextID = 0
+
+    const SORT_BY_NAME = (a Symbol, b Symbol) int => {
+      var delta = a.name <=> b.name
+      if delta == 0 {
+        return a.id <=> b.id
+      }
+      return delta
+    }
 
     def _createID int {
       return ++_nextID

@@ -11,7 +11,11 @@ namespace Skew {
     over run(context PassContext) {
       context.cache.loadGlobals(context.log, context.global)
       Resolving.Resolver.new(context.global, context.options, context.options.defines.clone, context.cache, context.log).resolve
-      context.isResolvePassComplete = true
+
+      # The tree isn't fully resolved for speed reasons if code completion is requested
+      if context.options.completionContext == null {
+        context.isResolvePassComplete = true
+      }
     }
   }
 }
@@ -1053,6 +1057,12 @@ namespace Skew.Resolving {
               }
             }
           }
+        }
+
+        # Skip resolving irrelevant function bodies to speed up code completion
+        var context = _options.completionContext
+        if context != null && block.range != null && block.range.source != context.source {
+          return
         }
 
         _resolveNode(block, scope, null)
@@ -2315,6 +2325,78 @@ namespace Skew.Resolving {
       return hook
     }
 
+    enum CompletionCheck {
+      NORMAL
+      INSTANCE_ONLY
+      GLOBAL_ONLY
+    }
+
+    def _checkForMemberCompletions(type Type, range Range, name string, check CompletionCheck) {
+      assert(type != null)
+      var completionContext = _options.completionContext
+
+      if completionContext != null && range != null && range.source == completionContext.source &&
+          range.touches(completionContext.index) && type.kind == .SYMBOL && type.symbol.kind.isObject {
+        var prefix = name.slice(0, completionContext.index - range.start)
+        var object = type.symbol.asObjectSymbol
+
+        _initializeSymbol(object)
+        completionContext.range = range
+
+        for member in object.members.values {
+          var isOnInstances = member.kind.isOnInstances
+          if (check == .INSTANCE_ONLY ? isOnInstances : check == .GLOBAL_ONLY ? !isOnInstances : true) && member.name.startsWith(prefix) {
+            _initializeSymbol(member)
+            completionContext.addCompletion(member)
+          }
+        }
+      }
+    }
+
+    def _checkForScopeCompletions(scope Scope, range Range, name string, thisObject ObjectSymbol) {
+      var completionContext = _options.completionContext
+
+      if completionContext != null && range != null && range.source == completionContext.source && range.touches(completionContext.index) {
+        var prefix = name.slice(0, completionContext.index - range.start)
+
+        completionContext.range = range
+
+        while scope != null {
+          switch scope.kind {
+            case .OBJECT {
+              var object = scope.asObjectScope.symbol
+              for symbol in object.members.values {
+                if symbol.name.startsWith(prefix) && (!symbol.kind.isOnInstances || object == thisObject) {
+                  _initializeSymbol(symbol)
+                  completionContext.addCompletion(symbol)
+                }
+              }
+            }
+
+            case .FUNCTION {
+              for symbol in scope.asFunctionScope.parameters.values {
+                if symbol.name.startsWith(prefix) {
+                  _initializeSymbol(symbol)
+                  completionContext.addCompletion(symbol)
+                }
+              }
+            }
+
+            case .LOCAL {
+              for symbol in scope.asLocalScope.locals.values {
+                if symbol.name.startsWith(prefix) {
+                  _initializeSymbol(symbol)
+                  completionContext.addCompletion(symbol)
+                }
+              }
+            }
+          }
+
+          scope = scope.parent
+        }
+      }
+    }
+
     def _resolveDot(node Node, scope Scope, context Type) {
       var hook = _sinkNullDotIntoHook(node, scope, context)
       if hook != null {
@@ -2326,6 +2408,19 @@ namespace Skew.Resolving {
       var target = node.dotTarget
       var name = node.asString
 
+      # Resolve the target if present
+      if target != null {
+        _resolveNode(target, scope, null)
+
+        # Support IDE code completion
+        _checkForMemberCompletions(target.resolvedType, node.internalRange, name, target.isType ? .GLOBAL_ONLY : .INSTANCE_ONLY)
+      }
+
+      # Ignore parse errors (the syntax tree is kept around for code completion)
+      if name == "" {
+        return
+      }
+
       # Infer the target from the type context if it's omitted
       if target == null {
         if context == null {
@@ -2335,8 +2430,6 @@ namespace Skew.Resolving {
         target = Node.createType(context)
         node.appendChild(target)
         assert(node.dotTarget == target)
-      } else {
-        _resolveNode(target, scope, null)
       }
 
       # Search for a setter first, then search for a normal member
@@ -2677,19 +2770,26 @@ namespace Skew.Resolving {
 
     def _resolveName(node Node, scope Scope) {
       var enclosingFunction = scope.findEnclosingFunction
+      var thisVariable = enclosingFunction?.symbol.this
       var name = node.asString
+
+      # Support IDE code completion
+      _checkForScopeCompletions(scope, node.range, name, thisVariable != null ? enclosingFunction.symbol.parent.asObjectSymbol : null)
+      if thisVariable != null {
+        _checkForMemberCompletions(thisVariable.resolvedType, node.range, name, .NORMAL)
+      }
+
       var symbol = scope.find(name, _shouldCheckForSetter(node) ? .ALSO_CHECK_FOR_SETTER : .NORMAL)
 
       if symbol == null {
-        var canAccessSelf = enclosingFunction != null && enclosingFunction.symbol.this != null
         _reportGuardMergingFailure(node)
 
-        if name == "this" && canAccessSelf {
+        if name == "this" && thisVariable != null {
           _log.semanticErrorUndeclaredSelfSymbol(node.range, name)
         }
 
         else {
-          var correction = scope.findWithFuzzyMatching(name, node.shouldExpectType ? .TYPE_ONLY : canAccessSelf ? .EVERYTHING : .GLOBAL_ONLY, .SELF_AND_PARENTS)
+          var correction = scope.findWithFuzzyMatching(name, node.shouldExpectType ? .TYPE_ONLY : thisVariable != null ? .EVERYTHING : .GLOBAL_ONLY, .SELF_AND_PARENTS)
           _log.semanticErrorUndeclaredSymbol(node.range, name, correction == null ? null : enclosingFunction != null &&
             _isBaseGlobalReference(enclosingFunction.symbol.parent, correction) ? correction.fullName : correction.name, correction?.range)
         }
@@ -2719,10 +2819,9 @@ namespace Skew.Resolving {
       # Automatically insert "self." before instance symbols
       var resolvedType = symbol.resolvedType
       if symbol.kind.isOnInstances {
-        var variable = enclosingFunction?.symbol.this
-        if variable != null && enclosingFunction.symbol.parent.asObjectSymbol.isSameOrHasBaseClass(symbol.parent) {
-          node.become(Node.createDot(Node.createSymbolReference(variable), name).withRange(node.range).withInternalRange(node.range))
-          resolvedType = _cache.substitute(resolvedType, variable.resolvedType.environment)
+        if thisVariable != null && enclosingFunction.symbol.parent.asObjectSymbol.isSameOrHasBaseClass(symbol.parent) {
+          node.become(Node.createDot(Node.createSymbolReference(thisVariable), name).withRange(node.range).withInternalRange(node.range))
+          resolvedType = _cache.substitute(resolvedType, thisVariable.resolvedType.environment)
         } else {
           _log.semanticErrorMemberUnexpectedInstance(node.range, symbol.name)
         }
