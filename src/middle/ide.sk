@@ -484,4 +484,128 @@ namespace Skew.IDE {
 
     return null
   }
+
+  class SignatureQuery {
+    const source Source
+    const index int
+    var signature FunctionSymbol = null
+    var argumentIndex = -1
+
+    def signatureString string {
+      if signature == null {
+        return null
+      }
+
+      var text = "\(signature.isOver ? "over" : "def") \(signature.name)("
+      for i in 0..signature.arguments.count {
+        var argument = signature.arguments[i]
+        if i != 0 {
+          text += ", "
+        }
+        text += "\(argument.name) \(argument.resolvedType)"
+      }
+      text += ")"
+      if signature.resolvedType.returnType != null {
+        text += " \(signature.resolvedType.returnType)"
+      }
+
+      return text
+    }
+
+    def argumentStrings List<string> {
+      var list List<string> = []
+      for argument in signature.arguments {
+        list.append("\(argument.name) \(argument.resolvedType)")
+      }
+      return list
+    }
+
+    def run(global ObjectSymbol) {
+      var findSignatureInSymbol fn(Symbol) bool
+      var findSignatureInObject fn(ObjectSymbol) bool
+      var findSignatureInFunction fn(FunctionSymbol) bool
+      var findSignatureInVariable fn(VariableSymbol) bool
+      var findSignatureInNode fn(Node) bool
+
+      findSignatureInSymbol = symbol => {
+        while true {
+          if symbol.annotations != null {
+            for node in symbol.annotations {
+              if findSignatureInNode(node) {
+                return true
+              }
+            }
+          }
+          if symbol.nextMergedSymbol == null {
+            return false
+          }
+          symbol = symbol.nextMergedSymbol
+        }
+      }
+
+      findSignatureInObject = symbol => {
+        return
+          findSignatureInSymbol(symbol) ||
+          symbol.objects.any(findSignatureInObject) ||
+          symbol.functions.any(findSignatureInFunction) ||
+          symbol.variables.any(findSignatureInVariable) ||
+          findSignatureInNode(symbol.extends) ||
+          symbol.implements != null && symbol.implements.any(findSignatureInNode)
+      }
+
+      findSignatureInFunction = symbol => {
+        if symbol.isAutomaticallyGenerated {
+          return false
+        }
+        return
+          findSignatureInSymbol(symbol) ||
+          symbol.arguments.any(findSignatureInVariable) ||
+          findSignatureInNode(symbol.block)
+      }
+
+      findSignatureInVariable = symbol => {
+        return
+          findSignatureInSymbol(symbol) ||
+          findSignatureInNode(symbol.value)
+      }
+
+      findSignatureInNode = node => {
+        if node != null {
+          var kind = node.kind
+
+          if kind == .VARIABLE {
+            return findSignatureInVariable(node.symbol.asVariableSymbol)
+          }
+
+          for child = node.firstChild; child != null; child = child.nextSibling {
+            if findSignatureInNode(child) {
+              return true
+            }
+          }
+
+          if kind == .CALL && node.symbol != null && node.internalRange != null && node.internalRange.source == source && node.internalRange.touches(index) {
+            signature = node.symbol.asFunctionSymbol
+
+            # Find the argument containing the query location, if any
+            if !signature.arguments.isEmpty {
+              argumentIndex = 0
+              var limit = signature.arguments.count
+              for child = node.callValue.nextSibling; child != null; child = child.nextSibling {
+                if child.range != null && index <= child.range.end || argumentIndex + 1 >= limit {
+                  break
+                }
+                argumentIndex++
+              }
+            }
+
+            return true
+          }
+        }
+
+        return false
+      }
+
+      findSignatureInObject(global)
+    }
+  }
 }

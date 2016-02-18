@@ -81,29 +81,67 @@ namespace Skew.Tests {
     }
 
     def tooltipQuery(line int, column int) string {
-      var query = IDE.SymbolQuery.new(_source, _source.lineColumnToIndex(line, column))
+      var index = _source.lineColumnToIndex(line, column)
+      if index == -1 {
+        return "error: The location \"\(line):\(column)\" could not be found in the input"
+      }
+
+      var query = IDE.SymbolQuery.new(_source, index)
       query.run(_result.global)
       if query.symbol != null {
         return query.generateTooltip
       }
+
       return ""
     }
 
     def definitionQuery(line int, column int) string {
-      var query = IDE.SymbolQuery.new(_source, _source.lineColumnToIndex(line, column))
+      var index = _source.lineColumnToIndex(line, column)
+      if index == -1 {
+        return "error: The location \"\(line):\(column)\" could not be found in the input"
+      }
+
+      var query = IDE.SymbolQuery.new(_source, index)
       query.run(_result.global)
       if query.symbol != null {
         return query.symbol.range.locationString
       }
+
       return ""
     }
 
     def renameQuery(line int, column int) string {
-      var query = IDE.RenameQuery.new(_source, _source.lineColumnToIndex(line, column))
+      var index = _source.lineColumnToIndex(line, column)
+      if index == -1 {
+        return "error: The location \"\(line):\(column)\" could not be found in the input"
+      }
+
+      var query = IDE.RenameQuery.new(_source, index)
       query.run(_result.global)
       if query.ranges != null {
         return ", ".join(query.ranges.map<string>(range => range.locationString))
       }
+
+      return ""
+    }
+
+    def signatureQuery(line int, column int) string {
+      var index = _source.lineColumnToIndex(line, column)
+      if index == -1 {
+        return "error: The location \"\(line):\(column)\" could not be found in the input"
+      }
+
+      var query = IDE.SignatureQuery.new(_source, index)
+      query.run(_result.global)
+      if query.signature != null {
+        var signature = query.signatureString
+        var argument = query.argumentStrings[query.argumentIndex]
+        var position = signature.indexOf(argument)
+        if position != -1 {
+          return "\(signature.slice(0, position))[\(argument)]\(signature.slice(position + argument.count))"
+        }
+      }
+
       return ""
     }
   }

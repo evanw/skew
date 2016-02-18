@@ -303,6 +303,42 @@ namespace Skew.API {
       }
     }
 
+    var handleSignatureQuery = (message dynamic) dynamic => {
+      var name string = message.source + ""
+      var line int = message.line | 0
+      var column int = message.column | 0
+      var signature string = null
+      var arguments List<string> = null
+      var argumentIndex = -1
+
+      if inputs != null {
+        for source in inputs {
+          if source.name == name {
+            var index = source.lineColumnToIndex(line, column)
+            if index != -1 && result != null && result.global != null {
+              var query = IDE.SignatureQuery.new(source, index)
+              query.run(result.global)
+              if query.signature != null {
+                signature = query.signatureString
+                arguments = query.argumentStrings
+                argumentIndex = query.argumentIndex
+              }
+            }
+            break
+          }
+        }
+      }
+
+      return {
+        "type": "signature-query",
+        "id": message.id,
+        "source": name,
+        "signature": signature,
+        "arguments": arguments,
+        "argumentIndex": argumentIndex,
+      }
+    }
+
     var handleMessage = (message dynamic) dynamic => {
       switch message.type {
         case "compile" { return handleCompile(message) }
@@ -311,6 +347,7 @@ namespace Skew.API {
         case "symbols-query" { return handleSymbolsQuery(message) }
         case "rename-query" { return handleRenameQuery(message) }
         case "completion-query" { return handleCompletionQuery(message) }
+        case "signature-query" { return handleSignatureQuery(message) }
         default { throw dynamic.Error.new("Unexpected message type '\(message.type)'") }
       }
     }
@@ -322,6 +359,7 @@ namespace Skew.API {
       "symbolsQuery": handleSymbolsQuery,
       "renameQuery": handleRenameQuery,
       "completionQuery": handleCompletionQuery,
+      "signatureQuery": handleSignatureQuery,
       "message": handleMessage,
     }
   }
