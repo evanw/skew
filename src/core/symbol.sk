@@ -453,6 +453,22 @@ namespace Skew {
       _bestMatch = null
     }
 
+    def _isBetterScore(score double, match Symbol) bool {
+      if score < _bestScore {
+        return true
+      }
+
+      # Do tie-breaking using a consistent ordering so that language targets
+      # with unordered maps (C++ for example) can iterate over symbols in an
+      # unspecified order for speed and still deterministically arrive at the
+      # same result.
+      if score == _bestScore && (_bestMatch == null || match.id < _bestMatch.id) {
+        return true
+      }
+
+      return false
+    }
+
     def include(match Symbol) {
       if _kind == .INSTANCE_ONLY && !match.kind.isOnInstances ||
           _kind == .GLOBAL_ONLY && match.kind.isOnInstances ||
@@ -462,7 +478,7 @@ namespace Skew {
       }
 
       var score = caseAwareLevenshteinEditDistance(_name, match.name)
-      if score <= _bestScore && score <= match.name.count * 0.5 {
+      if score <= match.name.count * 0.5 && _isBetterScore(score, match) {
         _bestScore = score
         _bestMatch = match
       }
