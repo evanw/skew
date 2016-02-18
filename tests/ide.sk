@@ -973,5 +973,18 @@ var foo F
         [Foo] # \"type\"
 ")
 
+# Signatures: test basic signature queries
+testIDE("
+def test(foo int, bar bool) double {
+  return test(foo, bar)
+}
+", (ide, expect) => {
+  expect("", ide.signatureQuery(1, 12))
+  expect("def test([foo int], bar bool) double", ide.signatureQuery(1, 13))
+  expect("def test([foo int], bar bool) double", ide.signatureQuery(1, 17))
+  expect("def test(foo int, [bar bool]) double", ide.signatureQuery(1, 18))
+  expect("def test(foo int, [bar bool]) double", ide.signatureQuery(1, 23))
+})
+
   }
 }
