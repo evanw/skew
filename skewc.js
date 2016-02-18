@@ -9650,6 +9650,22 @@
     this._bestMatch = null;
   };
 
+  Skew.FuzzySymbolMatcher.prototype._isBetterScore = function(score, match) {
+    if (score < this._bestScore) {
+      return true;
+    }
+
+    // Do tie-breaking using a consistent ordering so that language targets
+    // with unordered maps (C++ for example) can iterate over symbols in an
+    // unspecified order for speed and still deterministically arrive at the
+    // same result.
+    if (score == this._bestScore && (this._bestMatch == null || match.id < this._bestMatch.id)) {
+      return true;
+    }
+
+    return false;
+  };
+
   Skew.FuzzySymbolMatcher.prototype.include = function(match) {
     if (this._kind == Skew.FuzzySymbolKind.INSTANCE_ONLY && !Skew.in_SymbolKind.isOnInstances(match.kind) || this._kind == Skew.FuzzySymbolKind.GLOBAL_ONLY && Skew.in_SymbolKind.isOnInstances(match.kind) || this._kind == Skew.FuzzySymbolKind.TYPE_ONLY && !Skew.in_SymbolKind.isType(match.kind) || match.state == Skew.SymbolState.INITIALIZING) {
       return;
@@ -9657,7 +9673,7 @@
 
     var score = Skew.caseAwareLevenshteinEditDistance(this._name, match.name);
 
-    if (score <= this._bestScore && score <= match.name.length * 0.5) {
+    if (score <= match.name.length * 0.5 && this._isBetterScore(score, match)) {
       this._bestScore = score;
       this._bestMatch = match;
     }
