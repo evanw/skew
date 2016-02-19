@@ -62,6 +62,7 @@
 "-="                              ASSIGN_MINUS;
 "*="                              ASSIGN_MULTIPLY;
 "/="                              ASSIGN_DIVIDE;
+"%%="                             ASSIGN_MODULUS;
 "%="                              ASSIGN_REMAINDER;
 "&="                              ASSIGN_BITWISE_AND;
 "|="                              ASSIGN_BITWISE_OR;
@@ -76,6 +77,7 @@
 "-"                               MINUS;
 "*"                               MULTIPLY;
 "/"                               DIVIDE;
+"%%"                              MODULUS;
 "%"                               REMAINDER;
 "||"                              LOGICAL_OR;
 "&&"                              LOGICAL_AND;

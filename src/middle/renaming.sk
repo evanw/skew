@@ -196,6 +196,7 @@ namespace Skew.Renaming {
   const prefixes = {
     # Binary operators
     "%": "remainder",
+    "%%": "modulus",
     "&": "and",
     "*": "multiply",
     "**": "power",
@@ -207,10 +208,11 @@ namespace Skew.Renaming {
     ">>": "rightShift",
     ">>>": "unsignedRightShift",
     "^": "xor",
-    "|": "or",
     "in": "contains",
+    "|": "or",
 
     # Binary assignment operators
+    "%%=": "modulusUpdate",
     "%=": "remainderUpdate",
     "&=": "andUpdate",
     "**=": "powerUpdate",
