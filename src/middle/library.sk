@@ -111,6 +111,10 @@ class int {
   def |(x int) int
   def ^(x int) int
 
+  def %%(x int) int {
+    return ((self % x) + x) % x
+  }
+
   def <<=(x int) int
   def >>=(x int) int
   def &=(x int) int
@@ -153,6 +157,10 @@ class double {
   def /(x double) double
   def **(x double) double
   def <=>(x double) int
+
+  def %%(x double) double {
+    return self - Math.floor(self / x) * x
+  }
 
   def *=(x double) double
   def +=(x double) double

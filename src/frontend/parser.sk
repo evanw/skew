@@ -896,6 +896,7 @@ namespace Skew.Parsing {
     TokenKind.ASSIGN_DIVIDE: 0,
     TokenKind.ASSIGN_INDEX: 0,
     TokenKind.ASSIGN_MINUS: 0,
+    TokenKind.ASSIGN_MODULUS: 0,
     TokenKind.ASSIGN_MULTIPLY: 0,
     TokenKind.ASSIGN_PLUS: 0,
     TokenKind.ASSIGN_POWER: 0,
@@ -914,6 +915,7 @@ namespace Skew.Parsing {
     TokenKind.INDEX: 0,
     TokenKind.LIST: 0,
     TokenKind.MINUS: 0,
+    TokenKind.MODULUS: 0,
     TokenKind.MULTIPLY: 0,
     TokenKind.NOT: 0,
     TokenKind.PLUS: 0,
@@ -966,6 +968,7 @@ namespace Skew.Parsing {
     TokenKind.ASSIGN_BITWISE_XOR: .ASSIGN_BITWISE_XOR,
     TokenKind.ASSIGN_DIVIDE: .ASSIGN_DIVIDE,
     TokenKind.ASSIGN_MINUS: .ASSIGN_SUBTRACT,
+    TokenKind.ASSIGN_MODULUS: .ASSIGN_MODULUS,
     TokenKind.ASSIGN_MULTIPLY: .ASSIGN_MULTIPLY,
     TokenKind.ASSIGN_PLUS: .ASSIGN_ADD,
     TokenKind.ASSIGN_POWER: .ASSIGN_POWER,
@@ -1640,6 +1643,7 @@ namespace Skew.Parsing {
     pratt.infix(.LOGICAL_AND, .LOGICAL_AND, binaryInfix(.LOGICAL_AND))
     pratt.infix(.LOGICAL_OR, .LOGICAL_OR, binaryInfix(.LOGICAL_OR))
     pratt.infix(.MINUS, .ADD, binaryInfix(.SUBTRACT))
+    pratt.infix(.MODULUS, .MULTIPLY, binaryInfix(.MODULUS))
     pratt.infix(.MULTIPLY, .MULTIPLY, binaryInfix(.MULTIPLY))
     pratt.infix(.NOT_EQUAL, .EQUAL, binaryInfix(.NOT_EQUAL))
     pratt.infix(.PLUS, .ADD, binaryInfix(.ADD))
@@ -1655,6 +1659,7 @@ namespace Skew.Parsing {
     pratt.infixRight(.ASSIGN_BITWISE_XOR, .ASSIGN, binaryInfix(.ASSIGN_BITWISE_XOR))
     pratt.infixRight(.ASSIGN_DIVIDE, .ASSIGN, binaryInfix(.ASSIGN_DIVIDE))
     pratt.infixRight(.ASSIGN_MINUS, .ASSIGN, binaryInfix(.ASSIGN_SUBTRACT))
+    pratt.infixRight(.ASSIGN_MODULUS, .ASSIGN, binaryInfix(.ASSIGN_MODULUS))
     pratt.infixRight(.ASSIGN_MULTIPLY, .ASSIGN, binaryInfix(.ASSIGN_MULTIPLY))
     pratt.infixRight(.ASSIGN_NULL, .ASSIGN, binaryInfix(.ASSIGN_NULL))
     pratt.infixRight(.ASSIGN_PLUS, .ASSIGN, binaryInfix(.ASSIGN_ADD))
