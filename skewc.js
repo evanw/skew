@@ -9934,6 +9934,10 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Invalid escape sequence'));
   };
 
+  Skew.Log.prototype.syntaxErrorIntegerLiteralTooLarge = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Integer literal is too big to fit in 32 bits'));
+  };
+
   Skew.Log.prototype.syntaxErrorInvalidCharacter = function(range) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use double quotes for strings (single quotes are for character literals)').withFix(Skew.FixKind.SINGLE_QUOTES, range, 'Replace single quotes with double quotes', Skew.replaceSingleQuotesWithDoubleQuotes(range.toString())));
   };
@@ -10626,7 +10630,8 @@
     var isNegative = in_string.startsWith(text, '-');
     var start = isNegative | 0;
     var count = text.length;
-    var value = 0;
+    var doubleValue = 0;
+    var intValue = 0;
     var base = 10;
 
     // Parse the base
@@ -10656,37 +10661,50 @@
 
     // Special-case hexadecimal since it's more complex
     if (base == 16) {
-      for (var i = start, count1 = text.length; i < count1; i = i + 1 | 0) {
+      for (var i = start, count1 = count; i < count1; i = i + 1 | 0) {
         var c1 = in_string.get1(text, i);
 
         if ((c1 < 48 || c1 > 57) && (c1 < 65 || c1 > 70) && (c1 < 97 || c1 > 102)) {
           return null;
         }
 
-        value = (__imul(value, 16) + c1 | 0) - (c1 <= 57 ? 48 : c1 <= 70 ? 65 - 10 | 0 : 97 - 10 | 0) | 0;
+        var delta = c1 - (c1 <= 57 ? 48 : c1 <= 70 ? 65 - 10 | 0 : 97 - 10 | 0) | 0;
+        doubleValue = doubleValue * 16 + delta;
+        intValue = __imul(intValue, 16) + delta | 0;
       }
     }
 
     // All other bases are zero-relative
     else {
-      for (var i1 = start, count2 = text.length; i1 < count2; i1 = i1 + 1 | 0) {
-        var c2 = in_string.get1(text, i1);
+      for (var i1 = start, count2 = count; i1 < count2; i1 = i1 + 1 | 0) {
+        var delta1 = in_string.get1(text, i1) - 48 | 0;
 
-        if (c2 < 48 || c2 >= (48 + base | 0)) {
+        if (delta1 < 0 || delta1 >= base) {
           return null;
         }
 
-        value = (__imul(value, base) + c2 | 0) - 48 | 0;
+        doubleValue = doubleValue * base + delta1;
+        intValue = __imul(intValue, base) + delta1 | 0;
       }
+    }
+
+    // Integer literals are only an error if they are outside both the signed and
+    // unsigned 32-bit integer ranges. Integers here are 32-bit signed integers
+    // but it can be convenient to write literals using unsigned notation and
+    // have the compiler do the wrapping (for example, all Mach-O files use a
+    // magic number of 0xFEEDFACE).
+    if (doubleValue < -2147483648 || doubleValue > 4294967295) {
+      log.syntaxErrorIntegerLiteralTooLarge(range);
+      return new Box(intValue);
     }
 
     // Warn about decimal integers that start with "0" because other languages
     // strangely treat these numbers as octal instead of decimal
-    if (base == 10 && value != 0 && in_string.get1(text, 0) == 48) {
+    if (base == 10 && intValue != 0 && in_string.get1(text, 0) == 48) {
       log.syntaxWarningOctal(range);
     }
 
-    return new Box(isNegative ? -value | 0 : value);
+    return new Box(isNegative ? -intValue | 0 : intValue);
   };
 
   Skew.Parsing.checkExtraParentheses = function(context, node) {

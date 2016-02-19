@@ -186,6 +186,10 @@ namespace Skew {
       append(Diagnostic.error(range, "Invalid escape sequence"))
     }
 
+    def syntaxErrorIntegerLiteralTooLarge(range Range) {
+      append(Diagnostic.error(range, "Integer literal is too big to fit in 32 bits"))
+    }
+
     def syntaxErrorInvalidCharacter(range Range) {
       append(Diagnostic
         .error(range, "Use double quotes for strings (single quotes are for character literals)")

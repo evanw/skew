@@ -53,7 +53,8 @@ namespace Skew.Parsing {
     var isNegative = text.startsWith("-") # Parse negative signs for use with the "--define" flag
     var start = isNegative as int
     var count = text.count
-    var value = 0
+    var doubleValue = 0.0
+    var intValue = 0
     var base = 10
 
     # Parse the base
@@ -78,33 +79,46 @@ namespace Skew.Parsing {
 
     # Special-case hexadecimal since it's more complex
     if base == 16 {
-      for i in start..text.count {
+      for i in start..count {
         var c = text[i]
         if (c < '0' || c > '9') && (c < 'A' || c > 'F') && (c < 'a' || c > 'f') {
           return null
         }
-        value = value * 16 + c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10)
+        var delta = c - (c <= '9' ? '0' : c <= 'F' ? 'A' - 10 : 'a' - 10)
+        doubleValue = doubleValue * 16 + delta
+        intValue = intValue * 16 + delta
       }
     }
 
     # All other bases are zero-relative
     else {
-      for i in start..text.count {
-        var c = text[i]
-        if c < '0' || c >= '0' + base {
+      for i in start..count {
+        var delta = text[i] - '0'
+        if delta < 0 || delta >= base {
           return null
         }
-        value = value * base + c - '0'
+        doubleValue = doubleValue * base + delta
+        intValue = intValue * base + delta
       }
+    }
+
+    # Integer literals are only an error if they are outside both the signed and
+    # unsigned 32-bit integer ranges. Integers here are 32-bit signed integers
+    # but it can be convenient to write literals using unsigned notation and
+    # have the compiler do the wrapping (for example, all Mach-O files use a
+    # magic number of 0xFEEDFACE).
+    if doubleValue < -2147483648.0 || doubleValue > 4294967295.0 {
+      log.syntaxErrorIntegerLiteralTooLarge(range)
+      return Box<int>.new(intValue)
     }
 
     # Warn about decimal integers that start with "0" because other languages
     # strangely treat these numbers as octal instead of decimal
-    if base == 10 && value != 0 && text[0] == '0' {
+    if base == 10 && intValue != 0 && text[0] == '0' {
       log.syntaxWarningOctal(range)
     }
 
-    return Box<int>.new(isNegative ? -value : value)
+    return Box<int>.new(isNegative ? -intValue : intValue)
   }
 
   def checkExtraParentheses(context ParserContext, node Node) {

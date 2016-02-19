@@ -23,6 +23,60 @@ var z = '12'
 ")
 
 test("
+var foo = [
+  0x7FFFFFFF,
+  -0x7FFFFFFF,
+  0x80000000,
+  -0x80000000,
+  0xFFFFFFFF,
+  -0xFFFFFFFF,
+  0x100000000,
+  -0x100000000,
+  0xFFFFFFFFFFFFFFFF,
+  -0xFFFFFFFFFFFFFFFF,
+]
+var bar = [
+  2147483647,
+  -2147483647,
+  2147483648,
+  -2147483648,
+  2147483648,
+  -2147483648,
+  4294967295,
+  -4294967295,
+  4294967296,
+  -4294967296,
+  12345678901234567890,
+  -12345678901234567890,
+]
+", "
+<stdin>:8:3: error: Integer literal is too big to fit in 32 bits
+  0x100000000,
+  ~~~~~~~~~~~
+<stdin>:9:4: error: Integer literal is too big to fit in 32 bits
+  -0x100000000,
+   ~~~~~~~~~~~
+<stdin>:10:3: error: Integer literal is too big to fit in 32 bits
+  0xFFFFFFFFFFFFFFFF,
+  ~~~~~~~~~~~~~~~~~~
+<stdin>:11:4: error: Integer literal is too big to fit in 32 bits
+  -0xFFFFFFFFFFFFFFFF,
+   ~~~~~~~~~~~~~~~~~~
+<stdin>:22:3: error: Integer literal is too big to fit in 32 bits
+  4294967296,
+  ~~~~~~~~~~
+<stdin>:23:4: error: Integer literal is too big to fit in 32 bits
+  -4294967296,
+   ~~~~~~~~~~
+<stdin>:24:3: error: Integer literal is too big to fit in 32 bits
+  12345678901234567890,
+  ~~~~~~~~~~~~~~~~~~~~
+<stdin>:25:4: error: Integer literal is too big to fit in 32 bits
+  -12345678901234567890,
+   ~~~~~~~~~~~~~~~~~~~~
+")
+
+test("
 def foo {
   0;
   var x = 0;
