@@ -18184,8 +18184,8 @@
       }
     }
 
-    // Global functions can't be abstract
-    else if (!symbol.isImported() && !symbol.isObsolete() && (symbol.kind == Skew.SymbolKind.FUNCTION_GLOBAL || symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR)) {
+    // Global functions and functions on non-virtual types can't be abstract
+    else if (!symbol.isImported() && !symbol.isObsolete() && (symbol.kind == Skew.SymbolKind.FUNCTION_GLOBAL || symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR || symbol.kind == Skew.SymbolKind.FUNCTION_INSTANCE && symbol.parent.kind != Skew.SymbolKind.OBJECT_CLASS && symbol.parent.kind != Skew.SymbolKind.OBJECT_INTERFACE)) {
       this._log.semanticErrorUnimplementedFunction(symbol.range, symbol.name);
     }
   };

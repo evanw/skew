@@ -1088,8 +1088,9 @@ namespace Skew.Resolving {
         }
       }
 
-      # Global functions can't be abstract
-      else if !symbol.isImported && !symbol.isObsolete && (symbol.kind == .FUNCTION_GLOBAL || symbol.kind == .FUNCTION_CONSTRUCTOR) {
+      # Global functions and functions on non-virtual types can't be abstract
+      else if !symbol.isImported && !symbol.isObsolete && (symbol.kind == .FUNCTION_GLOBAL || symbol.kind == .FUNCTION_CONSTRUCTOR ||
+          symbol.kind == .FUNCTION_INSTANCE && symbol.parent.kind != .OBJECT_CLASS && symbol.parent.kind != .OBJECT_INTERFACE) {
         _log.semanticErrorUnimplementedFunction(symbol.range, symbol.name)
       }
     }
