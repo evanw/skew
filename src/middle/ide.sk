@@ -473,6 +473,15 @@ namespace Skew.IDE {
       return symbol.resolvedType.toString
     }
 
+    switch symbol.kind {
+      case .OBJECT_CLASS { return "class" }
+      case .OBJECT_ENUM { return "enum" }
+      case .OBJECT_FLAGS { return "flags" }
+      case .OBJECT_INTERFACE { return "interface" }
+      case .OBJECT_NAMESPACE { return "namespace" }
+      case .OBJECT_WRAPPED { return "type" }
+    }
+
     return null
   }
 }
