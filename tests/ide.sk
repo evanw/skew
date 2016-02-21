@@ -631,7 +631,7 @@ var x i
 <stdin>:1:7: completions:
 var x i
       ^
-      [int]
+      [int] # \"class\"
 ")
 
 # Completion: variable inside instance function
@@ -887,6 +887,90 @@ def main {
          # This is the
          # second paragraph
          # of text.
+")
+
+# Completion: class object
+testCompletion("
+class Foo {}
+var foo F
+", 1, 9, "
+<stdin>:2:9: error: \"F\" is not declared
+var foo F
+        ^
+<stdin>:2:9: completions:
+var foo F
+        ^
+        [Foo] # \"class\"
+")
+
+# Completion: interface object
+testCompletion("
+interface Foo {}
+var foo F
+", 1, 9, "
+<stdin>:2:9: error: \"F\" is not declared
+var foo F
+        ^
+<stdin>:2:9: completions:
+var foo F
+        ^
+        [Foo] # \"interface\"
+")
+
+# Completion: namespace object
+testCompletion("
+namespace Foo {}
+var foo F
+", 1, 9, "
+<stdin>:2:9: error: \"F\" is not declared
+var foo F
+        ^
+<stdin>:2:9: completions:
+var foo F
+        ^
+        [Foo] # \"namespace\"
+")
+
+# Completion: enum object
+testCompletion("
+enum Foo {}
+var foo F
+", 1, 9, "
+<stdin>:2:9: error: \"F\" is not declared
+var foo F
+        ^
+<stdin>:2:9: completions:
+var foo F
+        ^
+        [Foo] # \"enum\"
+")
+
+# Completion: flags object
+testCompletion("
+flags Foo {}
+var foo F
+", 1, 9, "
+<stdin>:2:9: error: \"F\" is not declared
+var foo F
+        ^
+<stdin>:2:9: completions:
+var foo F
+        ^
+        [Foo] # \"flags\"
+")
+
+# Completion: wrapped object
+testCompletion("
+type Foo : int {}
+var foo F
+", 1, 9, "
+<stdin>:2:9: error: \"F\" is not declared
+var foo F
+        ^
+<stdin>:2:9: completions:
+var foo F
+        ^
+        [Foo] # \"type\"
 ")
 
   }
