@@ -4649,16 +4649,17 @@ type Foo {}
 
 def main {
   var foo = 0 as Foo
+  var bar = null as Foo
 }
 ", "
 <stdin>:1:6: error: Missing base type for wrapped type \"Foo\"
 type Foo {}
      ~~~
-<stdin>:4:13: error: Cannot convert from type \"int\" to type \"Foo\"
-  var foo = 0 as Foo
-            ^
 <stdin>:4:7: warning: Local variable \"foo\" is never read
   var foo = 0 as Foo
+      ~~~
+<stdin>:5:7: warning: Local variable \"bar\" is never read
+  var bar = null as Foo
       ~~~
 ")
 

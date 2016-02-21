@@ -1,4 +1,8 @@
-#include <sys/mman.h>
+#if _WIN32
+  #include <windows.h>
+#else
+  #include <sys/mman.h>
+#endif
 
 static void *__fast_next;
 static size_t __fast_available;

@@ -17300,6 +17300,10 @@
     // Wrapped types without something to wrap don't make sense
     else if (kind == Skew.SymbolKind.OBJECT_WRAPPED) {
       this._log.semanticErrorMissingWrappedType(symbol.range, symbol.fullName());
+
+      // Make sure to fill out the wrapped type anyway so code that tries to
+      // access it doesn't crash. The dynamic type should ignore further errors.
+      symbol.wrappedType = Skew.Type.DYNAMIC;
     }
 
     // Resolve the base interface types
