@@ -1,7 +1,11 @@
 namespace Skew {
   const NATIVE_LIBRARY_JS = "
+const __create fn(dynamic) dynamic = dynamic.Object.create ? dynamic.Object.create : prototype => {
+  return {\"__proto__\": prototype}
+}
+
 const __extends = (derived dynamic, base dynamic) => {
-  derived.prototype = dynamic.Object.create(base.prototype)
+  derived.prototype = __create(base.prototype)
   derived.prototype.constructor = derived
 }
 
@@ -313,7 +317,7 @@ namespace List {
 
 namespace StringMap {
   def new StringMap<T> {
-    return dynamic.Object.create(null)
+    return __create(null)
   }
 }
 
