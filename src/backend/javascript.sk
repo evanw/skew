@@ -41,6 +41,7 @@ namespace Skew {
     enum SpecialVariable {
       NONE
       AS_STRING
+      CREATE
       EXTENDS
       IS_BOOL
       IS_DOUBLE
@@ -132,6 +133,7 @@ namespace Skew {
         }
       }
       assert(SpecialVariable.AS_STRING in _specialVariables)
+      assert(SpecialVariable.CREATE in _specialVariables)
       assert(SpecialVariable.EXTENDS in _specialVariables)
       assert(SpecialVariable.IS_BOOL in _specialVariables)
       assert(SpecialVariable.IS_DOUBLE in _specialVariables)
@@ -158,6 +160,12 @@ namespace Skew {
       _prepareGlobal(global)
       _convertLambdasToFunctions(global)
       var objects = _sortedObjects(global)
+
+      # Make sure the "__create" variable is inserted when used even if "__extends" isn't used
+      var create = _specialVariables[SpecialVariable.CREATE]
+      if create in global.variables {
+        _isSpecialVariableNeeded[create.id] = 0
+      }
 
       # The entire body of code is wrapped in a closure for safety
       _emit(_indent + "(function()" + _space + "{" + _newline)
@@ -1558,6 +1566,7 @@ namespace Skew {
       # Subclasses need the extension stub
       if !symbol.isImported && (symbol.baseClass != null || symbol.kind == .OBJECT_CLASS && symbol.extends != null) {
         _specialVariable(.EXTENDS)
+        _specialVariable(.CREATE)
       }
 
       # Scan over child objects
@@ -2902,6 +2911,7 @@ namespace Skew {
 
     const _specialVariableMap = {
       "__asString": SpecialVariable.AS_STRING,
+      "__create": SpecialVariable.CREATE,
       "__extends": SpecialVariable.EXTENDS,
       "__imul": SpecialVariable.MULTIPLY,
       "__isBool": SpecialVariable.IS_BOOL,

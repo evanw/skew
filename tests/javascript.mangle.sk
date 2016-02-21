@@ -1064,32 +1064,36 @@ def main(args List<string>) int {
 }
 ", "
 (function() {
-  function d(a, b) {
-    a.prototype = Object.create(b.prototype), a.prototype.constructor = a;
+  var d = Object.create || function(a) {
+    return {__proto__: a};
+  };
+
+  function e(a, b) {
+    a.prototype = d(b.prototype), a.prototype.constructor = a;
   }
 
-  var e = Math.imul || function(a, b) {
+  var f = Math.imul || function(a, b) {
     return (a * (b >>> 16) << 16) + a * (b & 65535) | 0;
   };
 
-  function h(a) {
-    return new g, e(c(a), 100);
+  function i(a) {
+    return new h, f(c(a), 100);
   }
 
   function c(a) {
     return a.length;
   }
 
-  function f() {
-  }
-
   function g() {
-    f.call(this);
   }
 
-  d(g, f);
+  function h() {
+    g.call(this);
+  }
 
-  process.exit(h(process.argv.slice(2)));
+  e(h, g);
+
+  process.exit(i(process.argv.slice(2)));
 })();
 ").jsMangle
 
@@ -2496,6 +2500,29 @@ def test(a int, b int, c int, d int) {
   };
 })();
 ").jsMangle
+
+# Check mangled map constructors
+test("
+@export
+def test {
+  var a = {1: 2, 3: 4}
+  var b = {\"1\": 2, \"3\": 4}
+}
+", "
+(function() {
+  var e = Object.create || function(b) {
+    return {__proto__: b};
+  };
+
+  test = function() {
+    var b = {1: 2, 3: 4}, c = a(a(e(null), '1', 2), '3', 4);
+  };
+
+  function a(d, b, c) {
+    return d[b] = c, d;
+  }
+})();
+").jsMangle.inlineAllFunctions
 
   }
 }

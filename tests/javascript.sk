@@ -53,8 +53,12 @@ test("
 class DerivedClass : dynamic.BaseClass {}
 ", "
 (function() {
+  var __create = Object.create ? Object.create : function(prototype) {
+    return {'__proto__': prototype};
+  };
+
   function __extends(derived, base) {
-    derived.prototype = Object.create(base.prototype);
+    derived.prototype = __create(base.prototype);
     derived.prototype.constructor = derived;
   }
 
@@ -129,8 +133,12 @@ def main {
 }
 ", "
 (function() {
+  var __create = Object.create ? Object.create : function(prototype) {
+    return {'__proto__': prototype};
+  };
+
   function __extends(derived, base) {
-    derived.prototype = Object.create(base.prototype);
+    derived.prototype = __create(base.prototype);
     derived.prototype.constructor = derived;
   }
 
@@ -1908,8 +1916,12 @@ class Baz2 : Bar {
 }
 ", "
 (function() {
+  var __create = Object.create ? Object.create : function(prototype) {
+    return {'__proto__': prototype};
+  };
+
   function __extends(derived, base) {
-    derived.prototype = Object.create(base.prototype);
+    derived.prototype = __create(base.prototype);
     derived.prototype.constructor = derived;
   }
 
@@ -1971,8 +1983,12 @@ class Baz2 : Bar {
 }
 ", "
 (function() {
+  var __create = Object.create ? Object.create : function(prototype) {
+    return {'__proto__': prototype};
+  };
+
   function __extends(derived, base) {
-    derived.prototype = Object.create(base.prototype);
+    derived.prototype = __create(base.prototype);
     derived.prototype.constructor = derived;
   }
 
