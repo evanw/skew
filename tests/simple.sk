@@ -2507,6 +2507,9 @@ namespace Foo {
 <stdin>:4:3: error: Cannot use this declaration here
   def new
   ~~~~~~~
+<stdin>:3:7: error: Non-imported function \"bar\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+  def bar
+      ~~~
 <stdin>:4:7: error: Non-imported function \"new\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
   def new
       ~~~
@@ -4465,11 +4468,11 @@ class Foo {
 type Bar = Foo
 
 type Bar {
-  def bar
+  def bar {}
 }
 
 type Baz : Foo {
-  def bar
+  def bar {}
 }
 
 def main {
@@ -4565,6 +4568,9 @@ namespace Foo {
 <stdin>:4:3: error: Cannot use this declaration here
   def new
   ~~~~~~~
+<stdin>:3:7: error: Non-imported function \"bar\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+  def bar
+      ~~~
 <stdin>:4:7: error: Non-imported function \"new\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
   def new
       ~~~
@@ -7793,6 +7799,65 @@ def test(foo Foo) {
 <stdin>:8:17: error: \"+\" is not declared on type \"Foo\"
   (foo ?? .FOO) + 2
                 ^
+")
+
+# Abstract functions are only allowed on certain types
+test("
+class C { def foo }
+enum E { def foo }
+flags F { def foo }
+interface I { def foo }
+namespace N { def foo }
+type T : int { def foo }
+", "
+<stdin>:2:14: error: Non-imported function \"foo\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+enum E { def foo }
+             ~~~
+<stdin>:3:15: error: Non-imported function \"foo\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+flags F { def foo }
+              ~~~
+<stdin>:5:19: error: Non-imported function \"foo\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+namespace N { def foo }
+                  ~~~
+<stdin>:6:20: error: Non-imported function \"foo\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)
+type T : int { def foo }
+                   ~~~
+")
+
+# Forward-declaring a function should not count as abstract
+test("
+class C { def foo }
+enum E { def foo }
+flags F { def foo }
+interface I { def foo }
+namespace N { def foo }
+type T : int { def foo }
+
+class C { def foo {} }
+enum E { def foo {} }
+flags F { def foo {} }
+interface I { def foo {} }
+namespace N { def foo {} }
+type T { def foo {} }
+", "
+")
+
+# Forward-declaring a function should not count as abstract
+test("
+class C { def foo {} }
+enum E { def foo {} }
+flags F { def foo {} }
+interface I { def foo {} }
+namespace N { def foo {} }
+type T : int { def foo {} }
+
+class C { def foo }
+enum E { def foo }
+flags F { def foo }
+interface I { def foo }
+namespace N { def foo }
+type T { def foo }
+", "
 ")
 
   }
