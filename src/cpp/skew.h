@@ -246,7 +246,7 @@ namespace Skew {
   };
 }
 
-Skew::string operator "" _s (const char *data, unsigned long count);
+Skew::string operator "" _s (const char *data, size_t count);
 
 namespace std {
   template <>

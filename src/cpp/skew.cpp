@@ -1,6 +1,13 @@
 #include <math.h>
 #include <string.h>
-#include <sys/time.h>
+
+#if _WIN32
+  #include <windows.h>
+  #undef max
+  #undef min
+#else
+  #include <sys/time.h>
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -199,7 +206,7 @@ Skew::string Skew::string::fromCodeUnits(const List<int> *x) {
   return result;
 }
 
-Skew::string operator "" _s (const char *data, unsigned long count) {
+Skew::string operator "" _s (const char *data, size_t count) {
   return Skew::string(data, count);
 }
 
@@ -294,9 +301,15 @@ double Skew::Math::random() {
   static bool setup;
 
   if (!setup) {
-    timeval data;
-    gettimeofday(&data, nullptr);
-    state0 = __MurmurHash3(((uint64_t)data.tv_sec << 32) | (uint64_t)data.tv_usec);
+    #ifdef _WIN32
+      LARGE_INTEGER counter;
+      QueryPerformanceCounter(&counter);
+      state0 = __MurmurHash3(counter.QuadPart);
+    #else
+      timeval data;
+      gettimeofday(&data, nullptr);
+      state0 = __MurmurHash3(((uint64_t)data.tv_sec << 32) | (uint64_t)data.tv_usec);
+    #endif
     state1 = __MurmurHash3(state0);
     setup = true;
   }
