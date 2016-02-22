@@ -22,6 +22,7 @@ namespace Skew {
     var _includeNames StringMap<int> = {}
     var _loopLabels IntMap<VariableSymbol> = {}
     var _enclosingFunction FunctionSymbol = null
+    var _dummyFunction = FunctionSymbol.new(.FUNCTION_INSTANCE, "<dummy>")
 
     over visit(global ObjectSymbol) {
       # Generate the entry point
@@ -63,6 +64,10 @@ namespace Skew {
         }
       }
 
+      # Make sure strings reference the right namespace. This has to be set
+      # here instead of in the library code to avoid a cyclic definition.
+      _cache.stringType.symbol.name = "Skew::string"
+
       # Avoid emitting unnecessary stuff
       shakingPass(global, _cache.entryPointSymbol, .USE_TYPES)
       _markVirtualFunctions(global)
@@ -96,6 +101,7 @@ namespace Skew {
           for function in symbol.functions {
             _emitFunction(function, .IMPLEMENT)
           }
+          _emitMarkFunction(symbol, .IMPLEMENT)
         }
       }
       _finalizeEmittedFile
@@ -197,7 +203,7 @@ namespace Skew {
           _adjustNamespace(symbol)
           _emitNewlineBeforeSymbol(symbol, .DECLARE)
           if symbol.kind == .OBJECT_FLAGS {
-            _emit(_indent + "struct " + _mangleName(symbol) + " {\n")
+            _emit(_indent + "namespace " + _mangleName(symbol) + " {\n")
             _increaseIndent
             if !symbol.variables.isEmpty {
               _emit(_indent + "enum {\n")
@@ -215,8 +221,10 @@ namespace Skew {
               _emit(_indent + "};\n")
             }
             _decreaseIndent
+            _emit(_indent + "}\n")
+          } else {
+            _emit(_indent + "};\n")
           }
-          _emit(_indent + "};\n")
           _emitNewlineAfterSymbol(symbol)
         }
 
@@ -255,6 +263,8 @@ namespace Skew {
                 _emitExpressionOrType(node, node.resolvedType, .BARE)
               }
             }
+          } else {
+            _emit(" SKEW_BASE_OBJECT")
           }
           _emit(" {\n")
           _increaseIndent
@@ -264,6 +274,7 @@ namespace Skew {
           for variable in symbol.variables {
             _emitVariable(variable, .DEFINE)
           }
+          _emitMarkFunction(symbol, .DEFINE)
           _decreaseIndent
           _emit(_indent + "};\n")
           _emitNewlineAfterSymbol(symbol)
@@ -276,6 +287,21 @@ namespace Skew {
           }
         }
       }
+    }
+
+    def _emitEnclosingSymbolPrefix(parent ObjectSymbol) {
+      _emit(_fullName(parent))
+      if parent.parameters != null {
+        _emit("<")
+        for parameter in parent.parameters {
+          if parameter != parent.parameters.first {
+            _emit(", ")
+          }
+          _emit(_mangleName(parameter))
+        }
+        _emit(">")
+      }
+      _emit("::")
     }
 
     def _emitFunction(symbol FunctionSymbol, mode CodeMode) {
@@ -310,18 +336,7 @@ namespace Skew {
         _emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType, .DECLARATION)
       }
       if mode == .IMPLEMENT && parent.kind != .OBJECT_GLOBAL {
-        _emit(_fullName(parent))
-        if parent.parameters != null {
-          _emit("<")
-          for parameter in parent.parameters {
-            if parameter != parent.parameters.first {
-              _emit(", ")
-            }
-            _emit(_mangleName(parameter))
-          }
-          _emit(">")
-        }
-        _emit("::")
+        _emitEnclosingSymbolPrefix(parent)
       }
       _emit(_mangleName(symbol))
       _emitArgumentList(symbol)
@@ -356,6 +371,45 @@ namespace Skew {
 
       _emitNewlineAfterSymbol(symbol)
       _enclosingFunction = null
+    }
+
+    def _emitMarkFunction(symbol ObjectSymbol, mode CodeMode) {
+      if symbol.kind == .OBJECT_CLASS {
+        if mode == .DEFINE {
+          _emit("\n" + _indent + "#ifdef SKEW_GC_MARK_AND_SWEEP\n")
+          _increaseIndent
+          _emit(_indent + "virtual void __gc_mark() override;\n")
+          _decreaseIndent
+          _emit(_indent + "#endif\n")
+        }
+
+        else if mode == .IMPLEMENT {
+          _emitNewlineBeforeSymbol(_dummyFunction, mode)
+          _emit(_indent + "#ifdef SKEW_GC_MARK_AND_SWEEP\n")
+          _increaseIndent
+          _emitTypeParameters(symbol.parameters)
+          _emit(_indent + "void ")
+          _emitEnclosingSymbolPrefix(symbol)
+          _emit("__gc_mark() {\n")
+          _increaseIndent
+
+          if symbol.baseClass != null {
+            _emit(_indent + _mangleName(symbol.baseClass) + "::__gc_mark();\n")
+          }
+
+          for variable in symbol.variables {
+            if variable.kind == .VARIABLE_INSTANCE && variable.parent == symbol && _isReferenceType(variable.resolvedType) {
+              _emit(_indent + "Skew::GC::mark(" + _mangleName(variable) + ");\n")
+            }
+          }
+
+          _decreaseIndent
+          _emit(_indent + "}\n")
+          _decreaseIndent
+          _emit(_indent + "#endif\n")
+          _emitNewlineAfterSymbol(_dummyFunction)
+        }
+      }
     }
 
     def _emitTypeParameters(parameters List<ParameterSymbol>) {
@@ -396,17 +450,29 @@ namespace Skew {
 
       _emitNewlineBeforeSymbol(symbol, mode)
       _emitComments(symbol.comments)
+
       if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
         symbol.value.resolvedType = _cache.intType # Enum values are initialized with integers, so avoid any casts
         _emit(_indent + _mangleName(symbol) + " = ")
         _emitExpression(symbol.value, .COMMA)
         _emit(",\n")
-      } else {
+      }
+
+      else {
         _emit(_indent)
         if mode == .DEFINE && symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
           _emit("static ")
         }
-        _emitType(symbol.resolvedType, .DECLARATION)
+
+        # Global variables must be stored in roots to avoid accidental garbage collection
+        if symbol.kind == .VARIABLE_GLOBAL && _isReferenceType(symbol.resolvedType) {
+          _emit("Skew::Root<")
+          _emitType(symbol.resolvedType, .BARE)
+          _emit("> ")
+        } else {
+          _emitType(symbol.resolvedType, .DECLARATION)
+        }
+
         if mode == .DEFINE {
           _emit(_mangleName(symbol))
         } else {
@@ -418,6 +484,7 @@ namespace Skew {
         }
         _emit(";\n")
       }
+
       _emitNewlineAfterSymbol(symbol)
     }
 
@@ -707,7 +774,7 @@ namespace Skew {
         case .STRING {
           var text = content.asString
           var quoted = quoteString(text, .DOUBLE, .OCTAL_WORKAROUND)
-          _emit("\0" in text ? "string(\(quoted), \(text.count))" : quoted + "_s") # TODO: This needs to work with UTF8
+          _emit("\0" in text ? "Skew::string(\(quoted), \(text.count))" : quoted + "_s") # TODO: This needs to work with UTF8
         }
       }
     }
@@ -804,7 +871,8 @@ namespace Skew {
           var value = node.castValue
 
           if value.kind == .NULL && node.resolvedType == _cache.stringType {
-            _emit("string()")
+            _emitType(_cache.stringType, .BARE)
+            _emit("()")
           }
 
           else if type.kind == .TYPE && type.resolvedType == .DYNAMIC {
@@ -1027,7 +1095,7 @@ namespace Skew {
         else if type.kind == .LAMBDA {
           var hasReturnType = type.returnType != null
           var argumentCount = type.argumentTypes.count
-          _emit((hasReturnType ? "Fn" : "FnVoid") + "\(argumentCount)")
+          _emit((hasReturnType ? "Skew::Fn" : "Skew::FnVoid") + "\(argumentCount)")
           if hasReturnType || argumentCount != 0 {
             _emit("<")
             if hasReturnType {

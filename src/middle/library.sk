@@ -33,7 +33,7 @@ def @spreads
 @skip if !ASSERTS
 def assert(truth bool)
 
-@import if TARGET == .NONE || TARGET == .CPLUSPLUS
+@import if TARGET == .NONE
 namespace Math {
   @prefer
   def abs(x double) double

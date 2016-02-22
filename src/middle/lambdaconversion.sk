@@ -127,6 +127,7 @@ namespace Skew.LambdaConversion {
     const _stack List<Scope> = []
     const _interfaces IntMap<ObjectSymbol> = {}
     const _calls List<Node> = []
+    var _skewNamespace ObjectSymbol = null
     var _enclosingFunction FunctionSymbol = null
 
     def run {
@@ -173,7 +174,7 @@ namespace Skew.LambdaConversion {
       for scope in _scopes {
         if scope.hasCapturedDefinitions || scope.kind == .LAMBDA {
           # Create an object to store the environment
-          var object = _createObject(.OBJECT_CLASS, _generateEnvironmentName(scope))
+          var object = _createObject(.OBJECT_CLASS, _generateEnvironmentName(scope), _global)
           var constructor = _createConstructor(object)
           var constructorCall = Node.createCall(Node.createMemberReference(Node.createSymbolReference(object), constructor)).withType(object.resolvedType)
 
@@ -440,14 +441,31 @@ namespace Skew.LambdaConversion {
       return scope
     }
 
-    def _createObject(kind SymbolKind, name string) ObjectSymbol {
-      var object = ObjectSymbol.new(kind, _global.scope.generateName(name))
-      object.scope = ObjectScope.new(_global.scope, object)
+    def _createObject(kind SymbolKind, name string, parent ObjectSymbol) ObjectSymbol {
+      var object = ObjectSymbol.new(kind, parent.scope.generateName(name))
+      object.scope = ObjectScope.new(parent.scope, object)
       object.resolvedType = Type.new(.SYMBOL, object)
       object.state = .INITIALIZED
-      object.parent = _global
-      _global.objects.append(object)
+      object.parent = parent
+      parent.objects.append(object)
       return object
+    }
+
+    def _ensureSkewNamespaceExists {
+      if _skewNamespace == null {
+        var symbol = _global.scope.find("Skew", .NORMAL)
+
+        # Did the user's code define the namespace?
+        if symbol != null && symbol.kind.isObject {
+          _skewNamespace = symbol.asObjectSymbol
+        }
+
+        # It's missing or there's a conflict, define one ourselves
+        else {
+          _skewNamespace = _createObject(.OBJECT_NAMESPACE, "Skew", _global)
+          _skewNamespace.flags |= .IS_IMPORTED
+        }
+      }
     }
 
     def _createInterface(count int, hasReturnType bool) ObjectSymbol {
@@ -455,7 +473,8 @@ namespace Skew.LambdaConversion {
       var object = _interfaces.get(key, null)
 
       if object == null {
-        object = _createObject(.OBJECT_INTERFACE, (hasReturnType ? "Fn" : "FnVoid") + count.toString)
+        _ensureSkewNamespaceExists
+        object = _createObject(.OBJECT_INTERFACE, (hasReturnType ? "Fn" : "FnVoid") + count.toString, _skewNamespace)
         object.flags |= .IS_IMPORTED
         _interfaces[key] = object
 

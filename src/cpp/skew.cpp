@@ -4,110 +4,110 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-string::string() : _isNull(true) {
+Skew::string::string() : _isNull(true) {
 }
 
-string::string(const char *x) : _data(x ? x : ""), _isNull(!x) {
+Skew::string::string(const char *x) : _data(x ? x : ""), _isNull(!x) {
 }
 
-string::string(const char *x, int count) : _data(x, x + count), _isNull(false) {
+Skew::string::string(const char *x, int count) : _data(x, x + count), _isNull(false) {
 }
 
-string::string(const std::string &x) : _data(x), _isNull(false) {
+Skew::string::string(const std::string &x) : _data(x), _isNull(false) {
 }
 
-bool string::operator == (const string &x) const {
+bool Skew::string::operator == (const string &x) const {
   return _isNull == x._isNull && _data == x._data;
 }
 
-bool string::operator != (const string &x) const {
+bool Skew::string::operator != (const string &x) const {
   return _isNull != x._isNull || _data != x._data;
 }
 
-const char *string::c_str() const {
+const char *Skew::string::c_str() const {
   return _isNull ? nullptr : _data.c_str();
 }
 
-const std::string &string::std_str() const {
+const std::string &Skew::string::std_str() const {
   return _data;
 }
 
-string string::operator + (const string &x) const {
+Skew::string Skew::string::operator + (const string &x) const {
   assert(!_isNull);
   assert(!x._isNull);
   return _data + x._data;
 }
 
-string &string::operator += (const string &x) {
+Skew::string &Skew::string::operator += (const string &x) {
   assert(!_isNull);
   assert(!x._isNull);
   _data += x._data;
   return *this;
 }
 
-int string::compare(const string &x) const {
+int Skew::string::compare(const string &x) const {
   assert(!_isNull);
   assert(!x._isNull);
   return (_data > x._data) - (_data < x._data);
 }
 
-int string::count() const {
+int Skew::string::count() const {
   return (int)_data.size();
 }
 
-bool string::contains(const string &x) const {
+bool Skew::string::contains(const string &x) const {
   assert(!_isNull);
   assert(!x._isNull);
   return _data.find(x._data) != std::string::npos;
 }
 
-int string::indexOf(const string &x) const {
+int Skew::string::indexOf(const string &x) const {
   assert(!_isNull);
   assert(!x._isNull);
   auto it = _data.find(x._data);
   return it != std::string::npos ? (int)it : -1;
 }
 
-int string::lastIndexOf(const string &x) const {
+int Skew::string::lastIndexOf(const string &x) const {
   assert(!_isNull);
   assert(!x._isNull);
   auto it = _data.rfind(x._data);
   return it != std::string::npos ? (int)it : -1;
 }
 
-bool string::startsWith(const string &x) const {
+bool Skew::string::startsWith(const string &x) const {
   assert(!_isNull);
   assert(!x._isNull);
   return _data.size() >= x._data.size() && !memcmp(_data.data(), x._data.data(), x._data.size());
 }
 
-bool string::endsWith(const string &x) const {
+bool Skew::string::endsWith(const string &x) const {
   assert(!_isNull);
   assert(!x._isNull);
   return _data.size() >= x._data.size() && !memcmp(_data.data() + _data.size() - x._data.size(), x._data.data(), x._data.size());
 }
 
-int string::operator [] (int x) const {
+int Skew::string::operator [] (int x) const {
   assert(0 <= x && x < count());
   return (int)(unsigned char)_data[x]; // Code units should not be negative
 }
 
-string string::get(int x) const {
+Skew::string Skew::string::get(int x) const {
   assert(0 <= x && x < count());
   return std::string(1, _data[x]);
 }
 
-string string::slice(int start) const {
+Skew::string Skew::string::slice(int start) const {
   assert(0 <= start && start <= count());
   return _data.substr(start);
 }
 
-string string::slice(int start, int end) const {
+Skew::string Skew::string::slice(int start, int end) const {
   assert(0 <= start && start <= end && end <= count());
   return _data.substr(start, end - start);
 }
 
-List<int> *string::codeUnits() const {
+Skew::List<int> *Skew::string::codeUnits() const {
   auto result = new List<int>;
   for (unsigned char x : _data) {
     result->append(x);
@@ -115,7 +115,7 @@ List<int> *string::codeUnits() const {
   return result;
 }
 
-List<string> *string::split(const string &x) const {
+Skew::List<Skew::string> *Skew::string::split(const string &x) const {
   assert(!_isNull);
   assert(!x._isNull);
   auto result = new List<string>;
@@ -132,7 +132,7 @@ List<string> *string::split(const string &x) const {
   return result;
 }
 
-string string::join(const List<string> *x) const {
+Skew::string Skew::string::join(const List<Skew::string> *x) const {
   assert(!_isNull);
   std::string result("");
   for (auto b = x->begin(), e = x->end(), it = b; it != e; it++) {
@@ -145,7 +145,7 @@ string string::join(const List<string> *x) const {
   return result;
 }
 
-string string::repeat(int x) const {
+Skew::string Skew::string::repeat(int x) const {
   assert(x >= 0);
   std::string result("");
   result.reserve(_data.size() * x);
@@ -155,7 +155,7 @@ string string::repeat(int x) const {
   return result;
 }
 
-string string::replaceAll(const string &before, const string &after) const {
+Skew::string Skew::string::replaceAll(const string &before, const string &after) const {
   assert(!_isNull);
   assert(!before._isNull);
   assert(!after._isNull);
@@ -174,23 +174,23 @@ string string::replaceAll(const string &before, const string &after) const {
   return result;
 }
 
-string string::toLowerCase() const {
+Skew::string Skew::string::toLowerCase() const {
   auto result = _data;
   std::transform(_data.begin(), _data.end(), result.begin(), ::tolower);
   return result;
 }
 
-string string::toUpperCase() const {
+Skew::string Skew::string::toUpperCase() const {
   auto result = _data;
   std::transform(_data.begin(), _data.end(), result.begin(), ::toupper);
   return result;
 }
 
-string string::fromCodeUnit(int x) {
+Skew::string Skew::string::fromCodeUnit(int x) {
   return std::string(1, x);
 }
 
-string string::fromCodeUnits(const List<int> *x) {
+Skew::string Skew::string::fromCodeUnits(const List<int> *x) {
   std::string result("");
   result.reserve(x->count());
   for (char y : *x) {
@@ -199,82 +199,82 @@ string string::fromCodeUnits(const List<int> *x) {
   return result;
 }
 
-string operator "" _s (const char *data, unsigned long count) {
-  return string(data, count);
+Skew::string operator "" _s (const char *data, unsigned long count) {
+  return Skew::string(data, count);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-StringBuilder::StringBuilder() {
+Skew::StringBuilder::StringBuilder() {
 }
 
-void StringBuilder::append(const string &x) {
+void Skew::StringBuilder::append(const string &x) {
   _data += x.std_str();
 }
 
-string StringBuilder::toString() const {
+Skew::string Skew::StringBuilder::toString() const {
   return _data;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-double Math::abs(double x) {
+double Skew::Math::abs(double x) {
   return ::fabs(x);
 }
 
-int Math::abs(int x) {
+int Skew::Math::abs(int x) {
   return ::abs(x);
 }
 
-double Math::acos(double x) {
+double Skew::Math::acos(double x) {
   return ::acos(x);
 }
 
-double Math::asin(double x) {
+double Skew::Math::asin(double x) {
   return ::asin(x);
 }
 
-double Math::atan(double x) {
+double Skew::Math::atan(double x) {
   return ::atan(x);
 }
 
-double Math::atan2(double x, double y) {
+double Skew::Math::atan2(double x, double y) {
   return ::atan2(x, y);
 }
 
-double Math::sin(double x) {
+double Skew::Math::sin(double x) {
   return ::sin(x);
 }
 
-double Math::cos(double x) {
+double Skew::Math::cos(double x) {
   return ::cos(x);
 }
 
-double Math::tan(double x) {
+double Skew::Math::tan(double x) {
   return ::tan(x);
 }
 
-double Math::floor(double x) {
+double Skew::Math::floor(double x) {
   return ::floor(x);
 }
 
-double Math::ceil(double x) {
+double Skew::Math::ceil(double x) {
   return ::ceil(x);
 }
 
-double Math::round(double x) {
+double Skew::Math::round(double x) {
   return ::round(x);
 }
 
-double Math::exp(double x) {
+double Skew::Math::exp(double x) {
   return ::exp(x);
 }
 
-double Math::log(double x) {
+double Skew::Math::log(double x) {
   return ::log(x);
 }
 
-double Math::pow(double x, double y) {
+double Skew::Math::pow(double x, double y) {
   return ::pow(x, y);
 }
 
@@ -288,7 +288,7 @@ static uint64_t __MurmurHash3(uint64_t h) {
 }
 
 // This implementation is from V8: http://v8project.blogspot.com/2015/12/theres-mathrandom-and-then-theres.html
-double Math::random() {
+double Skew::Math::random() {
   static uint64_t state0;
   static uint64_t state1;
   static bool setup;
@@ -320,22 +320,109 @@ double Math::random() {
   return result - 1;
 }
 
-double Math::sqrt(double x) {
+double Skew::Math::sqrt(double x) {
   return ::sqrt(x);
 }
 
-double Math::max(double x, double y) {
+double Skew::Math::max(double x, double y) {
   return x > y ? x : y;
 }
 
-int Math::max(int x, int y) {
+int Skew::Math::max(int x, int y) {
   return x > y ? x : y;
 }
 
-double Math::min(double x, double y) {
+double Skew::Math::min(double x, double y) {
   return x < y ? x : y;
 }
 
-int Math::min(int x, int y) {
+int Skew::Math::min(int x, int y) {
   return x < y ? x : y;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+
+  #include <stack>
+  #include <unordered_set>
+
+  static std::unordered_set<Skew::Object *> marked;
+  static std::stack<Skew::Object *> stack;
+  static Skew::Object *latest;
+
+  // Skew::Internal is a friend of Skew::Object so it can access private variables
+  namespace Skew {
+    struct Internal {
+      static UntypedRoot *start();
+      static void mark();
+      static void sweep();
+    };
+  }
+
+  void Skew::GC::collect() {
+    Skew::Internal::mark();
+    Skew::Internal::sweep();
+  }
+
+  void Skew::GC::mark(Object *object) {
+    if (object && !marked.count(object)) {
+      marked.insert(object);
+      stack.push(object);
+    }
+  }
+
+  Skew::UntypedRoot::UntypedRoot(Object *object) : _previous(Internal::start()), _next(_previous->_next), _object(object) {
+    _previous->_next = this;
+    _next->_previous = this;
+  }
+
+  Skew::UntypedRoot::~UntypedRoot() {
+    _previous->_next = _next;
+    _next->_previous = _previous;
+  }
+
+  Skew::Object::Object() : __gc_next(latest) {
+    latest = this;
+  }
+
+  // The first root is the start of a doubly-linked list of roots. It's returned as
+  // a static local variable to avoid trouble from C++ initialization order. Roots
+  // are global variables and initialization order of global variables is undefined.
+  Skew::UntypedRoot *Skew::Internal::start() {
+    static UntypedRoot start;
+    return &start;
+  }
+
+  // Marking must be done with an explicit stack to avoid call stack overflow
+  void Skew::Internal::mark() {
+    for (auto end = start(), root = end->_next; root != end; root = root->_next) {
+      GC::mark(root->_object);
+    }
+
+    while (!stack.empty()) {
+      auto object = stack.top();
+      stack.pop();
+      object->__gc_mark();
+    }
+  }
+
+  // Sweeping removes unmarked objects from the linked list and deletes them
+  void Skew::Internal::sweep() {
+    for (Object *previous = nullptr, *current = latest, *next; current; current = next) {
+      next = current->__gc_next;
+
+      if (!marked.count(current)) {
+        (previous ? previous->__gc_next : latest) = next;
+        delete current;
+      }
+
+      else {
+        previous = current;
+      }
+    }
+
+    marked.clear();
+  }
+
+#endif

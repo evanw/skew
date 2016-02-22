@@ -37,6 +37,7 @@ namespace Skew {
   }
 
   class CompilerOptions {
+    var completionContext CompletionContext = null
     var defines StringMap<Define> = {}
     var foldAllConstants = false
     var globalizeAllFunctions = false
@@ -45,13 +46,12 @@ namespace Skew {
     var jsMangle = false
     var jsMinify = false
     var jsSourceMap = false
-    var stopAfterResolve = false
-    var completionContext CompletionContext = null
-    var verbose = false
     var outputDirectory string = null
     var outputFile string = null
-    var target = CompilerTarget.new
     var passes List<Pass> = null
+    var stopAfterResolve = false
+    var target = CompilerTarget.new
+    var verbose = false
 
     def new {
       passes = [

@@ -29,7 +29,7 @@ def test(x List<string>) {
 }
 ", "
 void main(int argc, char** argv) {
-  List<string> *x = new List<string>();
+  Skew::List<Skew::string> *x = new Skew::List<Skew::string>();
 
   if (*argv++) {
     while (*argv) {
@@ -47,7 +47,7 @@ def test(x List<string>) int {
 }
 ", "
 int main(int argc, char** argv) {
-  List<string> *x = new List<string>();
+  Skew::List<Skew::string> *x = new Skew::List<Skew::string>();
 
   if (*argv++) {
     while (*argv) {
@@ -70,7 +70,7 @@ namespace ns {
 }
 ", "
 int main(int argc, char** argv) {
-  List<string> *x = new List<string>();
+  Skew::List<Skew::string> *x = new Skew::List<Skew::string>();
 
   if (*argv++) {
     while (*argv) {
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  main(new List<string>());
+  main(new Skew::List<Skew::string>());
   return x->count();
 }
 ").cpp
@@ -93,7 +93,7 @@ def main(x List<string>) int {
 }
 ", "
 int main(int argc1, char** argv1) {
-  List<string> *x = new List<string>();
+  Skew::List<Skew::string> *x = new Skew::List<Skew::string>();
 
   if (*argv1++) {
     while (*argv1) {
@@ -136,7 +136,7 @@ namespace Bar {
 struct Foo;
 struct Bar;
 
-struct Foo {
+struct Foo SKEW_BASE_OBJECT {
   virtual void instanceMethod();
   void instanceMethod2();
   Foo(int instanceVariable1);
@@ -144,6 +144,10 @@ struct Foo {
   int instanceVariable1;
   int instanceVariable2;
   static int staticVariable;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 struct Bar : Foo {
@@ -154,6 +158,10 @@ struct Bar : Foo {
   int instanceVariable3;
   int instanceVariable4;
   static int staticVariable2;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 int Foo::staticVariable = 0;
@@ -170,6 +178,11 @@ Foo::Foo(int instanceVariable1) {
   this->instanceVariable2 = 0;
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Foo::__gc_mark() {
+  }
+#endif
+
 void Bar::instanceMethod() {
   Foo::instanceMethod();
 }
@@ -181,6 +194,12 @@ Bar::Bar(int instanceVariable1, int instanceVariable3) : Foo::Foo(instanceVariab
   this->instanceVariable3 = instanceVariable3;
   this->instanceVariable4 = 0;
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Bar::__gc_mark() {
+    Foo::__gc_mark();
+  }
+#endif
 ").cpp
 
 # Basic interface usage
@@ -208,12 +227,12 @@ struct Baz;
 
 struct Foo;
 
-struct Bar {
+struct Bar SKEW_BASE_OBJECT {
   virtual void instanceMethod() = 0;
   virtual void instanceMethod(int x) = 0;
 };
 
-struct Baz {
+struct Baz SKEW_BASE_OBJECT {
   virtual void instanceMethod() = 0;
   virtual void instanceMethod2() = 0;
 };
@@ -223,6 +242,10 @@ struct Foo : Bar, Baz {
   virtual void instanceMethod(int x);
   virtual void instanceMethod2();
   Foo();
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 void Foo::instanceMethod() {
@@ -236,6 +259,11 @@ void Foo::instanceMethod2() {
 
 Foo::Foo() {
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Foo::__gc_mark() {
+  }
+#endif
 ").cpp
 
 # Interface usage with tree shaking
@@ -268,17 +296,21 @@ struct Baz;
 
 struct Foo;
 
-struct Bar {
+struct Bar SKEW_BASE_OBJECT {
   virtual void instanceMethod1() = 0;
 };
 
-struct Baz {
+struct Baz SKEW_BASE_OBJECT {
   virtual void instanceMethod1() = 0;
 };
 
 struct Foo : Bar, Baz {
   virtual void instanceMethod1();
   Foo();
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 void test() {
@@ -291,6 +323,11 @@ void Foo::instanceMethod1() {
 
 Foo::Foo() {
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Foo::__gc_mark() {
+  }
+#endif
 ").cpp
 
 # Type wrapping
@@ -361,9 +398,9 @@ def foo {
 #include <utility>
 
 void foo() {
-  List<int> *x = new List<int>({1, 2, 3});
-  IntMap<int> *y = new IntMap<int>({std::make_pair(1, 2), std::make_pair(3, 4)});
-  StringMap<int> *z = new StringMap<int>({std::make_pair(\"1\"_s, 2), std::make_pair(\"3\"_s, 4)});
+  Skew::List<int> *x = new Skew::List<int>({1, 2, 3});
+  Skew::IntMap<int> *y = new Skew::IntMap<int>({std::make_pair(1, 2), std::make_pair(3, 4)});
+  Skew::StringMap<int> *z = new Skew::StringMap<int>({std::make_pair(\"1\"_s, 2), std::make_pair(\"3\"_s, 4)});
 }
 ").cpp
 
@@ -443,7 +480,7 @@ def main {
 }
 ", "
 void main() {
-  string value = \"a\"_s;
+  Skew::string value = \"a\"_s;
 
   if (value == \"b\"_s) {
   }
@@ -494,12 +531,12 @@ enum struct Foo {
   B = 1,
 };
 
-struct Bar {
+namespace Bar {
   enum {
     C = 1,
     D = 2,
   };
-};
+}
 
 namespace Baz {
   void foo(int self);
@@ -586,7 +623,7 @@ def test {
   }
 }
 ", "
-struct Foo {
+namespace Foo {
   enum {
     X0 = 1,
     X1 = 2,
@@ -595,7 +632,7 @@ struct Foo {
     X30 = 1073741824,
     X31 = -2147483648,
   };
-};
+}
 
 void test() {
   if (!(((Foo::X0 | Foo::X1) & (Foo::X30 | Foo::X31)) != 0)) {
@@ -670,66 +707,98 @@ struct FooTestLambda2;
 struct FooTestEnv2;
 struct FooTestLambda3;
 
-struct Foo {
+struct Foo SKEW_BASE_OBJECT {
   int test(int x);
   Foo();
 
   int value;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooTestEnv {
+struct FooTestEnv SKEW_BASE_OBJECT {
   FooTestEnv();
 
   Foo *self;
   int x;
   int y;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooTestLambda : Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> {
+struct FooTestLambda : Skew::Fn1<Skew::Fn0<Skew::Fn1<Skew::Fn0<int> *, int> *> *, int> {
   FooTestLambda(FooTestEnv *env);
-  virtual Fn0<Fn1<Fn0<int> *, int> *> *run(int a);
+  virtual Skew::Fn0<Skew::Fn1<Skew::Fn0<int> *, int> *> *run(int a);
 
   FooTestEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooTestEnv1 {
+struct FooTestEnv1 SKEW_BASE_OBJECT {
   FooTestEnv1(FooTestEnv *env);
 
   int a;
   FooTestEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooTestLambda1 : Fn0<Fn1<Fn0<int> *, int> *> {
+struct FooTestLambda1 : Skew::Fn0<Skew::Fn1<Skew::Fn0<int> *, int> *> {
   FooTestLambda1(FooTestEnv *env, FooTestEnv1 *env1);
-  virtual Fn1<Fn0<int> *, int> *run();
+  virtual Skew::Fn1<Skew::Fn0<int> *, int> *run();
 
   FooTestEnv *env;
   FooTestEnv1 *env1;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooTestLambda2 : Fn1<Fn0<int> *, int> {
+struct FooTestLambda2 : Skew::Fn1<Skew::Fn0<int> *, int> {
   FooTestLambda2(FooTestEnv *env, FooTestEnv1 *env1);
-  virtual Fn0<int> *run(int b);
+  virtual Skew::Fn0<int> *run(int b);
 
   FooTestEnv *env;
   FooTestEnv1 *env1;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooTestEnv2 {
+struct FooTestEnv2 SKEW_BASE_OBJECT {
   FooTestEnv2(FooTestEnv *env, FooTestEnv1 *env1);
 
   int b;
   FooTestEnv *env;
   FooTestEnv1 *env1;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooTestLambda3 : Fn0<int> {
+struct FooTestLambda3 : Skew::Fn0<int> {
   FooTestLambda3(FooTestEnv *env, FooTestEnv1 *env1, FooTestEnv2 *env2);
   virtual int run();
 
   FooTestEnv *env;
   FooTestEnv1 *env1;
   FooTestEnv2 *env2;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 int Foo::test(int x) {
@@ -737,7 +806,7 @@ int Foo::test(int x) {
   env->self = this;
   env->x = x;
   env->y = 0;
-  Fn1<Fn0<Fn1<Fn0<int> *, int> *> *, int> *f = new FooTestLambda(env);
+  Skew::Fn1<Skew::Fn0<Skew::Fn1<Skew::Fn0<int> *, int> *> *, int> *f = new FooTestLambda(env);
   return f->run(1)->run()->run(2)->run();
 }
 
@@ -745,47 +814,91 @@ Foo::Foo() {
   this->value = 0;
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Foo::__gc_mark() {
+  }
+#endif
+
 FooTestEnv::FooTestEnv() {
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooTestEnv::__gc_mark() {
+    Skew::GC::mark(self);
+  }
+#endif
 
 FooTestLambda::FooTestLambda(FooTestEnv *env) {
   this->env = env;
 }
 
-Fn0<Fn1<Fn0<int> *, int> *> *FooTestLambda::run(int a) {
+Skew::Fn0<Skew::Fn1<Skew::Fn0<int> *, int> *> *FooTestLambda::run(int a) {
   FooTestEnv1 *env1 = new FooTestEnv1(this->env);
   env1->a = a;
   return new FooTestLambda1(env1->env, env1);
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooTestLambda::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
+
 FooTestEnv1::FooTestEnv1(FooTestEnv *env) {
   this->env = env;
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooTestEnv1::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
 
 FooTestLambda1::FooTestLambda1(FooTestEnv *env, FooTestEnv1 *env1) {
   this->env = env;
   this->env1 = env1;
 }
 
-Fn1<Fn0<int> *, int> *FooTestLambda1::run() {
+Skew::Fn1<Skew::Fn0<int> *, int> *FooTestLambda1::run() {
   return new FooTestLambda2(this->env, this->env1);
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooTestLambda1::__gc_mark() {
+    Skew::GC::mark(env);
+    Skew::GC::mark(env1);
+  }
+#endif
 
 FooTestLambda2::FooTestLambda2(FooTestEnv *env, FooTestEnv1 *env1) {
   this->env = env;
   this->env1 = env1;
 }
 
-Fn0<int> *FooTestLambda2::run(int b) {
+Skew::Fn0<int> *FooTestLambda2::run(int b) {
   FooTestEnv2 *env2 = new FooTestEnv2(this->env, this->env1);
   env2->b = b;
   return new FooTestLambda3(env2->env, env2->env1, env2);
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooTestLambda2::__gc_mark() {
+    Skew::GC::mark(env);
+    Skew::GC::mark(env1);
+  }
+#endif
+
 FooTestEnv2::FooTestEnv2(FooTestEnv *env, FooTestEnv1 *env1) {
   this->env = env;
   this->env1 = env1;
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooTestEnv2::__gc_mark() {
+    Skew::GC::mark(env);
+    Skew::GC::mark(env1);
+  }
+#endif
 
 FooTestLambda3::FooTestLambda3(FooTestEnv *env, FooTestEnv1 *env1, FooTestEnv2 *env2) {
   this->env = env;
@@ -796,6 +909,14 @@ FooTestLambda3::FooTestLambda3(FooTestEnv *env, FooTestEnv1 *env1, FooTestEnv2 *
 int FooTestLambda3::run() {
   return this->env->self->value + this->env->x + this->env->y + this->env1->a + this->env2->b;
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooTestLambda3::__gc_mark() {
+    Skew::GC::mark(env);
+    Skew::GC::mark(env1);
+    Skew::GC::mark(env2);
+  }
+#endif
 ").cpp
 
 # Test lambda conversion at global scope
@@ -811,25 +932,37 @@ struct Lambda;
 struct LambdaRunEnv;
 struct LambdaRunLambda;
 
-struct Lambda : Fn1<Fn1<int, int> *, int> {
+struct Lambda : Skew::Fn1<Skew::Fn1<int, int> *, int> {
   Lambda();
-  virtual Fn1<int, int> *run(int x);
+  virtual Skew::Fn1<int, int> *run(int x);
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct LambdaRunEnv {
+struct LambdaRunEnv SKEW_BASE_OBJECT {
   LambdaRunEnv();
 
   int x;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct LambdaRunLambda : Fn1<int, int> {
+struct LambdaRunLambda : Skew::Fn1<int, int> {
   LambdaRunLambda(LambdaRunEnv *env);
   virtual int run(int y);
 
   LambdaRunEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-Fn1<Fn1<int, int> *, int> *f = new Lambda();
+Skew::Root<Skew::Fn1<Skew::Fn1<int, int> *, int>> f = new Lambda();
 
 int main() {
   return f->run(1)->run(2);
@@ -838,14 +971,24 @@ int main() {
 Lambda::Lambda() {
 }
 
-Fn1<int, int> *Lambda::run(int x) {
+Skew::Fn1<int, int> *Lambda::run(int x) {
   LambdaRunEnv *env = new LambdaRunEnv();
   env->x = x;
   return new LambdaRunLambda(env);
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Lambda::__gc_mark() {
+  }
+#endif
+
 LambdaRunEnv::LambdaRunEnv() {
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void LambdaRunEnv::__gc_mark() {
+  }
+#endif
 
 LambdaRunLambda::LambdaRunLambda(LambdaRunEnv *env) {
   this->env = env;
@@ -854,6 +997,12 @@ LambdaRunLambda::LambdaRunLambda(LambdaRunEnv *env) {
 int LambdaRunLambda::run(int y) {
   return this->env->x + y;
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void LambdaRunLambda::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
 ").cpp
 
 # Check for a crash with nested loop handling
@@ -874,28 +1023,41 @@ def test {
 struct TestEnv;
 struct TestLambda;
 
-struct TestEnv {
+struct TestEnv SKEW_BASE_OBJECT {
   TestEnv();
 
   int foo;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct TestLambda : Fn0<int> {
+struct TestLambda : Skew::Fn0<int> {
   TestLambda(TestEnv *env);
   virtual int run();
 
   TestEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 void test() {
   TestEnv *env = new TestEnv();
   env->foo = 0;
-  Fn0<int> *bar = new TestLambda(env);
+  Skew::Fn0<int> *bar = new TestLambda(env);
   bar->run();
 }
 
 TestEnv::TestEnv() {
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestEnv::__gc_mark() {
+  }
+#endif
 
 TestLambda::TestLambda(TestEnv *env) {
   this->env = env;
@@ -903,11 +1065,17 @@ TestLambda::TestLambda(TestEnv *env) {
 
 int TestLambda::run() {
   while (true) {
-    for (int baz : *new List<int>({1})) {
+    for (int baz : *new Skew::List<int>({1})) {
       return this->env->foo + baz;
     }
   }
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestLambda::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
 ").cpp
 
 # Check that recursive lambdas work
@@ -922,17 +1090,25 @@ def main {
 struct MainEnv;
 struct MainLambda;
 
-struct MainEnv {
+struct MainEnv SKEW_BASE_OBJECT {
   MainEnv();
 
-  FnVoid0 *f;
+  Skew::FnVoid0 *f;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct MainLambda : FnVoid0 {
+struct MainLambda : Skew::FnVoid0 {
   MainLambda(MainEnv *env);
   virtual void run();
 
   MainEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 void main() {
@@ -945,6 +1121,12 @@ void main() {
 MainEnv::MainEnv() {
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void MainEnv::__gc_mark() {
+    Skew::GC::mark(f);
+  }
+#endif
+
 MainLambda::MainLambda(MainEnv *env) {
   this->env = env;
 }
@@ -952,6 +1134,12 @@ MainLambda::MainLambda(MainEnv *env) {
 void MainLambda::run() {
   this->env->f->run();
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void MainLambda::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
 ").cpp
 
 # Check for a crash in captured variable substitution
@@ -967,23 +1155,31 @@ def main {
 struct MainEnv;
 struct MainLambda;
 
-struct MainEnv {
+struct MainEnv SKEW_BASE_OBJECT {
   MainEnv();
 
-  List<int> *x;
+  Skew::List<int> *x;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct MainLambda : Fn0<List<int> *> {
+struct MainLambda : Skew::Fn0<Skew::List<int> *> {
   MainLambda(MainEnv *env);
-  virtual List<int> *run();
+  virtual Skew::List<int> *run();
 
   MainEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 void main() {
   MainEnv *env = new MainEnv();
-  env->x = new List<int>({1});
-  Fn0<List<int> *> *f = new MainLambda(env);
+  env->x = new Skew::List<int>({1});
+  Skew::Fn0<Skew::List<int> *> *f = new MainLambda(env);
 
   for (int y : *env->x) {
   }
@@ -994,13 +1190,25 @@ void main() {
 MainEnv::MainEnv() {
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void MainEnv::__gc_mark() {
+    Skew::GC::mark(x);
+  }
+#endif
+
 MainLambda::MainLambda(MainEnv *env) {
   this->env = env;
 }
 
-List<int> *MainLambda::run() {
+Skew::List<int> *MainLambda::run() {
   return this->env->x;
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void MainLambda::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
 ").cpp
 
 # Test break statements inside a switch
@@ -1046,7 +1254,7 @@ test("
   flags Bar {}
 }
 ", "
-struct Foo {
+namespace Foo {
   enum {
     // Comment 1
     FOO = 1,
@@ -1055,10 +1263,10 @@ struct Foo {
     BAR = 2,
     BAZ = 4,
   };
-};
+}
 
-struct Bar {
-};
+namespace Bar {
+}
 ").cpp
 
 # Check for accidental mutation of argument types during globalization
@@ -1082,22 +1290,34 @@ struct Foo;
 struct FooEnv;
 struct FooLambda;
 
-struct Foo {
+struct Foo SKEW_BASE_OBJECT {
   static void test(Foo *self, Foo *foo);
   Foo();
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooEnv {
+struct FooEnv SKEW_BASE_OBJECT {
   FooEnv();
 
-  FnVoid1<Foo *> *visit;
+  Skew::FnVoid1<Foo *> *visit;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct FooLambda : FnVoid1<Foo *> {
+struct FooLambda : Skew::FnVoid1<Foo *> {
   FooLambda(FooEnv *env);
   virtual void run(Foo *foo);
 
   FooEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
 void foo() {
@@ -1117,8 +1337,19 @@ void Foo::test(Foo *self, Foo *foo) {
 Foo::Foo() {
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Foo::__gc_mark() {
+  }
+#endif
+
 FooEnv::FooEnv() {
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooEnv::__gc_mark() {
+    Skew::GC::mark(visit);
+  }
+#endif
 
 FooLambda::FooLambda(FooEnv *env) {
   this->env = env;
@@ -1127,6 +1358,12 @@ FooLambda::FooLambda(FooEnv *env) {
 void FooLambda::run(Foo *foo) {
   this->env->visit->run(foo);
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void FooLambda::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
 ").cpp.globalizeAllFunctions
 
 # Test dead code elimination and imports
@@ -1152,29 +1389,45 @@ struct TestLambda1;
 struct TestLambda2;
 struct TestLambda3;
 
-struct TestLambda : FnVoid0 {
+struct TestLambda : Skew::FnVoid0 {
   TestLambda();
   virtual void run();
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct TestLambda1 : FnVoid1<int> {
+struct TestLambda1 : Skew::FnVoid1<int> {
   TestLambda1();
   virtual void run(int x);
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct TestLambda2 : FnVoid2<int, int> {
+struct TestLambda2 : Skew::FnVoid2<int, int> {
   TestLambda2();
   virtual void run(int x, int y);
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct TestLambda3 : FnVoid3<int, int, int> {
+struct TestLambda3 : Skew::FnVoid3<int, int, int> {
   TestLambda3();
   virtual void run(int x, int y, int z);
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-FnVoid2<int, int> *c = nullptr;
+Skew::Root<Skew::FnVoid2<int, int>> c = nullptr;
 
-void d(FnVoid3<int, int, int> *x) {
+void d(Skew::FnVoid3<int, int, int> *x) {
 }
 
 void test() {
@@ -1190,11 +1443,21 @@ TestLambda::TestLambda() {
 void TestLambda::run() {
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestLambda::__gc_mark() {
+  }
+#endif
+
 TestLambda1::TestLambda1() {
 }
 
 void TestLambda1::run(int x) {
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestLambda1::__gc_mark() {
+  }
+#endif
 
 TestLambda2::TestLambda2() {
 }
@@ -1202,11 +1465,21 @@ TestLambda2::TestLambda2() {
 void TestLambda2::run(int x, int y) {
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestLambda2::__gc_mark() {
+  }
+#endif
+
 TestLambda3::TestLambda3() {
 }
 
 void TestLambda3::run(int x, int y, int z) {
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestLambda3::__gc_mark() {
+  }
+#endif
 ").cpp
 
 # Test lambda conversion in loops
@@ -1224,35 +1497,51 @@ struct TestLambda;
 struct TestEnv1;
 struct TestLambda1;
 
-struct TestEnv {
+struct TestEnv SKEW_BASE_OBJECT {
   TestEnv();
 
-  List<int> *list;
+  Skew::List<int> *list;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct TestLambda : Fn0<List<int> *> {
+struct TestLambda : Skew::Fn0<Skew::List<int> *> {
   TestLambda(TestEnv *env);
-  virtual List<int> *run();
+  virtual Skew::List<int> *run();
 
   TestEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct TestEnv1 {
+struct TestEnv1 SKEW_BASE_OBJECT {
   TestEnv1(TestEnv *env);
 
   int i;
   TestEnv *env;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-struct TestLambda1 : FnVoid0 {
+struct TestLambda1 : Skew::FnVoid0 {
   TestLambda1(TestEnv *env, TestEnv1 *env1);
   virtual void run();
 
   TestEnv *env;
   TestEnv1 *env1;
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
 };
 
-void test(List<int> *list) {
+void test(Skew::List<int> *list) {
   TestEnv *env = new TestEnv();
   env->list = list;
   (new TestLambda(env))->run();
@@ -1267,17 +1556,35 @@ void test(List<int> *list) {
 TestEnv::TestEnv() {
 }
 
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestEnv::__gc_mark() {
+    Skew::GC::mark(list);
+  }
+#endif
+
 TestLambda::TestLambda(TestEnv *env) {
   this->env = env;
 }
 
-List<int> *TestLambda::run() {
+Skew::List<int> *TestLambda::run() {
   return this->env->list;
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestLambda::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
 
 TestEnv1::TestEnv1(TestEnv *env) {
   this->env = env;
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestEnv1::__gc_mark() {
+    Skew::GC::mark(env);
+  }
+#endif
 
 TestLambda1::TestLambda1(TestEnv *env, TestEnv1 *env1) {
   this->env = env;
@@ -1287,6 +1594,13 @@ TestLambda1::TestLambda1(TestEnv *env, TestEnv1 *env1) {
 void TestLambda1::run() {
   this->env->list->append(this->env1->i);
 }
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void TestLambda1::__gc_mark() {
+    Skew::GC::mark(env);
+    Skew::GC::mark(env1);
+  }
+#endif
 ").cpp
 
 # Constructors on dynamic types shouldn't need parentheses
