@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #if _WIN32
   #include <windows.h>
 #else

@@ -469,7 +469,7 @@ namespace Skew.LambdaConversion {
     }
 
     def _createInterface(count int, hasReturnType bool) ObjectSymbol {
-      var key = count | (hasReturnType ? 1 << 31 : 0)
+      var key = count << 1 | hasReturnType as int
       var object = _interfaces.get(key, null)
 
       if object == null {
