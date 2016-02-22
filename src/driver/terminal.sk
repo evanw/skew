@@ -3,6 +3,7 @@ namespace Skew {
     DEFINE
     FIX_ALL
     FOLD_CONSTANTS
+    GC_STRATEGY
     GLOBALIZE_FUNCTIONS
     HELP
     INLINE_FUNCTIONS
@@ -401,13 +402,15 @@ namespace Skew {
   }
 
   def parseEnum<T>(log Log, name string, map StringMap<T>, range Range, defaultValue T) T {
-    var key = range.toString
-    if key in map {
-      return map[key]
+    if range != null {
+      var key = range.toString
+      if key in map {
+        return map[key]
+      }
+      var keys = map.keys
+      keys.sort(SORT_STRINGS) # Sort so the order is deterministic
+      log.commandLineErrorInvalidEnum(range, name, key, keys)
     }
-    var keys = map.keys
-    keys.sort(SORT_STRINGS) # Sort so the order is deterministic
-    log.commandLineErrorInvalidEnum(range, name, key, keys)
     return defaultValue
   }
 

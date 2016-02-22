@@ -38,24 +38,35 @@ class string {
   def in(x string) bool
 }
 
+@rename(\"Skew::List\")
 class List {
   @rename(\"contains\")
   def in(x T) bool
 }
 
+@rename(\"Skew::StringMap\")
 class StringMap {
   @rename(\"contains\")
   def in(x string) bool
 }
 
+@rename(\"Skew::IntMap\")
 class IntMap {
   @rename(\"contains\")
   def in(x int) bool
 }
 
-@import {
-  class StringBuilder {}
-  def assert(truth bool)
+@import
+@rename(\"Skew::StringBuilder\")
+class StringBuilder {
 }
+
+@import
+@rename(\"Skew::Math\")
+namespace Math {
+}
+
+@import
+def assert(truth bool)
 "
 }

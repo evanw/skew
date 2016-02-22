@@ -10,28 +10,28 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-string IO::readFile(const string &path) {
+Skew::string IO::readFile(const Skew::string &path) {
   std::ifstream file(path.c_str());
-  if (!file) return string();
+  if (!file) return Skew::string();
   std::string contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  return string(contents).replaceAll("\r\n", "\n");
+  return Skew::string(contents).replaceAll("\r\n", "\n");
 }
 
-bool IO::writeFile(const string &path, const string &contents) {
+bool IO::writeFile(const Skew::string &path, const Skew::string &contents) {
   std::ofstream file(path.c_str());
   if (!file) return false;
   file << contents.c_str();
   return true;
 }
 
-bool IO::isDirectory(const string &path) {
+bool IO::isDirectory(const Skew::string &path) {
   struct stat info;
   return stat(path.c_str(), &info) == 0 && info.st_mode & S_IFDIR;
 }
 
-List<string> *IO::readDirectory(const string &path) {
+Skew::List<Skew::string> *IO::readDirectory(const Skew::string &path) {
   if (auto dir = opendir(path.c_str())) {
-    auto entries = new List<string>();
+    auto entries = new Skew::List<Skew::string>();
     while (auto entry = readdir(dir)) {
       entries->append(entry->d_name);
     }
@@ -81,7 +81,7 @@ int Terminal::height() {
   return __getTerminalInfo().height;
 }
 
-void Terminal::print(const string &text) {
+void Terminal::print(const Skew::string &text) {
   std::cout << text.c_str() << std::endl;
 }
 
@@ -89,7 +89,7 @@ void Terminal::flush() {
   std::cout.flush();
 }
 
-void Terminal::write(const string &text) {
+void Terminal::write(const Skew::string &text) {
   std::cout << text.c_str();
 }
 
@@ -103,14 +103,14 @@ double Timestamp::seconds() {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-double parseDoubleLiteral(const string &x) {
+double parseDoubleLiteral(const Skew::string &x) {
   double y = NAN;
   std::stringstream(x.c_str()) >> y;
   return y;
 }
 
 // Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
-string doubleToString(double value) {
+Skew::string doubleToString(double value) {
   char buffer[64];
   std::snprintf(&buffer[0], sizeof(buffer), "%.15g", value);
   if (std::stod(&buffer[0]) != value) {
@@ -133,6 +133,6 @@ bool doubleIsFinite(double x) {
   return std::isfinite(x);
 }
 
-string intToString(int x) {
+Skew::string intToString(int x) {
   return std::to_string(x);
 }

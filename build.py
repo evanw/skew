@@ -51,22 +51,26 @@ CPP_FLAGS = [
   '-Wno-switch',
   '-Wno-unused-parameter',
   '-Wno-unused-variable',
-  '-include', 'src/backend/library.h',
-  '-include', 'src/backend/support.h',
+  '-include', 'src/cpp/skew.h',
+  '-include', 'src/cpp/support.h',
 ]
 
 CPP_DEBUG_FLAGS = [
-  'src/backend/library.cpp',
-  'src/backend/support.cpp',
+  'src/cpp/skew.cpp',
+  'src/cpp/support.cpp',
 ]
 
 CPP_RELEASE_FLAGS = [
   '-O3',
   '-DNDEBUG',
   '-fomit-frame-pointer',
-  '-include', 'src/backend/library.cpp',
-  '-include', 'src/backend/support.cpp',
-  '-include', 'src/backend/fast.cpp',
+  '-include', 'src/cpp/skew.cpp',
+  '-include', 'src/cpp/support.cpp',
+  '-include', 'src/cpp/fast.cpp',
+]
+
+CPP_GC_FLAGS = [
+  '-DSKEW_GC_MARK_AND_SWEEP',
 ]
 
 node_binary = None
@@ -198,8 +202,8 @@ def skewc_cpp(source, target, sources=None, release=False):
 def compile_cs(sources, target):
   run(['mcs', '-debug'] + sources + ['-out:' + target])
 
-def compile_cpp(source, target, release=False):
-  run(['c++', source, '-o', target] + CPP_FLAGS + (CPP_RELEASE_FLAGS if release else CPP_DEBUG_FLAGS))
+def compile_cpp(source, target, release=False, gc=False):
+  run(['c++', source, '-o', target] + CPP_FLAGS + (CPP_RELEASE_FLAGS if release else CPP_DEBUG_FLAGS) + (CPP_GC_FLAGS if gc else []))
 
 ################################################################################
 
@@ -242,8 +246,12 @@ def check_js():
 def check_cs():
   mkdir('out')
   skewc_js('skewc.js', 'out/skewc.cs', sources=SOURCES_SKEWC)
+
+  # Iteration 1
   compile_cs(['out/skewc.cs'], 'out/skewc.exe')
   skewc_cs('out/skewc.exe', 'out/skewc2.cs', sources=SOURCES_SKEWC)
+
+  # Iteration 2
   compile_cs(['out/skewc2.cs'], 'out/skewc2.exe')
   skewc_cs('out/skewc2.exe', 'out/skewc3.cs', sources=SOURCES_SKEWC)
   check_same('out/skewc2.cs', 'out/skewc3.cs')
@@ -252,11 +260,20 @@ def check_cs():
 def check_cpp():
   mkdir('out')
   skewc_js('skewc.js', 'out/skewc.cpp', sources=SOURCES_SKEWC, release=True)
-  compile_cpp('out/skewc.cpp', 'out/skewc', release=True)
+
+  # Iteration 1: Debug
+  compile_cpp('out/skewc.cpp', 'out/skewc')
   skewc_cpp('out/skewc', 'out/skewc2.cpp', sources=SOURCES_SKEWC)
-  compile_cpp('out/skewc2.cpp', 'out/skewc2')
+
+  # Iteration 2: Release
+  compile_cpp('out/skewc2.cpp', 'out/skewc2', release=True)
   skewc_cpp('out/skewc2', 'out/skewc3.cpp', sources=SOURCES_SKEWC)
   check_same('out/skewc2.cpp', 'out/skewc3.cpp')
+
+  # Iteration 3: GC
+  compile_cpp('out/skewc3.cpp', 'out/skewc3', gc=True)
+  skewc_cpp('out/skewc3', 'out/skewc4.cpp', sources=SOURCES_SKEWC)
+  check_same('out/skewc3.cpp', 'out/skewc4.cpp')
 
 @job
 def check_determinism():
@@ -291,8 +308,12 @@ def test():
 def test_js():
   mkdir('out')
   skewc_js('skewc.js', 'out/skewc.js', sources=SOURCES_SKEWC)
+
+  # Debug
   skewc_js('out/skewc.js', 'out/test.js', sources=SOURCES_TEST)
   run_js('out/test.js', [])
+
+  # Release
   skewc_js('out/skewc.js', 'out/test.min.js', sources=SOURCES_TEST, release=True)
   run_js('out/test.min.js', [])
 
@@ -300,9 +321,13 @@ def test_js():
 def test_cs():
   mkdir('out')
   skewc_js('skewc.js', 'out/skewc.js', sources=SOURCES_SKEWC)
+
+  # Single file
   skewc_js('out/skewc.js', 'out/test.cs', sources=SOURCES_TEST)
   compile_cs(['out/test.cs'], 'out/test.exe')
   run_cs('out/test.exe', [])
+
+  # Multiple files
   rmtree('out/cs')
   mkdir('out/cs')
   run_js('out/skewc.js', SOURCES_TEST + ['--target=cs', '--output-dir=out/cs'])
@@ -313,12 +338,21 @@ def test_cs():
 def test_cpp():
   mkdir('out')
   skewc_js('skewc.js', 'out/skewc.js', sources=SOURCES_SKEWC)
-  skewc_js('skewc.js', 'out/test.debug.cpp', sources=SOURCES_TEST)
+
+  # Debug
+  skewc_js('out/skewc.js', 'out/test.debug.cpp', sources=SOURCES_TEST)
   compile_cpp('out/test.debug.cpp', 'out/test.debug')
   run_cpp('out/test.debug', [])
-  skewc_js('skewc.js', 'out/test.release.cpp', sources=SOURCES_TEST, release=True)
+
+  # Release
+  skewc_js('out/skewc.js', 'out/test.release.cpp', sources=SOURCES_TEST, release=True)
   compile_cpp('out/test.release.cpp', 'out/test.release', release=True)
   run_cpp('out/test.release', [])
+
+  # GC
+  skewc_js('out/skewc.js', 'out/test.gc.cpp', sources=SOURCES_TEST)
+  compile_cpp('out/test.gc.cpp', 'out/test.gc', gc=True)
+  run_cpp('out/test.gc', [])
 
 @job
 def benchmark():
