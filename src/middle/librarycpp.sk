@@ -1,5 +1,16 @@
 namespace Skew {
   const NATIVE_LIBRARY_CPP = "
+@import {
+  def __doubleToString(x double) string
+  def __intToString(x int) string
+
+  @rename(\"std::isnan\")
+  def __doubleIsNaN(x double) bool
+
+  @rename(\"std::isfinite\")
+  def __doubleIsFinite(x double) bool
+}
+
 class bool {
   def toString string {
     return self ? \"true\" : \"false\"
@@ -8,7 +19,7 @@ class bool {
 
 class int {
   def toString string {
-    return dynamic.intToString(self)
+    return __intToString(self)
   }
 
   def >>>(x int) int {
@@ -18,15 +29,15 @@ class int {
 
 class double {
   def toString string {
-    return dynamic.doubleToString(self)
+    return __doubleToString(self)
   }
 
   def isNaN bool {
-    return dynamic.doubleIsNaN(self)
+    return __doubleIsNaN(self)
   }
 
   def isFinite bool {
-    return dynamic.doubleIsFinite(self)
+    return __doubleIsFinite(self)
   }
 }
 

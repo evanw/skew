@@ -353,6 +353,30 @@ int Skew::Math::min(int x, int y) {
   return x < y ? x : y;
 }
 
+// Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
+Skew::string __doubleToString(double value) {
+  char buffer[64];
+  std::snprintf(&buffer[0], sizeof(buffer), "%.15g", value);
+
+  if (std::stod(&buffer[0]) != value) {
+    std::snprintf(&buffer[0], sizeof(buffer), "%.16g", value);
+
+    if (std::stod(&buffer[0]) != value) {
+      std::snprintf(&buffer[0], sizeof(buffer), "%.17g", value);
+    }
+  }
+
+  if (!strcmp(buffer, "-0")) {
+    return "0";
+  }
+
+  return buffer;
+}
+
+Skew::string __intToString(int x) {
+  return std::to_string(x);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifdef SKEW_GC_MARK_AND_SWEEP

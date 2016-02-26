@@ -1,7 +1,6 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <string.h>
 
 #ifdef _WIN32
   #include <windows.h>
@@ -177,32 +176,4 @@ double parseDoubleLiteral(const Skew::string &x) {
   double y = NAN;
   std::stringstream(x.c_str()) >> y;
   return y;
-}
-
-// Try shorter strings first. Good test cases: 0.1, 9.8, 0.00000000001, 1.1 - 1.0
-Skew::string doubleToString(double value) {
-  char buffer[64];
-  std::snprintf(&buffer[0], sizeof(buffer), "%.15g", value);
-  if (std::stod(&buffer[0]) != value) {
-    std::snprintf(&buffer[0], sizeof(buffer), "%.16g", value);
-    if (std::stod(&buffer[0]) != value) {
-      std::snprintf(&buffer[0], sizeof(buffer), "%.17g", value);
-    }
-  }
-  if (!strcmp(buffer, "-0")) {
-    return "0";
-  }
-  return buffer;
-}
-
-bool doubleIsNaN(double x) {
-  return std::isnan(x);
-}
-
-bool doubleIsFinite(double x) {
-  return std::isfinite(x);
-}
-
-Skew::string intToString(int x) {
-  return std::to_string(x);
 }

@@ -26,7 +26,3 @@ namespace Timestamp {
 }
 
 double parseDoubleLiteral(const Skew::string &x);
-Skew::string doubleToString(double x);
-bool doubleIsNaN(double x);
-bool doubleIsFinite(double x);
-Skew::string intToString(int x);

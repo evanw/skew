@@ -459,6 +459,9 @@ namespace Skew {
   }
 }
 
+Skew::string __doubleToString(double x);
+Skew::string __intToString(int x);
+
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
