@@ -6945,7 +6945,7 @@ def bar2 {
 <stdin>:7:3: error: Must return a value of type \"int\"
   return
   ~~~~~~
-<stdin>:12:3: error: Cannot return a value inside a function without a return type
+<stdin>:12:3: warning: Unused expression
   false
   ~~~~~
 ")

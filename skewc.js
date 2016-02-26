@@ -11400,20 +11400,9 @@
           context.next();
         }
 
-        // There is a well-known bug in JavaScript where a return statement
-        // followed by a newline and a value is parsed as two statements,
-        // a return statement without a value and an expression statement.
-        // This is dumb so don't do this. Parse this as a single return
-        // statement with a value instead.
-        if (previous != null && previous.kind == Skew.NodeKind.RETURN && previous.returnValue() == null && statement1.kind == Skew.NodeKind.EXPRESSION) {
-          previous.appendChild(statement1.expressionValue().remove());
-        }
-
-        else {
-          previous = statement1;
-          statement1.comments = comments;
-          parent.appendChild(statement1);
-        }
+        previous = statement1;
+        statement1.comments = comments;
+        parent.appendChild(statement1);
       }
 
       // Special-case semicolons before comments for better parser recovery
@@ -18936,6 +18925,24 @@
 
     for (var child = node.firstChild(), next = null; child != null; child = next) {
       next = child.nextSibling();
+
+      // There is a well-known ambiguity in languages like JavaScript where
+      // a return statement followed by a newline and a value can either be
+      // parsed as a single return statement with a value or as two
+      // statements, a return statement without a value and an expression
+      // statement. Luckily, we're better off than JavaScript since we know
+      // the type of the function. Parse a single statement in a non-void
+      // function but two statements in a void function.
+      if (child.kind == Skew.NodeKind.RETURN && next != null && child.returnValue() == null && next.kind == Skew.NodeKind.EXPRESSION) {
+        var $function = scope.findEnclosingFunctionOrLambda().symbol;
+
+        if ($function.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR && $function.resolvedType.returnType != null) {
+          child.appendChild(next.remove().expressionValue().remove());
+          next = child.nextSibling();
+          assert(child.returnValue() != null);
+        }
+      }
+
       this._resolveNode(child, scope, null);
 
       // Stop now if the child was removed

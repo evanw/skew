@@ -712,20 +712,9 @@ namespace Skew.Parsing {
           context.next
         }
 
-        # There is a well-known bug in JavaScript where a return statement
-        # followed by a newline and a value is parsed as two statements,
-        # a return statement without a value and an expression statement.
-        # This is dumb so don't do this. Parse this as a single return
-        # statement with a value instead.
-        if previous != null && previous.kind == .RETURN && previous.returnValue == null && statement.kind == .EXPRESSION {
-          previous.appendChild(statement.expressionValue.remove)
-        }
-
-        else {
-          previous = statement
-          statement.comments = comments
-          parent.appendChild(statement)
-        }
+        previous = statement
+        statement.comments = comments
+        parent.appendChild(statement)
       }
 
       # Special-case semicolons before comments for better parser recovery
