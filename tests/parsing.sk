@@ -498,9 +498,6 @@ def test {
 <stdin>:16:3: error: \"foo\" is not declared
   foo(
   ~~~
-<stdin>:16:3: error: Cannot return a value inside a function without a return type
-  foo(
-  ~~~~
 <stdin>:17:3: error: Cannot use \"break\" outside a loop
   break
   ~~~~~
