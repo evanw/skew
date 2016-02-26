@@ -414,7 +414,7 @@ def main {
 ", "
 void main() {
   foo(0.0 / 0.0, 1.0 / 0.0, -(1.0 / 0.0));
-  foo(doubleToString(0.0 / 0.0), doubleToString(1.0 / 0.0), doubleToString(-(1.0 / 0.0)));
+  foo(__doubleToString(0.0 / 0.0), __doubleToString(1.0 / 0.0), __doubleToString(-(1.0 / 0.0)));
 }
 ").cpp.inlineAllFunctions
 
@@ -430,7 +430,7 @@ def main {
 
 void main() {
   foo(NAN, INFINITY, -INFINITY);
-  foo(doubleToString(NAN), doubleToString(INFINITY), doubleToString(-INFINITY));
+  foo(__doubleToString(NAN), __doubleToString(INFINITY), __doubleToString(-INFINITY));
 }
 ").cpp.inlineAllFunctions.foldAllConstants
 
@@ -442,7 +442,7 @@ def main {
 }
 ", "
 void main() {
-  foo(intToString(0), doubleToString(1.0), doubleToString(-1.0), doubleToString(0.5), doubleToString(-0.5));
+  foo(__intToString(0), __doubleToString(1.0), __doubleToString(-1.0), __doubleToString(0.5), __doubleToString(-0.5));
 }
 ").cpp.inlineAllFunctions
 
