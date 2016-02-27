@@ -2944,6 +2944,11 @@
           var function1 = in_List.get(list3, i3);
           this._emitFunction(function1, Skew.CPlusPlusEmitter.CodeMode.DEFINE);
         }
+
+        for (var i4 = 0, list4 = symbol.variables, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
+          var variable1 = in_List.get(list4, i4);
+          this._emitVariable(variable1, Skew.CPlusPlusEmitter.CodeMode.DEFINE);
+        }
         break;
       }
     }
@@ -3133,7 +3138,6 @@
       return;
     }
 
-    // C++ can't forward-declare variables without also giving them external linkage
     var avoidFullName = symbol.kind == Skew.SymbolKind.VARIABLE_GLOBAL && symbol.parent.kind != Skew.SymbolKind.OBJECT_CLASS;
 
     if (mode == Skew.CPlusPlusEmitter.CodeMode.IMPLEMENT && symbol.kind != Skew.SymbolKind.VARIABLE_LOCAL) {
@@ -3154,8 +3158,8 @@
     else {
       this._emit(this._indent);
 
-      if (mode == Skew.CPlusPlusEmitter.CodeMode.DEFINE && symbol.kind == Skew.SymbolKind.VARIABLE_GLOBAL && symbol.parent.kind == Skew.SymbolKind.OBJECT_CLASS) {
-        this._emit('static ');
+      if (mode == Skew.CPlusPlusEmitter.CodeMode.DEFINE && symbol.kind == Skew.SymbolKind.VARIABLE_GLOBAL) {
+        this._emit(symbol.parent.kind == Skew.SymbolKind.OBJECT_CLASS ? 'static ' : 'extern ');
       }
 
       // Global variables must be stored in roots to avoid accidental garbage collection

@@ -349,6 +349,8 @@ def test(x double) Foo {
 ", "
 namespace Foo {
   double scaleBy(double self, double scale);
+
+  extern double FOO;
 }
 
 namespace Foo {
@@ -540,6 +542,8 @@ namespace Bar {
 
 namespace Baz {
   void foo(int self);
+
+  extern int X;
 }
 
 namespace in_Foo {
@@ -1712,6 +1716,34 @@ void test(int x, int y) {
   x = (x - y) & x;
   x = x * y & x;
   x = x / y & x;
+}
+").cpp
+
+# Check forward-declaration of global variables
+test("
+namespace Foo {
+  const FOO = 0
+}
+
+const foo = Foo.FOO
+
+@export
+def test {
+  foo
+}
+", "
+namespace Foo {
+  extern int FOO;
+}
+
+int foo = Foo::FOO;
+
+namespace Foo {
+  int FOO = 0;
+}
+
+void test() {
+  foo;
 }
 ").cpp
 

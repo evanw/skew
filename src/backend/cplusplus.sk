@@ -285,6 +285,9 @@ namespace Skew {
           for function in symbol.functions {
             _emitFunction(function, .DEFINE)
           }
+          for variable in symbol.variables {
+            _emitVariable(variable, .DEFINE)
+          }
         }
       }
     }
@@ -442,7 +445,6 @@ namespace Skew {
         return
       }
 
-      # C++ can't forward-declare variables without also giving them external linkage
       var avoidFullName = symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind != .OBJECT_CLASS
       if mode == .IMPLEMENT && symbol.kind != .VARIABLE_LOCAL {
         _adjustNamespace(avoidFullName ? symbol.parent : null)
@@ -460,8 +462,8 @@ namespace Skew {
 
       else {
         _emit(_indent)
-        if mode == .DEFINE && symbol.kind == .VARIABLE_GLOBAL && symbol.parent.kind == .OBJECT_CLASS {
-          _emit("static ")
+        if mode == .DEFINE && symbol.kind == .VARIABLE_GLOBAL {
+          _emit(symbol.parent.kind == .OBJECT_CLASS ? "static " : "extern ")
         }
 
         # Global variables must be stored in roots to avoid accidental garbage collection
