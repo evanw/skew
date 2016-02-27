@@ -207,7 +207,7 @@ Skew::string Skew::string::fromCodeUnits(const List<int> *x) {
 }
 
 Skew::string operator "" _s (const char *data, size_t count) {
-  return Skew::string(data, count);
+  return Skew::string(data, (int)count);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
