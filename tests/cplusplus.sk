@@ -1747,5 +1747,43 @@ void test() {
 }
 ").cpp
 
+# Check that exporting wrapped types with constructors is feasible
+test("
+@export
+type Foo : int {
+  def foo int {
+    return self as int * 2
+  }
+}
+
+namespace Foo {
+  def new(x int) Foo {
+    return (x / 2) as Foo
+  }
+}
+
+@export
+def test {
+  Foo.new(0).foo
+}
+", "
+namespace Foo {
+  int foo(int self);
+  int _new(int x);
+}
+
+void test() {
+  Foo::foo(Foo::_new(0));
+}
+
+int Foo::foo(int self) {
+  return self * 2;
+}
+
+int Foo::_new(int x) {
+  return x / 2;
+}
+").cpp
+
   }
 }
