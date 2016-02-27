@@ -1785,5 +1785,65 @@ int Foo::_new(int x) {
 }
 ").cpp
 
+# Check for a validation error with types inside exported classes
+test("
+@export
+class Foo {
+  enum Bar {
+    BAZ
+  }
+}
+
+@export
+def test {
+  Foo.Bar.BAZ
+}
+", "
+struct Foo;
+
+namespace in_Foo {
+  enum struct Bar {
+    BAZ = 0,
+  };
+}
+
+struct Foo SKEW_BASE_OBJECT {
+  Foo();
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
+};
+
+namespace in_Bar {
+  Skew::string toString(in_Foo::Bar self);
+
+  extern Skew::Root<Skew::List<Skew::string>> _strings;
+}
+
+namespace in_Foo {
+}
+
+namespace in_Bar {
+  Skew::Root<Skew::List<Skew::string>> _strings = new Skew::List<Skew::string>({\"BAZ\"_s});
+}
+
+void test() {
+  in_Foo::Bar::BAZ;
+}
+
+Foo::Foo() {
+}
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Foo::__gc_mark() {
+  }
+#endif
+
+Skew::string in_Bar::toString(in_Foo::Bar self) {
+  return (*in_Bar::_strings)[(int)self];
+}
+").cpp
+
   }
 }

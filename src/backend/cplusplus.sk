@@ -190,7 +190,11 @@ namespace Skew {
       while parent != null && parent.kind == .OBJECT_CLASS {
         parent = parent.parent
       }
-      symbol.parent = parent
+      if symbol.parent != parent {
+        symbol.parent.asObjectSymbol.objects.removeOne(symbol)
+        symbol.parent = parent
+        parent.asObjectSymbol.objects.append(symbol)
+      }
     }
 
     def _declareObject(symbol ObjectSymbol) {
