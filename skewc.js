@@ -2813,7 +2813,11 @@
       parent = parent.parent;
     }
 
-    symbol.parent = parent;
+    if (symbol.parent != parent) {
+      in_List.removeOne(symbol.parent.asObjectSymbol().objects, symbol);
+      symbol.parent = parent;
+      parent.asObjectSymbol().objects.push(symbol);
+    }
   };
 
   Skew.CPlusPlusEmitter.prototype._declareObject = function(symbol) {
