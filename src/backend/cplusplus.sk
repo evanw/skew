@@ -1044,8 +1044,8 @@ namespace Skew {
                 parent.kind == .LOGICAL_OR && kind == .LOGICAL_AND ||
                 parent.kind == .BITWISE_OR && kind == .BITWISE_AND ||
 
-                # GCC also warns about add/subtract inside bitwise operations without parentheses
-                (parent.kind == .BITWISE_AND || parent.kind == .BITWISE_OR || parent.kind == .BITWISE_XOR) && (kind == .ADD || kind == .SUBTRACT)) {
+                # Clang and GCC also warn about add/subtract inside bitwise operations and shifts without parentheses
+                (parent.kind == .BITWISE_AND || parent.kind == .BITWISE_OR || parent.kind == .BITWISE_XOR || parent.kind.isShift) && (kind == .ADD || kind == .SUBTRACT)) {
 
               precedence = .MEMBER
             }

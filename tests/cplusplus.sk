@@ -1693,6 +1693,18 @@ def test(x int, y int) {
   x = x - y & x
   x = x * y & x
   x = x / y & x
+
+  # <<
+  x = x + y << x
+  x = x - y << x
+  x = x * y << x
+  x = x / y << x
+
+  # >>
+  x = x + y >> x
+  x = x - y >> x
+  x = x * y >> x
+  x = x / y >> x
 }
 ", "
 void test(int x, int y) {
@@ -1716,6 +1728,18 @@ void test(int x, int y) {
   x = (x - y) & x;
   x = x * y & x;
   x = x / y & x;
+
+  // <<
+  x = (x + y) << x;
+  x = (x - y) << x;
+  x = x * y << x;
+  x = x / y << x;
+
+  // >>
+  x = (x + y) >> x;
+  x = (x - y) >> x;
+  x = x * y >> x;
+  x = x / y >> x;
 }
 ").cpp
 

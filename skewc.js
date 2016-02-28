@@ -3873,7 +3873,7 @@
         if (Skew.in_NodeKind.isBinary(kind)) {
           var parent = node.parent();
 
-          if (parent != null && (parent.kind == Skew.NodeKind.LOGICAL_OR && kind == Skew.NodeKind.LOGICAL_AND || parent.kind == Skew.NodeKind.BITWISE_OR && kind == Skew.NodeKind.BITWISE_AND || (parent.kind == Skew.NodeKind.BITWISE_AND || parent.kind == Skew.NodeKind.BITWISE_OR || parent.kind == Skew.NodeKind.BITWISE_XOR) && (kind == Skew.NodeKind.ADD || kind == Skew.NodeKind.SUBTRACT))) {
+          if (parent != null && (parent.kind == Skew.NodeKind.LOGICAL_OR && kind == Skew.NodeKind.LOGICAL_AND || parent.kind == Skew.NodeKind.BITWISE_OR && kind == Skew.NodeKind.BITWISE_AND || (parent.kind == Skew.NodeKind.BITWISE_AND || parent.kind == Skew.NodeKind.BITWISE_OR || parent.kind == Skew.NodeKind.BITWISE_XOR || Skew.in_NodeKind.isShift(parent.kind)) && (kind == Skew.NodeKind.ADD || kind == Skew.NodeKind.SUBTRACT))) {
             precedence = Skew.Precedence.MEMBER;
           }
 
