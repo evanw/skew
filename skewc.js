@@ -910,7 +910,7 @@
   Skew.readSources = function(log, normalArguments, inputs, inputRanges) {
     var visit = null;
     visit = function(range, path, isExplicit) {
-      if (in_string.startsWith(path, '.')) {
+      if (in_string.startsWith(Skew.splitPath(path).entry, '.')) {
         return;
       }
 
