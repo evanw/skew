@@ -6,7 +6,7 @@ test("
 class Foo {
 }
 
-@export
+@entry
 def main {
   var i int
   var s string
@@ -22,23 +22,25 @@ def main {
 }
 ", "
 (function() {
-  main = function() {
+  function f() {
     var b = 0, a = null, c = 0, d = !1, e = null;
     b && foo(), a != '' && foo(), a != null && foo(), c != 0 && foo(), d != !1 && foo(), e && foo();
-  };
+  }
+
+  f();
 })();
 ").jsMangle
 
 # Test default values
 test("
-@export
-def main string {
+@entry
+def main {
   var i int
   var s string
   var d double
   var b bool
   var f Foo
-  return i.toString + d.toString + b.toString + s + f.toString
+  var r = i.toString + d.toString + b.toString + s + f.toString
 }
 
 class Foo {
@@ -46,16 +48,16 @@ class Foo {
 }
 ", "
 (function() {
-  main = function() {
-    var a = null, b = null;
-    return '0' + 0 + 'false' + a + b.c();
-  };
+  function e() {
+    var a = null, b = null, d = '0' + 0 + 'false' + a + b.c();
+  }
+
+  e();
 })();
 ").jsMangle.foldAllConstants
 
 # Test associative operator rotation
 test("
-@export
 def foo {
   dynamic.test(dynamic.a + (dynamic.b + dynamic.c))
   dynamic.test(dynamic.a - (dynamic.b - dynamic.c))
@@ -68,25 +70,28 @@ def foo {
   dynamic.test(dynamic.a || (dynamic.b || dynamic.c))
 }
 
-@export
+@entry
 def bar {
   dynamic.test(dynamic.a & ((dynamic.b | dynamic.c) & (dynamic.d & (dynamic.e & dynamic.f))))
+  foo
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     test(a + (b + c)), test(a - (b - c)), test(a * (b * c)), test(a / (b / c)), test(a & b & c), test(a | b | c), test(a ^ b ^ c), test(a && b && c), test(a || b || c);
-  };
+  }
 
-  bar = function() {
-    test(a & (b | c) & d & e & f);
-  };
+  function b() {
+    test(a & (b | c) & d & e & f), a();
+  }
+
+  b();
 })();
 ").jsMangle
 
 # Test if statement folding
 test("
-@export
+@entry
 def main {
   if dynamic.a() {}
   if dynamic.b() { dynamic.c() }
@@ -97,15 +102,16 @@ def main {
 }
 ", "
 (function() {
-  main = function() {
+  function a() {
     a(), b() && c(), d() || e(), f() ? g() : h();
-  };
+  }
+
+  a();
 })();
 ").jsMangle.foldAllConstants
 
 # Test if statement return folding
 test("
-@export
 def foo bool {
   if dynamic.a { return true }
   if dynamic.b && dynamic.c { return true }
@@ -114,7 +120,6 @@ def foo bool {
   return false
 }
 
-@export
 def bar bool {
   if dynamic.a { return true }
   else if dynamic.b && dynamic.c { return true }
@@ -123,7 +128,6 @@ def bar bool {
   else { return false }
 }
 
-@export
 def baz bool {
   if dynamic.a || dynamic.b {
     if dynamic.c || dynamic.d {
@@ -132,25 +136,37 @@ def baz bool {
   }
   return false
 }
+
+@entry
+def main {
+  foo
+  bar
+  baz
+}
 ", "
 (function() {
-  foo = function() {
+  function a() {
     return a || b && c || d || e && f ? !0 : !1;
-  };
+  }
 
-  bar = function() {
+  function b() {
     return a || b && c || d || e && f ? !0 : !1;
-  };
+  }
 
-  baz = function() {
+  function c() {
     return (a || b) && (c || d) ? !0 : !1;
-  };
+  }
+
+  function d() {
+    a(), b(), c();
+  }
+
+  d();
 })();
 ").jsMangle
 
 # More tests for if statement return folding
 test("
-@export
 def foo(x dynamic) dynamic {
   x.foo(1)
   if x.y {
@@ -171,27 +187,37 @@ def foo(x dynamic) dynamic {
   return 0
 }
 
-@export
 def bar(x double) int {
   if x < 0 { return 0 }
   if x > 1 { return 1 }
   return 2
 }
+
+@entry
+def main {
+  foo(0)
+  bar(0)
+}
 ", "
 (function() {
-  foo = function(a) {
+  function b(a) {
     return (a.foo(1), a.y && (a.foo(2), a.y)) || (a.foo(3), a.y && (a.foo(4), a.y)) ? (a.foo(0), a) : 0;
-  };
+  }
 
-  bar = function(a) {
+  function c(a) {
     return a < 0 ? 0 : a > 1 ? 1 : 2;
-  };
+  }
+
+  function d() {
+    b(0), c(0);
+  }
+
+  d();
 })();
 ").jsMangle
 
 # Test integer comparison special cases
 test("
-@export
 def foo(bar int, baz fn()) {
   if bar < 1 { baz() }
   if bar <= 1 { baz() }
@@ -201,7 +227,6 @@ def foo(bar int, baz fn()) {
   if bar != 1 { baz() }
 }
 
-@export
 def bar(foo int, baz fn()) {
   if 1 < foo { baz() }
   if 1 <= foo { baz() }
@@ -210,21 +235,32 @@ def bar(foo int, baz fn()) {
   if 1 == foo { baz() }
   if 1 != foo { baz() }
 }
+
+@entry
+def main {
+  foo(0, null)
+  bar(0, null)
+}
 ", "
 (function() {
-  foo = function(a, b) {
+  function c(a, b) {
     a < 1 && b(), a < 2 && b(), a > 1 && b(), a > 0 && b(), a ^ 1 || b(), a ^ 1 && b();
-  };
+  }
 
-  bar = function(a, b) {
+  function d(a, b) {
     1 < a && b(), 0 < a && b(), 1 > a && b(), 2 > a && b(), 1 ^ a || b(), 1 ^ a && b();
-  };
+  }
+
+  function e() {
+    c(0, null), d(0, null);
+  }
+
+  e();
 })();
 ").jsMangle
 
 # Test enum comparison special cases
 test("
-@export
 def foo(bar Foo, baz fn()) {
   if bar < Foo.BAR { baz() }
   if bar <= Foo.BAR { baz() }
@@ -236,7 +272,6 @@ def foo(bar Foo, baz fn()) {
   if bar != Foo.BAR { baz() }
 }
 
-@export
 def bar(foo Foo, baz fn()) {
   if Foo.BAR < foo { baz() }
   if Foo.BAR <= foo { baz() }
@@ -248,25 +283,36 @@ def bar(foo Foo, baz fn()) {
   if Foo.BAR != foo { baz() }
 }
 
+@entry
+def main {
+  foo(.FOO, null)
+  bar(.BAR, null)
+}
+
 enum Foo {
   FOO
   BAR
 }
 ", "
 (function() {
-  foo = function(a, b) {
+  function c(a, b) {
     a < 1 && b(), a < 2 && b(), a > 1 && b(), a > 0 && b(), a || b(), a && b(), a ^ 1 || b(), a ^ 1 && b();
-  };
+  }
 
-  bar = function(a, b) {
+  function d(a, b) {
     1 < a && b(), 0 < a && b(), 1 > a && b(), 2 > a && b(), a || b(), a && b(), 1 ^ a || b(), 1 ^ a && b();
-  };
+  }
+
+  function e() {
+    c(0, null), d(1, null);
+  }
+
+  e();
 })();
 ").jsMangle.foldAllConstants
 
 # Doubles should not trigger integer comparison special cases
 test("
-@export
 def foo(bar double, baz fn()) {
   if bar < 1 { baz() }
   if bar <= 1 { baz() }
@@ -276,7 +322,6 @@ def foo(bar double, baz fn()) {
   if bar != 1 { baz() }
 }
 
-@export
 def bar(foo double, baz fn()) {
   if 1 < foo { baz() }
   if 1 <= foo { baz() }
@@ -285,35 +330,56 @@ def bar(foo double, baz fn()) {
   if 1 == foo { baz() }
   if 1 != foo { baz() }
 }
+
+@entry
+def main {
+  foo(0, null)
+  bar(0, null)
+}
 ", "
 (function() {
-  foo = function(a, b) {
+  function c(a, b) {
     a < 1 && b(), a <= 1 && b(), a > 1 && b(), a >= 1 && b(), a == 1 && b(), a != 1 && b();
-  };
+  }
 
-  bar = function(a, b) {
+  function d(a, b) {
     1 < a && b(), 1 <= a && b(), 1 > a && b(), 1 >= a && b(), 1 == a && b(), 1 != a && b();
-  };
+  }
+
+  function e() {
+    c(0, null), d(0, null);
+  }
+
+  e();
 })();
 ").jsMangle
 
 # Test a special case for comparison with -1
 test("
-@export
-def main(foo string) {
-  if \"foo\" in foo { dynamic.bar() }
+def foo(bar string) {
+  if \"foo\" in bar { dynamic.bar() }
+}
+
+@entry
+def main {
+  foo(null)
 }
 ", "
 (function() {
-  main = function(a) {
-    ~a.indexOf('foo') && bar();
-  };
+  function a(b) {
+    ~b.indexOf('foo') && bar();
+  }
+
+  function c() {
+    a(null);
+  }
+
+  c();
 })();
 ").jsMangle.inlineAllFunctions.foldAllConstants
 
 # Test index to member conversions
 test("
-@export
 def foo(map StringMap<int>) {
   dynamic.test(map[\"x\"])
   dynamic.test(map[\"_\"])
@@ -322,7 +388,6 @@ def foo(map StringMap<int>) {
   dynamic.test(map[\"if\"])
 }
 
-@export
 def bar(map StringMap<int>) {
   map[\"x\"] = dynamic.test()
   map[\"_\"] = dynamic.test()
@@ -330,15 +395,27 @@ def bar(map StringMap<int>) {
   map[\"x0\"] = dynamic.test()
   map[\"if\"] = dynamic.test()
 }
+
+@entry
+def main {
+  foo(null)
+  bar(null)
+}
 ", "
 (function() {
-  foo = function(a) {
+  function b(a) {
     test(a.x), test(a._), test(a['0']), test(a.x0), test(a['if']);
-  };
+  }
 
-  bar = function(a) {
+  function c(a) {
     a.x = test(), a._ = test(), a['0'] = test(), a.x0 = test(), a['if'] = test();
-  };
+  }
+
+  function d() {
+    b(null), c(null);
+  }
+
+  d();
 })();
 ").jsMangle.inlineAllFunctions.foldAllConstants
 
@@ -352,7 +429,7 @@ enum Foo {
 
 const foo = Foo.BAZ
 
-@export
+@entry
 def bar {
   if foo == .FOO { dynamic.test(\"FOO\") }
   else if foo == .BAR { dynamic.test(\"BAR\") }
@@ -361,15 +438,17 @@ def bar {
 }
 ", "
 (function() {
-  bar = function() {
+  function a() {
     test('BAZ');
-  };
+  }
+
+  a();
 })();
 ").jsMangle.foldAllConstants
 
 # Test return statement collapsing
 test("
-@export
+@entry
 def foo {
   if dynamic.x {
     dynamic.y()
@@ -378,17 +457,19 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     if (x) {
       y();
     }
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test return statement collapsing
 test("
-@export
+@entry
 def foo {
   if dynamic.x { return }
   dynamic.y()
@@ -396,15 +477,17 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     x || (y(), y());
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test return statement collapsing
 test("
-@export
+@entry
 def foo {
   if dynamic.x { return }
   dynamic.y()
@@ -413,15 +496,17 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     x || (y(), x || y());
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test return statement collapsing
 test("
-@export
+@entry
 def foo {
   if dynamic.x {
     if dynamic.y { return }
@@ -431,15 +516,17 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     x && (y || (z(), z()));
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test return statement collapsing
 test("
-@export
+@entry
 def foo {
   if dynamic.x {
     if dynamic.y { return }
@@ -450,7 +537,7 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     if (x) {
       if (y) {
         return;
@@ -460,13 +547,15 @@ def foo {
     }
 
     z();
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test return statement collapsing
 test("
-@export
+@entry
 def foo {
   while dynamic.x {
     if dynamic.y { return }
@@ -476,7 +565,7 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; x;) {
       if (y) {
         return;
@@ -484,13 +573,14 @@ def foo {
 
       z(), z();
     }
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test return statement collapsing
 test("
-@export
 def foo {
   dynamic.a()
   dynamic.b()
@@ -501,7 +591,7 @@ def foo {
   }
 }
 
-@export
+@entry
 def bar {
   dynamic.a()
   dynamic.b()
@@ -510,15 +600,15 @@ def bar {
     dynamic.e()
     dynamic.f()
   }
-  dynamic.g()
+  foo
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     a(), b(), c() && (d() || (e(), f()));
-  };
+  }
 
-  bar = function() {
+  function b() {
     if (a(), b(), c()) {
       if (d()) {
         return;
@@ -527,14 +617,16 @@ def bar {
       e(), f();
     }
 
-    g();
-  };
+    a();
+  }
+
+  b();
 })();
 ").jsMangle
 
 # Test continue statement collapsing
 test("
-@export
+@entry
 def foo {
   while dynamic.x {
     if dynamic.y {
@@ -545,19 +637,21 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; x;) {
       if (y) {
         z();
       }
     }
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test continue statement collapsing
 test("
-@export
+@entry
 def foo {
   while dynamic.x {
     if dynamic.y { continue }
@@ -567,17 +661,19 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; x;) {
       y || (z(), z());
     }
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test continue statement collapsing
 test("
-@export
+@entry
 def foo {
   while dynamic.x {
     if dynamic.y { continue }
@@ -588,17 +684,19 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; x;) {
       y || (z(), y || z());
     }
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test continue statement collapsing
 test("
-@export
+@entry
 def foo {
   while dynamic.x {
     if dynamic.y {
@@ -611,17 +709,19 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; x;) {
       y && (z(), y || (z(), z()));
     }
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test continue statement collapsing
 test("
-@export
+@entry
 def foo {
   while dynamic.x {
     if dynamic.y {
@@ -635,7 +735,7 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; x;) {
       if (y) {
         if (z(), y) {
@@ -647,13 +747,15 @@ def foo {
 
       z();
     }
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test continue statement collapsing
 test("
-@export
+@entry
 def foo {
   while dynamic.x {
     if dynamic.y {
@@ -666,17 +768,18 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; x;) {
       y ? z() : (z(), z());
     }
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Test continue statement collapsing
 test("
-@export
 def foo {
   while dynamic.x {
     dynamic.a()
@@ -689,7 +792,7 @@ def foo {
   }
 }
 
-@export
+@entry
 def bar {
   while dynamic.x {
     dynamic.a()
@@ -699,18 +802,18 @@ def bar {
       dynamic.e()
       dynamic.f()
     }
-    dynamic.g()
+    foo
   }
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; x;) {
       a(), b(), c() && (d() || (e(), f()));
     }
-  };
+  }
 
-  bar = function() {
+  function b() {
     for (; x;) {
       if (a(), b(), c()) {
         if (d()) {
@@ -720,9 +823,11 @@ def bar {
         e(), f();
       }
 
-      g();
+      a();
     }
-  };
+  }
+
+  b();
 })();
 ").jsMangle
 
@@ -755,14 +860,14 @@ class Foo {
   }
 }
 ", "
-(function() {
+(function(d) {
   var c;
 
-  Foo = function() {
+  d.Foo = function() {
     this.x = 100;
   };
 
-  c = Foo.prototype;
+  c = d.Foo.prototype;
 
   c.foo = function() {
     var b = this, a = get();
@@ -793,12 +898,11 @@ class Foo {
       return a.x;
     };
   };
-})();
+})(this);
 ").jsMangle
 
 # Test a loop special case
 test("
-@export
 def foo {
   while true {
     dynamic.a()
@@ -808,7 +912,6 @@ def foo {
   }
 }
 
-@export
 def bar {
   while dynamic.a() {
     dynamic.b()
@@ -817,23 +920,35 @@ def bar {
     }
   }
 }
+
+@entry
+def main {
+  foo
+  bar
+}
 ", "
 (function() {
-  foo = function() {
+  function a() {
     for (; a(), !b();) {
     }
-  };
+  }
 
-  bar = function() {
+  function b() {
     for (; a() && (b(), !c());) {
     }
-  };
+  }
+
+  function c() {
+    a(), b();
+  }
+
+  c();
 })();
 ").jsMangle
 
 # Test mangling the name of catch variables
 test("
-@export
+@entry
 def foo {
   try {
   } catch foo dynamic {
@@ -841,18 +956,20 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function b() {
     try {
     }
 
     catch (a) {
     }
-  };
+  }
+
+  b();
 })();
 ").jsMangle
 
 test("
-@export
+@entry
 def foo {
   while true {
     switch dynamic.x {
@@ -877,23 +994,8 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
-    c: for (;;) {
-      switch (x) {
-        case 0: {
-          break c;
-        }
-
-        case 1: {
-          if (!y) {
-            break c;
-          }
-          break;
-        }
-      }
-    }
-
-    d: for (var a = 0; a < 10; a = a + 1 | 0) {
+  function c() {
+    d: for (;;) {
       switch (x) {
         case 0: {
           break d;
@@ -908,7 +1010,7 @@ def foo {
       }
     }
 
-    e: for (var b = 0; b < 10; b = b + 1 | 0) {
+    e: for (var a = 0; a < 10; a = a + 1 | 0) {
       switch (x) {
         case 0: {
           break e;
@@ -922,13 +1024,30 @@ def foo {
         }
       }
     }
-  };
+
+    f: for (var b = 0; b < 10; b = b + 1 | 0) {
+      switch (x) {
+        case 0: {
+          break f;
+        }
+
+        case 1: {
+          if (!y) {
+            break f;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  c();
 })();
 ").jsMangle
 
 # Test moving the default case outside the switch statement
 test("
-@export
+@entry
 def foo {
   switch dynamic.a {
     case 0 { return }
@@ -950,9 +1069,11 @@ def foo {
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     a && (b1(), b2(), a ? (d1(), d2()) : c(), e());
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
@@ -963,11 +1084,11 @@ def foo dynamic {
   return {\"a\": 0, \"0\": 0, \" \": 0}
 }
 ", "
-(function() {
-  foo = function() {
+(function(a) {
+  a.foo = function() {
     return {a: 0, '0': 0, ' ': 0};
   };
-})();
+})(this);
 ").jsMangle
 
 # Test sequence hook rotation
@@ -984,13 +1105,13 @@ def foo dynamic {
   }
 }
 ", "
-(function() {
-  foo = function() {
+(function(a) {
+  a.foo = function() {
     return function() {
       return x(), q ? (x(), !0) : !1;
     };
   };
-})();
+})(this);
 ").jsMangle
 
 # Test toString() removal
@@ -1021,19 +1142,19 @@ class Baz {
   def toString string { return \"\" }
 }
 ", "
-(function() {
-  foo = function(a, d, e) {
-    var b = new f;
-    t('' + a), t(q + a.toString()), t(a + ''), t(a.toString() + a), t(d + ''), t(e.toString(0) + ''), t(b.c() + '');
-  };
-
+(function(g) {
   function f() {
   }
 
   f.prototype.c = function() {
     return '';
   };
-})();
+
+  g.foo = function(a, d, e) {
+    var b = new f;
+    t('' + a), t(q + a.toString()), t(a + ''), t(a.toString() + a), t(d + ''), t(e.toString(0) + ''), t(b.c() + '');
+  };
+})(this);
 ").jsMangle
 
 # Make sure folding doesn't leave extra variables in this case
@@ -1045,11 +1166,11 @@ def foo int {
   return a + b + c
 }
 ", "
-(function() {
-  foo = function() {
+(function(a) {
+  a.foo = function() {
     return 0;
   };
-})();
+})(this);
 ").jsMangle.foldAllConstants
 
 # Make sure special runtime function names and definitions are mangled
@@ -1117,15 +1238,17 @@ def main int {
 
 # Make sure constant folding folds string lengths
 test("
-@export
+@entry
 def foo int {
   return \"abc\".count
 }
 ", "
 (function() {
-  foo = function() {
+  function a() {
     return 3;
-  };
+  }
+
+  process.exit(a());
 })();
 ").jsMangle.foldAllConstants
 
@@ -1291,36 +1414,55 @@ class Foo {
 
 # Make sure the 32-bit integer negation special-case is handled correctly
 test("
-@export
-def main List<int> {
+def foo List<int> {
   return [0x7FFFFFFF, -0x7FFFFFFF, 0x80000000, -0x80000000]
+}
+
+@entry
+def main {
+  foo
 }
 ", "
 (function() {
-  main = function() {
+  function a() {
     return [2147483647, -2147483647, 1 << 31, -(1 << 31) | 0];
-  };
+  }
+
+  function b() {
+    a();
+  }
+
+  b();
 })();
 ").jsMangle
 
 # Make sure the 32-bit integer negation special-case is handled correctly
 test("
-@export
-def main List<int> {
+def foo List<int> {
   return [0x7FFFFFFF, -0x7FFFFFFF, 0x80000000, -0x80000000]
+}
+
+@entry
+def main {
+  foo
 }
 ", "
 (function() {
-  main = function() {
+  function a() {
     return [2147483647, -2147483647, 1 << 31, 1 << 31];
-  };
+  }
+
+  function b() {
+    a();
+  }
+
+  b();
 })();
 ").jsMangle.foldAllConstants
 
 # Test left shift substitution
 test("
-@export
-def main List<int> {
+def foo List<int> {
   return [
     16384,
     131072,
@@ -1332,11 +1474,22 @@ def main List<int> {
     0xFF000000,
   ]
 }
+
+@entry
+def main {
+  foo
+}
 ", "
 (function() {
-  main = function() {
+  function a() {
     return [16384, 1 << 17, 1 << 30, 1 << 31, 1044480, 255 << 16, 255 << 20, 255 << 24];
-  };
+  }
+
+  function b() {
+    a();
+  }
+
+  b();
 })();
 ").jsMangle.foldAllConstants
 
@@ -1344,21 +1497,23 @@ def main List<int> {
 test("
 type Foo = int
 
-@export
+@entry
 def main int {
   return 0 as Foo as int as Foo as int
 }
 ", "
 (function() {
-  main = function() {
+  function a() {
     return 0;
-  };
+  }
+
+  process.exit(a());
 })();
 ").jsMangle
 
 # Wrapping should work with constant folding
 test("
-@export
+@entry
 def main {
   dynamic.foo((0 as Foo) == (1 as Foo))
   dynamic.foo((0 as int) == (1 as int))
@@ -1368,46 +1523,52 @@ def main {
 type Foo = int
 ", "
 (function() {
-  main = function() {
+  function a() {
     foo(!1), foo(!1), foo(!1);
-  };
+  }
+
+  a();
 })();
 ").jsMangle.foldAllConstants
 
 # Check that empty switch statements are removed
 test("
-@export
-def main(x int) {
-  switch x { default { dynamic.y() } }
+@entry
+def main {
+  switch dynamic.x { default { dynamic.y() } }
 }
 ", "
 (function() {
-  main = function(a) {
+  function a() {
     y();
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Check that empty switch statements are removed
 test("
-@export
-def main(x fn() int) {
-  switch x() { default { dynamic.y() } }
+@entry
+def main {
+  switch dynamic.x() { default { dynamic.y() } }
 }
 ", "
 (function() {
-  main = function(a) {
-    a(), y();
-  };
+  function a() {
+    x(), y();
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Check that switch statements have a single element turn into if statements, which are then further optimized
 test("
-@export
-def main(x int, y Foo) {
-  switch x { case X { dynamic.foo() } }
-  switch y { case Y { dynamic.bar() } }
+@entry
+def main {
+  switch dynamic.x { case X { dynamic.foo() } }
+  switch dynamic.y { case Y { dynamic.bar() } }
 }
 
 type Foo = int
@@ -1415,43 +1576,49 @@ const X = 0
 const Y = 0 as Foo
 ", "
 (function() {
-  main = function(a, b) {
-    a || foo(), b || bar();
-  };
+  function a() {
+    x || foo(), y || bar();
+  }
+
+  a();
 })();
 ").jsMangle.foldAllConstants
 
 # Check that switch statements that become single-element after other optimizations turn into if statements
 test("
-@export
-def main(x int) {
-  switch x {
+@entry
+def main {
+  switch dynamic.x {
     case 0 { return }
     default { dynamic.y() }
   }
 }
 ", "
 (function() {
-  main = function(a) {
-    a && y();
-  };
+  function a() {
+    x && y();
+  }
+
+  a();
 })();
 ").jsMangle
 
 # Check that double-element switch statements turn into if statements and are optimized further
 test("
-@export
-def main(x int) {
-  switch x {
+@entry
+def main {
+  switch dynamic.x {
     case 0 { dynamic.y() }
     default { dynamic.z() }
   }
 }
 ", "
 (function() {
-  main = function(a) {
-    a ? z() : y();
-  };
+  function a() {
+    x ? z() : y();
+  }
+
+  a();
 })();
 ").jsMangle
 
@@ -1463,7 +1630,6 @@ enum Foo {
   BAZ
 }
 
-@export
 def a(x int) Foo {
   switch x {
     case 0 { return .FOO }
@@ -1473,7 +1639,6 @@ def a(x int) Foo {
   }
 }
 
-@export
 def b(x int) Foo {
   switch x {
     case 1 { return .FOO }
@@ -1483,7 +1648,6 @@ def b(x int) Foo {
   }
 }
 
-@export
 def c(x int) Foo {
   switch x {
     case 0 { return .BAR }
@@ -1492,7 +1656,6 @@ def c(x int) Foo {
   }
 }
 
-@export
 def d(x Foo) int {
   switch x {
     case .FOO { return 0 }
@@ -1502,7 +1665,6 @@ def d(x Foo) int {
   }
 }
 
-@export
 def e(x Foo) int {
   switch x {
     case .FOO { return 1 }
@@ -1512,7 +1674,6 @@ def e(x Foo) int {
   }
 }
 
-@export
 def f(x Foo) int {
   switch x {
     case .BAR { return 0 }
@@ -1521,7 +1682,6 @@ def f(x Foo) int {
   }
 }
 
-@export
 def g(x int) Foo {
   switch x {
     case 1 { return .BAR }
@@ -1530,7 +1690,6 @@ def g(x int) Foo {
   }
 }
 
-@export
 def h(x int) Foo {
   switch x {
     case 0 { return .BAR }
@@ -1539,7 +1698,6 @@ def h(x int) Foo {
   }
 }
 
-@export
 def i(x int) Foo {
   switch x {
     case 0 { return .FOO }
@@ -1547,38 +1705,51 @@ def i(x int) Foo {
     default { return .FOO }
   }
 }
+
+@entry
+def main {
+  a(0)
+  b(0)
+  c(0)
+  d(.FOO)
+  e(.BAR)
+  f(.BAZ)
+  g(0)
+  h(0)
+  i(0)
+}
 ", "
 (function() {
-  a = function(j) {
-    return j > -1 && j < 3 ? j : 0;
-  };
+  function b(a) {
+    return a > -1 && a < 3 ? a : 0;
+  }
 
-  b = function(j) {
-    return j > 0 && j < 4 ? j - 1 | 0 : 0;
-  };
+  function c(a) {
+    return a > 0 && a < 4 ? a - 1 | 0 : 0;
+  }
 
-  c = function(j) {
-    return j > -1 && j < 2 ? j + 1 | 0 : 0;
-  };
+  function d(a) {
+    return a > -1 && a < 2 ? a + 1 | 0 : 0;
+  }
 
-  d = function(j) {
-    return j > -1 && j < 3 ? j : 0;
-  };
+  function e(a) {
+    return a > -1 && a < 3 ? a : 0;
+  }
 
-  e = function(j) {
-    return j > -1 && j < 3 ? j + 1 | 0 : 0;
-  };
+  function f(a) {
+    return a > -1 && a < 3 ? a + 1 | 0 : 0;
+  }
 
-  f = function(j) {
-    return j > 0 && j < 3 ? j - 1 | 0 : 0;
-  };
+  function g(a) {
+    return a > 0 && a < 3 ? a - 1 | 0 : 0;
+  }
 
-  g = function(j) {
-    return j > -1 && j < 2 ? j : 0;
-  };
+  function h(a) {
+    return a > -1 && a < 2 ? a : 0;
+  }
 
-  h = function(j) {
-    switch (j) {
+  function i(a) {
+    switch (a) {
       case 0: {
         return 1;
       }
@@ -1589,24 +1760,30 @@ def i(x int) Foo {
     }
 
     return 0;
-  };
+  }
 
-  i = function(j) {
-    switch (j) {
+  function j(a) {
+    switch (a) {
       case 0:
       case 2: {
-        return j;
+        return a;
       }
     }
 
     return 0;
-  };
+  }
+
+  function k() {
+    b(0), c(0), d(0), e(0), f(1), g(2), h(0), i(0), j(0);
+  }
+
+  k();
 })();
 ").jsMangle.foldAllConstants
 
 # Check parentheses omission for object creation
 test("
-@export
+@entry
 def main {
   dynamic.Foo.new()
   dynamic.Foo.new(100)
@@ -1615,9 +1792,11 @@ def main {
 }
 ", "
 (function() {
-  main = function() {
+  function a() {
     new Foo, new Foo(100), new Foo().foo, new Foo(100).foo;
-  };
+  }
+
+  a();
 })();
 ").jsMangle
 
@@ -1633,7 +1812,7 @@ var bar = (x int) => {
   dynamic.use(x)
 }
 
-@export
+@entry
 def main {
   foo(0)
   bar(0)
@@ -1644,13 +1823,15 @@ def main {
     a && use(a);
   }
 
-  main = function() {
+  function d() {
     b(0), c(0);
-  };
+  }
 
   var c = function(a) {
     a && use(a);
   };
+
+  d();
 })();
 ").jsMangle
 
@@ -1659,7 +1840,7 @@ class Class {}
 enum Enum {}
 type Type = int
 
-@export
+@entry
 def main {
   dynamic.foo(dynamic.bar is dynamic)
   dynamic.foo(dynamic.bar is fn())
@@ -1694,19 +1875,23 @@ def main {
     return typeof a === 'string';
   }
 
-  main = function() {
+  function j() {
     foo(bar), foo(bar instanceof Function), foo(g(bar)), foo(h(bar)), foo(f(bar)), foo(f(bar)), foo(f(bar)), foo(i(bar)), foo(bar instanceof c), foo(bar instanceof Dynamic);
-  };
+  }
 
   var c = {};
   var d = {};
 
   var e = {};
+
+  j();
 })();
 ").jsMangle
 
+# Test default values for wrapped types
 test("
-@export {
+@entry
+def main {
   var a Bool
   var b Int
   var c Double
@@ -1722,11 +1907,11 @@ type Bar = Foo
 enum Foo {}
 ", "
 (function() {
-  a = !1;
-  b = 0;
-  c = 0;
-  d = null;
-  e = 0;
+  function f() {
+    var a = !1, b = 0, c = 0, d = null, e = 0;
+  }
+
+  f();
 })();
 ").jsMangle
 
@@ -1820,22 +2005,23 @@ test("
 class Foo {}
 type Bar = Foo
 
-@export
-def main bool {
+@entry
+def main {
   var foo = Foo.new
-  return foo is Foo || foo is Bar
+  var bar = foo is Foo || foo is Bar
 }
 ", "
 (function() {
-  main = function() {
-    var a = new b;
-    return a instanceof b || a instanceof b;
-  };
+  function e() {
+    var a = new b, d = a instanceof b || a instanceof b;
+  }
 
   function b() {
   }
 
   var c = {};
+
+  e();
 })();
 ").jsMangle
 
@@ -2065,15 +2251,18 @@ def main {
 
 # Check shortening of long reciprocals
 test("
-@export
-def foo(x double) double {
-  return 0.3333333333333333 + x * 1.3333333333333333
+@entry
+def foo {
+  var x = 0
+  var y = 0.3333333333333333 + x * 1.3333333333333333
 }
 ", "
 (function() {
-  foo = function(a) {
-    return 1 / 3 + a * (4 / 3);
-  };
+  function c() {
+    var a = 0, b = 1 / 3 + a * (4 / 3);
+  }
+
+  c();
 })();
 ").jsMangle
 
@@ -2088,15 +2277,25 @@ class Bar {
   const bar = 2
 }
 
-@export
-def main(foo Foo, bar Bar) int {
+def test(foo Foo, bar Bar) int {
   return foo.foo + bar.bar
+}
+
+@entry
+def main {
+  test(null, null)
 }
 ", "
 (function() {
-  main = function(a, b) {
+  function b(a, c) {
     return a.a + 2 | 0;
-  };
+  }
+
+  function d() {
+    b(null, null);
+  }
+
+  d();
 })();
 ").jsMangle.foldAllConstants
 
@@ -2108,16 +2307,16 @@ class Foo {
   def new(x int) {}
 }
 
-@export
+@entry
 def main {
   Foo.new
   Foo.new(0)
 }
 ", "
 (function() {
-  main = function() {
+  function e() {
     new d, new d.b(0);
-  };
+  }
 
   function d() {
     this.a = function(a) {
@@ -2132,6 +2331,8 @@ def main {
   };
 
   d.b.prototype = d.prototype;
+
+  e();
 })();
 ").jsMangle
 
@@ -2141,19 +2342,21 @@ class Foo {
   const foo = 0
 }
 
-@export
+@entry
 def main {
   Foo.new
 }
 ", "
 (function() {
-  main = function() {
+  function c() {
     new b;
-  };
+  }
 
   function b() {
     this.a = 0;
   }
+
+  c();
 })();
 ").jsMangle.foldAllConstants
 
@@ -2164,21 +2367,23 @@ class Foo {
   def new { foo = 1 }
 }
 
-@export
+@entry
 def main int {
   var x = Foo.new
   return x.foo
 }
 ", "
 (function() {
-  main = function() {
+  function c() {
     var a = new b;
     return a.a;
-  };
+  }
 
   function b() {
     this.a = 1;
   }
+
+  process.exit(c());
 })();
 ").jsMangle.foldAllConstants
 
@@ -2187,8 +2392,8 @@ test("
 class Foo {
 }
 
-@export
-def main(x int) {
+@entry
+def main {
   try {
     throw Foo.new
   } catch e Foo {
@@ -2197,24 +2402,26 @@ def main(x int) {
 }
 ", "
 (function() {
-  main = function(a) {
+  function c() {
     try {
       throw new b;
     }
 
-    catch (c) {
-      if (c instanceof b) {
-        throw c;
+    catch (a) {
+      if (a instanceof b) {
+        throw a;
       }
 
       else {
-        throw c;
+        throw a;
       }
     }
-  };
+  }
 
   function b() {
   }
+
+  c();
 })();
 ").jsMangle
 
@@ -2239,17 +2446,17 @@ namespace ns2 {
 }
 var z = 0.0
 ", "
-(function() {
-  main = function() {
-    return a + b + c + x + ns2.y + d;
+(function(f) {
+  f.main = function() {
+    return a + b + c + f.x + f.ns2.y + d;
   };
 
-  ns2 = {};
+  f.ns2 = {};
 
-  x = 0;
-  ns2.y = 0;
+  f.x = 0;
+  f.ns2.y = 0;
   var a = 0, c = 0, d = 0, b = 0;
-})();
+})(this);
 ").jsMangle
 
 # Check mangling of hook expressions containing assignments
@@ -2263,15 +2470,15 @@ def test(x Foo) Foo {
   return (x = x.y) != null ? x : Foo.new
 }
 ", "
-(function() {
-  test = function(a) {
-    return (a = a.a) || new b;
-  };
-
+(function(c) {
   function b() {
     this.a = null;
   }
-})();
+
+  c.test = function(a) {
+    return (a = a.a) || new b;
+  };
+})(this);
 ").jsMangle
 
 # Interface removal with an instance variable shouldn't prevent dead code stripping a class constructor
@@ -2293,15 +2500,15 @@ def test(foo Foo) {
   foo.foo
 }
 ", "
-(function() {
-  test = function(a) {
-    b(a);
-  };
-
+(function(c) {
   function b(a) {
     a.a(a);
   }
-})();
+
+  c.test = function(a) {
+    b(a);
+  };
+})(this);
 ").jsMangle.globalizeAllFunctions
 
 # Check for a crash due to a cast with a resolved type of null after inlining
@@ -2314,15 +2521,17 @@ namespace Foo {
   }
 }
 
-@export
+@entry
 def test {
   var foo = Foo.new(false)
 }
 ", "
 (function() {
-  test = function() {
+  function b() {
     var a = !1;
-  };
+  }
+
+  b();
 })();
 ").jsMangle.inlineAllFunctions
 
@@ -2393,62 +2602,73 @@ def main {
 
 # Test assignment collapsing
 test("
-@export {
-  def foo(a int, b int, c int, f fn() int) {
-    a = 1
-    b = 1
-    c = 1
+def foo(a int, b int, c int, f fn() int) {
+  a = 1
+  b = 1
+  c = 1
 
-    a = 1
-    b = 2
-    c = 3
+  a = 1
+  b = 2
+  c = 3
 
-    a = f()
-    b = f()
-    c = f()
-  }
+  a = f()
+  b = f()
+  c = f()
+}
 
-  def bar(a dynamic, f fn() int) {
-    a[0] = 1
-    a[1] = 1
-    a[2] = 1
+def bar(a dynamic, f fn() int) {
+  a[0] = 1
+  a[1] = 1
+  a[2] = 1
 
-    a[0] = 1
-    a[1] = 2
-    a[2] = 3
+  a[0] = 1
+  a[1] = 2
+  a[2] = 3
 
-    a[0] = f()
-    a[1] = f()
-    a[2] = f()
-  }
+  a[0] = f()
+  a[1] = f()
+  a[2] = f()
+}
 
-  def baz(a dynamic, f fn() int) {
-    a.x = 1
-    a[1] = 1
-    a[\"y\"] = 1
+def baz(a dynamic, f fn() int) {
+  a.x = 1
+  a[1] = 1
+  a[\"y\"] = 1
 
-    a.x = 1
-    a[1] = 2
-    a[\"y\"] = 3
+  a.x = 1
+  a[1] = 2
+  a[\"y\"] = 3
 
-    a.x = f()
-    a[1] = f()
-    a[\"y\"] = f()
-  }
+  a.x = f()
+  a[1] = f()
+  a[\"y\"] = f()
+}
+
+@entry
+def main {
+  foo(0, 0, 0, null)
+  bar(0, null)
+  baz(0, null)
 }
 ", "
 (function() {
-  foo = function(a, b, c, d) {
+  function e(a, b, c, d) {
     a = b = c = a = 1, b = 2, c = 3, a = d(), b = d(), c = d();
-  };
+  }
 
-  bar = function(a, b) {
+  function f(a, b) {
     a[0] = a[1] = a[2] = a[0] = 1, a[1] = 2, a[2] = 3, a[0] = b(), a[1] = b(), a[2] = b();
-  };
+  }
 
-  baz = function(a, b) {
+  function g(a, b) {
     a.x = a[1] = a.y = a.x = 1, a[1] = 2, a.y = 3, a.x = b(), a[1] = b(), a.y = b();
-  };
+  }
+
+  function h() {
+    e(0, 0, 0, null), f(0, null), g(0, null);
+  }
+
+  h();
 })();
 ").jsMangle
 
@@ -2458,26 +2678,29 @@ flags Foo {
   A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
 }
 
-@export
+@entry
 def test int {
   return Foo.Z
 }
 ", "
 (function() {
-  test = function() {
+  function c() {
     return b.a;
-  };
+  }
 
   var b = {
     a: 1 << 25
   };
+
+  process.exit(c());
 })();
 ").jsMangle
 
 # Check that int casts aren't inserted when != turns into ^
 test("
-@export
-def test(a int, b int, c int, d int) {
+@entry
+def test {
+  var a = 0, b = 0, c = 0, d = 0
   while a - b != c - d {}
   while ((a - b) ^ (c - d)) != 0 {}
   while (a - b | 0) != (c - d | 0) {}
@@ -2485,8 +2708,8 @@ def test(a int, b int, c int, d int) {
 }
 ", "
 (function() {
-  test = function(a, b, c, d) {
-    for (; a - b ^ c - d;) {
+  function e() {
+    for (var a = 0, b = 0, c = 0, d = 0; a - b ^ c - d;) {
     }
 
     for (; a - b ^ c - d;) {
@@ -2497,13 +2720,15 @@ def test(a int, b int, c int, d int) {
 
     for (; (a - b | 1) ^ (c - d | 1);) {
     }
-  };
+  }
+
+  e();
 })();
 ").jsMangle
 
 # Check mangled map constructors
 test("
-@export
+@entry
 def test {
   var a = {1: 2, 3: 4}
   var b = {\"1\": 2, \"3\": 4}
@@ -2514,15 +2739,56 @@ def test {
     return {__proto__: b};
   };
 
-  test = function() {
+  function f() {
     var b = {1: 2, 3: 4}, c = a(a(e(null), '1', 2), '3', 4);
-  };
+  }
 
   function a(d, b, c) {
     return d[b] = c, d;
   }
+
+  f();
 })();
 ").jsMangle.inlineAllFunctions
+
+# Check export syntax
+test("
+@export {
+  class Class { def foo { new } }
+  enum Enum { def toString { Namespace.foo } }
+  namespace Namespace { def foo { (0 as Enum).toString } }
+  def Function {}
+  var Variable = 0
+}
+", "
+(function(c) {
+  var b = {};
+
+  b.toString = function(a) {
+    c.Namespace.foo();
+  };
+
+  c.Function = function() {
+  };
+
+  c.Class = function() {
+  };
+
+  c.Class.prototype.foo = function() {
+    new c.Class;
+  };
+
+  c.Enum = {};
+
+  c.Namespace = {};
+
+  c.Namespace.foo = function() {
+    b.toString(0);
+  };
+
+  c.Variable = 0;
+})(this);
+").jsMangle
 
   }
 }

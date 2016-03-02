@@ -57,7 +57,10 @@ namespace Skew {
     const _isSpecialVariableNeeded IntMap<int> = {}
     const _loopLabels IntMap<VariableSymbol> = {}
     const _specialVariables IntMap<VariableSymbol> = {}
+    var _global ObjectSymbol = null
+    var _symbolsToExport List<Symbol> = []
     var _allSpecialVariables List<VariableSymbol> = null
+    var _exportsNamespace ObjectSymbol = null
     var _enclosingFunction FunctionSymbol = null # This includes lambdas during patching but not during emission
     var _enclosingLoop Node = null
     var _namespacePrefix = ""
@@ -118,6 +121,7 @@ namespace Skew {
       _mangle = _options.jsMangle
       _minify = _options.jsMinify
       _sourceMap = _options.jsSourceMap
+      _global = global
 
       if _minify {
         _indentAmount = ""
@@ -142,7 +146,7 @@ namespace Skew {
       assert(SpecialVariable.MULTIPLY in _specialVariables)
       assert(SpecialVariable.PROTOTYPE in _specialVariables)
 
-      # The prototype cache doesn't need to be initialized
+      # These don't need to be initialized
       _specialVariables[SpecialVariable.PROTOTYPE].value = null
 
       # Sort these so their order is deterministic
@@ -168,7 +172,7 @@ namespace Skew {
       }
 
       # The entire body of code is wrapped in a closure for safety
-      _emit(_indent + "(function()" + _space + "{" + _newline)
+      _emit(_indent + "(function(" + (_exportsNamespace != null ? _mangleName(_exportsNamespace) : "") + ")" + _space + "{" + _newline + "")
       _increaseIndent
 
       # Emit special-cased variables that must come first
@@ -228,7 +232,7 @@ namespace Skew {
 
       # End the closure wrapping everything
       _decreaseIndent
-      _emit(_indent + "})();\n")
+      _emit(_indent + "})(" + (_exportsNamespace != null ? "this" : "") + ");\n")
 
       var codeName = _options.outputDirectory != null ? _options.outputDirectory + "/compiled.js" : _options.outputFile
       var mapName = codeName != null ? codeName + ".map" : null
@@ -442,6 +446,7 @@ namespace Skew {
     def _prepareGlobal(global ObjectSymbol) {
       # Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
       _patchObject(global)
+      _exportSymbols
 
       # Skip everything below if we aren't mangling
       if !_mangle {
@@ -742,10 +747,10 @@ namespace Skew {
 
       switch symbol.kind {
         case .OBJECT_NAMESPACE, .OBJECT_INTERFACE, .OBJECT_WRAPPED {
-          if symbol.forwardTo == null {
+          if symbol.forwardTo == null && symbol != _exportsNamespace {
             _emitNewlineBeforeSymbol(symbol)
             _emitComments(symbol.comments)
-            _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
+            _emit(_indent + (_namespacePrefix == "" ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{}")
             _emitSemicolonAfterStatement
             _emitNewlineAfterSymbol(symbol)
           }
@@ -754,7 +759,7 @@ namespace Skew {
         case .OBJECT_ENUM, .OBJECT_FLAGS {
           _emitNewlineBeforeSymbol(symbol)
           _emitComments(symbol.comments)
-          _emit(_indent + (_namespacePrefix == "" && !symbol.isExported ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{")
+          _emit(_indent + (_namespacePrefix == "" ? "var " : _namespacePrefix) + _mangleName(symbol) + _space + "=" + _space + "{")
           _increaseIndent
           var isFirst = true
           for variable in symbol.variables {
@@ -901,7 +906,7 @@ namespace Skew {
       if symbol.kind != .VARIABLE_INSTANCE && symbol.kind != .VARIABLE_ENUM_OR_FLAGS && (symbol.value != null || _namespacePrefix == "" || symbol.kind.isLocalOrArgumentVariable) {
         _emitNewlineBeforeSymbol(symbol)
         _emitComments(symbol.comments)
-        _emit(_indent + (_namespacePrefix == "" && !symbol.isExported || symbol.kind.isLocalOrArgumentVariable ? "var " : _namespacePrefix) + _mangleName(symbol))
+        _emit(_indent + (_namespacePrefix == "" || symbol.kind.isLocalOrArgumentVariable ? "var " : _namespacePrefix) + _mangleName(symbol))
 
         if symbol.value != null {
           _emit(_space + "=" + _space)
@@ -1572,6 +1577,10 @@ namespace Skew {
       # Scan over child objects
       for object in symbol.objects {
         _patchObject(object)
+
+        if symbol == _global && object.isExported {
+          _symbolsToExport.append(object)
+        }
       }
 
       # Scan over child functions
@@ -1643,12 +1652,61 @@ namespace Skew {
             symbol.flags |= .USE_PROTOTYPE_CACHE
           }
         }
+
+        if symbol == _global && function.isExported {
+          _symbolsToExport.append(function)
+        }
       }
 
       # Scan over child variables
       for variable in symbol.variables {
         _allocateNamingGroupIndex(variable)
         _patchNode(variable.value)
+
+        if symbol == _global && variable.isExported {
+          _symbolsToExport.append(variable)
+        }
+      }
+    }
+
+    def _exportSymbols {
+      if _symbolsToExport.isEmpty {
+        return
+      }
+
+      _exportsNamespace = ObjectSymbol.new(.OBJECT_NAMESPACE, _global.scope.generateName("exports"))
+      _exportsNamespace.resolvedType = Type.new(.SYMBOL, _exportsNamespace)
+      _exportsNamespace.state = .INITIALIZED
+      _exportsNamespace.scope = ObjectScope.new(_global.scope, _exportsNamespace)
+      _exportsNamespace.parent = _global
+      _global.objects.append(_exportsNamespace)
+      _allocateNamingGroupIndex(_exportsNamespace)
+
+      for symbol in _symbolsToExport {
+        assert(symbol.parent != null)
+        assert(symbol.parent.kind.isObject)
+
+        var oldParent = symbol.parent.asObjectSymbol
+        symbol.parent = _exportsNamespace
+
+        if symbol.kind.isObject {
+          oldParent.objects.removeOne(symbol.asObjectSymbol)
+          _exportsNamespace.objects.append(symbol.asObjectSymbol)
+        }
+
+        else if symbol.kind.isFunction {
+          oldParent.functions.removeOne(symbol.asFunctionSymbol)
+          _exportsNamespace.functions.append(symbol.asFunctionSymbol)
+        }
+
+        else if symbol.kind.isVariable {
+          oldParent.variables.removeOne(symbol.asVariableSymbol)
+          _exportsNamespace.variables.append(symbol.asVariableSymbol)
+        }
+
+        else {
+          assert(false)
+        }
       }
     }
 
