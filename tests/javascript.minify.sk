@@ -3,18 +3,17 @@ namespace Skew.Tests {
 
 # Strings should be emitted using the shortest representation
 test("
-@export
+@entry
 def main {
   dynamic.a(\"'\" + \"\\\"\")
 }
 ", "
-(function(){main=function(){a(\"'\"+'\"')}})();
+(function(){function main(){a(\"'\"+'\"')}main()})();
 ").jsMinify
 
 # Check for various whitespace issues
 test("
-@export
-def main dynamic {
+def foo dynamic {
   dynamic.a(dynamic.b + +dynamic.c)
   dynamic.a(dynamic.b + -dynamic.c)
   dynamic.a(dynamic.b - +dynamic.c)
@@ -28,43 +27,52 @@ def main dynamic {
   return []
   return {}
 }
+
+@entry
+def main {
+  foo
+}
 ", "
-(function(){main=function(){a(b+ +c);a(b+-c);a(b-+c);a(b- -c);return'';return a;return a+b;return-a;return~a;return!a;return[];return{}}})();
+(function(){function foo(){a(b+ +c);a(b+-c);a(b-+c);a(b- -c);return'';return a;return a+b;return-a;return~a;return!a;return[];return{}}function main(){foo()}main()})();
 ").jsMinify
 
 # Check for whitespace with numeric literals
 test("
-@export
 def foo dynamic {
   return -1
 }
 
-@export
 def bar dynamic {
   return -1.5
 }
 
-@export
 def baz dynamic {
   return 0
 }
+
+@entry
+def main {
+  foo
+  bar
+  baz
+}
 ", "
-(function(){foo=function(){return-1};bar=function(){return-1.5};baz=function(){return 0}})();
+(function(){function foo(){return-1}function bar(){return-1.5}function baz(){return 0}function main(){foo();bar();baz()}main()})();
 ").jsMinify.foldAllConstants
 
 # Check for omitting the leading zero
 test("
-@export
-def foo dynamic {
-  return [-1.5, -1.0, -0.5, -0.0, 0.0, 0.5, 1.0, 1.5]
+@entry
+def foo {
+  var x = [-1.5, -1.0, -0.5, -0.0, 0.0, 0.5, 1.0, 1.5]
 }
 ", "
-(function(){foo=function(){return[-1.5,-1,-.5,0,0,.5,1,1.5]}})();
+(function(){function foo(){var x=[-1.5,-1,-.5,0,0,.5,1,1.5]}foo()})();
 ").jsMinify.foldAllConstants
 
 # There is no "dangling if" ambiguity here
 test("
-@export
+@entry
 def main {
   if dynamic.a() {
     if dynamic.b() {
@@ -79,12 +87,12 @@ def main {
   }
 }
 ", "
-(function(){main=function(){if(a()){if(b()){var c=d();e(c,c)}else{var f=g();h(f,f)}}else i()}})();
+(function(){function main(){if(a()){if(b()){var c=d();e(c,c)}else{var f=g();h(f,f)}}else i()}main()})();
 ").jsMinify
 
 # This must be careful about the "dangling if" ambiguity
 test("
-@export
+@entry
 def main {
   if dynamic.a() {
     if dynamic.b() {
@@ -101,12 +109,12 @@ def main {
   }
 }
 ", "
-(function(){main=function(){if(a()){if(b())if(c()){var d=e();f(d,d)}else{var g=h();i(g,g)}}else j()}})();
+(function(){function main(){if(a()){if(b())if(c()){var d=e();f(d,d)}else{var g=h();i(g,g)}}else j()}main()})();
 ").jsMinify
 
 # Another "dangling if" variant
 test("
-@export
+@entry
 def main {
   if dynamic.a() {
     if dynamic.b() {
@@ -122,12 +130,12 @@ def main {
   }
 }
 ", "
-(function(){main=function(){if(a()){if(b()){var c=d();e(c,c)}else if(f()){var g=h();i(g,g)}}else{var j=k();l(j,j)}}})();
+(function(){function main(){if(a()){if(b()){var c=d();e(c,c)}else if(f()){var g=h();i(g,g)}}else{var j=k();l(j,j)}}main()})();
 ").jsMinify
 
 # A tricky "dangling if" issue
 test("
-@export
+@entry
 def main {
   if dynamic.a() {
     while true {
@@ -138,7 +146,7 @@ def main {
   }
 }
 ", "
-(function(){main=function(){if(a()){while(true)if(b())break}else c()}})();
+(function(){function main(){if(a()){while(true)if(b())break}else c()}main()})();
 ").jsMinify
 
 # Check that minification doesn't remove constants in switch statements unless necessary
@@ -157,82 +165,94 @@ def main(x int, y Foo) {
 
 enum Foo { FOO }
 ", "
-(function(){main=function(x,y){switch(x){case C:a();break;case 5:a();break}switch(y){case Foo.FOO:b();break}};var Foo={FOO:0};C=2})();
+(function(exports){var Foo={FOO:0};exports.main=function(x,y){switch(x){case exports.C:a();break;case 5:a();break}switch(y){case Foo.FOO:b();break}};exports.C=2})(this);
 ").jsMinify
 
 test("
-@export
 def foo string {
   return 0.toString
 }
+
+@entry
+def main {
+  foo
+}
 ", "
-(function(){foo=function(){return (0).toString()}})();
+(function(){function foo(){return (0).toString()}function main(){foo()}main()})();
 ").jsMinify
 
 # Make sure null is allowed to convert to string
 test("
-@export
 def foo string {
   return null
 }
+
+@entry
+def main {
+  foo
+}
 ", "
-(function(){foo=function(){return null}})();
+(function(){function foo(){return null}function main(){foo()}main()})();
 ").jsMinify
 
 # Avoid a space after "case" if possible
 test("
-@export
-def main(x string) {
+@entry
+def main {
+  var x = \"\"
   switch x {
     case \"x\" {}
     case x {}
   }
 }
 ", "
-(function(){main=function(x){switch(x){case'x':break;case x:break}}})();
+(function(){function main(){var x='';switch(x){case'x':break;case x:break}}main()})();
 ").jsMinify
 
 # Check complex post-keyword space removal
 test("
-@export
-def main(x int) int {
+@entry
+def main int {
+  var x = 0
   if x == -1 { dynamic.foo() }
   else { dynamic.bar() }
   return 0
 }
 ", "
-(function(){main=function(a){return~a?bar():foo(),0}})();
+(function(){function b(){var a=0;return~a?bar():foo(),0}process.exit(b())})();
 ").jsMinify.jsMangle
 
 # Check nested negation minification
 test("
-@export
-def main(x double) double {
-  return x - (-x) * 2 + x + (-x) * 2
+@entry
+def main {
+  var x = 0.0
+  var y = x - (-x) * 2 + x + (-x) * 2
 }
 ", "
-(function(){main=function(x){return x- -x*2+x+-x*2}})();
+(function(){function main(){var x=0;var y=x- -x*2+x+-x*2}main()})();
 ").jsMinify
 
 # Check nested negation minification
 test("
-@export
-def main(x double) double {
-  return x - (-2) * 2 + x + (-2) * 2
+@entry
+def main {
+  var x = dynamic.z as double
+  var y = x - (-2) * 2 + x + (-2) * 2
 }
 ", "
-(function(){main=function(x){return x- -4+x+-4}})();
+(function(){function main(){var x=+z;var y=x- -4+x+-4}main()})();
 ").jsMinify.foldAllConstants
 
 # Remove the space before the "in" operator
 test("
-@export
+@entry
 def test {
   dynamic.foo(dynamic.x in dynamic.y)
   dynamic.foo(\"x\" in dynamic.y)
 }
 ", "
-(function(){test=function(){foo(x in y);foo('x'in y)}})();
+(function(){function test(){foo(x in y);foo('x'in y)}test()})();
 ").jsMinify
 
   }

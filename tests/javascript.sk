@@ -25,7 +25,7 @@ def main {
 
 # Check primitive casting for dynamic values
 test("
-@export
+@entry
 def test {
   dynamic.foo(dynamic.x as bool)
   dynamic.foo(dynamic.x as int)
@@ -38,12 +38,14 @@ def test {
     return value === null ? value : value + '';
   }
 
-  test = function() {
+  function test() {
     foo(!!x);
     foo(x | 0);
     foo(+x);
     foo(__asString(x));
-  };
+  }
+
+  test();
 })();
 ").js
 
@@ -52,7 +54,7 @@ test("
 @export
 class DerivedClass : dynamic.BaseClass {}
 ", "
-(function() {
+(function(exports) {
   var __create = Object.create ? Object.create : function(prototype) {
     return {'__proto__': prototype};
   };
@@ -62,11 +64,11 @@ class DerivedClass : dynamic.BaseClass {}
     derived.prototype.constructor = derived;
   }
 
-  DerivedClass = function() {
+  exports.DerivedClass = function() {
   };
 
-  __extends(DerivedClass, BaseClass);
-})();
+  __extends(exports.DerivedClass, BaseClass);
+})(this);
 ").js
 
 # Make sure classes with unused constructors are still emitted
@@ -531,7 +533,7 @@ class Bar : Foo {
 
 # Check map literal inlining
 test("
-@export
+@entry
 def main {
   dynamic.bar(foo(foo([], 1, 2), \"3\", \"4\"))
 }
@@ -542,20 +544,22 @@ def foo(map dynamic, key dynamic, value dynamic) dynamic {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     bar(foo(foo([], 1, 2), '3', '4'));
-  };
+  }
 
   function foo(map, key, value) {
     map[key] = value;
     return map;
   }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
 # Check map literal inlining
 test("
-@export
+@entry
 def main {
   dynamic.bar(foo(foo({}, 1, 2), \"3\", \"4\"))
 }
@@ -566,9 +570,11 @@ def foo(map dynamic, key dynamic, value dynamic) dynamic {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     bar({1: 2, '3': '4'});
-  };
+  }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
@@ -579,22 +585,25 @@ def foo<T>(map IntMap<T>, key int, value T) IntMap<T> {
   return map
 }
 
-@export
+@entry
 def main {
   dynamic.bar(foo<int>(foo<int>({}, 1, 2), 3, 4))
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     bar({1: 2, 3: 4});
-  };
+  }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
 # Check map literal inlining
 test("
-@export
-def main(x int) {
+@entry
+def main {
+  var x = 0
   dynamic.bar(foo(foo(foo(foo({}, 1, 2), 3, 4), x, 5), 6, 7))
 }
 
@@ -604,21 +613,25 @@ def foo(map dynamic, key int, value int) dynamic {
 }
 ", "
 (function() {
-  main = function(x) {
+  function main() {
+    var x = 0;
     bar(foo(foo({1: 2, 3: 4}, x, 5), 6, 7));
-  };
+  }
 
   function foo(map, key, value) {
     map[key] = value;
     return map;
   }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
 # Check map literal inlining
 test("
-@export
-def main(x int) {
+@entry
+def main {
+  var x = 0
   dynamic.bar({1: 2, 3: 4, x: 5, 6: 7} as Foo)
 }
 
@@ -641,9 +654,10 @@ namespace Foo {
 }
 ", "
 (function() {
-  main = function(x) {
+  function main() {
+    var x = 0;
     bar(in_Foo.insert(in_Foo.insert({1: 2, 3: 4}, x, 5), 6, 7));
-  };
+  }
 
   var in_Foo = {};
 
@@ -651,12 +665,14 @@ namespace Foo {
     self[key] = value;
     return self;
   };
+
+  main();
 })();
 ").js.inlineAllFunctions
 
 # Check list literal inlining
 test("
-@export
+@entry
 def main {
   dynamic.bar(foo(foo([], 1), 2))
 }
@@ -667,15 +683,17 @@ def foo(list dynamic, value dynamic) dynamic {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     bar([1, 2]);
-  };
+  }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
 # Check list literal inlining
 test("
-@export
+@entry
 def main {
   dynamic.bar(foo(foo([], 1), 2))
 }
@@ -686,20 +704,22 @@ def foo(list dynamic, value dynamic) dynamic {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     bar(foo(foo([], 1), 2));
-  };
+  }
 
   function foo(list, value) {
     list.unshift(value);
     return list;
   }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
 # Check list literal inlining
 test("
-@export
+@entry
 def main {
   dynamic.bar(foo(foo({}, 1), 2))
 }
@@ -710,21 +730,24 @@ def foo(list dynamic, value dynamic) dynamic {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     bar(foo(foo({}, 1), 2));
-  };
+  }
 
   function foo(list, value) {
     list.push(value);
     return list;
   }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
 # Check list literal inlining
 test("
-@export
-def main(x int) {
+@entry
+def main {
+  var x = 0
   dynamic.bar([1, \"2\", x, false] as Foo)
 }
 
@@ -747,9 +770,12 @@ namespace Foo {
 }
 ", "
 (function() {
-  main = function(x) {
+  function main() {
+    var x = 0;
     bar([1, '2', x, false]);
-  };
+  }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
@@ -774,15 +800,17 @@ namespace Foo {
   }
 }
 
-@export
+@entry
 def main {
   [1, false] as Foo
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     [1, false];
-  };
+  }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
@@ -807,15 +835,17 @@ namespace Foo {
   }
 }
 
-@export
+@entry
 def main {
   [1, false] as Foo
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     [1, false];
-  };
+  }
+
+  main();
 })();
 ").js.inlineAllFunctions
 
@@ -889,7 +919,7 @@ interface IFoo {
   def bar {}
 }
 
-@export
+@entry
 def main {
   var foo = Foo.new
   var ifoo = foo as IFoo
@@ -898,12 +928,12 @@ def main {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     var foo = new Foo();
     var ifoo = foo;
     foo.foo();
     in_IFoo.bar(ifoo);
-  };
+  }
 
   function Foo() {
   }
@@ -915,14 +945,16 @@ def main {
 
   in_IFoo.bar = function(self) {
   };
+
+  main();
 })();
 ").js
 
 # Check folding of the "**" operator
 test("
-@export
-def main dynamic {
-  return [
+@entry
+def main {
+  var x dynamic = [
     2 ** 2,
     2 ** 3,
     3 ** 2,
@@ -934,9 +966,11 @@ def main dynamic {
 }
 ", "
 (function() {
-  main = function() {
-    return [4, 8, 9, 1, 0, 0.5, 0.5];
-  };
+  function main() {
+    var x = [4, 8, 9, 1, 0, 0.5, 0.5];
+  }
+
+  main();
 })();
 ").js.foldAllConstants
 
@@ -949,17 +983,17 @@ class Foo {
   def new(x int) {}
 }
 
-@export
-def main{
+@entry
+def main {
   Foo.new
   Foo.new(1)
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     new Foo();
     new Foo.new2(1);
-  };
+  }
 
   function Foo() {
     this.foo = '';
@@ -972,6 +1006,8 @@ def main{
   };
 
   Foo.new2.prototype = Foo.prototype;
+
+  main();
 })();
 ").js
 
@@ -985,22 +1021,23 @@ if BAR == 0 {
 @export
 const BAR = Foo.FOO
 ", "
-(function() {
-  main = function() {
-  };
-
+(function(exports) {
   var Foo = {
     FOO: 0
   };
 
-  BAR = Foo.FOO;
-})();
+  exports.main = function() {
+  };
+
+  exports.BAR = Foo.FOO;
+})(this);
 ").js
 
 # Check for integer casting
 test("
-@export
-def main(x int) {
+@entry
+def main {
+  var x = 0
   dynamic.foo(x + 1)
   dynamic.foo(x - 1)
   dynamic.foo(x * 2)
@@ -1020,7 +1057,8 @@ def main(x int) {
     return (a * (b >>> 16) << 16) + a * (b & 65535) | 0;
   };
 
-  main = function(x) {
+  function main() {
+    var x = 0;
     foo(x + 1 | 0);
     foo(x - 1 | 0);
     foo(__imul(x, 2));
@@ -1033,7 +1071,9 @@ def main(x int) {
     foo(x >>> 1);
     foo(x >>> 0 | 0);
     foo(x >>> x | 0);
-  };
+  }
+
+  main();
 })();
 ").js
 
@@ -1053,15 +1093,15 @@ class Baz {
   }
 }
 
-@export
+@entry
 def main {
   Baz.new.foo(null)
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     Baz.foo(new Baz(), null);
-  };
+  }
 
   var Bar = {};
   Bar.foo = function(self) {
@@ -1074,6 +1114,8 @@ def main {
   Baz.foo = function(self, foo) {
     return Bar.foo(foo);
   };
+
+  main();
 })();
 ").js.inlineAllFunctions.foldAllConstants.globalizeAllFunctions
 
@@ -1086,12 +1128,12 @@ def main(x int, y int) int {
   return x + y
 }
 ", "
-(function() {
-  main = function(x, y) {
+(function(exports) {
+  exports.main = function(x, y) {
     x = 1;
     return x + y | 0;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check a case of assignment folding
@@ -1103,13 +1145,13 @@ def main(x int, y int) int {
   return x + y
 }
 ", "
-(function() {
-  main = function(x, y) {
+(function(exports) {
+  exports.main = function(x, y) {
     x = 0;
     x = x + 1 | 0;
     return x + y | 0;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check a case of assignment folding
@@ -1122,13 +1164,13 @@ def main(x int, y int) int {
   return x + y
 }
 ", "
-(function() {
-  main = function(x, y) {
+(function(exports) {
+  exports.main = function(x, y) {
     y = 0;
     x = 1;
     return x + y | 0;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check a case of assignment folding
@@ -1141,14 +1183,14 @@ def main(x int, y int) int {
   return x + y
 }
 ", "
-(function() {
-  main = function(x, y) {
+(function(exports) {
+  exports.main = function(x, y) {
     x = 0;
     foo();
     x = 1;
     return x + y | 0;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check a case of assignment folding
@@ -1161,14 +1203,14 @@ def main(x int, y int) int {
   return x + y
 }
 ", "
-(function() {
-  main = function(x, y) {
+(function(exports) {
+  exports.main = function(x, y) {
     x = 0;
     y = x;
     x = 1;
     return x + y | 0;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check a case of assignment folding
@@ -1181,14 +1223,14 @@ def main(x int, y int) int {
   return x + y
 }
 ", "
-(function() {
-  main = function(x, y) {
+(function(exports) {
+  exports.main = function(x, y) {
     x = 0;
     y = foo ? x : x + 1 | 0;
     x = 1;
     return x + y | 0;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check a case of assignment folding
@@ -1197,7 +1239,7 @@ class Foo {
   var x = 0
 }
 
-@export
+@entry
 def main int {
   var foo = Foo.new
   foo.x = 1
@@ -1206,15 +1248,17 @@ def main int {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     var foo = new Foo();
     foo.x = 2;
     return foo.x;
-  };
+  }
 
   function Foo() {
     this.x = 0;
   }
+
+  process.exit(main());
 })();
 ").js.foldAllConstants
 
@@ -1225,7 +1269,7 @@ class Foo {
   def foo {}
 }
 
-@export
+@entry
 def main int {
   var foo = Foo.new
   var y Foo = null
@@ -1238,7 +1282,7 @@ def main int {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     var foo = new Foo();
     var y = null;
     var z = 0;
@@ -1247,11 +1291,13 @@ def main int {
     z = y.x;
     foo.x = 2;
     return foo.x;
-  };
+  }
 
   function Foo() {
     this.x = 0;
   }
+
+  process.exit(main());
 })();
 ").js.foldAllConstants
 
@@ -1262,7 +1308,7 @@ class Foo {
   def foo int { return x }
 }
 
-@export
+@entry
 def main int {
   var foo = Foo.new
   foo.x = foo.foo + 1
@@ -1271,12 +1317,12 @@ def main int {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     var foo = new Foo();
     foo.x = foo.foo() + 1 | 0;
     foo.x = foo.foo() + 2 | 0;
     return foo.x;
-  };
+  }
 
   function Foo() {
     this.x = 0;
@@ -1285,6 +1331,8 @@ def main int {
   Foo.prototype.foo = function() {
     return this.x;
   };
+
+  process.exit(main());
 })();
 ").js.foldAllConstants
 
@@ -1295,7 +1343,7 @@ class Foo {
   def foo {}
 }
 
-@export
+@entry
 def main int {
   var foo = Foo.new
   var bar = Foo.new
@@ -1306,17 +1354,19 @@ def main int {
 }
 ", "
 (function() {
-  main = function() {
+  function main() {
     var foo = new Foo();
     var bar = new Foo();
     bar.x = 2;
     foo.x = 3;
     return foo.x;
-  };
+  }
 
   function Foo() {
     this.x = 0;
   }
+
+  process.exit(main());
 })();
 ").js.foldAllConstants
 
@@ -1331,11 +1381,11 @@ def main string {
   }
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     return '0';
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check constant folding of switch statements
@@ -1349,11 +1399,11 @@ def main string {
   }
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     return null;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check constant folding of switch statements
@@ -1367,11 +1417,11 @@ def main(x int) string {
   }
 }
 ", "
-(function() {
-  main = function(x) {
+(function(exports) {
+  exports.main = function(x) {
     return '0';
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check constant folding of switch statements
@@ -1386,8 +1436,8 @@ def main(x int) string {
   }
 }
 ", "
-(function() {
-  main = function(x) {
+(function(exports) {
+  exports.main = function(x) {
     switch (1) {
       case x: {
         return '0';
@@ -1402,7 +1452,7 @@ def main(x int) string {
       }
     }
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check IIFE parentheses
@@ -1435,14 +1485,14 @@ def main(x int) int {
   return x
 }
 ", "
-(function() {
-  main = function(x) {
+(function(exports) {
+  exports.main = function(x) {
     x = (x & 65280) + (x & 65280) | 0;
     x = (x << 1 & 65280) + (x << 1 & 65280) | 0;
     x = (x >> 1 & 32640) + (x >>> 1 & 32640) | 0;
     return x;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check constant folding of two adjacent bitwise "and" operations inside a bitwise "or"
@@ -1452,11 +1502,11 @@ def main(x int) int {
   return x & 17 | 257 & x
 }
 ", "
-(function() {
-  main = function(x) {
+(function(exports) {
+  exports.main = function(x) {
     return x & 273;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check constant folding of a single "and" inside a bitwise "or"
@@ -1470,15 +1520,15 @@ def main(x int) int {
   return x
 }
 ", "
-(function() {
-  main = function(x) {
+(function(exports) {
+  exports.main = function(x) {
     x = x | 16777215;
     x = x & 2130706432 | 16777215;
     x = x | 16777215;
     x = x & 2130706687 | 16777215;
     return x;
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check constant folding of identity operations
@@ -1521,12 +1571,12 @@ def main(x int, y fn() int) {
   dynamic.foo(dynamic.z() >>> 0)
 }
 ", "
-(function() {
+(function(exports) {
   var __imul = Math.imul ? Math.imul : function(a, b) {
     return (a * (b >>> 16) << 16) + a * (b & 65535) | 0;
   };
 
-  main = function(x, y) {
+  exports.main = function(x, y) {
     // Multiplication (be careful about expressions with side effects and about NaN for dynamic values)
     foo(0);
     foo(x);
@@ -1562,7 +1612,7 @@ def main(x int, y fn() int) {
     foo(z() >> 0);
     foo(z() >>> 0);
   };
-})();
+})(this);
 ").js.foldAllConstants.inlineAllFunctions
 
 # Check constant folding of bitwise operations and inlining
@@ -1589,17 +1639,17 @@ def isOrange(color Color) bool {
   return color.opaque == Color.new(255, 127, 0, 255)
 }
 ", "
-(function() {
-  isOrange = function(color) {
-    return Color.opaque(color) == -16744449;
-  };
-
+(function(exports) {
   var Color = {};
 
   Color.opaque = function(self) {
     return self | -16777216;
   };
-})();
+
+  exports.isOrange = function(color) {
+    return Color.opaque(color) == -16744449;
+  };
+})(this);
 ").js.foldAllConstants.inlineAllFunctions
 
 # Check that compile-time if statements work
@@ -1625,10 +1675,10 @@ enum Foo {
   BAR
 }
 ", "
-(function() {
-  FOO_YES = true;
-  BAR_NO = false;
-})();
+(function(exports) {
+  exports.FOO_YES = true;
+  exports.BAR_NO = false;
+})(this);
 ").js
 
 # Check that nested compile-time if statements work
@@ -1656,10 +1706,10 @@ enum Foo {
   BAR
 }
 ", "
-(function() {
-  FOO_YES = true;
-  BAR_NO = false;
-})();
+(function(exports) {
+  exports.FOO_YES = true;
+  exports.BAR_NO = false;
+})(this);
 ").js
 
 # Check constant folding of unicode string factory functions
@@ -1673,11 +1723,11 @@ def main string {
     string.fromCodeUnits(['y', 'z'])
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     return '😄x💾💿yz';
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Check constant folding of unicode string factory functions
@@ -1691,16 +1741,12 @@ def main(x int) string {
     string.fromCodeUnits([x, x])
 }
 ", "
-(function() {
+(function(exports) {
   function assert(truth) {
     if (!truth) {
       throw Error('Assertion failed');
     }
   }
-
-  main = function(x) {
-    return in_string.fromCodePoint(x) + String.fromCharCode(x) + in_string.fromCodePoints([120, x]) + in_string.fromCodeUnits([x, x]);
-  };
 
   function StringBuilder() {
     this.buffer = '';
@@ -1748,7 +1794,11 @@ def main(x int) string {
     assert(0 <= index && index < self.length);
     return self[index];
   };
-})();
+
+  exports.main = function(x) {
+    return in_string.fromCodePoint(x) + String.fromCharCode(x) + in_string.fromCodePoints([120, x]) + in_string.fromCodeUnits([x, x]);
+  };
+})(this);
 ").js.foldAllConstants.inlineAllFunctions
 
 # Check that iterating over a local constant doesn't generate an extra variable
@@ -1763,14 +1813,21 @@ def main {
   for i in bar {}
 }
 ", "
-(function() {
+(function(exports) {
   function assert(truth) {
     if (!truth) {
       throw Error('Assertion failed');
     }
   }
 
-  main = function() {
+  var in_List = {};
+
+  in_List.get = function(self, index) {
+    assert(0 <= index && index < self.length);
+    return self[index];
+  };
+
+  exports.main = function() {
     var foo = [0, 1, 2];
     var bar = [0, 1, 2];
     bar = [];
@@ -1783,14 +1840,7 @@ def main {
       var i1 = in_List.get(list, i3);
     }
   };
-
-  var in_List = {};
-
-  in_List.get = function(self, index) {
-    assert(0 <= index && index < self.length);
-    return self[index];
-  };
-})();
+})(this);
 ").js.foldAllConstants.inlineAllFunctions
 
 # Check for a bug with bounded for loops
@@ -1802,12 +1852,12 @@ def main {
   for i in foo..bar {}
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     for (var i = 0; i < 5; i = i + 1 | 0) {
     }
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Test @neverinline
@@ -2033,12 +2083,12 @@ def main {
   dynamic.foo(Math.NAN.toString, Math.INFINITY.toString, (-Math.INFINITY).toString)
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     foo(0 / 0, 1 / 0, -(1 / 0));
     foo((0 / 0).toString(), (1 / 0).toString(), (-(1 / 0)).toString());
   };
-})();
+})(this);
 ").js.inlineAllFunctions
 
 # Test math constants
@@ -2049,12 +2099,12 @@ def main {
   dynamic.foo(Math.NAN.toString, Math.INFINITY.toString, (-Math.INFINITY).toString)
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     foo(NaN, Infinity, -Infinity);
     foo(NaN.toString(), Infinity.toString(), (-Infinity).toString());
   };
-})();
+})(this);
 ").js.inlineAllFunctions.foldAllConstants
 
 # Test math toString
@@ -2064,11 +2114,11 @@ def main {
   dynamic.foo(0.toString, 1.0.toString, (-1.0).toString, 0.5.toString, (-0.5).toString)
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     foo((0).toString(), (1).toString(), (-1).toString(), (0.5).toString(), (-0.5).toString());
   };
-})();
+})(this);
 ").js
 
 # Test math toString
@@ -2078,11 +2128,11 @@ def main {
   dynamic.foo(0.toString, 1.0.toString, (-1.0).toString, 0.5.toString, (-0.5).toString)
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     foo('0', (1).toString(), (-1).toString(), (0.5).toString(), (-0.5).toString());
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Double literals must be emitted with the right format
@@ -2097,8 +2147,8 @@ def main(x double) {
   x = 1.5e-100 / 2.5e-100
 }
 ", "
-(function() {
-  main = function(x) {
+(function(exports) {
+  exports.main = function(x) {
     x = 1 / 2;
     x = 1e+100 / 2e+100;
     x = 1e-100 / 2e-100;
@@ -2106,7 +2156,7 @@ def main(x double) {
     x = 1.5e+100 / 2.5e+100;
     x = 1.5e-100 / 2.5e-100;
   };
-})();
+})(this);
 ").js
 
 # Test folding of nested shifts
@@ -2125,8 +2175,8 @@ def main(x int) {
   dynamic.foo(x >>> 5 >> 6)
 }
 ", "
-(function() {
-  main = function(x) {
+(function(exports) {
+  exports.main = function(x) {
     foo(x << 11);
     foo(x * 32 * 64);
     foo((x << 5) * 64);
@@ -2138,7 +2188,7 @@ def main(x int) {
     foo(x >> 5 >>> 6);
     foo(x >>> 5 >> 6);
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # Test renaming with symbol merging
@@ -2159,11 +2209,11 @@ def main {
   Foo.new.foo(0)
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     new Foo().bar(0);
   };
-})();
+})(this);
 ").js
 
 # Test renaming with symbol merging
@@ -2184,11 +2234,11 @@ def main {
   Foo.new.foo(0)
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     new Foo().bar(0);
   };
-})();
+})(this);
 ").js
 
 # Test renaming with symbol merging and generics
@@ -2212,12 +2262,12 @@ def main {
   Foo<int>.new.bar<int>(0)
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     new Foo().baz(0);
     new Foo().baz(0);
   };
-})();
+})(this);
 ").js
 
 # Test imported auto-implemented operators
@@ -2232,11 +2282,11 @@ def main(foo Foo) {
   foo *= 2
 }
 ", "
-(function() {
-  main = function(foo) {
+(function(exports) {
+  exports.main = function(foo) {
     foo = foo * 2;
   };
-})();
+})(this);
 ").js.inlineAllFunctions
 
 # Test side-effect preservation for auto-implemented operators
@@ -2262,8 +2312,8 @@ def main(foo Foo) {
   bar.z[bar.y] **= 2
 }
 ", "
-(function() {
-  main = function(foo) {
+(function(exports) {
+  exports.main = function(foo) {
     var ref6;
     var ref5;
     var ref4;
@@ -2284,7 +2334,7 @@ def main(foo Foo) {
     this.y = 0;
     this.z = [0];
   }
-})();
+})(this);
 ").js.inlineAllFunctions.skip # Skipped because rewriting assignment operators doesn't work with non-imported functions yet
 
 # Test the null join operator
@@ -2305,12 +2355,16 @@ def main(foo Foo) {
   bar.x ?? bar ?? foo.x ?? foo
 }
 ", "
-(function() {
+(function(exports) {
   function bar() {
     return new Foo();
   }
 
-  main = function(foo) {
+  function Foo() {
+    this.x = null;
+  }
+
+  exports.main = function(foo) {
     var ref2;
     var ref1;
     var ref;
@@ -2319,11 +2373,7 @@ def main(foo Foo) {
     (ref = bar()).x != null ? ref.x : bar().x;
     (ref2 = bar()).x != null ? ref2.x : (ref1 = bar()) != null ? ref1 : foo.x != null ? foo.x : foo;
   };
-
-  function Foo() {
-    this.x = null;
-  }
-})();
+})(this);
 ").js
 
 # Test the null dot operator
@@ -2362,12 +2412,27 @@ def main(foo Foo) {
   dynamic.use(bar?.d(0)?.d(0))
 }
 ", "
-(function() {
+(function(exports) {
   function bar() {
     return new Foo();
   }
 
-  main = function(foo) {
+  function Foo() {
+    this.a = null;
+    this.c = function() {
+      return null;
+    };
+  }
+
+  Foo.prototype.b = function() {
+    return this;
+  };
+
+  Foo.prototype.d = function(x) {
+    return this;
+  };
+
+  exports.main = function(foo) {
     var ref15;
     var ref14;
     var ref13;
@@ -2401,22 +2466,7 @@ def main(foo Foo) {
     use((ref13 = (ref12 = bar()) != null ? ref12.c() : null) != null ? ref13.c() : null);
     use((ref15 = (ref14 = bar()) != null ? ref14.d(0) : null) != null ? ref15.d(0) : null);
   };
-
-  function Foo() {
-    this.a = null;
-    this.c = function() {
-      return null;
-    };
-  }
-
-  Foo.prototype.b = function() {
-    return this;
-  };
-
-  Foo.prototype.d = function(x) {
-    return this;
-  };
-})();
+})(this);
 ").js
 
 # Test top-level use of the null dot operator
@@ -2455,12 +2505,27 @@ def main(foo Foo) {
   bar?.d(0)?.d(0)
 }
 ", "
-(function() {
+(function(exports) {
   function bar() {
     return new Foo();
   }
 
-  main = function(foo) {
+  function Foo() {
+    this.a = null;
+    this.c = function() {
+      return null;
+    };
+  }
+
+  Foo.prototype.b = function() {
+    return this;
+  };
+
+  Foo.prototype.d = function(x) {
+    return this;
+  };
+
+  exports.main = function(foo) {
     var ref15;
     var ref14;
     var ref13;
@@ -2542,22 +2607,7 @@ def main(foo Foo) {
       ref15.d(0);
     }
   };
-
-  function Foo() {
-    this.a = null;
-    this.c = function() {
-      return null;
-    };
-  }
-
-  Foo.prototype.b = function() {
-    return this;
-  };
-
-  Foo.prototype.d = function(x) {
-    return this;
-  };
-})();
+})(this);
 ").js
 
 # Test unary assignment operators
@@ -2606,12 +2656,16 @@ def main {
   dynamic.use(--foo.x)
 }
 ", "
-(function() {
+(function(exports) {
   function foo() {
     return new Foo();
   }
 
-  main = function() {
+  function Foo() {
+    this.x = 0;
+  }
+
+  exports.main = function() {
     var ref7;
     var ref6;
     var ref5;
@@ -2647,11 +2701,7 @@ def main {
     use(((ref6 = foo()).x = ref6.x - 1 | 0) + 1 | 0);
     use((ref7 = foo()).x = ref7.x - 1 | 0);
   };
-
-  function Foo() {
-    this.x = 0;
-  }
-})();
+})(this);
 ").js.foldAllConstants
 
 # Test custom unary assignment operators
@@ -2689,7 +2739,7 @@ def main {
   dynamic.use(++bar.bar[baz])
 }
 ", "
-(function() {
+(function(exports) {
   function bar() {
     return new Foo();
   }
@@ -2698,7 +2748,16 @@ def main {
     return 0;
   }
 
-  main = function() {
+  function Foo() {
+    this.foo = null;
+    this.bar = [];
+  }
+
+  Foo.prototype.increment = function() {
+    return this;
+  };
+
+  exports.main = function() {
     var ref14;
     var ref13;
     var ref12;
@@ -2728,16 +2787,7 @@ def main {
     use((ref10 = (ref11 = bar().bar)[ref12 = baz()], ref11[ref12] = ref10.increment(), ref10));
     use((ref13 = bar().bar)[ref14 = baz()] = ref13[ref14].increment());
   };
-
-  function Foo() {
-    this.foo = null;
-    this.bar = [];
-  }
-
-  Foo.prototype.increment = function() {
-    return this;
-  };
-})();
+})(this);
 ").js.skip # Skipped because rewriting assignment operators doesn't work with non-imported functions yet
 
 # Test null assignment operator
@@ -2770,7 +2820,7 @@ def main(baz Foo) {
   bar(foo.x ?= foo)
 }
 ", "
-(function() {
+(function(exports) {
   function foo() {
     return new Foo();
   }
@@ -2778,7 +2828,11 @@ def main(baz Foo) {
   function bar(foo) {
   }
 
-  main = function(baz) {
+  function Foo() {
+    this.x = null;
+  }
+
+  exports.main = function(baz) {
     var ref3;
     var ref2;
     var ref1;
@@ -2808,11 +2862,7 @@ def main(baz Foo) {
     bar((ref2 = foo()).x != null ? ref2.x : foo());
     bar((ref3 = foo()).x != null ? ref3.x : ref3.x = foo());
   };
-
-  function Foo() {
-    this.x = null;
-  }
-})();
+})(this);
 ").js
 
 # Test null assignment operator with dynamic values
@@ -2825,8 +2875,8 @@ def main {
   dynamic.use(dynamic.foo()[dynamic.bar()] ?= \"4\")
 }
 ", "
-(function() {
-  main = function() {
+(function(exports) {
+  exports.main = function() {
     var ref3;
     var ref2;
     var ref1;
@@ -2836,7 +2886,7 @@ def main {
     use((ref = foo())[ref1 = bar()] !== null ? ref[ref1] : '3');
     use((ref2 = foo())[ref3 = bar()] !== null ? ref2[ref3] : ref2[ref3] = '4');
   };
-})();
+})(this);
 ").js
 
 # Test "?=" and "?." with comments when converted to if statements
@@ -2851,8 +2901,8 @@ def main(foo Foo) {
   foo?.foo # This comment should be kept too
 }
 ", "
-(function() {
-  main = function(foo) {
+(function(exports) {
+  exports.main = function(foo) {
     // This comment should be kept
     if (foo == null) {
       foo = foo;
@@ -2863,7 +2913,7 @@ def main(foo Foo) {
       foo.foo;
     }
   };
-})();
+})(this);
 ").js
 
 # Test string interpolation empty string omission
@@ -2877,14 +2927,14 @@ test("
   var f = \"\\(\"\")\\(\"\")\\(1)\\(\"\")\\(\"\")\"
 }
 ", "
-(function() {
-  a = (1).toString();
-  b = 'a' + (1).toString();
-  c = (1).toString() + 'b';
-  d = 'a' + (1).toString() + 'b';
-  e = '';
-  f = (1).toString();
-})();
+(function(exports) {
+  exports.a = (1).toString();
+  exports.b = 'a' + (1).toString();
+  exports.c = (1).toString() + 'b';
+  exports.d = 'a' + (1).toString() + 'b';
+  exports.e = '';
+  exports.f = (1).toString();
+})(this);
 ").js
 
 # Test string interpolation toString insertion
@@ -2897,9 +2947,9 @@ test("
 @export
 var z = \"\\(x)\\(y)\"
 ", "
-(function() {
-  z = x().toString() + y();
-})();
+(function(exports) {
+  exports.z = x().toString() + y();
+})(this);
 ").js
 
 # Test nested string interpolation
@@ -2914,12 +2964,12 @@ var y =
     )\"
   )\"
 ", "
-(function() {
+(function(exports) {
   var x = function() {
     return '';
   };
-  y = (1).toString() + 'a' + (x() + x() + ('b' + x() + 'c' + (x() + 'd' + x())));
-})();
+  exports.y = (1).toString() + 'a' + (x() + x() + ('b' + x() + 'c' + (x() + 'd' + x())));
+})(this);
 ").js
 
 # Test string interpolation order without constant folding
@@ -2932,10 +2982,10 @@ def x string
   var z = \"a\\(x)b\" + \"c\\(x)d\"
 }
 ", "
-(function() {
-  y = x() + (x() + x());
-  z = 'a' + x() + 'b' + ('c' + x() + 'd');
-})();
+(function(exports) {
+  exports.y = x() + (x() + x());
+  exports.z = 'a' + x() + 'b' + ('c' + x() + 'd');
+})(this);
 ").js
 
 # Test string interpolation order with constant folding
@@ -2948,10 +2998,10 @@ def x string
   var z = \"a\\(x)b\" + \"c\\(x)d\"
 }
 ", "
-(function() {
-  y = x() + x() + x();
-  z = 'a' + x() + 'bc' + x() + 'd';
-})();
+(function(exports) {
+  exports.y = x() + x() + x();
+  exports.z = 'a' + x() + 'bc' + x() + 'd';
+})(this);
 ").js.foldAllConstants
 
 # Check assignment operators inside global variable initializers
@@ -2966,7 +3016,7 @@ var x = Foo.new
 @export
 var y = x.y.z += 2
 ", "
-(function() {
+(function(exports) {
   function Foo() {
     this.y = null;
     this.z = 0;
@@ -2974,8 +3024,8 @@ var y = x.y.z += 2
 
   var ref;
   var x = new Foo();
-  y = (ref = x.y).z = ref.z + 2 | 0;
-})();
+  exports.y = (ref = x.y).z = ref.z + 2 | 0;
+})(this);
 ").js
 
 # Check for a crash when inlining an XML-style literal that calls a global function
@@ -2993,12 +3043,12 @@ namespace Foo {
   }
 }
 ", "
-(function() {
+(function(exports) {
   function Foo(x) {
   }
 
-  foo = new Foo(0);
-})();
+  exports.foo = new Foo(0);
+})(this);
 ").js.inlineAllFunctions
 
 # Check correct XML literal output for variable assignments
@@ -3012,7 +3062,7 @@ class Foo {
   def bar=(x Foo) {}
 }
 ", "
-(function() {
+(function(exports) {
   function Foo() {
     this.foo = 0;
   }
@@ -3027,8 +3077,8 @@ class Foo {
   var ref;
   var ref1;
   var ref2;
-  foo = (ref = new Foo(), ref.foo = 0, ref.setBar((ref1 = new Foo(), ref1.setBar(new Foo()), ref1.foo = 1, ref1.append((ref2 = new Foo(), ref2.foo = 2, ref2)), ref1)), ref);
-})();
+  exports.foo = (ref = new Foo(), ref.foo = 0, ref.setBar((ref1 = new Foo(), ref1.setBar(new Foo()), ref1.foo = 1, ref1.append((ref2 = new Foo(), ref2.foo = 2, ref2)), ref1)), ref);
+})(this);
 ").js
 
 # Check correct XML literal output for generated closures
@@ -3045,7 +3095,7 @@ class Foo {
   def <>...</>(x Foo) {}
 }
 ", "
-(function() {
+(function(exports) {
   function Foo() {
     this.foo = 0;
   }
@@ -3054,14 +3104,14 @@ class Foo {
   };
 
   var ref;
-  foo = (ref = new Foo(), (function() {
+  exports.foo = (ref = new Foo(), (function() {
     var ref1;
 
     for (var i = 0; i < 5; i = i + 1 | 0) {
       ref.append((ref1 = new Foo(), ref1.foo = i, ref1));
     }
   })(), ref);
-})();
+})(this);
 ").js
 
 # Unused interface implementations should not be emitted
@@ -3083,11 +3133,11 @@ def test(foo Foo) {
   foo.foo
 }
 ", "
-(function() {
-  test = function(foo) {
+(function(exports) {
+  exports.test = function(foo) {
     foo.foo();
   };
-})();
+})(this);
 ").js
 
 # Check code generation of contextual keywords
@@ -3112,17 +3162,7 @@ def test Foo {
   return Foo.new
 }
 ", "
-(function() {
-  test = function() {
-    var $class = 0;
-    var def = 0;
-    var $enum = 0;
-    var $interface = 0;
-    var namespace = 0;
-    var over = 0;
-    return new Foo();
-  };
-
+(function(exports) {
   function Foo() {
     this.$class = 0;
     this.def = 0;
@@ -3131,7 +3171,17 @@ def test Foo {
     this.namespace = 0;
     this.over = 0;
   }
-})();
+
+  exports.test = function() {
+    var $class = 0;
+    var def = 0;
+    var $enum = 0;
+    var $interface = 0;
+    var namespace = 0;
+    var over = 0;
+    return new Foo();
+  };
+})(this);
 ").js
 
 # Check for a crash due to a variable value changing unexpectedly after inlining
@@ -3140,15 +3190,17 @@ def foo(x bool) dynamic {
   return x
 }
 
-@export
+@entry
 def test {
   var bar = foo(false)
 }
 ", "
 (function() {
-  test = function() {
+  function test() {
     var bar = false;
-  };
+  }
+
+  test();
 })();
 ").js.inlineAllFunctions
 
@@ -3192,7 +3244,7 @@ flags Foo {
   X31
 }
 
-@export
+@entry
 def test {
   if (.X0 | .X1) in (Foo.X30 | .X31) {
     var x = Foo.X0
@@ -3202,13 +3254,13 @@ def test {
 }
 ", "
 (function() {
-  test = function() {
+  function test() {
     if (((Foo.X0 | Foo.X1) & (Foo.X30 | Foo.X31)) != 0) {
       var x = Foo.X0;
       x = Foo.X1 | Foo.X2;
       x &= ~Foo.X3;
     }
-  };
+  }
 
   var Foo = {
     X0: 1,
@@ -3218,12 +3270,14 @@ def test {
     X30: 1073741824,
     X31: -2147483648
   };
+
+  test();
 })();
 ").js
 
 # Make sure lambda functions with dynamic type context don't return values that are known to be undefined
 test("
-@export
+@entry
 def test {
   var a = => {}
   var b = => a()
@@ -3232,7 +3286,7 @@ def test {
 }
 ", "
 (function() {
-  test = function() {
+  function test() {
     var a = function() {
     };
     var b = function() {
@@ -3244,7 +3298,9 @@ def test {
     var d = function() {
       return c();
     };
-  };
+  }
+
+  test();
 })();
 ").js
 
@@ -3264,8 +3320,8 @@ def test(x int, y double) {
   dynamic.bar(y - 0)
 }
 ", "
-(function() {
-  test = function(x, y) {
+(function(exports) {
+  exports.test = function(x, y) {
     foo(x);
     foo(-x | 0);
     foo(y);
@@ -3275,7 +3331,7 @@ def test(x int, y double) {
     bar(y);
     bar(y);
   };
-})();
+})(this);
 ").js.foldAllConstants
 
 # There's no way operator overloading will work with JavaScript, but make sure it at least generates valid JavaScript
@@ -3287,14 +3343,14 @@ class Foo {
   }
 }
 ", "
-(function() {
-  Foo = function() {
+(function(exports) {
+  exports.Foo = function() {
   };
 
-  Foo.prototype.positive = function() {
-    new Foo().positive();
+  exports.Foo.prototype.positive = function() {
+    new exports.Foo().positive();
   };
-})();
+})(this);
 ").js
 
 # Check for parentheses in a stupid JavaScript corner case
@@ -3306,8 +3362,8 @@ def test(z dynamic) {
   var x3 = 0 in z
 }
 ", "
-(function() {
-  test = function(z) {
+(function(exports) {
+  exports.test = function(z) {
     for (var x = (0 in z); x; x = !x) {
     }
 
@@ -3316,7 +3372,7 @@ def test(z dynamic) {
 
     var x3 = 0 in z;
   };
-})();
+})(this);
 ").js
 
 # The null dot operator shouldn't require a value inside a lambda expression
@@ -3334,8 +3390,8 @@ class Foo {
   def z {}
 }
 ", "
-(function() {
-  test = function(x, y) {
+(function(exports) {
+  exports.test = function(x, y) {
     if (x != null) {
       x.z();
     }
@@ -3356,12 +3412,12 @@ class Foo {
       }
     })();
   };
-})();
+})(this);
 ").js
 
 # Constructors on dynamic types shouldn't need parentheses
 test("
-@export
+@entry
 def test {
   dynamic.Foo.new
   dynamic.Foo.new()
@@ -3379,7 +3435,7 @@ def test {
 }
 ", "
 (function() {
-  test = function() {
+  function test() {
     new Foo();
     new Foo();
     new Foo().test;
@@ -3392,7 +3448,9 @@ def test {
     var d = new Foo().test;
     var e = new Foo().test;
     var f = new Foo().test;
-  };
+  }
+
+  test();
 })();
 ").js
 
@@ -3405,9 +3463,58 @@ var foo = [
   0x80000000,
 ]
 ", "
-(function() {
-  foo = [0, 2147483647, -2147483647, -2147483648];
-})();
+(function(exports) {
+  exports.foo = [0, 2147483647, -2147483647, -2147483648];
+})(this);
+").js
+
+# Check export syntax
+test("
+@export {
+  class Class { def foo { new } }
+  enum Enum { def toString { Namespace.foo } }
+  namespace Namespace { def foo { (0 as Enum).toString } }
+  def Function {}
+  var Variable = 0
+}
+", "
+(function(exports) {
+  var in_Enum = {};
+
+  in_Enum.toString = function(self) {
+    exports.Namespace.foo();
+  };
+
+  exports.Function = function() {
+  };
+
+  exports.Class = function() {
+  };
+
+  exports.Class.prototype.foo = function() {
+    new exports.Class();
+  };
+
+  exports.Enum = {};
+
+  exports.Namespace = {};
+
+  exports.Namespace.foo = function() {
+    in_Enum.toString(0);
+  };
+
+  exports.Variable = 0;
+})(this);
+").js
+
+# Check export name collisions
+test("
+@export
+var exports = 0
+", "
+(function(exports1) {
+  exports1.exports = 0;
+})(this);
 ").js
 
   }

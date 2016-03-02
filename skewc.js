@@ -4119,7 +4119,10 @@
     this._isSpecialVariableNeeded = {};
     this._loopLabels = {};
     this._specialVariables = {};
+    this._global = null;
+    this._symbolsToExport = [];
     this._allSpecialVariables = null;
+    this._exportsNamespace = null;
     this._enclosingFunction = null;
     this._enclosingLoop = null;
     this._namespacePrefix = '';
@@ -4153,6 +4156,7 @@
     this._mangle = this._options.jsMangle;
     this._minify = this._options.jsMinify;
     this._sourceMap = this._options.jsSourceMap;
+    this._global = global;
 
     if (this._minify) {
       this._indentAmount = '';
@@ -4180,7 +4184,7 @@
     assert(Skew.JavaScriptEmitter.SpecialVariable.MULTIPLY in this._specialVariables);
     assert(Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE in this._specialVariables);
 
-    // The prototype cache doesn't need to be initialized
+    // These don't need to be initialized
     in_IntMap.get1(this._specialVariables, Skew.JavaScriptEmitter.SpecialVariable.PROTOTYPE).value = null;
 
     // Sort these so their order is deterministic
@@ -4209,7 +4213,7 @@
     }
 
     // The entire body of code is wrapped in a closure for safety
-    this._emit(this._indent + '(function()' + this._space + '{' + this._newline);
+    this._emit(this._indent + '(function(' + (this._exportsNamespace != null ? Skew.JavaScriptEmitter._mangleName(this._exportsNamespace) : '') + ')' + this._space + '{' + this._newline + '');
     this._increaseIndent();
 
     // Emit special-cased variables that must come first
@@ -4285,7 +4289,7 @@
 
     // End the closure wrapping everything
     this._decreaseIndent();
-    this._emit(this._indent + '})();\n');
+    this._emit(this._indent + '})(' + (this._exportsNamespace != null ? 'this' : '') + ');\n');
     var codeName = this._options.outputDirectory != null ? this._options.outputDirectory + '/compiled.js' : this._options.outputFile;
     var mapName = codeName != null ? codeName + '.map' : null;
 
@@ -4523,6 +4527,7 @@
   Skew.JavaScriptEmitter.prototype._prepareGlobal = function(global) {
     // Lower certain stuff into JavaScript (for example, "x as bool" becomes "!!x")
     this._patchObject(global);
+    this._exportSymbols();
 
     // Skip everything below if we aren't mangling
     if (!this._mangle) {
@@ -4886,10 +4891,10 @@
       case Skew.SymbolKind.OBJECT_NAMESPACE:
       case Skew.SymbolKind.OBJECT_INTERFACE:
       case Skew.SymbolKind.OBJECT_WRAPPED: {
-        if (symbol.forwardTo == null) {
+        if (symbol.forwardTo == null && symbol != this._exportsNamespace) {
           this._emitNewlineBeforeSymbol(symbol);
           this._emitComments(symbol.comments);
-          this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{}');
+          this._emit(this._indent + (this._namespacePrefix == '' ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{}');
           this._emitSemicolonAfterStatement();
           this._emitNewlineAfterSymbol(symbol);
         }
@@ -4900,7 +4905,7 @@
       case Skew.SymbolKind.OBJECT_FLAGS: {
         this._emitNewlineBeforeSymbol(symbol);
         this._emitComments(symbol.comments);
-        this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{');
+        this._emit(this._indent + (this._namespacePrefix == '' ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol) + this._space + '=' + this._space + '{');
         this._increaseIndent();
         var isFirst = true;
 
@@ -5074,7 +5079,7 @@
     if (symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE && symbol.kind != Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS && (symbol.value != null || this._namespacePrefix == '' || Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind))) {
       this._emitNewlineBeforeSymbol(symbol);
       this._emitComments(symbol.comments);
-      this._emit(this._indent + (this._namespacePrefix == '' && !symbol.isExported() || Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind) ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol));
+      this._emit(this._indent + (this._namespacePrefix == '' || Skew.in_SymbolKind.isLocalOrArgumentVariable(symbol.kind) ? 'var ' : this._namespacePrefix) + Skew.JavaScriptEmitter._mangleName(symbol));
 
       if (symbol.value != null) {
         this._emit(this._space + '=' + this._space);
@@ -5879,6 +5884,10 @@
     for (var i = 0, list = symbol.objects, count = list.length; i < count; i = i + 1 | 0) {
       var object = in_List.get(list, i);
       this._patchObject(object);
+
+      if (symbol == this._global && object.isExported()) {
+        this._symbolsToExport.push(object);
+      }
     }
 
     // Scan over child functions
@@ -5961,6 +5970,10 @@
           symbol.flags |= Skew.SymbolFlags.USE_PROTOTYPE_CACHE;
         }
       }
+
+      if (symbol == this._global && $function.isExported()) {
+        this._symbolsToExport.push($function);
+      }
     }
 
     // Scan over child variables
@@ -5968,6 +5981,51 @@
       var variable2 = in_List.get(list3, i3);
       this._allocateNamingGroupIndex(variable2);
       this._patchNode(variable2.value);
+
+      if (symbol == this._global && variable2.isExported()) {
+        this._symbolsToExport.push(variable2);
+      }
+    }
+  };
+
+  Skew.JavaScriptEmitter.prototype._exportSymbols = function() {
+    if (this._symbolsToExport.length == 0) {
+      return;
+    }
+
+    this._exportsNamespace = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_NAMESPACE, this._global.scope.generateName('exports'));
+    this._exportsNamespace.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, this._exportsNamespace);
+    this._exportsNamespace.state = Skew.SymbolState.INITIALIZED;
+    this._exportsNamespace.scope = new Skew.ObjectScope(this._global.scope, this._exportsNamespace);
+    this._exportsNamespace.parent = this._global;
+    this._global.objects.push(this._exportsNamespace);
+    this._allocateNamingGroupIndex(this._exportsNamespace);
+
+    for (var i = 0, list = this._symbolsToExport, count = list.length; i < count; i = i + 1 | 0) {
+      var symbol = in_List.get(list, i);
+      assert(symbol.parent != null);
+      assert(Skew.in_SymbolKind.isObject(symbol.parent.kind));
+      var oldParent = symbol.parent.asObjectSymbol();
+      symbol.parent = this._exportsNamespace;
+
+      if (Skew.in_SymbolKind.isObject(symbol.kind)) {
+        in_List.removeOne(oldParent.objects, symbol.asObjectSymbol());
+        this._exportsNamespace.objects.push(symbol.asObjectSymbol());
+      }
+
+      else if (Skew.in_SymbolKind.isFunction(symbol.kind)) {
+        in_List.removeOne(oldParent.functions, symbol.asFunctionSymbol());
+        this._exportsNamespace.functions.push(symbol.asFunctionSymbol());
+      }
+
+      else if (Skew.in_SymbolKind.isVariable(symbol.kind)) {
+        in_List.removeOne(oldParent.variables, symbol.asVariableSymbol());
+        this._exportsNamespace.variables.push(symbol.asVariableSymbol());
+      }
+
+      else {
+        assert(false);
+      }
     }
   };
 
