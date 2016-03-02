@@ -182,7 +182,7 @@ namespace Skew {
     var visit fn(Range, string, bool)
 
     visit = (range, path, isExplicit) => {
-      if path.startsWith(".") {
+      if splitPath(path).entry.startsWith(".") {
         return
       }
 
