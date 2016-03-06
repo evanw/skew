@@ -3517,5 +3517,34 @@ var exports = 0
 })(this);
 ").js
 
+# Make sure not to overwrite the in_IntMap namespace when generating sibling namespaces in separate passes
+test("
+@entry
+def main {
+  var x = IntMap<int>.new
+  var y = {0: 1}
+}
+", "
+(function() {
+  function main() {
+    var x = in_IntMap.$new();
+    var y = in_IntMap.insert(in_IntMap.$new(), 0, 1);
+  }
+
+  var in_IntMap = {};
+
+  in_IntMap.insert = function(self, key, value) {
+    self[key] = value;
+    return self;
+  };
+
+  in_IntMap.$new = function() {
+    return {};
+  };
+
+  main();
+})();
+").js
+
   }
 }
