@@ -11,6 +11,7 @@ namespace Skew {
     over run(context PassContext) {
       var globalizeAllFunctions = context.options.globalizeAllFunctions
       var virtualLookup = globalizeAllFunctions || context.options.isAlwaysInlinePresent ? VirtualLookup.new(context.global) : null
+      var motionContext = Motion.Context.new
 
       for info in context.callGraph.callInfo {
         var symbol = info.symbol
@@ -28,6 +29,12 @@ namespace Skew {
           function.arguments.prepend(function.this)
           function.resolvedType.argumentTypes.prepend(function.this.resolvedType)
           function.this = null
+
+          # The globalized function needs instance type parameters
+          if function.parent.asObjectSymbol.parameters != null {
+            function.parent.asObjectSymbol.functions.removeOne(function)
+            motionContext.moveSymbolIntoNewNamespace(function)
+          }
 
           # Update all call sites
           for callSite in info.callSites {
@@ -48,6 +55,8 @@ namespace Skew {
           }
         }
       }
+
+      motionContext.finish
     }
   }
 

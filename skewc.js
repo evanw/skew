@@ -1583,8 +1583,7 @@
     }
 
     switch (symbol.kind) {
-      case Skew.SymbolKind.OBJECT_CLASS:
-      case Skew.SymbolKind.OBJECT_NAMESPACE: {
+      case Skew.SymbolKind.OBJECT_CLASS: {
         this._emit('class ');
         break;
       }
@@ -1600,7 +1599,8 @@
         break;
       }
 
-      case Skew.SymbolKind.OBJECT_WRAPPED: {
+      case Skew.SymbolKind.OBJECT_WRAPPED:
+      case Skew.SymbolKind.OBJECT_NAMESPACE: {
         this._emit('static class ');
         break;
       }
@@ -15352,6 +15352,7 @@
   Skew.GlobalizingPass.prototype.run = function(context) {
     var globalizeAllFunctions = context.options.globalizeAllFunctions;
     var virtualLookup = globalizeAllFunctions || context.options.isAlwaysInlinePresent ? new Skew.VirtualLookup(context.global) : null;
+    var motionContext = new Skew.Motion.Context();
 
     for (var i1 = 0, list1 = context.callGraph.callInfo, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
       var info = in_List.get(list1, i1);
@@ -15364,6 +15365,12 @@
         $function.$arguments.unshift($function.$this);
         $function.resolvedType.argumentTypes.unshift($function.$this.resolvedType);
         $function.$this = null;
+
+        // The globalized function needs instance type parameters
+        if ($function.parent.asObjectSymbol().parameters != null) {
+          in_List.removeOne($function.parent.asObjectSymbol().functions, $function);
+          motionContext.moveSymbolIntoNewNamespace($function);
+        }
 
         // Update all call sites
         for (var i = 0, list = info.callSites, count = list.length; i < count; i = i + 1 | 0) {
@@ -15385,6 +15392,8 @@
         }
       }
     }
+
+    motionContext.finish();
   };
 
   Skew.VirtualLookup = function(global) {
@@ -16749,30 +16758,20 @@
   };
 
   Skew.MotionPass.prototype.run = function(context) {
-    var namespaces = {};
-    Skew.Motion.symbolMotion(context.global, context.options, namespaces);
-
-    // Avoid mutation during the iteration above
-    var values = in_IntMap.values(namespaces);
-
-    // Sort so the order is deterministic
-    values.sort(Skew.Symbol.SORT_OBJECTS_BY_ID);
-
-    for (var i = 0, list = values, count = list.length; i < count; i = i + 1 | 0) {
-      var object = in_List.get(list, i);
-      object.parent.asObjectSymbol().objects.push(object);
-    }
+    var motionContext = new Skew.Motion.Context();
+    Skew.Motion.symbolMotion(context.global, context.options, motionContext);
+    motionContext.finish();
   };
 
   Skew.Motion = {};
 
-  Skew.Motion.symbolMotion = function(symbol, options, namespaces) {
+  Skew.Motion.symbolMotion = function(symbol, options, context) {
     // Move non-imported objects off imported objects
     in_List.removeIf(symbol.objects, function(object) {
-      Skew.Motion.symbolMotion(object, options, namespaces);
+      Skew.Motion.symbolMotion(object, options, context);
 
       if (symbol.isImported() && !object.isImported() || !options.target.supportsNestedTypes() && !Skew.in_SymbolKind.isNamespaceOrGlobal(symbol.kind)) {
-        Skew.Motion.moveSymbolIntoNewNamespace(object, namespaces).objects.push(object);
+        context.moveSymbolIntoNewNamespace(object);
         return true;
       }
 
@@ -16782,7 +16781,7 @@
     // Move global functions with implementations off of imported objects and interfaces
     in_List.removeIf(symbol.functions, function($function) {
       if ($function.kind == Skew.SymbolKind.FUNCTION_GLOBAL && (symbol.isImported() && !$function.isImported() || symbol.kind == Skew.SymbolKind.OBJECT_INTERFACE)) {
-        Skew.Motion.moveSymbolIntoNewNamespace($function, namespaces).functions.push($function);
+        context.moveSymbolIntoNewNamespace($function);
         return true;
       }
 
@@ -16792,14 +16791,14 @@
     // Move stuff off of enums and flags
     if (Skew.in_SymbolKind.isEnumOrFlags(symbol.kind)) {
       symbol.objects.forEach(function(object) {
-        Skew.Motion.moveSymbolIntoNewNamespace(object, namespaces).objects.push(object);
+        context.moveSymbolIntoNewNamespace(object);
       });
       symbol.functions.forEach(function($function) {
-        Skew.Motion.moveSymbolIntoNewNamespace($function, namespaces).functions.push($function);
+        context.moveSymbolIntoNewNamespace($function);
       });
       in_List.removeIf(symbol.variables, function(variable) {
         if (variable.kind != Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
-          Skew.Motion.moveSymbolIntoNewNamespace(variable, namespaces).variables.push(variable);
+          context.moveSymbolIntoNewNamespace(variable);
           return true;
         }
 
@@ -16812,15 +16811,32 @@
     // Move variables off of interfaces
     else if (symbol.kind == Skew.SymbolKind.OBJECT_INTERFACE) {
       symbol.variables.forEach(function(variable) {
-        Skew.Motion.moveSymbolIntoNewNamespace(variable, namespaces).variables.push(variable);
+        context.moveSymbolIntoNewNamespace(variable);
       });
       symbol.variables = [];
     }
   };
 
-  Skew.Motion.moveSymbolIntoNewNamespace = function(symbol, namespaces) {
+  Skew.Motion.Context = function() {
+    this._namespaces = {};
+  };
+
+  // Avoid mutation during iteration
+  Skew.Motion.Context.prototype.finish = function() {
+    var values = in_IntMap.values(this._namespaces);
+
+    // Sort so the order is deterministic
+    values.sort(Skew.Symbol.SORT_OBJECTS_BY_ID);
+
+    for (var i = 0, list = values, count = list.length; i < count; i = i + 1 | 0) {
+      var object = in_List.get(list, i);
+      object.parent.asObjectSymbol().objects.push(object);
+    }
+  };
+
+  Skew.Motion.Context.prototype.moveSymbolIntoNewNamespace = function(symbol) {
     var parent = symbol.parent;
-    var namespace = in_IntMap.get(namespaces, parent.id, null);
+    var namespace = in_IntMap.get(this._namespaces, parent.id, null);
     var object = namespace != null ? namespace.asObjectSymbol() : null;
 
     // Create a parallel namespace next to the parent
@@ -16831,23 +16847,34 @@
       object.state = Skew.SymbolState.INITIALIZED;
       object.scope = new Skew.ObjectScope(common.scope, object);
       object.parent = common;
-      namespaces[parent.id] = object;
-    }
-
-    // Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)
-    if (Skew.in_SymbolKind.isFunction(symbol.kind) && parent.asObjectSymbol().parameters != null) {
-      var $function = symbol.asFunctionSymbol();
-
-      if ($function.parameters == null) {
-        $function.parameters = [];
-      }
-
-      in_List.prepend1($function.parameters, parent.asObjectSymbol().parameters);
+      this._namespaces[parent.id] = object;
     }
 
     // Move this function into that parallel namespace
     symbol.parent = object;
-    return object;
+
+    if (Skew.in_SymbolKind.isObject(symbol.kind)) {
+      object.objects.push(symbol.asObjectSymbol());
+    }
+
+    else if (Skew.in_SymbolKind.isFunction(symbol.kind)) {
+      object.functions.push(symbol.asFunctionSymbol());
+
+      // Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)
+      if (parent.asObjectSymbol().parameters != null) {
+        var $function = symbol.asFunctionSymbol();
+
+        if ($function.parameters == null) {
+          $function.parameters = [];
+        }
+
+        in_List.prepend1($function.parameters, parent.asObjectSymbol().parameters);
+      }
+    }
+
+    else if (Skew.in_SymbolKind.isVariable(symbol.kind)) {
+      object.variables.push(symbol.asVariableSymbol());
+    }
   };
 
   Skew.RenamingPass = function() {
@@ -23311,107 +23338,25 @@
     return false;
   };
 
-  var in_int = {};
+  var in_List = {};
 
-  in_int.power = function(self, x) {
-    var y = self;
-    var z = x < 0 ? 0 : 1;
-
-    while (x > 0) {
-      if ((x & 1) != 0) {
-        z = __imul(z, y);
-      }
-
-      x >>= 1;
-      y = __imul(y, y);
-    }
-
-    return z;
-  };
-
-  in_int.compare = function(self, x) {
-    return (x < self | 0) - (x > self | 0) | 0;
-  };
-
-  var in_string = {};
-
-  in_string.fromCodePoints = function(codePoints) {
-    var builder = new StringBuilder();
-
-    for (var i = 0, list = codePoints, count1 = list.length; i < count1; i = i + 1 | 0) {
-      var codePoint = in_List.get(list, i);
-      builder.append(in_string.fromCodePoint(codePoint));
-    }
-
-    return builder.toString();
-  };
-
-  in_string.compare = function(self, x) {
-    return (x < self | 0) - (x > self | 0) | 0;
-  };
-
-  in_string.slice1 = function(self, start) {
-    assert(0 <= start && start <= self.length);
-    return self.slice(start);
-  };
-
-  in_string.slice2 = function(self, start, end) {
-    assert(0 <= start && start <= end && end <= self.length);
-    return self.slice(start, end);
-  };
-
-  in_string.startsWith = function(self, text) {
-    return self.length >= text.length && in_string.slice2(self, 0, text.length) == text;
-  };
-
-  in_string.endsWith = function(self, text) {
-    return self.length >= text.length && in_string.slice1(self, self.length - text.length | 0) == text;
-  };
-
-  in_string.get1 = function(self, index) {
-    assert(0 <= index && index < self.length);
-    return self.charCodeAt(index);
-  };
-
-  in_string.get = function(self, index) {
+  in_List.get = function(self, index) {
     assert(0 <= index && index < self.length);
     return self[index];
   };
 
-  in_string.repeat = function(self, times) {
-    var result = '';
-
-    for (var i = 0, count1 = times; i < count1; i = i + 1 | 0) {
-      result += self;
-    }
-
-    return result;
+  in_List.set = function(self, index, value) {
+    assert(0 <= index && index < self.length);
+    return self[index] = value;
   };
-
-  in_string.codePoints = function(self) {
-    var codePoints = [];
-    var instance = Unicode.StringIterator.INSTANCE;
-    instance.reset(self, 0);
-
-    while (true) {
-      var codePoint = instance.nextCodePoint();
-
-      if (codePoint < 0) {
-        return codePoints;
-      }
-
-      codePoints.push(codePoint);
-    }
-  };
-
-  in_string.fromCodePoint = function(codePoint) {
-    return codePoint < 65536 ? String.fromCharCode(codePoint) : String.fromCharCode((codePoint - 65536 >> 10) + 55296 | 0) + String.fromCharCode((codePoint - 65536 & (1 << 10) - 1) + 56320 | 0);
-  };
-
-  var in_List = {};
 
   in_List.setLast = function(self, x) {
     return in_List.set(self, self.length - 1 | 0, x);
+  };
+
+  in_List.removeLast = function(self) {
+    assert(!(self.length == 0));
+    self.pop();
   };
 
   in_List.swap = function(self, i, j) {
@@ -23425,16 +23370,6 @@
   in_List.slice2 = function(self, start, end) {
     assert(0 <= start && start <= end && end <= self.length);
     return self.slice(start, end);
-  };
-
-  in_List.get = function(self, index) {
-    assert(0 <= index && index < self.length);
-    return self[index];
-  };
-
-  in_List.set = function(self, index, value) {
-    assert(0 <= index && index < self.length);
-    return self[index] = value;
   };
 
   in_List.first = function(self) {
@@ -23478,11 +23413,6 @@
   in_List.insert2 = function(self, index, value) {
     assert(0 <= index && index <= self.length);
     self.splice(index, 0, value);
-  };
-
-  in_List.removeLast = function(self) {
-    assert(!(self.length == 0));
-    self.pop();
   };
 
   in_List.takeLast = function(self) {
@@ -23601,13 +23531,6 @@
     return self;
   };
 
-  in_IntMap.get = function(self, key, defaultValue) {
-    var value = self[key];
-
-    // Compare against undefined so the key is only hashed once for speed
-    return value !== void 0 ? value : defaultValue;
-  };
-
   in_IntMap.values = function(self) {
     var values = [];
 
@@ -23616,6 +23539,110 @@
     }
 
     return values;
+  };
+
+  in_IntMap.get = function(self, key, defaultValue) {
+    var value = self[key];
+
+    // Compare against undefined so the key is only hashed once for speed
+    return value !== void 0 ? value : defaultValue;
+  };
+
+  var in_int = {};
+
+  in_int.power = function(self, x) {
+    var y = self;
+    var z = x < 0 ? 0 : 1;
+
+    while (x > 0) {
+      if ((x & 1) != 0) {
+        z = __imul(z, y);
+      }
+
+      x >>= 1;
+      y = __imul(y, y);
+    }
+
+    return z;
+  };
+
+  in_int.compare = function(self, x) {
+    return (x < self | 0) - (x > self | 0) | 0;
+  };
+
+  var in_string = {};
+
+  in_string.fromCodePoints = function(codePoints) {
+    var builder = new StringBuilder();
+
+    for (var i = 0, list = codePoints, count1 = list.length; i < count1; i = i + 1 | 0) {
+      var codePoint = in_List.get(list, i);
+      builder.append(in_string.fromCodePoint(codePoint));
+    }
+
+    return builder.toString();
+  };
+
+  in_string.compare = function(self, x) {
+    return (x < self | 0) - (x > self | 0) | 0;
+  };
+
+  in_string.slice1 = function(self, start) {
+    assert(0 <= start && start <= self.length);
+    return self.slice(start);
+  };
+
+  in_string.slice2 = function(self, start, end) {
+    assert(0 <= start && start <= end && end <= self.length);
+    return self.slice(start, end);
+  };
+
+  in_string.startsWith = function(self, text) {
+    return self.length >= text.length && in_string.slice2(self, 0, text.length) == text;
+  };
+
+  in_string.endsWith = function(self, text) {
+    return self.length >= text.length && in_string.slice1(self, self.length - text.length | 0) == text;
+  };
+
+  in_string.get1 = function(self, index) {
+    assert(0 <= index && index < self.length);
+    return self.charCodeAt(index);
+  };
+
+  in_string.get = function(self, index) {
+    assert(0 <= index && index < self.length);
+    return self[index];
+  };
+
+  in_string.repeat = function(self, times) {
+    var result = '';
+
+    for (var i = 0, count1 = times; i < count1; i = i + 1 | 0) {
+      result += self;
+    }
+
+    return result;
+  };
+
+  in_string.codePoints = function(self) {
+    var codePoints = [];
+    var instance = Unicode.StringIterator.INSTANCE;
+    instance.reset(self, 0);
+
+    while (true) {
+      var codePoint = instance.nextCodePoint();
+
+      if (codePoint < 0) {
+        return codePoints;
+      }
+
+      codePoints.push(codePoint);
+    }
+  };
+
+  in_string.fromCodePoint = function(codePoint) {
+    return codePoint < 65536 ? String.fromCharCode(codePoint) : String.fromCharCode((codePoint - 65536 >> 10) + 55296 | 0) + String.fromCharCode((codePoint - 65536 & (1 << 10) - 1) + 56320 | 0);
   };
 
   var TARGET = Target.JAVASCRIPT;

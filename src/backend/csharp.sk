@@ -267,10 +267,10 @@ namespace Skew {
         _emit("abstract ")
       }
       switch symbol.kind {
-        case .OBJECT_CLASS, .OBJECT_NAMESPACE { _emit("class ") }
+        case .OBJECT_CLASS { _emit("class ") }
         case .OBJECT_ENUM, .OBJECT_FLAGS { _emit("enum ") }
         case .OBJECT_INTERFACE { _emit("interface ") }
-        case .OBJECT_WRAPPED { _emit("static class ") }
+        case .OBJECT_WRAPPED, .OBJECT_NAMESPACE { _emit("static class ") }
         default { assert(false) }
       }
       _emit(_mangleName(symbol))
