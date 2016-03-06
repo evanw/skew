@@ -9,10 +9,12 @@
       Object(); // Adds this object to the global linked list of objects
       virtual ~Object() {}
 
+    protected:
+      virtual void __gc_mark() {} // Recursively marks all child objects
+
     private:
       friend Internal;
       Object *__gc_next = nullptr; // GC space overhead is one pointer per object
-      virtual void __gc_mark() = 0; // Recursively marks all child objects
       Object(const Object &); // Prevent copying
       Object &operator = (const Object &); // Prevent copying
     };
