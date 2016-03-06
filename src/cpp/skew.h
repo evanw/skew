@@ -34,6 +34,7 @@
     template <typename T>
     struct Root : UntypedRoot {
       Root(T *object = nullptr) : UntypedRoot(object) {}
+      T *get() const { return dynamic_cast<T *>(_object); }
       operator T * () const { return dynamic_cast<T *>(_object); }
       T *operator -> () const { return dynamic_cast<T *>(_object); }
       Root<T> &operator = (T *value) { _object = value; return *this; }
@@ -61,6 +62,7 @@
     template <typename T>
     struct Root {
       Root(T *object = nullptr) : _object(object) {}
+      T *get() const { return _object; }
       operator T * () const { return _object; }
       T *operator -> () const { return _object; }
       Root<T> &operator = (T *value) { _object = value; return *this; }
