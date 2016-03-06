@@ -136,7 +136,7 @@ namespace Bar {
 struct Foo;
 struct Bar;
 
-struct Foo SKEW_BASE_OBJECT {
+struct Foo : virtual Skew::Object {
   virtual void instanceMethod();
   void instanceMethod2();
   Foo(int instanceVariable1);
@@ -227,12 +227,12 @@ struct Baz;
 
 struct Foo;
 
-struct Bar SKEW_BASE_OBJECT {
+struct Bar : virtual Skew::Object {
   virtual void instanceMethod() = 0;
   virtual void instanceMethod(int x) = 0;
 };
 
-struct Baz SKEW_BASE_OBJECT {
+struct Baz : virtual Skew::Object {
   virtual void instanceMethod() = 0;
   virtual void instanceMethod2() = 0;
 };
@@ -296,11 +296,11 @@ struct Baz;
 
 struct Foo;
 
-struct Bar SKEW_BASE_OBJECT {
+struct Bar : virtual Skew::Object {
   virtual void instanceMethod1() = 0;
 };
 
-struct Baz SKEW_BASE_OBJECT {
+struct Baz : virtual Skew::Object {
   virtual void instanceMethod1() = 0;
 };
 
@@ -711,7 +711,7 @@ struct FooTestLambda2;
 struct FooTestEnv2;
 struct FooTestLambda3;
 
-struct Foo SKEW_BASE_OBJECT {
+struct Foo : virtual Skew::Object {
   int test(int x);
   Foo();
 
@@ -722,7 +722,7 @@ struct Foo SKEW_BASE_OBJECT {
   #endif
 };
 
-struct FooTestEnv SKEW_BASE_OBJECT {
+struct FooTestEnv : virtual Skew::Object {
   FooTestEnv();
 
   Foo *self;
@@ -745,7 +745,7 @@ struct FooTestLambda : Skew::Fn1<Skew::Fn0<Skew::Fn1<Skew::Fn0<int> *, int> *> *
   #endif
 };
 
-struct FooTestEnv1 SKEW_BASE_OBJECT {
+struct FooTestEnv1 : virtual Skew::Object {
   FooTestEnv1(FooTestEnv *env);
 
   int a;
@@ -780,7 +780,7 @@ struct FooTestLambda2 : Skew::Fn1<Skew::Fn0<int> *, int> {
   #endif
 };
 
-struct FooTestEnv2 SKEW_BASE_OBJECT {
+struct FooTestEnv2 : virtual Skew::Object {
   FooTestEnv2(FooTestEnv *env, FooTestEnv1 *env1);
 
   int b;
@@ -945,7 +945,7 @@ struct Lambda : Skew::Fn1<Skew::Fn1<int, int> *, int> {
   #endif
 };
 
-struct LambdaRunEnv SKEW_BASE_OBJECT {
+struct LambdaRunEnv : virtual Skew::Object {
   LambdaRunEnv();
 
   int x;
@@ -1027,7 +1027,7 @@ def test {
 struct TestEnv;
 struct TestLambda;
 
-struct TestEnv SKEW_BASE_OBJECT {
+struct TestEnv : virtual Skew::Object {
   TestEnv();
 
   int foo;
@@ -1094,7 +1094,7 @@ def main {
 struct MainEnv;
 struct MainLambda;
 
-struct MainEnv SKEW_BASE_OBJECT {
+struct MainEnv : virtual Skew::Object {
   MainEnv();
 
   Skew::FnVoid0 *f;
@@ -1159,7 +1159,7 @@ def main {
 struct MainEnv;
 struct MainLambda;
 
-struct MainEnv SKEW_BASE_OBJECT {
+struct MainEnv : virtual Skew::Object {
   MainEnv();
 
   Skew::List<int> *x;
@@ -1294,7 +1294,7 @@ struct Foo;
 struct FooEnv;
 struct FooLambda;
 
-struct Foo SKEW_BASE_OBJECT {
+struct Foo : virtual Skew::Object {
   static void test(Foo *self, Foo *foo);
   Foo();
 
@@ -1303,7 +1303,7 @@ struct Foo SKEW_BASE_OBJECT {
   #endif
 };
 
-struct FooEnv SKEW_BASE_OBJECT {
+struct FooEnv : virtual Skew::Object {
   FooEnv();
 
   Skew::FnVoid1<Foo *> *visit;
@@ -1501,7 +1501,7 @@ struct TestLambda;
 struct TestEnv1;
 struct TestLambda1;
 
-struct TestEnv SKEW_BASE_OBJECT {
+struct TestEnv : virtual Skew::Object {
   TestEnv();
 
   Skew::List<int> *list;
@@ -1522,7 +1522,7 @@ struct TestLambda : Skew::Fn0<Skew::List<int> *> {
   #endif
 };
 
-struct TestEnv1 SKEW_BASE_OBJECT {
+struct TestEnv1 : virtual Skew::Object {
   TestEnv1(TestEnv *env);
 
   int i;
@@ -1831,7 +1831,7 @@ namespace in_Foo {
   };
 }
 
-struct Foo SKEW_BASE_OBJECT {
+struct Foo : virtual Skew::Object {
   Foo();
 
   #ifdef SKEW_GC_MARK_AND_SWEEP
@@ -1898,6 +1898,57 @@ template <typename T>
 int in_Foo::size(Skew::List<T> *self) {
   return self->count();
 }
+").cpp
+
+# Check the "is" operator
+test("
+class Foo {}
+class Bar : Foo {}
+
+@entry
+def main {
+  Foo.new is Bar == true || true == Foo.new is Bar
+}
+", "
+struct Foo;
+struct Bar;
+
+struct Foo : virtual Skew::Object {
+  Foo();
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
+};
+
+struct Bar : Foo {
+  Bar();
+
+  #ifdef SKEW_GC_MARK_AND_SWEEP
+    virtual void __gc_mark() override;
+  #endif
+};
+
+void main() {
+  dynamic_cast<Bar *>(new Foo()) != nullptr == true || true == (dynamic_cast<Bar *>(new Foo()) != nullptr);
+}
+
+Foo::Foo() {
+}
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Foo::__gc_mark() {
+  }
+#endif
+
+Bar::Bar() : Foo::Foo() {
+}
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void Bar::__gc_mark() {
+    Foo::__gc_mark();
+  }
+#endif
 ").cpp
 
   }

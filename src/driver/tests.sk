@@ -383,6 +383,7 @@ namespace Skew.Tests {
     testNode
     testQuoteReplacement
     testRanges
+    testRuntime
     testUnicode
 
     var report = Unit.TerminalReport.new

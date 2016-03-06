@@ -2400,6 +2400,24 @@
         break;
       }
 
+      case Skew.NodeKind.TYPE_CHECK: {
+        var value2 = node.typeCheckValue();
+        var type1 = node.typeCheckType();
+
+        if (Skew.Precedence.COMPARE < precedence) {
+          this._emit('(');
+        }
+
+        this._emitExpression(value2, Skew.Precedence.LOWEST);
+        this._emit(' is ');
+        this._emitExpressionOrType(type1, type1.resolvedType);
+
+        if (Skew.Precedence.COMPARE < precedence) {
+          this._emit(')');
+        }
+        break;
+      }
+
       case Skew.NodeKind.INITIALIZER_LIST: {
         this._emit('new ');
         this._emitType(node.resolvedType);
@@ -2442,16 +2460,16 @@
       }
 
       case Skew.NodeKind.PARAMETERIZE: {
-        var value2 = node.parameterizeValue();
+        var value3 = node.parameterizeValue();
 
-        if (value2.isType()) {
+        if (value3.isType()) {
           this._emitType(node.resolvedType);
         }
 
         else {
-          this._emitExpression(value2, precedence);
+          this._emitExpression(value3, precedence);
           this._emit('<');
-          this._emitCommaSeparatedExpressions(value2.nextSibling(), null);
+          this._emitCommaSeparatedExpressions(value3.nextSibling(), null);
           this._emit('>');
         }
         break;
@@ -2505,7 +2523,7 @@
       case Skew.NodeKind.POSTFIX_INCREMENT:
       case Skew.NodeKind.PREFIX_DECREMENT:
       case Skew.NodeKind.PREFIX_INCREMENT: {
-        var value3 = node.unaryValue();
+        var value4 = node.unaryValue();
         var info = in_IntMap.get1(Skew.operatorInfo, kind);
         var sign = node.sign();
 
@@ -2517,12 +2535,12 @@
           this._emit(info.text);
 
           // Prevent "x - -1" from becoming "x--1"
-          if (sign != Skew.NodeKind.NULL && sign == value3.sign()) {
+          if (sign != Skew.NodeKind.NULL && sign == value4.sign()) {
             this._emit(' ');
           }
         }
 
-        this._emitExpression(value3, info.precedence);
+        this._emitExpression(value4, info.precedence);
 
         if (Skew.in_NodeKind.isUnaryPostfix(kind)) {
           this._emit(info.text);
@@ -2917,7 +2935,7 @@
         }
 
         else {
-          this._emit(' SKEW_BASE_OBJECT');
+          this._emit(' : virtual Skew::Object');
         }
 
         this._emit(' {\n');
@@ -3696,6 +3714,26 @@
         break;
       }
 
+      case Skew.NodeKind.TYPE_CHECK: {
+        var value2 = node.typeCheckValue();
+        var type2 = node.typeCheckType();
+
+        if (Skew.Precedence.EQUAL < precedence) {
+          this._emit('(');
+        }
+
+        this._emit('dynamic_cast<');
+        this._emitExpressionOrType(type2, type2.resolvedType, Skew.CPlusPlusEmitter.CppEmitMode.NORMAL);
+        this._emit('>(');
+        this._emitExpression(value2, Skew.Precedence.LOWEST);
+        this._emit(') != nullptr');
+
+        if (Skew.Precedence.EQUAL < precedence) {
+          this._emit(')');
+        }
+        break;
+      }
+
       case Skew.NodeKind.INDEX: {
         var left = node.indexLeft();
 
@@ -3744,18 +3782,18 @@
       }
 
       case Skew.NodeKind.PARAMETERIZE: {
-        var value2 = node.parameterizeValue();
+        var value3 = node.parameterizeValue();
 
-        if (value2.isType()) {
+        if (value3.isType()) {
           this._emitType(node.resolvedType, Skew.CPlusPlusEmitter.CppEmitMode.NORMAL);
         }
 
         else {
-          this._emitExpression(value2, precedence);
+          this._emitExpression(value3, precedence);
           this._emit('<');
 
-          for (var child = value2.nextSibling(); child != null; child = child.nextSibling()) {
-            if (child.previousSibling() != value2) {
+          for (var child = value3.nextSibling(); child != null; child = child.nextSibling()) {
+            if (child.previousSibling() != value3) {
               this._emit(', ');
             }
 
@@ -3840,7 +3878,7 @@
       case Skew.NodeKind.POSTFIX_INCREMENT:
       case Skew.NodeKind.PREFIX_DECREMENT:
       case Skew.NodeKind.PREFIX_INCREMENT: {
-        var value3 = node.unaryValue();
+        var value4 = node.unaryValue();
         var info = in_IntMap.get1(Skew.operatorInfo, kind);
         var sign = node.sign();
 
@@ -3852,12 +3890,12 @@
           this._emit(info.text);
 
           // Prevent "x - -1" from becoming "x--1"
-          if (sign != Skew.NodeKind.NULL && sign == value3.sign()) {
+          if (sign != Skew.NodeKind.NULL && sign == value4.sign()) {
             this._emit(' ');
           }
         }
 
-        this._emitExpression(value3, info.precedence);
+        this._emitExpression(value4, info.precedence);
 
         if (Skew.in_NodeKind.isUnaryPostfix(kind)) {
           this._emit(info.text);

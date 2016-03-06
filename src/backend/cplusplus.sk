@@ -268,7 +268,7 @@ namespace Skew {
               }
             }
           } else {
-            _emit(" SKEW_BASE_OBJECT")
+            _emit(" : virtual Skew::Object")
           }
           _emit(" {\n")
           _increaseIndent
@@ -907,6 +907,23 @@ namespace Skew {
           # Otherwise, pretend the cast isn't there
           else {
             _emitExpression(value, precedence)
+          }
+        }
+
+        case .TYPE_CHECK {
+          var value = node.typeCheckValue
+          var type = node.typeCheckType
+
+          if Precedence.EQUAL < precedence {
+            _emit("(")
+          }
+          _emit("dynamic_cast<")
+          _emitExpressionOrType(type, type.resolvedType, .NORMAL)
+          _emit(">(")
+          _emitExpression(value, .LOWEST)
+          _emit(") != nullptr")
+          if Precedence.EQUAL < precedence {
+            _emit(")")
           }
         }
 

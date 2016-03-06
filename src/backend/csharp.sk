@@ -929,6 +929,21 @@ namespace Skew {
           }
         }
 
+        case .TYPE_CHECK {
+          var value = node.typeCheckValue
+          var type = node.typeCheckType
+
+          if Precedence.COMPARE < precedence {
+            _emit("(")
+          }
+          _emitExpression(value, .LOWEST)
+          _emit(" is ")
+          _emitExpressionOrType(type, type.resolvedType)
+          if Precedence.COMPARE < precedence {
+            _emit(")")
+          }
+        }
+
         case .INITIALIZER_LIST {
           _emit("new ")
           _emitType(node.resolvedType)
