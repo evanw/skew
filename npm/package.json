@@ -9,7 +9,7 @@
     "skewc": "skewc"
   },
   "scripts": {
-    "postinstall": "node postinstall.js"
+    "postinstall": "node postinstall.js || true"
   },
   "repository": {
     "type": "git",
