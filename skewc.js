@@ -3100,7 +3100,7 @@
         this._increaseIndent();
 
         if (symbol.baseClass != null) {
-          this._emit(this._indent + Skew.CPlusPlusEmitter._mangleName(symbol.baseClass) + '::__gc_mark();\n');
+          this._emit(this._indent + Skew.CPlusPlusEmitter._fullName(symbol.baseClass) + '::__gc_mark();\n');
         }
 
         for (var i = 0, list = symbol.variables, count = list.length; i < count; i = i + 1 | 0) {

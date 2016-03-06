@@ -401,7 +401,7 @@ namespace Skew {
           _increaseIndent
 
           if symbol.baseClass != null {
-            _emit(_indent + _mangleName(symbol.baseClass) + "::__gc_mark();\n")
+            _emit(_indent + _fullName(symbol.baseClass) + "::__gc_mark();\n")
           }
 
           for variable in symbol.variables {

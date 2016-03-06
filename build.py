@@ -38,6 +38,11 @@ SOURCES_TEST = SOURCES + [
   'tests',
 ]
 
+PUBLIC_CPP_FILES = [
+  'src/cpp/skew.cpp',
+  'src/cpp/skew.h',
+]
+
 FLAGS = [
   '--inline-functions',
   '--verbose',
@@ -385,6 +390,8 @@ def publish():
   compile_cpp('out/skewc.release.cpp', 'out/skewc.osx.64', release=True)
   open('npm/skewc', 'w').write('#!/usr/bin/env node\n' + open('out/skewc.min.js').read())
   run(['chmod', '+x', 'npm/skewc'])
+  for name in PUBLIC_CPP_FILES:
+    shutil.copyfile(name, 'npm/' + os.path.basename(name))
   run(['npm', 'publish'], cwd='npm')
   release = create_github_release(version)
   upload_github_release(release, 'skewc.osx.64.gz', 'out/skewc.osx.64')

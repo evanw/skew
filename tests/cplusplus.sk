@@ -1991,5 +1991,58 @@ Foo::Foo() {
 #endif
 ").cpp
 
+# Make sure to fully specify the base class in __gc_mark() for derived classes to avoid infinite recursion
+test("
+class A.Foo {}
+
+@export
+class B.Foo : A.Foo {}
+", "
+namespace A {
+  struct Foo;
+}
+
+namespace B {
+  struct Foo;
+}
+
+namespace A {
+  struct Foo : virtual Skew::Object {
+    Foo();
+
+    #ifdef SKEW_GC_MARK_AND_SWEEP
+      virtual void __gc_mark() override;
+    #endif
+  };
+}
+
+namespace B {
+  struct Foo : A::Foo {
+    Foo();
+
+    #ifdef SKEW_GC_MARK_AND_SWEEP
+      virtual void __gc_mark() override;
+    #endif
+  };
+}
+
+A::Foo::Foo() {
+}
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void A::Foo::__gc_mark() {
+  }
+#endif
+
+B::Foo::Foo() : A::Foo::Foo() {
+}
+
+#ifdef SKEW_GC_MARK_AND_SWEEP
+  void B::Foo::__gc_mark() {
+    A::Foo::__gc_mark();
+  }
+#endif
+").cpp
+
   }
 }
