@@ -16880,12 +16880,22 @@
     // Create a parallel namespace next to the parent
     if (namespace == null) {
       var common = parent.parent.asObjectSymbol();
-      object = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_NAMESPACE, 'in_' + parent.name);
-      object.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, object);
-      object.state = Skew.SymbolState.INITIALIZED;
-      object.scope = new Skew.ObjectScope(common.scope, object);
-      object.parent = common;
-      this._namespaces[parent.id] = object;
+      var name = 'in_' + parent.name;
+      var candidate = in_StringMap.get(common.members, name, null);
+
+      if (candidate != null && candidate.kind == Skew.SymbolKind.OBJECT_NAMESPACE) {
+        object = candidate.asObjectSymbol();
+      }
+
+      else {
+        object = new Skew.ObjectSymbol(Skew.SymbolKind.OBJECT_NAMESPACE, common.scope.generateName(name));
+        object.resolvedType = new Skew.Type(Skew.TypeKind.SYMBOL, object);
+        object.state = Skew.SymbolState.INITIALIZED;
+        object.scope = new Skew.ObjectScope(common.scope, object);
+        object.parent = common;
+        common.members[name] = object;
+        this._namespaces[parent.id] = object;
+      }
     }
 
     // Move this function into that parallel namespace
