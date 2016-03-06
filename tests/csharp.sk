@@ -945,5 +945,38 @@ public class Globals
 }
 ").csharp
 
+# Check the "is" operator
+test("
+class Foo {}
+class Bar : Foo {}
+
+@entry
+def main {
+  Foo.new is Bar == true || true == Foo.new is Bar
+}
+", "
+public class Foo
+{
+    public Foo()
+    {
+    }
+}
+
+public class Bar : Foo
+{
+    public Bar() : base()
+    {
+    }
+}
+
+public class Globals
+{
+    public static void Main()
+    {
+        new Foo() is Bar == true || true == new Foo() is Bar;
+    }
+}
+").csharp
+
   }
 }

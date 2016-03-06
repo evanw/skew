@@ -87,4 +87,16 @@ namespace Skew.Tests {
     testExpect("Range('[  abc  ]', 3, 6).rangeIncludingLeftWhitespace.toString", => Range.new(Source.new("", "[  abc  ]"), 3, 6).rangeIncludingLeftWhitespace.toString, "  abc")
     testExpect("Range('[  abc  ]', 3, 6).rangeIncludingRightWhitespace.toString", => Range.new(Source.new("", "[  abc  ]"), 3, 6).rangeIncludingRightWhitespace.toString, "abc  ")
   }
+
+  class Foo {}
+  class Bar : Foo {}
+  class Baz : Bar {}
+
+  def testRuntime {
+    testExpect("Foo.new is Foo", => Foo.new is Foo, true)
+    testExpect("Bar.new is Bar", => Bar.new is Bar, true)
+    testExpect("Foo.new is Bar", => Foo.new is Bar, false)
+    testExpect("Bar.new is Foo", => Bar.new is Foo, true)
+    testExpect("Bar.new is Baz", => Bar.new is Baz, false)
+  }
 }

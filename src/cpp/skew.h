@@ -51,11 +51,13 @@
     }
   }
 
-  #define SKEW_BASE_OBJECT : virtual Skew::Object
-
 #else
 
   namespace Skew {
+    struct Object {
+      virtual ~Object() {}
+    };
+
     template <typename T>
     struct Root {
       Root(T *object = nullptr) : _object(object) {}
@@ -67,8 +69,6 @@
       T *_object;
     };
   }
-
-  #define SKEW_BASE_OBJECT
 
 #endif
 
@@ -83,112 +83,112 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace Skew {
-  struct FnVoid0 SKEW_BASE_OBJECT {
+  struct FnVoid0 : virtual Skew::Object {
     virtual void run() = 0;
   };
 
   template <typename R>
-  struct Fn0 SKEW_BASE_OBJECT {
+  struct Fn0 : virtual Skew::Object {
     virtual R run() = 0;
   };
 
   template <typename A1>
-  struct FnVoid1 SKEW_BASE_OBJECT {
+  struct FnVoid1 : virtual Skew::Object {
     virtual void run(A1 a1) = 0;
   };
 
   template <typename R, typename A1>
-  struct Fn1 SKEW_BASE_OBJECT {
+  struct Fn1 : virtual Skew::Object {
     virtual R run(A1 a1) = 0;
   };
 
   template <typename A1, typename A2>
-  struct FnVoid2 SKEW_BASE_OBJECT {
+  struct FnVoid2 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2) = 0;
   };
 
   template <typename R, typename A1, typename A2>
-  struct Fn2 SKEW_BASE_OBJECT {
+  struct Fn2 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2) = 0;
   };
 
   template <typename A1, typename A2, typename A3>
-  struct FnVoid3 SKEW_BASE_OBJECT {
+  struct FnVoid3 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2, A3 a3) = 0;
   };
 
   template <typename R, typename A1, typename A2, typename A3>
-  struct Fn3 SKEW_BASE_OBJECT {
+  struct Fn3 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2, A3 a3) = 0;
   };
 
   template <typename A1, typename A2, typename A3, typename A4>
-  struct FnVoid4 SKEW_BASE_OBJECT {
+  struct FnVoid4 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2, A3 a3, A4 a4) = 0;
   };
 
   template <typename R, typename A1, typename A2, typename A3, typename A4>
-  struct Fn4 SKEW_BASE_OBJECT {
+  struct Fn4 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2, A3 a3, A4 a4) = 0;
   };
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5>
-  struct FnVoid5 SKEW_BASE_OBJECT {
+  struct FnVoid5 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5) = 0;
   };
 
   template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5>
-  struct Fn5 SKEW_BASE_OBJECT {
+  struct Fn5 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5) = 0;
   };
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
-  struct FnVoid6 SKEW_BASE_OBJECT {
+  struct FnVoid6 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6) = 0;
   };
 
   template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
-  struct Fn6 SKEW_BASE_OBJECT {
+  struct Fn6 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6) = 0;
   };
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
-  struct FnVoid7 SKEW_BASE_OBJECT {
+  struct FnVoid7 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7) = 0;
   };
 
   template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
-  struct Fn7 SKEW_BASE_OBJECT {
+  struct Fn7 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7) = 0;
   };
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
-  struct FnVoid8 SKEW_BASE_OBJECT {
+  struct FnVoid8 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8) = 0;
   };
 
   template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
-  struct Fn8 SKEW_BASE_OBJECT {
+  struct Fn8 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8) = 0;
   };
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
-  struct FnVoid9 SKEW_BASE_OBJECT {
+  struct FnVoid9 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9) = 0;
   };
 
   template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
-  struct Fn9 SKEW_BASE_OBJECT {
+  struct Fn9 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9) = 0;
   };
 
   template <typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
-  struct FnVoid10 SKEW_BASE_OBJECT {
+  struct FnVoid10 : virtual Skew::Object {
     virtual void run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10) = 0;
   };
 
   template <typename R, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
-  struct Fn10 SKEW_BASE_OBJECT {
+  struct Fn10 : virtual Skew::Object {
     virtual R run(A1 a1, A2 a2, A3 a3, A4 a4, A5 a5, A6 a6, A7 a7, A8 a8, A9 a9, A10 a10) = 0;
   };
 }
@@ -260,7 +260,7 @@ namespace std {
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace Skew {
-  struct StringBuilder SKEW_BASE_OBJECT {
+  struct StringBuilder : virtual Skew::Object {
     StringBuilder();
 
     #ifdef SKEW_GC_MARK_AND_SWEEP
@@ -294,7 +294,7 @@ namespace Skew {
   };
 
   template <typename T>
-  struct List SKEW_BASE_OBJECT {
+  struct List : virtual Skew::Object {
     List();
     List(const std::initializer_list<T> &x);
 
@@ -367,7 +367,7 @@ namespace Skew {
 
 namespace Skew {
   template <typename T>
-  struct StringMap SKEW_BASE_OBJECT {
+  struct StringMap : virtual Skew::Object {
     StringMap();
     StringMap(const std::initializer_list<std::pair<string, T>> &x);
 
@@ -398,7 +398,7 @@ namespace Skew {
 
 namespace Skew {
   template <typename T>
-  struct IntMap SKEW_BASE_OBJECT {
+  struct IntMap : virtual Skew::Object {
     IntMap();
     IntMap(const std::initializer_list<std::pair<int, T>> &x);
 
