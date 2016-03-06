@@ -3606,6 +3606,11 @@
 
       case Skew.NodeKind.NAME: {
         this._emit(symbol != null ? Skew.CPlusPlusEmitter._fullName(symbol) : node.asString());
+
+        // Need to unwrap GC roots using ".get()" when global variables are referenced
+        if (symbol != null && symbol.kind == Skew.SymbolKind.VARIABLE_GLOBAL && this._isReferenceType(symbol.resolvedType) && (node.parent() == null || node.parent().kind != Skew.NodeKind.DOT && (node.parent().kind != Skew.NodeKind.ASSIGN || node != node.parent().binaryLeft()))) {
+          this._emit('.get()');
+        }
         break;
       }
 

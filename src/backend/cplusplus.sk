@@ -814,6 +814,12 @@ namespace Skew {
 
         case .NAME {
           _emit(symbol != null ? _fullName(symbol) : node.asString)
+
+          # Need to unwrap GC roots using ".get()" when global variables are referenced
+          if symbol != null && symbol.kind == .VARIABLE_GLOBAL && _isReferenceType(symbol.resolvedType) && (
+              node.parent == null || node.parent.kind != .DOT && (node.parent.kind != .ASSIGN || node != node.parent.binaryLeft)) {
+            _emit(".get()")
+          }
         }
 
         case .DOT {
