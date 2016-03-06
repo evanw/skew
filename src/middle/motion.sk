@@ -9,26 +9,20 @@ namespace Skew {
     }
 
     over run(context PassContext) {
-      var namespaces = IntMap<ObjectSymbol>.new
-      Motion.symbolMotion(context.global, context.options, namespaces)
-
-      # Avoid mutation during the iteration above
-      var values = namespaces.values
-      values.sort(Symbol.SORT_OBJECTS_BY_ID) # Sort so the order is deterministic
-      for object in values {
-        object.parent.asObjectSymbol.objects.append(object)
-      }
+      var motionContext = Motion.Context.new
+      Motion.symbolMotion(context.global, context.options, motionContext)
+      motionContext.finish
     }
   }
 }
 
 namespace Skew.Motion {
-  def symbolMotion(symbol ObjectSymbol, options CompilerOptions, namespaces IntMap<ObjectSymbol>) {
+  def symbolMotion(symbol ObjectSymbol, options CompilerOptions, context Context) {
     # Move non-imported objects off imported objects
     symbol.objects.removeIf(object => {
-      symbolMotion(object, options, namespaces)
+      symbolMotion(object, options, context)
       if symbol.isImported && !object.isImported || !options.target.supportsNestedTypes && !symbol.kind.isNamespaceOrGlobal {
-        moveSymbolIntoNewNamespace(object, namespaces).objects.append(object)
+        context.moveSymbolIntoNewNamespace(object)
         return true
       }
       return false
@@ -37,7 +31,7 @@ namespace Skew.Motion {
     # Move global functions with implementations off of imported objects and interfaces
     symbol.functions.removeIf(function => {
       if function.kind == .FUNCTION_GLOBAL && (symbol.isImported && !function.isImported || symbol.kind == .OBJECT_INTERFACE) {
-        moveSymbolIntoNewNamespace(function, namespaces).functions.append(function)
+        context.moveSymbolIntoNewNamespace(function)
         return true
       }
       return false
@@ -45,11 +39,11 @@ namespace Skew.Motion {
 
     # Move stuff off of enums and flags
     if symbol.kind.isEnumOrFlags {
-      symbol.objects.each(object => moveSymbolIntoNewNamespace(object, namespaces).objects.append(object))
-      symbol.functions.each(function => moveSymbolIntoNewNamespace(function, namespaces).functions.append(function))
+      symbol.objects.each(object => context.moveSymbolIntoNewNamespace(object))
+      symbol.functions.each(function => context.moveSymbolIntoNewNamespace(function))
       symbol.variables.removeIf(variable => {
         if variable.kind != .VARIABLE_ENUM_OR_FLAGS {
-          moveSymbolIntoNewNamespace(variable, namespaces).variables.append(variable)
+          context.moveSymbolIntoNewNamespace(variable)
           return true
         }
         return false
@@ -60,36 +54,60 @@ namespace Skew.Motion {
 
     # Move variables off of interfaces
     else if symbol.kind == .OBJECT_INTERFACE {
-      symbol.variables.each(variable => moveSymbolIntoNewNamespace(variable, namespaces).variables.append(variable))
+      symbol.variables.each(variable => context.moveSymbolIntoNewNamespace(variable))
       symbol.variables = []
     }
   }
 
-  def moveSymbolIntoNewNamespace(symbol Symbol, namespaces IntMap<ObjectSymbol>) ObjectSymbol {
-    var parent = symbol.parent
-    var namespace = namespaces.get(parent.id, null)
-    var object = namespace?.asObjectSymbol
+  class Context {
+    var _namespaces = IntMap<ObjectSymbol>.new
 
-    # Create a parallel namespace next to the parent
-    if namespace == null {
-      var common = parent.parent.asObjectSymbol
-      object = ObjectSymbol.new(.OBJECT_NAMESPACE, "in_" + parent.name)
-      object.resolvedType = Type.new(.SYMBOL, object)
-      object.state = .INITIALIZED
-      object.scope = ObjectScope.new(common.scope, object)
-      object.parent = common
-      namespaces[parent.id] = object
+    # Avoid mutation during iteration
+    def finish {
+      var values = _namespaces.values
+      values.sort(Symbol.SORT_OBJECTS_BY_ID) # Sort so the order is deterministic
+      for object in values {
+        object.parent.asObjectSymbol.objects.append(object)
+      }
     }
 
-    # Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)
-    if symbol.kind.isFunction && parent.asObjectSymbol.parameters != null {
-      var function = symbol.asFunctionSymbol
-      function.parameters ?= []
-      function.parameters.prepend(parent.asObjectSymbol.parameters)
-    }
+    def moveSymbolIntoNewNamespace(symbol Symbol) {
+      var parent = symbol.parent
+      var namespace = _namespaces.get(parent.id, null)
+      var object = namespace?.asObjectSymbol
 
-    # Move this function into that parallel namespace
-    symbol.parent = object
-    return object
+      # Create a parallel namespace next to the parent
+      if namespace == null {
+        var common = parent.parent.asObjectSymbol
+        object = ObjectSymbol.new(.OBJECT_NAMESPACE, "in_" + parent.name)
+        object.resolvedType = Type.new(.SYMBOL, object)
+        object.state = .INITIALIZED
+        object.scope = ObjectScope.new(common.scope, object)
+        object.parent = common
+        _namespaces[parent.id] = object
+      }
+
+      # Move this function into that parallel namespace
+      symbol.parent = object
+
+      if symbol.kind.isObject {
+        object.objects.append(symbol.asObjectSymbol)
+      }
+
+      else if symbol.kind.isFunction {
+        object.functions.append(symbol.asFunctionSymbol)
+
+        # Inflate functions with type parameters from the parent (TODO: Need to inflate call sites too)
+        if parent.asObjectSymbol.parameters != null {
+          var function = symbol.asFunctionSymbol
+          function.parameters ?= []
+          function.parameters.prepend(parent.asObjectSymbol.parameters)
+        }
+      }
+
+      else if symbol.kind.isVariable {
+        object.variables.append(symbol.asVariableSymbol)
+      }
+    }
   }
 }

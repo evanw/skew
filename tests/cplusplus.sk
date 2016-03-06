@@ -1869,5 +1869,36 @@ Skew::string in_Bar::toString(in_Foo::Bar self) {
 }
 ").cpp
 
+# Check wrapped types with type parameters
+test("
+type Foo<T> : List<T> {
+  def size int {
+    return (self as List<T>).count
+  }
+}
+
+@entry
+def main {
+  (List<int>.new as Foo<int>).size
+}
+", "
+namespace Foo {
+}
+
+namespace in_Foo {
+  template <typename T>
+  int size(Skew::List<T> *self);
+}
+
+void main() {
+  in_Foo::size(new Skew::List<int>());
+}
+
+template <typename T>
+int in_Foo::size(Skew::List<T> *self) {
+  return self->count();
+}
+").cpp
+
   }
 }

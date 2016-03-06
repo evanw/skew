@@ -901,5 +901,49 @@ public class Globals
 }
 ").csharp.foldAllConstants.inlineAllFunctions
 
+# Check wrapped types with type parameters
+test("
+type Foo<T> : List<T> {
+  def size int {
+    return (self as List<T>).count
+  }
+}
+
+@entry
+def main {
+  (List<int>.new as Foo<int>).size
+}
+", "
+using System.Collections.Generic;
+
+public static class Foo<T>
+{
+}
+
+public class in_List
+{
+    public static int count<T>(List<T> self)
+    {
+        return self.Count;
+    }
+}
+
+public class in_Foo
+{
+    public static int size<T>(List<T> self)
+    {
+        return in_List.count(self);
+    }
+}
+
+public class Globals
+{
+    public static void Main()
+    {
+        in_Foo.size(new List<int>());
+    }
+}
+").csharp
+
   }
 }

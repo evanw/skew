@@ -1760,6 +1760,13 @@ def main(x int) string {
     return this.buffer;
   };
 
+  var in_List = {};
+
+  in_List.get = function(self, index) {
+    assert(0 <= index && index < self.length);
+    return self[index];
+  };
+
   var in_string = {};
 
   in_string.fromCodePoints = function(codePoints) {
@@ -1786,13 +1793,6 @@ def main(x int) string {
 
   in_string.fromCodePoint = function(codePoint) {
     return codePoint < 65536 ? String.fromCharCode(codePoint) : String.fromCharCode((codePoint - 65536 >> 10) + 55296 | 0) + String.fromCharCode((codePoint - 65536 & 1023) + 56320 | 0);
-  };
-
-  var in_List = {};
-
-  in_List.get = function(self, index) {
-    assert(0 <= index && index < self.length);
-    return self[index];
   };
 
   exports.main = function(x) {
