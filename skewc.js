@@ -10313,6 +10313,10 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Both sides of "' + operator + '" are identical, is this a bug?'));
   };
 
+  Skew.Log.prototype.semanticWarningSuspiciousAssignmentLocation = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Use of "=" here looks like a bug, did you mean to use "=="?'));
+  };
+
   Skew.Log.prototype.semanticWarningShiftByZero = function(range) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, "Shifting an integer by zero doesn't do anything, is this a bug?"));
   };
@@ -20997,6 +21001,21 @@
         if (left.looksTheSameAs(right) && left.hasNoSideEffects() && right.hasNoSideEffects()) {
           this._log.semanticWarningIdenticalOperands(node.range, node.wasAssignNull() ? '?=' : '=');
         }
+
+        // Check for likely bugs "x = y" instead of "x == y" based on type context
+        else if (node.internalRange != null && context != null && context != Skew.Type.DYNAMIC && left.resolvedType == Skew.Type.DYNAMIC && right.resolvedType != Skew.Type.DYNAMIC && !this._cache.canImplicitlyConvert(right.resolvedType, context)) {
+          this._log.semanticWarningSuspiciousAssignmentLocation(node.internalRangeOrRange());
+        }
+
+        // Check for likely bugs "x = y" instead of "x == y" based on expression context
+        else if (node.internalRange != null && node.parent() != null) {
+          var parent = node.parent();
+          var parentKind = parent.kind;
+
+          if (parentKind == Skew.NodeKind.IF || parentKind == Skew.NodeKind.WHILE || parentKind == Skew.NodeKind.LOGICAL_AND || parentKind == Skew.NodeKind.LOGICAL_OR || parentKind == Skew.NodeKind.RETURN || parentKind == Skew.NodeKind.NOT || parentKind == Skew.NodeKind.HOOK && node == parent.hookTest()) {
+            this._log.semanticWarningSuspiciousAssignmentLocation(node.internalRangeOrRange());
+          }
+        }
       }
 
       return;
@@ -21225,6 +21244,9 @@
 
         if (kind == Skew.NodeKind.PREFIX_INCREMENT || kind == Skew.NodeKind.PREFIX_DECREMENT || kind == Skew.NodeKind.POSTFIX_INCREMENT || kind == Skew.NodeKind.POSTFIX_DECREMENT) {
           node.appendChild(this._cache.createInt(1).withRange(node.internalRangeOrRange()));
+
+          // This no longer makes sense
+          node.internalRange = null;
         }
 
         wasUnaryPostfix = Skew.in_NodeKind.isUnaryPostfix(kind) && Skew.Resolving.Resolver._isExpressionUsed(node);
