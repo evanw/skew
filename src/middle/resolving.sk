@@ -2471,16 +2471,24 @@ namespace Skew.Resolving {
             _log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange, name, target.resolvedType, correction?.name, correction?.range)
           }
 
-          # "dynamic.foo" => "foo"
-          else if target.kind == .TYPE {
-            node.kind = .NAME
-            node.removeChildren
-          }
+          # Dynamic symbol access
+          else {
+            # Make sure to warn when accessing a symbol at statement level without using it
+            if node.parent != null && node.parent.kind == .EXPRESSION {
+              _log.semanticWarningUnusedExpression(node.range)
+            }
 
-          # "Foo.new" => "Foo.new()"
-          # "Foo.new()" => "Foo.new()"
-          else if name == "new" && !_isCallValue(node) {
-            node.become(Node.createCall(node.cloneAndStealChildren).withType(.DYNAMIC).withRange(node.range))
+            # "dynamic.foo" => "foo"
+            if target.kind == .TYPE {
+              node.kind = .NAME
+              node.removeChildren
+            }
+
+            # "Foo.new" => "Foo.new()"
+            # "Foo.new()" => "Foo.new()"
+            else if name == "new" && !_isCallValue(node) {
+              node.become(Node.createCall(node.cloneAndStealChildren).withType(.DYNAMIC).withRange(node.range))
+            }
           }
 
           return
