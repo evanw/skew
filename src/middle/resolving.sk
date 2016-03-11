@@ -3254,6 +3254,22 @@ namespace Skew.Resolving {
           if left.looksTheSameAs(right) && left.hasNoSideEffects && right.hasNoSideEffects {
             _log.semanticWarningIdenticalOperands(node.range, node.wasAssignNull ? "?=" : "=")
           }
+
+          # Check for likely bugs "x = y" instead of "x == y" based on type context
+          else if node.internalRange != null && context != null && context != .DYNAMIC && left.resolvedType == .DYNAMIC &&
+              right.resolvedType != .DYNAMIC && !_cache.canImplicitlyConvert(right.resolvedType, context) {
+            _log.semanticWarningSuspiciousAssignmentLocation(node.internalRangeOrRange)
+          }
+
+          # Check for likely bugs "x = y" instead of "x == y" based on expression context
+          else if node.internalRange != null && node.parent != null {
+            var parent = node.parent
+            var parentKind = parent.kind
+            if parentKind == .IF || parentKind == .WHILE || parentKind == .LOGICAL_AND || parentKind == .LOGICAL_OR ||
+                parentKind == .RETURN || parentKind == .NOT || parentKind == .HOOK && node == parent.hookTest {
+              _log.semanticWarningSuspiciousAssignmentLocation(node.internalRangeOrRange)
+            }
+          }
         }
 
         return
@@ -3472,6 +3488,7 @@ namespace Skew.Resolving {
           extracted = _extractExpressionForAssignment(target, scope)
           if kind == .PREFIX_INCREMENT || kind == .PREFIX_DECREMENT || kind == .POSTFIX_INCREMENT || kind == .POSTFIX_DECREMENT {
             node.appendChild(_cache.createInt(1).withRange(node.internalRangeOrRange))
+            node.internalRange = null # This no longer makes sense
           }
           wasUnaryPostfix = kind.isUnaryPostfix && _isExpressionUsed(node)
           kind = info.assignKind

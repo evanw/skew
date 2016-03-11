@@ -395,6 +395,10 @@ namespace Skew {
       append(Diagnostic.warning(range, "Both sides of \"\(operator)\" are identical, is this a bug?"))
     }
 
+    def semanticWarningSuspiciousAssignmentLocation(range Range) {
+      append(Diagnostic.warning(range, "Use of \"=\" here looks like a bug, did you mean to use \"==\"?"))
+    }
+
     def semanticWarningShiftByZero(range Range) {
       append(Diagnostic.warning(range, "Shifting an integer by zero doesn't do anything, is this a bug?"))
     }

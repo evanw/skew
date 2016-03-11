@@ -5861,6 +5861,151 @@ def main(x int, y Foo) {
   ~~~~~~~~~
 ")
 
+# Check for suspicious assignment placement warnings
+test("
+def main(x dynamic, y dynamic) dynamic {
+  var d1 dynamic = x = 1
+  var d2 dynamic = x = false
+  var d3 dynamic = x = y
+
+  var b1 bool = x = 1
+  var b2 bool = x = false
+  var b3 bool = x = y
+
+  var i1 int = x = 1
+  var i2 int = x = false
+  var i3 int = x = y
+
+  if x = 1 {}
+  if x = false {}
+  if x = y {}
+
+  if !(x = 1) {}
+  if !(x = false) {}
+  if !(x = y) {}
+
+  if (x = 1) || (x = 2) {}
+  if (x = true) || (x = false) {}
+  if (x = y) || (y = x) {}
+
+  while x = 1 {}
+  while x = false {}
+  while x = y {}
+
+  x = (x = 1) ? x = 0 : x = 1
+  x = (x = false) ? x = 0 : x = 1
+  x = (x = y) ? x = 0 : x = 1
+
+  x = y = 1
+  x = y = true
+  x = y = x
+
+  return x = 1
+  return x = true
+  return x = y
+
+  return x++
+  return ++x
+}
+", "
+<stdin>:6:19: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  var b1 bool = x = 1
+                  ^
+<stdin>:11:18: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  var i2 int = x = false
+                 ^
+<stdin>:14:8: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if x = 1 {}
+       ^
+<stdin>:15:8: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if x = false {}
+       ^
+<stdin>:16:8: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if x = y {}
+       ^
+<stdin>:18:10: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if !(x = 1) {}
+         ^
+<stdin>:19:10: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if !(x = false) {}
+         ^
+<stdin>:20:10: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if !(x = y) {}
+         ^
+<stdin>:22:9: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if (x = 1) || (x = 2) {}
+        ^
+<stdin>:22:20: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if (x = 1) || (x = 2) {}
+                   ^
+<stdin>:23:9: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if (x = true) || (x = false) {}
+        ^
+<stdin>:23:23: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if (x = true) || (x = false) {}
+                      ^
+<stdin>:24:9: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if (x = y) || (y = x) {}
+        ^
+<stdin>:24:20: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  if (x = y) || (y = x) {}
+                   ^
+<stdin>:26:11: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  while x = 1 {}
+          ^
+<stdin>:27:11: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  while x = false {}
+          ^
+<stdin>:28:11: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  while x = y {}
+          ^
+<stdin>:30:10: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  x = (x = 1) ? x = 0 : x = 1
+         ^
+<stdin>:31:10: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  x = (x = false) ? x = 0 : x = 1
+         ^
+<stdin>:32:10: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  x = (x = y) ? x = 0 : x = 1
+         ^
+<stdin>:38:12: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  return x = 1
+           ^
+<stdin>:39:12: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  return x = true
+           ^
+<stdin>:40:12: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?
+  return x = y
+           ^
+<stdin>:2:7: warning: Local variable \"d1\" is never read
+  var d1 dynamic = x = 1
+      ~~
+<stdin>:3:7: warning: Local variable \"d2\" is never read
+  var d2 dynamic = x = false
+      ~~
+<stdin>:4:7: warning: Local variable \"d3\" is never read
+  var d3 dynamic = x = y
+      ~~
+<stdin>:6:7: warning: Local variable \"b1\" is never read
+  var b1 bool = x = 1
+      ~~
+<stdin>:7:7: warning: Local variable \"b2\" is never read
+  var b2 bool = x = false
+      ~~
+<stdin>:8:7: warning: Local variable \"b3\" is never read
+  var b3 bool = x = y
+      ~~
+<stdin>:10:7: warning: Local variable \"i1\" is never read
+  var i1 int = x = 1
+      ~~
+<stdin>:11:7: warning: Local variable \"i2\" is never read
+  var i2 int = x = false
+      ~~
+<stdin>:12:7: warning: Local variable \"i3\" is never read
+  var i3 int = x = y
+      ~~
+")
+
 # Check math functions with dynamic inputs, overloads shouldn't be ambiguous
 test("
 def main(x dynamic, y dynamic) {
