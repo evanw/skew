@@ -20127,16 +20127,24 @@
           this._log.semanticErrorUnknownMemberSymbol(node.internalRangeOrRange(), name, target.resolvedType, correction != null ? correction.name : null, correction != null ? correction.range : null);
         }
 
-        // "dynamic.foo" => "foo"
-        else if (target.kind == Skew.NodeKind.TYPE) {
-          node.kind = Skew.NodeKind.NAME;
-          node.removeChildren();
-        }
+        // Dynamic symbol access
+        else {
+          // Make sure to warn when accessing a symbol at statement level without using it
+          if (node.parent() != null && node.parent().kind == Skew.NodeKind.EXPRESSION) {
+            this._log.semanticWarningUnusedExpression(node.range);
+          }
 
-        // "Foo.new" => "Foo.new()"
-        // "Foo.new()" => "Foo.new()"
-        else if (name == 'new' && !Skew.Resolving.Resolver._isCallValue(node)) {
-          node.become(Skew.Node.createCall(node.cloneAndStealChildren()).withType(Skew.Type.DYNAMIC).withRange(node.range));
+          // "dynamic.foo" => "foo"
+          if (target.kind == Skew.NodeKind.TYPE) {
+            node.kind = Skew.NodeKind.NAME;
+            node.removeChildren();
+          }
+
+          // "Foo.new" => "Foo.new()"
+          // "Foo.new()" => "Foo.new()"
+          else if (name == 'new' && !Skew.Resolving.Resolver._isCallValue(node)) {
+            node.become(Skew.Node.createCall(node.cloneAndStealChildren()).withType(Skew.Type.DYNAMIC).withRange(node.range));
+          }
         }
 
         return;

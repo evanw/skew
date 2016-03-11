@@ -7860,5 +7860,22 @@ type T { def foo }
 ", "
 ")
 
+# Warn on statement-level dynamic property access
+test("
+def test(foo dynamic) {
+  var bar = foo.bar
+  foo.bar
+  foo.bar = 1
+  foo.bar - 2
+}
+", "
+<stdin>:3:3: warning: Unused expression
+  foo.bar
+  ~~~~~~~
+<stdin>:2:7: warning: Local variable \"bar\" is never read
+  var bar = foo.bar
+      ~~~
+")
+
   }
 }
