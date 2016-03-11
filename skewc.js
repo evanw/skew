@@ -10123,8 +10123,10 @@
   };
 
   Skew.Log.prototype.syntaxWarningExtraParentheses = function(range) {
+    var leftSpace = range.rangeIncludingLeftWhitespace().start == range.start ? ' ' : '';
+    var rightSpace = range.rangeIncludingRightWhitespace().end == range.end ? ' ' : '';
     var text = range.toString();
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Unnecessary parentheses').withFix(Skew.FixKind.UNNECESSARY_PARENTHESES, range, 'Remove parentheses', in_string.slice2(text, 1, text.length - 1 | 0)));
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Unnecessary parentheses').withFix(Skew.FixKind.UNNECESSARY_PARENTHESES, range, 'Remove parentheses', leftSpace + in_string.slice2(text, 1, text.length - 1 | 0) + rightSpace));
   };
 
   Skew.Log.prototype.syntaxWarningExtraComma = function(range) {
@@ -10212,7 +10214,7 @@
   };
 
   Skew.Log.prototype.syntaxErrorExtraVarInForLoop = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The "var" keyword is unnecessary here since for loops automatically declare their variables').withFix(Skew.FixKind.FOR_LOOP_VAR, range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove "var"', ''));
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The "var" keyword is unnecessary here since for loops automatically declare their variables').withFix(Skew.FixKind.FOR_LOOP_VAR, range != null ? range.rangeIncludingRightWhitespace() : null, 'Remove "var"', ''));
   };
 
   Skew.Log.prototype.syntaxErrorWrongListSyntax = function(range, correction) {
@@ -13191,6 +13193,23 @@
     }
 
     return new Skew.Range(this.source, index, this.end);
+  };
+
+  Skew.Range.prototype.rangeIncludingRightWhitespace = function() {
+    var index = this.end;
+    var contents = this.source.contents;
+
+    while (index < contents.length) {
+      var c = in_string.get1(contents, index);
+
+      if (c != 32 && c != 9) {
+        break;
+      }
+
+      index = index + 1 | 0;
+    }
+
+    return new Skew.Range(this.source, this.start, index);
   };
 
   Skew.Range.span = function(start, end) {

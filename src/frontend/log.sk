@@ -168,10 +168,12 @@ namespace Skew {
     }
 
     def syntaxWarningExtraParentheses(range Range) {
+      var leftSpace = range.rangeIncludingLeftWhitespace.start == range.start ? " " : ""
+      var rightSpace = range.rangeIncludingRightWhitespace.end == range.end ? " " : ""
       var text = range.toString
       append(Diagnostic
         .warning(range, "Unnecessary parentheses")
-        .withFix(.UNNECESSARY_PARENTHESES, range, "Remove parentheses", text.slice(1, text.count - 1)))
+        .withFix(.UNNECESSARY_PARENTHESES, range, "Remove parentheses", leftSpace + text.slice(1, text.count - 1) + rightSpace))
     }
 
     def syntaxWarningExtraComma(range Range) {
@@ -290,7 +292,7 @@ namespace Skew {
     def syntaxErrorExtraVarInForLoop(range Range) {
       append(Diagnostic
         .error(range, "The \"var\" keyword is unnecessary here since for loops automatically declare their variables")
-        .withFix(.FOR_LOOP_VAR, range?.rangeIncludingLeftWhitespace, "Remove \"var\"", ""))
+        .withFix(.FOR_LOOP_VAR, range?.rangeIncludingRightWhitespace, "Remove \"var\"", ""))
     }
 
     def syntaxErrorWrongListSyntax(range Range, correction string) {
