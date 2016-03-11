@@ -6758,7 +6758,7 @@ class Foo {
 <stdin>:8:10: fix: Remove parentheses
     <Foo>(bar + bar)</Foo>
          ~~~~~~~~~~~
-         [bar + bar]
+         [ bar + bar ]
 ")
 
 # Test XML nested children
