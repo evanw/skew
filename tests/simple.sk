@@ -5906,6 +5906,10 @@ def main(x dynamic, y dynamic) dynamic {
 
   return x++
   return ++x
+
+  (=> x = 1)()
+  (=> x = true)()
+  (=> x = y)()
 }
 ", "
 <stdin>:6:19: warning: Use of \"=\" here looks like a bug, did you mean to use \"==\"?

@@ -3265,8 +3265,8 @@ namespace Skew.Resolving {
           else if node.internalRange != null && node.parent != null {
             var parent = node.parent
             var parentKind = parent.kind
-            if parentKind == .IF || parentKind == .WHILE || parentKind == .LOGICAL_AND || parentKind == .LOGICAL_OR ||
-                parentKind == .RETURN || parentKind == .NOT || parentKind == .HOOK && node == parent.hookTest {
+            if parentKind == .IF || parentKind == .WHILE || parentKind == .LOGICAL_AND || parentKind == .LOGICAL_OR || parentKind == .NOT ||
+                parentKind == .RETURN && !parent.isImplicitReturn || parentKind == .HOOK && node == parent.hookTest {
               _log.semanticWarningSuspiciousAssignmentLocation(node.internalRangeOrRange)
             }
           }

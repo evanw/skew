@@ -21012,7 +21012,7 @@
           var parent = node.parent();
           var parentKind = parent.kind;
 
-          if (parentKind == Skew.NodeKind.IF || parentKind == Skew.NodeKind.WHILE || parentKind == Skew.NodeKind.LOGICAL_AND || parentKind == Skew.NodeKind.LOGICAL_OR || parentKind == Skew.NodeKind.RETURN || parentKind == Skew.NodeKind.NOT || parentKind == Skew.NodeKind.HOOK && node == parent.hookTest()) {
+          if (parentKind == Skew.NodeKind.IF || parentKind == Skew.NodeKind.WHILE || parentKind == Skew.NodeKind.LOGICAL_AND || parentKind == Skew.NodeKind.LOGICAL_OR || parentKind == Skew.NodeKind.NOT || parentKind == Skew.NodeKind.RETURN && !parent.isImplicitReturn() || parentKind == Skew.NodeKind.HOOK && node == parent.hookTest()) {
             this._log.semanticWarningSuspiciousAssignmentLocation(node.internalRangeOrRange());
           }
         }
