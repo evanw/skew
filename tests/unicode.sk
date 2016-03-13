@@ -3,10 +3,37 @@ namespace Skew.Tests {
     test("codePoints " + text, expectString => expectString(toString(codePoints), toString(text.codePoints)))
     test("fromCodePoints " + text, expectString => expectString(text, string.fromCodePoints(codePoints)))
     test("codeUnits " + text, expectString => expectString(text, string.fromCodeUnits(text.codeUnits)))
+
+    # Call fromCodePoint() for each code point
     for codePoint in codePoints {
       test("fromCodePoint " + codePoint.toString, expectString =>
         expectString(toString([codePoint]), toString(string.fromCodePoint(codePoint).codePoints)))
     }
+
+    # Check forward iteration
+    var nextCodePoints = codePoints.clone
+    nextCodePoints.append(-1)
+    testExpect("StringIterator.nextCodePoint " + text, () List<int> => {
+      var iterator = Unicode.StringIterator.INSTANCE.reset(text, 0)
+      var observedCodePoints List<int> = []
+      for codePoint in 0..codePoints.count + 1 {
+        observedCodePoints.append(iterator.nextCodePoint)
+      }
+      return observedCodePoints
+    }, nextCodePoints)
+
+    # Check backward iteration
+    var previousCodePoints = codePoints.clone
+    previousCodePoints.reverse
+    previousCodePoints.append(-1)
+    testExpect("StringIterator.previousCodePoint " + text, () List<int> => {
+      var iterator = Unicode.StringIterator.INSTANCE.reset(text, text.count)
+      var observedCodePoints List<int> = []
+      for codePoint in 0..codePoints.count + 1 {
+        observedCodePoints.append(iterator.previousCodePoint)
+      }
+      return observedCodePoints
+    }, previousCodePoints)
   }
 
   def testUnicodeCount(text string, count int) {
@@ -21,6 +48,7 @@ namespace Skew.Tests {
     testUnicodeText("㊀㊁㊂㊃㊄", [12928, 12929, 12930, 12931, 12932])
     testUnicodeText("☳☶☲", [9779, 9782, 9778])
     testUnicodeText("𡇙𝌆", [135641, 119558])
+    testUnicodeText("🙉🙈🙊", [128585, 128584, 128586])
 
     # Make sure target-specific constant folding of string.count works correctly
     testUnicodeCount("Цлїςσδε", "Цлїςσδε".count)

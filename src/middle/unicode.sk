@@ -32,7 +32,25 @@ namespace Unicode {
       return count
     }
 
+    def previousCodePoint int
+    def nextCodePoint int
+
     if STRING_ENCODING == .UTF8 {
+      def previousCodePoint int {
+        if index <= 0 { return -1 }
+        var a = value[--index]
+        if (a & 0xC0) != 0x80 { return a }
+        if index <= 0 { return -1 }
+        var b = value[--index]
+        if (b & 0xC0) != 0x80 { return ((b & 0x1F) << 6) | (a & 0x3F) }
+        if index <= 0 { return -1 }
+        var c = value[--index]
+        if (c & 0xC0) != 0x80 { return ((c & 0x0F) << 12) | ((b & 0x3F) << 6) | (a & 0x3F) }
+        if index >= stop { return -1 }
+        var d = value[--index]
+        return ((d & 0x07) << 18) | ((c & 0x3F) << 12) | ((b & 0x3F) << 6) | (a & 0x3F)
+      }
+
       def nextCodePoint int {
         if index >= stop { return -1 }
         var a = value[index++]
@@ -50,10 +68,19 @@ namespace Unicode {
     }
 
     else if STRING_ENCODING == .UTF16 {
+      def previousCodePoint int {
+        if index <= 0 { return -1 }
+        var a = value[--index]
+        if (a & 0xFC00) != 0xDC00 { return a }
+        if index <= 0 { return -1 }
+        var b = value[--index]
+        return (b << 10) + a + (0x10000 - (0xD800 << 10) - 0xDC00)
+      }
+
       def nextCodePoint int {
         if index >= stop { return -1 }
         var a = value[index++]
-        if a < 0xD800 || a >= 0xDC00 { return a }
+        if (a & 0xFC00) != 0xD800 { return a }
         if index >= stop { return -1 }
         var b = value[index++]
         return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)
@@ -61,6 +88,11 @@ namespace Unicode {
     }
 
     else {
+      def previousCodePoint int {
+        if index <= 0 { return -1 }
+        return value[--index]
+      }
+
       def nextCodePoint int {
         if index >= stop { return -1 }
         return value[index++]
