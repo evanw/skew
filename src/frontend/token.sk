@@ -148,7 +148,7 @@ namespace Skew {
         }
 
         # Ignore whitespace
-        if yy_act == .WHITESPACE {
+        if yy_act == .WHITESPACE || yy_act == .COMMENT_MULTILINE {
           continue
         }
 
@@ -277,8 +277,11 @@ namespace Skew {
       # - "var x = 0 \n .toString"
       # - "var x = 0 # comment \n .toString"
       # - "var x = 0 \n # comment \n .toString"
+      # - "var x = 0 \n ### \n multi-line comment \n ### \n return 0"
       #
-      if (previousKind == .NEWLINE || previousKind == .COMMENT) && token.kind in REMOVE_WHITESPACE_BEFORE {
+      if previousKind == .NEWLINE && token.kind == .NEWLINE {
+        continue
+      } else if (previousKind == .NEWLINE || previousKind == .COMMENT) && token.kind in REMOVE_WHITESPACE_BEFORE {
         while true {
           tokens.removeLast
           if tokens.isEmpty || tokens.last.kind != .NEWLINE && tokens.last.kind != .COMMENT {

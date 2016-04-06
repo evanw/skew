@@ -2,6 +2,7 @@
 
 \n[ \t\r\n]*                      NEWLINE;
 [ \t\r]+                          WHITESPACE;
+###\n([^#]|#[^#]|##[^#])*###.*\n? COMMENT_MULTILINE;
 #.*\n?                            COMMENT;
 \/\/.*\n?                         COMMENT_ERROR;
 

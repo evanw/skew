@@ -3546,5 +3546,39 @@ def main {
 })();
 ").js
 
+# Check multiline comments
+test("
+@entry
+def main int {
+  ##
+  return 0
+  ##
+
+  ###
+  return 1
+  ###
+
+  ###
+  return 2
+  ### foo
+
+  ### foo
+  return 3
+  ###
+}
+", "
+(function() {
+  function main() {
+    //#
+    return 0;
+
+    //## foo
+    return 3;
+  }
+
+  process.exit(main());
+})();
+").js
+
   }
 }
