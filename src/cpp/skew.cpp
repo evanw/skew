@@ -388,18 +388,149 @@ Skew::string __intToString(int x) {
   static std::stack<Skew::Object *> stack;
   static Skew::Object *latest;
 
+  enum class Delete {
+    NOW,
+    LATER,
+  };
+
   // Skew::Internal is a friend of Skew::Object so it can access private variables
   namespace Skew {
     struct Internal {
       static UntypedRoot *start();
       static void mark();
-      static void sweep();
+      static void sweep(Delete mode);
+      static Object *next(Object *object) { return object->__gc_next; }
     };
   }
 
-  void Skew::GC::collect() {
+  #ifdef SKEW_GC_PARALLEL
+    #include <sys/fcntl.h>
+    #include <sys/wait.h>
+    #include <unistd.h>
+
+    struct DeleteLater {
+      Skew::Object *object;
+      Skew::Object **previous;
+    };
+
+    enum { READ, WRITE };
+    static int fd[2];
+    static pid_t childProcess;
+    static size_t liveObjectCount;
+    static size_t nextCollectionThreshold;
+    static std::vector<DeleteLater> deleteLater;
+    static Skew::Root<Skew::Object> parallelHead;
+
+    static void startParallelCollection() {
+      if (childProcess) {
+        return;
+      }
+
+      pipe(fd);
+      fcntl(fd[READ], F_SETFL, fcntl(fd[READ], F_GETFL) | O_NONBLOCK);
+
+      // Make sure the collection is always started with the latest object as
+      // a known object that is guaranteed not to be collected in this
+      // collection. That way the previous pointer for every collected object
+      // should be valid and we don't have to worry about collecting the
+      // latest object and not knowing which previous pointer to patch up.
+      parallelHead = new Skew::Object();
+
+      // Child process
+      if (!(childProcess = fork())) {
+        close(fd[READ]);
+        Skew::Internal::mark();
+        Skew::Internal::sweep(Delete::LATER);
+        write(fd[WRITE], deleteLater.data(), deleteLater.size() * sizeof(DeleteLater));
+        close(fd[WRITE]);
+        _exit(0);
+      }
+
+      // Parent process
+      close(fd[WRITE]);
+    }
+
+    enum class Check {
+      DO_NOT_BLOCK,
+      BLOCK_UNTIL_DONE,
+    };
+
+    static void checkParallelCollection(Check mode) {
+      static uint8_t *buffer[1 << 16];
+      static size_t offset;
+      ssize_t count;
+
+      if (!childProcess) {
+        return;
+      }
+
+      if (mode == Check::BLOCK_UNTIL_DONE) {
+        fcntl(fd[READ], F_SETFL, fcntl(fd[READ], F_GETFL) & ~O_NONBLOCK);
+      }
+
+      // Read some data
+      while ((count = read(fd[READ], buffer + offset, sizeof(buffer) - offset)) > 0) {
+        size_t totalSize = offset + count;
+        size_t objectCount = totalSize / sizeof(DeleteLater);
+        size_t usedSize = objectCount * sizeof(DeleteLater);
+        DeleteLater *records = reinterpret_cast<DeleteLater *>(buffer);
+
+        // Delete all complete records we received
+        for (size_t i = 0; i < objectCount; i++) {
+          const DeleteLater &record = records[i];
+
+          // Skew objects form a singly-linked list. Deleting an object
+          // involves unlinking that object from the list, which involves
+          // changing the next pointer of the previous link to the next link.
+          // This is easy with a doubly-linked list but with a singly-linked
+          // list we don't have the address of the previous link. To get around
+          // this, the collection process sends the address of the previous
+          // link's next pointer. Every object being deleted is guaranteed to
+          // have a previous link because of the "parallelHead" object that was
+          // created right before the collection started. The "parallelHead"
+          // object is guaranteed not to be collected in this collection.
+          *record.previous = Skew::Internal::next(record.object);
+
+          delete record.object;
+        }
+
+        // Preserve any remaining bytes left over
+        offset = totalSize - usedSize;
+        memmove(buffer, buffer + usedSize, offset);
+
+        if (mode == Check::DO_NOT_BLOCK) {
+          break;
+        }
+      }
+
+      // Check for exit
+      if (waitpid(childProcess, nullptr, mode == Check::BLOCK_UNTIL_DONE ? 0 : WNOHANG)) {
+        close(fd[READ]);
+        childProcess = 0;
+
+        // Set a threshold for the next collection so the garbage collector
+        // only kicks in when there's a decent number of objects to collect
+        nextCollectionThreshold = liveObjectCount + 1024;
+      }
+    }
+
+    void Skew::GC::parallelCollect() {
+      if (liveObjectCount > nextCollectionThreshold) {
+        startParallelCollection();
+      }
+
+      checkParallelCollection(Check::DO_NOT_BLOCK);
+    }
+  #endif
+
+  void Skew::GC::blockingCollect() {
+    #ifdef SKEW_GC_PARALLEL
+      checkParallelCollection(Check::BLOCK_UNTIL_DONE);
+    #endif
+
     Skew::Internal::mark();
-    Skew::Internal::sweep();
+    Skew::Internal::sweep(Delete::NOW);
+    marked.clear();
   }
 
   void Skew::GC::mark(Object *object) {
@@ -421,6 +552,16 @@ Skew::string __intToString(int x) {
 
   Skew::Object::Object() : __gc_next(latest) {
     latest = this;
+
+    #ifdef SKEW_GC_PARALLEL
+      liveObjectCount++;
+    #endif
+  }
+
+  Skew::Object::~Object() {
+    #ifdef SKEW_GC_PARALLEL
+      liveObjectCount--;
+    #endif
   }
 
   // The first root is the start of a doubly-linked list of roots. It's returned as
@@ -445,21 +586,31 @@ Skew::string __intToString(int x) {
   }
 
   // Sweeping removes unmarked objects from the linked list and deletes them
-  void Skew::Internal::sweep() {
+  void Skew::Internal::sweep(Delete mode) {
     for (Object *previous = nullptr, *current = latest, *next; current; current = next) {
       next = current->__gc_next;
 
       if (!marked.count(current)) {
-        (previous ? previous->__gc_next : latest) = next;
-        delete current;
+        switch (mode) {
+          case Delete::NOW: {
+            (previous ? previous->__gc_next : latest) = next;
+            delete current;
+            break;
+          }
+
+          case Delete::LATER: {
+            #ifdef SKEW_GC_PARALLEL
+              deleteLater.push_back({current, previous ? &previous->__gc_next : nullptr});
+            #endif
+            break;
+          }
+        }
       }
 
       else {
         previous = current;
       }
     }
-
-    marked.clear();
   }
 
 #endif
