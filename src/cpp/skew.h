@@ -7,7 +7,7 @@
 
     struct Object {
       Object(); // Adds this object to the global linked list of objects
-      virtual ~Object() {}
+      virtual ~Object();
 
     protected:
       virtual void __gc_mark() {} // Recursively marks all child objects
@@ -46,8 +46,12 @@
     using VoidIfNotObject = typename std::enable_if<!std::is_base_of<Object, typename std::remove_pointer<T>::type>::value, void>::type;
 
     namespace GC {
-      void collect();
+      void blockingCollect();
       void mark(Object *object);
+
+      #ifdef SKEW_GC_PARALLEL
+        void parallelCollect();
+      #endif
 
       template <typename T>
       inline VoidIfNotObject<T> mark(const T &value) {} // Don't mark anything that's not an object
