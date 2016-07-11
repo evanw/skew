@@ -2158,8 +2158,8 @@ namespace Skew {
 
           # This minification is not valid for strings and doubles because
           # they both have multiple falsy values (NaN and 0, null, and "")
-          if left.resolvedType != null && !_cache.isEquivalentToDouble(left.resolvedType) && !_cache.isEquivalentToString(left.resolvedType) &&
-              right.resolvedType != null && !_cache.isEquivalentToDouble(right.resolvedType) && !_cache.isEquivalentToString(right.resolvedType) {
+          if left.resolvedType != null && left.resolvedType != .DYNAMIC && !_cache.isEquivalentToDouble(left.resolvedType) && !_cache.isEquivalentToString(left.resolvedType) &&
+              right.resolvedType != null && right.resolvedType != .DYNAMIC && !_cache.isEquivalentToDouble(right.resolvedType) && !_cache.isEquivalentToString(right.resolvedType) {
             replacement.remove
             node.become(kind == .EQUAL ? _wrapWithNot(replacement) : replacement)
           }

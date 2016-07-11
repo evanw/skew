@@ -13,21 +13,29 @@ def main {
   var d double
   var b bool
   var f Foo
+  var y dynamic
+
   if i != 0 { dynamic.foo() }
   if s != \"\" { dynamic.foo() }
   if s != null { dynamic.foo() }
   if d != 0.0 { dynamic.foo() }
   if b != false { dynamic.foo() }
   if f != null { dynamic.foo() }
+
+  if y != 0 { dynamic.foo() }
+  if y != \"\" { dynamic.foo() }
+  if y != 0.0 { dynamic.foo() }
+  if y != false { dynamic.foo() }
+  if y != null { dynamic.foo() }
 }
 ", "
 (function() {
-  function f() {
-    var b = 0, a = null, c = 0, d = !1, e = null;
-    b && foo(), a != '' && foo(), a != null && foo(), c != 0 && foo(), d != !1 && foo(), e && foo();
+  function g() {
+    var c = 0, b = null, d = 0, e = !1, f = null, a = null;
+    c && foo(), b != '' && foo(), b != null && foo(), d != 0 && foo(), e != !1 && foo(), f && foo(), a !== 0 && foo(), a !== '' && foo(), a !== 0 && foo(), a !== !1 && foo(), a !== null && foo();
   }
 
-  f();
+  g();
 })();
 ").jsMangle
 
@@ -1002,7 +1010,7 @@ def foo {
         }
 
         case 1: {
-          if (!y) {
+          if (y === 0) {
             break d;
           }
           break;
@@ -1017,7 +1025,7 @@ def foo {
         }
 
         case 1: {
-          if (!y) {
+          if (y === 0) {
             break e;
           }
           break;
@@ -1032,7 +1040,7 @@ def foo {
         }
 
         case 1: {
-          if (!y) {
+          if (y === 0) {
             break f;
           }
           break;
@@ -1070,7 +1078,7 @@ def foo {
 ", "
 (function() {
   function a() {
-    a && (b1(), b2(), a ? (d1(), d2()) : c(), e());
+    a !== 0 && (b1(), b2(), a === 0 ? c() : (d1(), d2()), e());
   }
 
   a();
@@ -1577,7 +1585,7 @@ const Y = 0 as Foo
 ", "
 (function() {
   function a() {
-    x || foo(), y || bar();
+    x === 0 && foo(), y === 0 && bar();
   }
 
   a();
@@ -1596,7 +1604,7 @@ def main {
 ", "
 (function() {
   function a() {
-    x && y();
+    x !== 0 && y();
   }
 
   a();
@@ -1615,7 +1623,7 @@ def main {
 ", "
 (function() {
   function a() {
-    x ? z() : y();
+    x === 0 ? y() : z();
   }
 
   a();

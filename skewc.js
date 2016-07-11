@@ -6627,7 +6627,7 @@
       if (replacement != null) {
         // This minification is not valid for strings and doubles because
         // they both have multiple falsy values (NaN and 0, null, and "")
-        if (left.resolvedType != null && !this._cache.isEquivalentToDouble(left.resolvedType) && !this._cache.isEquivalentToString(left.resolvedType) && right.resolvedType != null && !this._cache.isEquivalentToDouble(right.resolvedType) && !this._cache.isEquivalentToString(right.resolvedType)) {
+        if (left.resolvedType != null && left.resolvedType != Skew.Type.DYNAMIC && !this._cache.isEquivalentToDouble(left.resolvedType) && !this._cache.isEquivalentToString(left.resolvedType) && right.resolvedType != null && right.resolvedType != Skew.Type.DYNAMIC && !this._cache.isEquivalentToDouble(right.resolvedType) && !this._cache.isEquivalentToString(right.resolvedType)) {
           replacement.remove();
           node.become(kind == Skew.NodeKind.EQUAL ? this._wrapWithNot(replacement) : replacement);
         }
