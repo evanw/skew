@@ -1876,7 +1876,7 @@ def main {
   }
 
   function h(a) {
-    return a === +a || isNaN(a);
+    return typeof a === 'number';
   }
 
   function i(a) {
