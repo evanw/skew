@@ -386,15 +386,12 @@ def publish():
   run(['git', 'push'])
   skewc_js('skewc.js', 'out/skewc.min.js', sources=SOURCES_SKEWC, release=True)
   skewc_js('skewc.js', 'npm/skew.js', sources=SOURCES_API, release=True)
-  skewc_js('skewc.js', 'out/skewc.release.cpp', sources=SOURCES_SKEWC, release=True)
-  compile_cpp('out/skewc.release.cpp', 'out/skewc.osx.64', release=True)
   open('npm/skewc', 'w').write('#!/usr/bin/env node\n' + open('out/skewc.min.js').read())
   run(['chmod', '+x', 'npm/skewc'])
   for name in PUBLIC_CPP_FILES:
     shutil.copyfile(name, 'npm/' + os.path.basename(name))
   run(['npm', 'publish'], cwd='npm')
   release = create_github_release(version)
-  upload_github_release(release, 'skewc.osx.64.gz', 'out/skewc.osx.64')
 
 ################################################################################
 
