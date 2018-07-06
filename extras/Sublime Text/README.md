@@ -7,11 +7,11 @@ To install, copy the "Skew" folder into the appropriate location for the given p
 ### OS X
 _Sublime Text 2_
 
-    ~/Application Support/Sublime Text 2/Packages/
+    ~/Library/Application Support/Sublime Text 2/Packages/
 
 _Sublime Text 3_
 
-    ~/Application Support/Sublime Text 3/Packages/
+    ~/Library/Application Support/Sublime Text 3/Packages/
 
 ### Windows
 _Sublime Text 2_
