@@ -13,6 +13,10 @@ const __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) =
   return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0
 }
 
+const __createMap fn() dynamic = () => {
+  return dynamic.Map.new
+}
+
 const __prototype dynamic
 const __isInt = (value dynamic) => value == (value | 0)
 const __isBool = (value dynamic) => value == !!value
@@ -317,14 +321,19 @@ namespace List {
 
 namespace StringMap {
   def new StringMap<T> {
-    return __create(null)
+    return __createMap()
   }
 }
 
 class StringMap {
   def [](key string) T {
     assert(key in self)
-    return (self as dynamic)[key]
+    return (self as dynamic).get(key)
+  }
+
+  def []=(key string, value T) T {
+    (self as dynamic).set(key, value)
+    return value
   }
 
   def {...}(key string, value T) StringMap<T> {
@@ -332,63 +341,65 @@ class StringMap {
     return self
   }
 
+  def in(key string) bool {
+    return (self as dynamic).has(key)
+  }
+
   def count int {
-    return keys.count
+    return (self as dynamic).size
   }
 
   def isEmpty bool {
-    for key in self as dynamic {
-      return false
-    }
-    return true
+    return count == 0
   }
 
   def get(key string, defaultValue T) T {
-    var value = (self as dynamic)[key]
+    const value = (self as dynamic).get(key)
     return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
   }
 
   def keys List<string> {
-    return dynamic.Object.keys(self)
+    return dynamic.Array.from((self as dynamic).keys())
   }
 
   def values List<T> {
-    var values List<T> = []
-    for key in self as dynamic {
-      values.append(self[key])
-    }
-    return values
+    return dynamic.Array.from((self as dynamic).values())
   }
 
   def clone StringMap<T> {
-    var clone = new
-    for key in keys {
-      clone[key] = self[key]
-    }
+    const clone = StringMap<T>.new
+    self.each((key string, value T) => {
+      clone[key] = value
+    })
     return clone
   }
 
   def remove(key string) {
-    dynamic.delete((self as dynamic)[key])
+    (self as dynamic).delete(key)
   }
 
   def each(x fn(string, T)) {
-    for key in self as dynamic {
-      x(key, self[key])
-    }
+    (self as dynamic).forEach((value, key) => {
+      x(key, value)
+    })
   }
 }
 
 namespace IntMap {
   def new IntMap<T> {
-    return {} as dynamic
+    return __createMap()
   }
 }
 
 class IntMap {
   def [](key int) T {
     assert(key in self)
-    return (self as dynamic)[key]
+    return (self as dynamic).get(key)
+  }
+
+  def []=(key int, value T) T {
+    (self as dynamic).set(key, value)
+    return value
   }
 
   def {...}(key int, value T) IntMap<T> {
@@ -396,54 +407,47 @@ class IntMap {
     return self
   }
 
+  def in(key int) bool {
+    return (self as dynamic).has(key)
+  }
+
   def count int {
-    return values.count
+    return (self as dynamic).size
   }
 
   def isEmpty bool {
-    for key in self as dynamic {
-      return false
-    }
-    return true
+    return count == 0
   }
 
   def get(key int, defaultValue T) T {
-    var value = (self as dynamic)[key]
+    const value = (self as dynamic).get(key)
     return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
   }
 
   def keys List<int> {
-    var keys List<int> = []
-    for key in self as dynamic {
-      keys.append(key as int)
-    }
-    return keys
+    return dynamic.Array.from((self as dynamic).keys())
   }
 
   def values List<T> {
-    var values List<T> = []
-    for key in self as dynamic {
-      values.append(self[key])
-    }
-    return values
+    return dynamic.Array.from((self as dynamic).values())
   }
 
   def clone IntMap<T> {
-    var clone = new
-    for key in keys {
-      clone[key] = self[key]
-    }
+    const clone = IntMap<T>.new
+    self.each((key int, value T) => {
+      clone[key] = value
+    })
     return clone
   }
 
   def remove(key int) {
-    dynamic.delete((self as dynamic)[key])
+    (self as dynamic).delete(key)
   }
 
   def each(x fn(int, T)) {
-    for key in self as dynamic {
-      x(key as int, self[key])
-    }
+    (self as dynamic).forEach((value, key) => {
+      x(key, value)
+    })
   }
 }
 "

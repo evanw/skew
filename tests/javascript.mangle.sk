@@ -411,19 +411,23 @@ def main {
 }
 ", "
 (function() {
-  function b(a) {
-    test(a.x), test(a._), test(a['0']), test(a.x0), test(a['if']);
+  function d(a) {
+    test(a.get('x')), test(a.get('_')), test(a.get('0')), test(a.get('x0')), test(a.get('if'));
   }
 
-  function c(a) {
-    a.x = test(), a._ = test(), a['0'] = test(), a.x0 = test(), a['if'] = test();
+  function e(a) {
+    b(a, 'x', test()), b(a, '_', test()), b(a, '0', test()), b(a, 'x0', test()), b(a, 'if', test());
   }
 
-  function d() {
-    b(null), c(null);
+  function g() {
+    d(null), e(null);
   }
 
-  d();
+  function b(f, a, c) {
+    return f.set(a, c), c;
+  }
+
+  g();
 })();
 ").jsMangle.inlineAllFunctions.foldAllConstants
 
@@ -2743,19 +2747,31 @@ def test {
 }
 ", "
 (function() {
-  var e = Object.create || function(b) {
-    return {__proto__: b};
-  };
+  function i() {
+    var c = e(e(f(), 1, 2), 3, 4), a = d(d(f(), '1', 2), '3', 4);
+  }
+
+  function g(b, c, a) {
+    return b.set(c, a), a;
+  }
+
+  function d(b, c, a) {
+    return g(b, c, a), b;
+  }
+
+  function h(b, c, a) {
+    return b.set(c, a), a;
+  }
+
+  function e(b, c, a) {
+    return h(b, c, a), b;
+  }
 
   function f() {
-    var b = {1: 2, 3: 4}, c = a(a(e(null), '1', 2), '3', 4);
+    return new Map;
   }
 
-  function a(d, b, c) {
-    return d[b] = c, d;
-  }
-
-  f();
+  i();
 })();
 ").jsMangle.inlineAllFunctions
 
