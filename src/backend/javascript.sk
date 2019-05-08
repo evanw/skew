@@ -1273,6 +1273,20 @@ namespace Skew {
       }
     }
 
+    # Returns true if the provided call node must be parenthesized due to being inside a dot expression
+    def _checkForDotParentOfCall(node Node) bool {
+      assert(node.kind == .CALL)
+      var p = node.parent
+      while p != null {
+        switch p.kind {
+          case .CAST, .PARAMETERIZE { p = p.parent }
+          case .DOT { return true }
+          default { break }
+        }
+      }
+      return false
+    }
+
     def _emitExpression(node Node, precedence Precedence) {
       var kind = node.kind
       _addMapping(node.range)
@@ -1349,7 +1363,7 @@ namespace Skew {
           }
 
           # Omit parentheses during mangling when possible
-          if !isNew || !_mangle || call || value.nextSibling != null || node.parent != null && node.parent.kind == .DOT {
+          if !isNew || !_mangle || call || value.nextSibling != null || _checkForDotParentOfCall(node) {
             _emit(isKeyword ? " " : "(")
 
             if call {

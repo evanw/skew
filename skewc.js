@@ -4051,6 +4051,32 @@
     }
   };
 
+  // Returns true if the provided call node must be parenthesized due to being inside a dot expression
+  Skew.JavaScriptEmitter.prototype._checkForDotParentOfCall = function(node) {
+    assert(node.kind == Skew.NodeKind.CALL);
+    var p = node.parent();
+
+    label: while (p != null) {
+      switch (p.kind) {
+        case Skew.NodeKind.CAST:
+        case Skew.NodeKind.PARAMETERIZE: {
+          p = p.parent();
+          break;
+        }
+
+        case Skew.NodeKind.DOT: {
+          return true;
+        }
+
+        default: {
+          break label;
+        }
+      }
+    }
+
+    return false;
+  };
+
   Skew.JavaScriptEmitter.prototype._emitExpression = function(node, precedence) {
     var kind = node.kind;
     this._addMapping(node.range);
@@ -4138,7 +4164,7 @@
         }
 
         // Omit parentheses during mangling when possible
-        if (!isNew || !this._mangle || call || value.nextSibling() != null || node.parent() != null && node.parent().kind == Skew.NodeKind.DOT) {
+        if (!isNew || !this._mangle || call || value.nextSibling() != null || this._checkForDotParentOfCall(node)) {
           this._emit(isKeyword ? ' ' : '(');
 
           if (call) {
