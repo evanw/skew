@@ -2747,31 +2747,27 @@ def test {
 }
 ", "
 (function() {
-  function i() {
-    var c = e(e(f(), 1, 2), 3, 4), a = d(d(f(), '1', 2), '3', 4);
+  function h() {
+    var c = e(e(new Map, 1, 2), 3, 4), a = d(d(new Map, '1', 2), '3', 4);
+  }
+
+  function f(b, c, a) {
+    return b.set(c, a), a;
+  }
+
+  function d(b, c, a) {
+    return f(b, c, a), b;
   }
 
   function g(b, c, a) {
     return b.set(c, a), a;
   }
 
-  function d(b, c, a) {
+  function e(b, c, a) {
     return g(b, c, a), b;
   }
 
-  function h(b, c, a) {
-    return b.set(c, a), a;
-  }
-
-  function e(b, c, a) {
-    return h(b, c, a), b;
-  }
-
-  function f() {
-    return new Map;
-  }
-
-  i();
+  h();
 })();
 ").jsMangle.inlineAllFunctions
 

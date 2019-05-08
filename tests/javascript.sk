@@ -597,11 +597,7 @@ def main {
   }
 
   function main() {
-    bar(foo(foo(__createMap(), 1, 2), 3, 4));
-  }
-
-  function __createMap() {
-    return new Map();
+    bar(foo(foo(new Map(), 1, 2), 3, 4));
   }
 
   var in_IntMap = {};
@@ -3547,10 +3543,6 @@ def main {
     var y = in_IntMap.insert(in_IntMap.$new(), 0, 1);
   }
 
-  function __createMap() {
-    return new Map();
-  }
-
   var in_IntMap = {};
 
   in_IntMap.set = function(self, key, value) {
@@ -3564,7 +3556,7 @@ def main {
   };
 
   in_IntMap.$new = function() {
-    return __createMap();
+    return new Map();
   };
 
   main();

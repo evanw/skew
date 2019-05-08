@@ -13,10 +13,6 @@ const __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) =
   return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0
 }
 
-const __createMap fn() dynamic = () => {
-  return dynamic.Map.new
-}
-
 const __prototype dynamic
 const __isInt = (value dynamic) => value == (value | 0)
 const __isBool = (value dynamic) => value == !!value
@@ -321,7 +317,7 @@ namespace List {
 
 namespace StringMap {
   def new StringMap<T> {
-    return __createMap()
+    return dynamic.Map.new
   }
 }
 
@@ -387,7 +383,7 @@ class StringMap {
 
 namespace IntMap {
   def new IntMap<T> {
-    return __createMap()
+    return dynamic.Map.new
   }
 }
 
