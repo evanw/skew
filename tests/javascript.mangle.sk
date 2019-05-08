@@ -2798,5 +2798,35 @@ test("
 })(this);
 ").jsMangle
 
+# Check parenthesis removal for new expressions in cast expressions
+test("
+@export
+def foo dynamic {
+  return (dynamic.Foo.new as dynamic).foo
+}
+", "
+(function(a) {
+  a.foo = function() {
+    return new Foo().foo;
+  };
+})(this);
+").jsMangle
+
+# Check parenthesis removal for new expressions in parameterized expressions
+test("
+@export
+def foo dynamic {
+  return dynamic.Foo.new<int>.foo
+}
+", "
+(function(c) {
+  var a;
+
+  c.foo = function() {
+    return new Foo().foo;
+  };
+})(this);
+").jsMangle
+
   }
 }
