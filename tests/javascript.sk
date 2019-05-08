@@ -591,9 +591,21 @@ def main {
 }
 ", "
 (function() {
-  function main() {
-    bar({1: 2, 3: 4});
+  function foo(map, key, value) {
+    in_IntMap.set(map, key, value);
+    return map;
   }
+
+  function main() {
+    bar(foo(foo(new Map(), 1, 2), 3, 4));
+  }
+
+  var in_IntMap = {};
+
+  in_IntMap.set = function(self, key, value) {
+    self.set(key, value);
+    return value;
+  };
 
   main();
 })();
@@ -3533,13 +3545,18 @@ def main {
 
   var in_IntMap = {};
 
+  in_IntMap.set = function(self, key, value) {
+    self.set(key, value);
+    return value;
+  };
+
   in_IntMap.insert = function(self, key, value) {
-    self[key] = value;
+    in_IntMap.set(self, key, value);
     return self;
   };
 
   in_IntMap.$new = function() {
-    return {};
+    return new Map();
   };
 
   main();
