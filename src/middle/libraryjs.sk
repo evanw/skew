@@ -363,11 +363,7 @@ class StringMap {
   }
 
   def clone StringMap<T> {
-    const clone = StringMap<T>.new
-    self.each((key string, value T) => {
-      clone[key] = value
-    })
-    return clone
+    return dynamic.Map.new(self)
   }
 
   def remove(key string) {
@@ -429,11 +425,7 @@ class IntMap {
   }
 
   def clone IntMap<T> {
-    const clone = IntMap<T>.new
-    self.each((key int, value T) => {
-      clone[key] = value
-    })
-    return clone
+    return dynamic.Map.new(self)
   }
 
   def remove(key int) {
