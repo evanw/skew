@@ -29,6 +29,11 @@ namespace Skew.Tests {
       return self
     }
 
+    def ts CompilerTest {
+      _options.target = TypeScriptTarget.new
+      return self
+    }
+
     def js CompilerTest {
       _options.target = JavaScriptTarget.new
       return self

@@ -77,6 +77,7 @@ namespace Skew.API {
 
     switch args.target {
       case "c#" { options.target = CSharpTarget.new }
+      case "ts" { options.target = TypeScriptTarget.new }
       case "c++" { options.target = CPlusPlusTarget.new }
       case "js" { options.target = JavaScriptTarget.new }
       case "lisp-tree" { options.target = LispTreeTarget.new }

@@ -29,6 +29,13 @@ def assert(truth bool) {
 @import
 namespace Math {}
 
+@rename(\"boolean\")
+class bool {}
+
+@rename(\"number\")
+class int {}
+
+@rename(\"number\")
 class double {
   def isFinite bool {
     return dynamic.isFinite(self)
@@ -142,16 +149,16 @@ class List {
   @rename(\"push\")
   def append(x T)
 
-  @rename(\"every\") if TARGET == .JAVASCRIPT
+  @rename(\"every\")
   def all(x fn(T) bool) bool
 
-  @rename(\"some\") if TARGET == .JAVASCRIPT
+  @rename(\"some\")
   def any(x fn(T) bool) bool
 
-  @rename(\"slice\") if TARGET == .JAVASCRIPT
+  @rename(\"slice\")
   def clone List<T>
 
-  @rename(\"forEach\") if TARGET == .JAVASCRIPT
+  @rename(\"forEach\")
   def each(x fn(T))
 
   def slice(start int) List<T> {

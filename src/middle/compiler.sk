@@ -90,6 +90,7 @@ namespace Skew {
           switch outputFile.slice(dot + 1) {
             case "cpp", "cxx", "cc" { target = CPlusPlusTarget.new }
             case "cs" { target = CSharpTarget.new }
+            case "ts" { target = TypeScriptTarget.new }
             case "js" { target = JavaScriptTarget.new }
             default { return false }
           }

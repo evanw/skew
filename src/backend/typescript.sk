@@ -1,0 +1,1272 @@
+namespace Skew {
+  class TypeScriptTarget : CompilerTarget {
+    over name string { return "TypeScript" }
+    over extension string { return "ts" }
+    over stopAfterResolve bool { return false }
+    over requiresIntegerSwitchStatements bool { return true }
+    over supportsListForeach bool { return true }
+    over supportsNestedTypes bool { return true }
+    over stringEncoding Unicode.Encoding { return .UTF16 }
+    over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
+    over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
+    over createEmitter(context PassContext) Emitter { return TypeScriptEmitter.new(context.options, context.cache) }
+  }
+
+  class TypeScriptEmitter : Emitter {
+    const _options CompilerOptions
+    const _cache TypeCache
+    var _previousNode Node = null
+    var _previousSymbol Symbol = null
+    var _namespaceStack List<Symbol> = []
+    var _symbolsCheckedForImport IntMap<int> = {}
+    var _importedFiles StringMap<StringMap<int>> = {}
+    var _loopLabels IntMap<VariableSymbol> = {}
+    var _enclosingFunction FunctionSymbol = null
+    var _expectedNextEnumValue = 0
+    var _currentFile = ""
+
+    over visit(global ObjectSymbol) {
+      _indentAmount = "  "
+
+      # Generate the entry point
+      const entryPoint = _cache.entryPointSymbol
+      if entryPoint != null {
+        entryPoint.name = "main"
+      }
+
+      # Avoid emitting unnecessary stuff
+      shakingPass(global, entryPoint, .USE_TYPES)
+      _markVirtualFunctions(global)
+
+      const emitIndividualFiles = _options.outputDirectory != null
+      const symbolsByFile = StringMap<List<Symbol>>.new
+
+      # Bucket things by the source file they came from
+      const collisions = StringMap<List<Symbol>>.new
+      const add = (s Symbol) => {
+        var name = ""
+        if s.range != null {
+          name = s.range.source.name
+        }
+        if !(name in symbolsByFile) {
+          symbolsByFile[name] =  []
+        }
+        symbolsByFile[name].append(s)
+
+        # Track collisions
+        if !s.isImported {
+          var list = collisions.get(s.name, [])
+          list.append(s)
+          collisions[s.name] = list
+        }
+      }
+
+      var addAll fn(ObjectSymbol)
+      addAll = (p ObjectSymbol) => {
+        for s in p.variables {
+          add(s)
+        }
+
+        for s in p.functions {
+          add(s)
+        }
+
+        for s in p.objects {
+          if _shouldFlattenNamespace(s) {
+            addAll(s)
+          } else {
+            add(s)
+
+            # There can only be one constructor in TypeScript
+            if s.kind == .OBJECT_CLASS && !s.isImported {
+              var count = 0
+              for f in s.functions {
+                if f.kind == .FUNCTION_CONSTRUCTOR {
+                  count++
+                  if count > 1 {
+                    f.kind = .FUNCTION_GLOBAL
+                    if f.block != null {
+                      const Object_create = Node.createDot(Node.createName("Object").withType(.DYNAMIC), "create").withType(.DYNAMIC)
+                      const Class_prototype = Node.createDot(Node.createSymbolReference(s).withType(.DYNAMIC), "prototype").withType(.DYNAMIC)
+                      f.this.kind = .VARIABLE_LOCAL
+                      f.this.value = Node.createCall(Object_create).appendChild(Class_prototype).withType(.DYNAMIC)
+                      f.block.prependChild(Node.createVariables.appendChild(Node.createVariable(f.this)))
+                      _replaceReturnsWithVariable(f.block, f.this)
+                      if !f.block.hasChildren || f.block.lastChild.kind != .RETURN {
+                        f.block.appendChild(Node.createReturn(Node.createSymbolReference(f.this)))
+                      }
+                    }
+                    f.this = null
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      addAll(global)
+
+      # Rename all collisions
+      collisions.each((name, list) => {
+        if list.count > 1 {
+          for s in list {
+            var i = 1
+            while true {
+              var rename = "\(name)\(i)"
+              if !(rename in collisions) {
+                collisions[rename] = []
+                s.name = rename
+                break
+              }
+              i++
+            }
+          }
+        }
+      })
+
+      # Emit each global object into a separate file
+      symbolsByFile.each((file, symbols) => {
+        _currentFile = file
+
+        for s in symbols {
+          if s.kind.isObject {
+            _emitObject(s as ObjectSymbol)
+          }
+        }
+
+        for s in symbols {
+          if s.kind.isFunction {
+            _emitFunction(s as FunctionSymbol)
+          }
+        }
+
+        for s in symbols {
+          if s.kind.isVariable {
+            _emitVariable(s as VariableSymbol)
+          }
+        }
+
+        # Emit each object into its own file if requested
+        if emitIndividualFiles {
+          _finalizeEmittedFile
+          _createSource(_options.outputDirectory + "/" + _tsFileName(file), .SKIP_IF_EMPTY)
+        }
+      })
+
+      # Emit a single file if requested
+      if !emitIndividualFiles {
+        _finalizeEmittedFile
+        _createSource(_options.outputFile, .ALWAYS_EMIT)
+      }
+    }
+
+    def _replaceReturnsWithVariable(node Node, variable VariableSymbol) {
+      if node.kind == .RETURN {
+        node.become(Node.createReturn(Node.createSymbolReference(variable)))
+      }
+
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _replaceReturnsWithVariable(child, variable)
+      }
+    }
+
+    def _tsFileName(skewFile string) string {
+      skewFile = skewFile.replaceAll("<", "")
+      skewFile = skewFile.replaceAll(">", "")
+
+      if skewFile.endsWith(".sk") {
+        skewFile = skewFile.slice(0, skewFile.count - ".sk".count)
+      }
+
+      return skewFile + ".ts"
+    }
+
+    def _relativeImport(file string) string {
+      var currentParts = _currentFile.split("/")
+      var fileParts = file.split("/")
+      currentParts.removeLast
+
+      while !currentParts.isEmpty && !fileParts.isEmpty && currentParts.first == fileParts.first {
+        currentParts.removeFirst
+        fileParts.removeFirst
+      }
+
+      if currentParts.isEmpty {
+        fileParts.prepend(".")
+      } else {
+        for _ in currentParts {
+          fileParts.prepend("..")
+        }
+      }
+
+      return "/".join(fileParts)
+    }
+
+    def _finalizeEmittedFile {
+      var importedFiles = _importedFiles.keys
+
+      if !importedFiles.isEmpty {
+        importedFiles.sort(SORT_STRINGS) # Sort so the order is deterministic
+        for file in importedFiles {
+          var importedNames = _importedFiles[file].keys
+          importedNames.sort(SORT_STRINGS) # Sort so the order is deterministic
+          var where = quoteString(_relativeImport(file), .DOUBLE, .NORMAL)
+          _emitPrefix("import { \(", ".join(importedNames)) } from \(where);\n")
+        }
+        _emitPrefix("\n")
+      }
+
+      _previousSymbol = null
+      _symbolsCheckedForImport = {}
+      _importedFiles = {}
+    }
+
+    def _handleSymbol(symbol Symbol) {
+      if !symbol.kind.isLocal && !(symbol.id in _symbolsCheckedForImport) {
+        _symbolsCheckedForImport[symbol.id] = 0
+        var parent = symbol.parent
+
+        if parent != null && (
+            symbol.kind == .VARIABLE_ENUM_OR_FLAGS ||
+            parent.kind == .OBJECT_WRAPPED ||
+            (parent.kind == .OBJECT_NAMESPACE && !_shouldFlattenNamespace(parent)) ||
+            (symbol.kind.isObject && parent.kind == .OBJECT_CLASS) ||
+            (symbol.kind == .FUNCTION_GLOBAL && parent.kind == .OBJECT_CLASS) ||
+            (symbol.kind == .VARIABLE_GLOBAL && parent.kind == .OBJECT_CLASS)) {
+          _handleSymbol(parent)
+        }
+
+        else if !symbol.isImported && symbol.range != null && (
+          symbol.kind == .OBJECT_CLASS ||
+          symbol.kind == .OBJECT_ENUM ||
+          symbol.kind == .OBJECT_FLAGS ||
+          symbol.kind == .OBJECT_WRAPPED ||
+          symbol.kind == .OBJECT_INTERFACE ||
+          symbol.kind == .OBJECT_NAMESPACE ||
+          (symbol.kind == .FUNCTION_GLOBAL && parent.kind != .OBJECT_CLASS) ||
+          (symbol.kind == .VARIABLE_GLOBAL && parent.kind != .OBJECT_CLASS)) {
+          var file = symbol.range.source.name
+          if _currentFile != file {
+            file = _tsFileName(file)
+            file = file.slice(0, file.count - ".ts".count)
+            if !(file in _importedFiles) {
+              _importedFiles[file] = {}
+            }
+            _importedFiles[file][_mangleName(symbol)] = 0
+          }
+        }
+      }
+    }
+
+    def _emitNewlineBeforeSymbol(symbol Symbol) {
+      if _previousSymbol != null && (!_previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
+        _emit("\n")
+      }
+      _previousSymbol = null
+    }
+
+    def _emitNewlineAfterSymbol(symbol Symbol) {
+      _previousSymbol = symbol
+    }
+
+    def _emitNewlineBeforeStatement(node Node) {
+      if _previousNode != null && (node.comments != null || !_isCompactNodeKind(_previousNode.kind) || !_isCompactNodeKind(node.kind)) {
+        _emit("\n")
+      }
+      _previousNode = null
+    }
+
+    def _emitNewlineAfterStatement(node Node) {
+      _previousNode = node
+    }
+
+    def _emitComments(comments List<string>) {
+      if comments != null {
+        for comment in comments {
+          _emit(_indent + "//" + comment)
+        }
+      }
+    }
+
+    def _emitObject(symbol ObjectSymbol) {
+      _handleSymbol(symbol)
+
+      if symbol.isImported || symbol.kind == .OBJECT_GLOBAL {
+        return
+      }
+
+      _emitNewlineBeforeSymbol(symbol)
+      _emitComments(symbol.comments)
+      _emit(_indent)
+      _emit("export ")
+      if symbol.isAbstract {
+        _emit("abstract ")
+      }
+      switch symbol.kind {
+        case .OBJECT_CLASS { _emit("class ") }
+        case .OBJECT_ENUM, .OBJECT_FLAGS { _emit("enum ") }
+        case .OBJECT_INTERFACE { _emit("interface ") }
+        case .OBJECT_WRAPPED { _emit("type ") }
+        case .OBJECT_NAMESPACE { _emit("namespace ") }
+        default { assert(false) }
+      }
+      _emit(_mangleName(symbol))
+      _emitTypeParameters(symbol.parameters)
+
+      if symbol.kind == .OBJECT_WRAPPED {
+        _emit(" = ")
+        _emitExpressionOrType(symbol.extends, symbol.wrappedType)
+        _emit("\n")
+        _emitNewlineAfterSymbol(symbol)
+      }
+
+      else {
+        if symbol.extends != null || symbol.implements != null {
+          if symbol.extends != null {
+            _emit(" extends ")
+            _emitExpressionOrType(symbol.extends, symbol.baseType)
+          }
+          if symbol.implements != null {
+            _emit(" implements ")
+            for node in symbol.implements {
+              if node != symbol.implements.first {
+                _emit(", ")
+              }
+              _emitExpressionOrType(node, node.resolvedType)
+            }
+          }
+        }
+
+        _emit(" {\n")
+        _increaseIndent
+        _expectedNextEnumValue = 0
+
+        for variable in symbol.variables {
+          _emitVariable(variable)
+        }
+
+        for function in symbol.functions {
+          _emitFunction(function)
+        }
+
+        _decreaseIndent
+        _emit(_indent + "}\n")
+        _emitNewlineAfterSymbol(symbol)
+      }
+
+      if symbol.objects.count > 0 || (symbol.kind == .OBJECT_WRAPPED && (symbol.variables.count > 0 || symbol.functions.count > 0)) {
+        _emitNewlineBeforeSymbol(symbol)
+        _emit(_indent + "export namespace ")
+        _emit(_mangleName(symbol))
+        _emit(" {\n")
+        _increaseIndent
+
+        for object in symbol.objects {
+          _emitObject(object)
+        }
+
+        if symbol.kind == .OBJECT_WRAPPED {
+          for variable in symbol.variables {
+            _emitVariable(variable)
+          }
+
+          for function in symbol.functions {
+            _emitFunction(function)
+          }
+        }
+
+        _decreaseIndent
+        _emit(_indent + "}\n")
+      }
+    }
+
+    def _emitTypeParameters(parameters List<ParameterSymbol>) {
+      if parameters != null {
+        _emit("<")
+        for parameter in parameters {
+          if parameter != parameters.first {
+            _emit(", ")
+          }
+          _emit(_mangleName(parameter))
+        }
+        _emit(">")
+      }
+    }
+
+    def _emitArgumentList(symbol FunctionSymbol) {
+      _emit("(")
+      for argument in symbol.arguments {
+        if argument != symbol.arguments.first {
+          _emit(", ")
+        }
+        _emit(_mangleName(argument) + ": ")
+        _emitExpressionOrType(argument.type, argument.resolvedType)
+      }
+      _emit(")")
+    }
+
+    def _emitVariable(symbol VariableSymbol) {
+      _handleSymbol(symbol)
+
+      if symbol.isImported {
+        return
+      }
+
+      _emitNewlineBeforeSymbol(symbol)
+      _emitComments(symbol.comments)
+      _emit(_indent)
+
+      if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
+        _emit(_mangleName(symbol))
+        if symbol.value != null {
+          symbol.value.resolvedType = _cache.intType # Enum values are initialized with integers
+          if symbol.value.asInt != _expectedNextEnumValue {
+            _emit(" = ")
+            _emitExpression(symbol.value, .COMMA)
+          }
+          _expectedNextEnumValue = symbol.value.asInt + 1
+        }
+        _emit(",\n")
+      }
+
+      else {
+        if symbol.kind == .VARIABLE_GLOBAL && symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS {
+          _emit("static ")
+        } else if symbol.kind != .VARIABLE_INSTANCE {
+          _emit("export ")
+          _emit("let ")
+        }
+
+        _emit(_mangleName(symbol) + ": ")
+        _emitExpressionOrType(symbol.type, symbol.resolvedType)
+        if symbol.value != null {
+          _emit(" = ")
+          _emitExpression(symbol.value, .COMMA)
+        }
+        _emit(";\n")
+      }
+      _emitNewlineAfterSymbol(symbol)
+    }
+
+    def _emitFunction(symbol FunctionSymbol) {
+      _handleSymbol(symbol)
+
+      if symbol.isImported {
+        return
+      }
+
+      # JavaScript arrow functions have sane capture rules for "this" so no variable insertion is needed
+      if symbol.this != null {
+        symbol.this.name = "this"
+        symbol.this.flags |= .IS_EXPORTED
+      }
+
+      _enclosingFunction = symbol
+      _emitNewlineBeforeSymbol(symbol)
+      _emitComments(symbol.comments)
+      _emit(_indent)
+
+      var block = symbol.block
+      if block == null && symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS {
+        _emit("abstract ")
+      }
+
+      if symbol.kind == .FUNCTION_CONSTRUCTOR {
+        _emit("constructor")
+      } else {
+        if symbol.kind == .FUNCTION_GLOBAL && symbol.parent != null && symbol.parent.kind == .OBJECT_CLASS {
+          _emit("static ")
+        } else if symbol.kind != .FUNCTION_INSTANCE {
+          _emit("export function ")
+        }
+        _emit(_mangleName(symbol))
+      }
+
+      _emitTypeParameters(symbol.parameters)
+      _emitArgumentList(symbol)
+      if symbol.kind != .FUNCTION_CONSTRUCTOR {
+        _emit(": ")
+        _emitExpressionOrType(symbol.returnType, symbol.resolvedType.returnType)
+      }
+
+      if block == null {
+        _emit(";\n")
+      }
+
+      else {
+        _emitBlock(block)
+        _emit("\n")
+      }
+
+      _emitNewlineAfterSymbol(symbol)
+      _enclosingFunction = null
+    }
+
+    def _emitType(type Type) {
+      if type == null {
+        _emit("void")
+        return
+      }
+
+      type = _cache.unwrappedType(type)
+
+      if type == .DYNAMIC {
+        _emit("any")
+      }
+
+      else if type.kind == .LAMBDA {
+        var argumentTypes = type.argumentTypes
+        var returnType = type.returnType
+        _emit("(")
+        for i in 0..argumentTypes.count {
+          if i != 0 {
+            _emit(", ")
+          }
+          _emit("v\(i): ")
+          _emitType(argumentTypes[i])
+        }
+        _emit(") => ")
+        if returnType != null {
+          _emitType(returnType)
+        } else {
+          _emit("void")
+        }
+      }
+
+      else if _cache.isIntMap(type) || _cache.isStringMap(type) {
+        _emit("Map<")
+        _emit(_cache.isIntMap(type) ? "number" : "string")
+        _emit(", ")
+        _emitType(type.substitutions.first)
+        _emit(">")
+      }
+
+      else {
+        assert(type.kind == .SYMBOL)
+        _handleSymbol(type.symbol)
+        _emit(_fullName(type.symbol))
+
+        if type.isParameterized {
+          _emit("<")
+
+          for i in 0..type.substitutions.count {
+            if i != 0 {
+              _emit(", ")
+            }
+            _emitType(type.substitutions[i])
+          }
+
+          _emit(">")
+        }
+      }
+    }
+
+    def _emitExpressionOrType(node Node, type Type) {
+      if node != null && (type == null || type == .DYNAMIC) {
+        # Treat the type "dynamic.Object" as an alias for "dynamic" instead of what it actually means
+        if type == .DYNAMIC && node.kind == .NAME && node.asString == "Object" {
+          _emitType(.DYNAMIC)
+        } else {
+          _emitExpression(node, .LOWEST)
+        }
+      } else {
+        _emitType(type)
+      }
+    }
+
+    def _emitStatements(node Node) {
+      _previousNode = null
+
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _emitNewlineBeforeStatement(child)
+        _emitComments(child.comments)
+        _emitStatement(child)
+        _emitNewlineAfterStatement(child)
+      }
+
+      _previousNode = null
+    }
+
+    def _emitBlock(node Node) {
+      assert(node.kind == .BLOCK)
+      _emit(" {\n")
+      _increaseIndent
+      _emitStatements(node)
+      _decreaseIndent
+      _emit(_indent + "}")
+    }
+
+    def _emitIf(node Node) {
+      _emit("if (")
+      _emitExpression(node.ifTest, .LOWEST)
+      _emit(")")
+      _emitBlock(node.ifTrue)
+
+      var block = node.ifFalse
+      if block != null {
+        var singleIf = block.hasOneChild && block.firstChild.kind == .IF ? block.firstChild : null
+        if block.comments != null || singleIf != null && singleIf.comments != null {
+          _emit("\n")
+          _emit("\n")
+          _emitComments(block.comments)
+          if singleIf != null {
+            _emitComments(singleIf.comments)
+          }
+          _emit(_indent + "else")
+        } else {
+          _emit(" else")
+        }
+
+        if singleIf != null {
+          _emit(" ")
+          _emitIf(singleIf)
+        } else {
+          _emitBlock(block)
+          _emit("\n")
+        }
+      } else {
+        _emit("\n")
+      }
+    }
+
+    def _scanForSwitchBreak(node Node, loop Node) {
+      if node.kind == .BREAK {
+        for parent = node.parent; parent != loop; parent = parent.parent {
+          if parent.kind == .SWITCH {
+            var label = _loopLabels.get(loop.id, null)
+            if label == null {
+              label = VariableSymbol.new(.VARIABLE_LOCAL, _enclosingFunction.scope.generateName("label"))
+              _loopLabels[loop.id] = label
+            }
+            _loopLabels[node.id] = label
+            break
+          }
+        }
+      }
+
+      # Stop at nested loops since those will be tested later
+      else if node == loop || !node.kind.isLoop {
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          _scanForSwitchBreak(child, loop)
+        }
+      }
+    }
+
+    def _emitStatement(node Node) {
+      if node.kind.isLoop {
+        _scanForSwitchBreak(node, node)
+
+        var label = _loopLabels.get(node.id, null)
+        if label != null {
+          _emit(_indent + _mangleName(label) + (node.nextSibling != null ? ":\n" : ":;\n"))
+        }
+      }
+
+      switch node.kind {
+        case .VARIABLES {
+          for child = node.firstChild; child != null; child = child.nextSibling {
+            var symbol = child.symbol.asVariableSymbol
+            _emit(_indent + "let " + _mangleName(symbol) + ": ")
+            _emitExpressionOrType(symbol.type, symbol.resolvedType)
+            if symbol.value != null {
+              _emit(" = ")
+              _emitExpression(symbol.value, .ASSIGN)
+            }
+            _emit(";\n")
+          }
+        }
+
+        case .EXPRESSION {
+          _emit(_indent)
+          _emitExpression(node.expressionValue, .LOWEST)
+          _emit(";\n")
+        }
+
+        case .BREAK {
+          var label = _loopLabels.get(node.id, null)
+          if label != null {
+            _emit(_indent + "break " + _mangleName(label) + ";\n")
+          } else {
+            _emit(_indent + "break;\n")
+          }
+        }
+
+        case .CONTINUE {
+          _emit(_indent + "continue;\n")
+        }
+
+        case .IF {
+          _emit(_indent)
+          _emitIf(node)
+        }
+
+        case .SWITCH {
+          var switchValue = node.switchValue
+          _emit(_indent + "switch (")
+          _emitExpression(switchValue, .LOWEST)
+          _emit(") {\n")
+          _increaseIndent
+          for child = switchValue.nextSibling; child != null; child = child.nextSibling {
+            var block = child.caseBlock
+            if child.previousSibling != switchValue {
+              _emit("\n")
+            }
+            if child.hasOneChild {
+              _emit(_indent + "default:")
+            } else {
+              for value = child.firstChild; value != block; value = value.nextSibling {
+                if value.previousSibling != null {
+                  _emit("\n")
+                }
+                _emit(_indent + "case ")
+                _emitExpression(value, .LOWEST)
+                _emit(":")
+              }
+            }
+            _emit(" {\n")
+            _increaseIndent
+            _emitStatements(block)
+            if block.hasControlFlowAtEnd {
+              _emit(_indent + "break;\n")
+            }
+            _decreaseIndent
+            _emit(_indent + "}\n")
+          }
+          _decreaseIndent
+          _emit(_indent + "}\n")
+        }
+
+        case .RETURN {
+          _emit(_indent + "return")
+          var value = node.returnValue
+          if value != null {
+            _emit(" ")
+            _emitExpression(value, .LOWEST)
+          }
+          _emit(";\n")
+        }
+
+        case .THROW {
+          _emit(_indent + "throw ")
+          _emitExpression(node.throwValue, .LOWEST)
+          _emit(";\n")
+        }
+
+        case .FOREACH {
+          var value = node.foreachValue
+          _emit(_indent + "for (const " + _mangleName(node.symbol))
+          _emit(_cache.isList(value.resolvedType)  ? " of " : " in ")
+          _emitExpression(value, .LOWEST)
+          _emit(")")
+          _emitBlock(node.foreachBlock)
+          _emit("\n")
+        }
+
+        case .FOR {
+          var setup = node.forSetup
+          var test = node.forTest
+          var update = node.forUpdate
+          _emit(_indent + "for (")
+          if !setup.isEmptySequence {
+            if setup.kind == .VARIABLES {
+              var symbol = setup.firstChild.symbol.asVariableSymbol
+              _emit("let ")
+              for child = setup.firstChild; child != null; child = child.nextSibling {
+                symbol = child.symbol.asVariableSymbol
+                assert(child.kind == .VARIABLE)
+                if child.previousSibling != null {
+                  _emit(", ")
+                }
+                _emit(_mangleName(symbol) + ": ")
+                _emitExpressionOrType(symbol.type, symbol.resolvedType)
+                _emit(" = ")
+                _emitExpression(symbol.value, .COMMA)
+              }
+            } else {
+              _emitExpression(setup, .LOWEST)
+            }
+          }
+          _emit("; ")
+          if !test.isEmptySequence {
+            _emitExpression(test, .LOWEST)
+          }
+          _emit("; ")
+          if !update.isEmptySequence {
+            _emitExpression(update, .LOWEST)
+          }
+          _emit(")")
+          _emitBlock(node.forBlock)
+          _emit("\n")
+        }
+
+        case .TRY {
+          var tryBlock = node.tryBlock
+          var finallyBlock = node.finallyBlock
+          _emit(_indent + "try")
+          _emitBlock(tryBlock)
+          _emit("\n")
+
+          for child = tryBlock.nextSibling; child != finallyBlock; child = child.nextSibling {
+            if child.comments != null {
+              _emit("\n")
+              _emitComments(child.comments)
+            }
+            _emit(_indent + "catch")
+            if child.symbol != null {
+              _emit(" (" + _mangleName(child.symbol) + ")")
+            }
+            _emitBlock(child.catchBlock)
+            _emit("\n")
+          }
+
+          if finallyBlock != null {
+            if finallyBlock.comments != null {
+              _emit("\n")
+              _emitComments(finallyBlock.comments)
+            }
+            _emit(_indent + "finally")
+            _emitBlock(finallyBlock)
+            _emit("\n")
+          }
+        }
+
+        case .WHILE {
+          _emit(_indent + "while (")
+          _emitExpression(node.whileTest, .LOWEST)
+          _emit(")")
+          _emitBlock(node.whileBlock)
+          _emit("\n")
+        }
+
+        default {
+          assert(false)
+        }
+      }
+    }
+
+    def _emitContent(content Content) {
+      switch content.kind {
+        case .BOOL { _emit(content.asBool.toString) }
+        case .INT { _emit(content.asInt.toString) }
+        case .DOUBLE {
+          var value = content.asDouble
+          _emit(
+            value.isNaN ? "NaN" :
+            value == Math.INFINITY ? "Infinity" :
+            value == -Math.INFINITY ? "-Infinity" :
+            doubleToStringWithDot(value))
+        }
+        case .STRING { _emit(quoteString(content.asString, .DOUBLE, .NORMAL)) }
+      }
+    }
+
+    def _emitCommaSeparatedExpressions(from Node, to Node) {
+      while from != to {
+        _emitExpression(from, .COMMA)
+        from = from.nextSibling
+        if from != to {
+          _emit(", ")
+        }
+      }
+    }
+
+    def _emitExpression(node Node, precedence Precedence) {
+      var kind = node.kind
+      var symbol = node.symbol
+
+      if symbol != null {
+        _handleSymbol(symbol)
+      }
+
+      switch kind {
+        case .TYPE, .LAMBDA_TYPE {
+          _emitType(node.resolvedType)
+        }
+
+        case .NULL {
+          _emit("null")
+        }
+
+        case .NAME {
+          _emit(symbol != null ? _fullName(symbol) : node.asString)
+        }
+
+        case .DOT {
+          _emitExpression(node.dotTarget, .MEMBER)
+          _emit("." + (symbol != null ? _mangleName(symbol) : node.asString))
+        }
+
+        case .CONSTANT {
+          var wrap = precedence == .MEMBER && node.isNumberLessThanZero && (!node.isDouble || node.asDouble.isFinite)
+          if wrap {
+            _emit("(")
+          }
+
+          _emitContent(node.content)
+
+          if node.resolvedType.isEnumOrFlags {
+            _emit(" as ")
+            _emitType(node.resolvedType)
+          }
+
+          if wrap {
+            _emit(")")
+          }
+        }
+
+        case .CALL {
+          var value = node.callValue
+          var wrap = value.kind == .LAMBDA
+
+          if wrap {
+            _emit("(")
+          }
+
+          if value.kind == .SUPER {
+            _emit("super")
+            if symbol.kind != .FUNCTION_CONSTRUCTOR {
+              _emit(".")
+              _emit(_mangleName(symbol))
+            }
+          }
+
+          else if symbol != null && symbol.kind == .FUNCTION_CONSTRUCTOR {
+            _emit("new ")
+            _emitType(node.resolvedType)
+          }
+
+          else if value.kind == .DOT && value.asString == "new" {
+            _emit("new ")
+            _emitExpression(value.dotTarget, .MEMBER)
+          }
+
+          else {
+            _emitExpression(value, .UNARY_POSTFIX)
+          }
+
+          if wrap {
+            _emit(")")
+          }
+
+          _emit("(")
+          _emitCommaSeparatedExpressions(value.nextSibling, null)
+          _emit(")")
+        }
+
+        case .CAST {
+          var resolvedType = node.resolvedType
+          var type = node.castType
+          var value = node.castValue
+          var unwrappedType = _cache.unwrappedType(type.resolvedType)
+
+          if type.kind == .TYPE && type.resolvedType == .DYNAMIC {
+            _emitExpression(value, precedence)
+          }
+
+          # Automatically promote integer literals to doubles instead of using a cast
+          else if _cache.isEquivalentToDouble(resolvedType) && value.isInt {
+            _emitExpression(_cache.createDouble(value.asInt), precedence)
+          }
+
+          # Cast from bool to a number
+          else if _cache.isNumeric(unwrappedType) && value.resolvedType == _cache.boolType {
+            _emitExpression(Node.createHook(value.remove, _cache.createInt(1), _cache.createInt(0)).withType(_cache.intType), precedence)
+          }
+
+          # Cast to bool
+          else if unwrappedType == _cache.boolType {
+            _emitExpression(Node.createUnary(.NOT, Node.createUnary(.NOT, value.remove).withType(_cache.boolType)).withType(_cache.boolType), precedence)
+          }
+
+          # Cast to int
+          else if unwrappedType == _cache.intType {
+            _emitExpression(Node.createBinary(.BITWISE_OR, value.remove, Node.createInt(0).withType(_cache.intType)).withType(_cache.intType), precedence)
+          }
+
+          # Cast to double
+          else if unwrappedType == _cache.doubleType {
+            _emitExpression(Node.createUnary(.POSITIVE, value.remove).withType(_cache.doubleType), precedence)
+          }
+
+          # Cast to string
+          else if unwrappedType == _cache.stringType {
+            _emitExpression(Node.createBinary(.ADD, value.remove, Node.createString("").withType(_cache.stringType)).withType(_cache.stringType), precedence)
+          }
+
+          # Only emit a cast if the underlying types are different
+          else if _cache.unwrappedType(value.resolvedType) != unwrappedType || type.resolvedType == .DYNAMIC {
+            if Precedence.ASSIGN < precedence {
+              _emit("(")
+            }
+            _emitExpression(value, .ASSIGN)
+            _emit(" as ")
+            _emitExpressionOrType(type, type.resolvedType)
+            if Precedence.ASSIGN < precedence {
+              _emit(")")
+            }
+          }
+
+          # Otherwise, pretend the cast isn't there
+          else {
+            _emitExpression(value, precedence)
+          }
+        }
+
+        case .TYPE_CHECK {
+          var value = node.typeCheckValue
+          var type = node.typeCheckType
+          var targetType = _cache.unwrappedType(type.resolvedType)
+
+          if Precedence.COMPARE < precedence {
+            _emit("(")
+          }
+
+          if targetType == _cache.doubleType {
+            _emit("typeof ")
+            _emitExpression(value, .UNARY_PREFIX)
+            _emit(" === 'number'")
+          }
+
+          else if targetType == _cache.stringType {
+            _emit("typeof ")
+            _emitExpression(value, .UNARY_PREFIX)
+            _emit(" === 'string'")
+          }
+
+          else if targetType == _cache.boolType {
+            _emit("typeof ")
+            _emitExpression(value, .UNARY_PREFIX)
+            _emit(" === 'boolean'")
+          }
+
+          else {
+            _emitExpression(value, .LOWEST)
+            _emit(" instanceof ")
+            _emitExpressionOrType(type, type.resolvedType)
+          }
+
+          if Precedence.COMPARE < precedence {
+            _emit(")")
+          }
+        }
+
+        case .INITIALIZER_LIST {
+          _emit("[")
+          _emitCommaSeparatedExpressions(node.firstChild, null)
+          _emit("]")
+        }
+
+        case .INITIALIZER_MAP {
+          if !node.hasChildren {
+            _emit("{}")
+          } else {
+            _emit("{\n")
+            _increaseIndent
+            for child = node.firstChild; child != null; child = child.nextSibling {
+              _emit(_indent)
+              _emitExpression(child.firstValue, .COMMA)
+              _emit(": ")
+              _emitExpression(child.secondValue, .COMMA)
+              _emit(",\n")
+            }
+            _decreaseIndent
+            _emit(_indent + "}")
+          }
+        }
+
+        case .INDEX {
+          _emitExpression(node.indexLeft, .UNARY_POSTFIX)
+          _emit("[")
+          _emitExpression(node.indexRight, .LOWEST)
+          _emit("]")
+        }
+
+        case .ASSIGN_INDEX {
+          if Precedence.ASSIGN < precedence {
+            _emit("(")
+          }
+          _emitExpression(node.assignIndexLeft, .UNARY_POSTFIX)
+          _emit("[")
+          _emitExpression(node.assignIndexCenter, .LOWEST)
+          _emit("] = ")
+          _emitExpression(node.assignIndexRight, .ASSIGN)
+          if Precedence.ASSIGN < precedence {
+            _emit(")")
+          }
+        }
+
+        case .PARAMETERIZE {
+          var value = node.parameterizeValue
+          if value.isType {
+            _emitType(node.resolvedType)
+          } else {
+            _emitExpression(value, precedence)
+            _emit("<")
+            _emitCommaSeparatedExpressions(value.nextSibling, null)
+            _emit(">")
+          }
+        }
+
+        case .SEQUENCE {
+          if Precedence.COMMA <= precedence {
+            _emit("(")
+          }
+          _emitCommaSeparatedExpressions(node.firstChild, null)
+          if Precedence.COMMA <= precedence {
+            _emit(")")
+          }
+        }
+
+        case .HOOK {
+          if Precedence.ASSIGN < precedence {
+            _emit("(")
+          }
+          _emitExpression(node.hookTest, .LOGICAL_OR)
+          _emit(" ? ")
+          _emitExpression(node.hookTrue, .ASSIGN)
+          _emit(" : ")
+          _emitExpression(node.hookFalse, .ASSIGN)
+          if Precedence.ASSIGN < precedence {
+            _emit(")")
+          }
+        }
+
+        case .LAMBDA {
+          var oldEnclosingFunction = _enclosingFunction
+          _enclosingFunction = symbol.asFunctionSymbol
+          _emitArgumentList(symbol.asFunctionSymbol)
+          _emit(" =>")
+          _emitBlock(symbol.asFunctionSymbol.block)
+          _enclosingFunction = oldEnclosingFunction
+        }
+
+        case .COMPLEMENT, .NEGATIVE, .NOT, .POSITIVE, .POSTFIX_DECREMENT, .POSTFIX_INCREMENT, .PREFIX_DECREMENT, .PREFIX_INCREMENT {
+          var value = node.unaryValue
+          var info = operatorInfo[kind]
+          var sign = node.sign
+          if info.precedence < precedence {
+            _emit("(")
+          }
+          if !kind.isUnaryPostfix {
+            _emit(info.text)
+
+            # Prevent "x - -1" from becoming "x--1"
+            if sign != .NULL && sign == value.sign {
+              _emit(" ")
+            }
+          }
+          _emitExpression(value, info.precedence)
+          if kind.isUnaryPostfix {
+            _emit(info.text)
+          }
+          if info.precedence < precedence {
+            _emit(")")
+          }
+        }
+
+        default {
+          if kind.isBinary {
+            var left = node.binaryLeft
+            var right = node.binaryRight
+            var info = operatorInfo[kind]
+            if info.precedence < precedence {
+              _emit("(")
+            }
+            _emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity))
+            _emit(" " + info.text + " ")
+            _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
+            if info.precedence < precedence {
+              _emit(")")
+            }
+          }
+
+          else {
+            assert(false)
+          }
+        }
+      }
+    }
+  }
+
+  namespace TypeScriptEmitter {
+    def _shouldFlattenNamespace(symbol Symbol) bool {
+      return symbol.kind == .OBJECT_NAMESPACE && !symbol.name.startsWith("in_")
+    }
+
+    def _isCompactNodeKind(kind NodeKind) bool {
+      return kind == .EXPRESSION || kind == .VARIABLES || kind.isJump
+    }
+
+    def _fullName(symbol Symbol) string {
+      var parent = symbol.parent
+      if parent != null && parent.kind != .OBJECT_GLOBAL && (!_shouldFlattenNamespace(parent) || parent.isImported) && !symbol.kind.isParameter {
+        var enclosingName = _fullName(parent)
+        if symbol.kind == .FUNCTION_CONSTRUCTOR {
+          return enclosingName
+        }
+        return enclosingName + "." + _mangleName(symbol)
+      }
+      return _mangleName(symbol)
+    }
+
+    def _mangleName(symbol Symbol) string {
+      symbol = symbol.forwarded
+      if symbol.kind == .FUNCTION_CONSTRUCTOR {
+        symbol = symbol.parent
+      }
+      if !symbol.isImportedOrExported && symbol.name in _isKeyword {
+        return "_" + symbol.name
+      }
+      return symbol.name
+    }
+
+    # https://github.com/Microsoft/TypeScript/issues/2536
+    const _isKeyword = {
+      # Reserved Words
+      "break": 0,
+      "case": 0,
+      "catch": 0,
+      "class": 0,
+      "const": 0,
+      "continue": 0,
+      "debugger": 0,
+      "default": 0,
+      "delete": 0,
+      "do": 0,
+      "else": 0,
+      "enum": 0,
+      "export": 0,
+      "extends": 0,
+      "false": 0,
+      "finally": 0,
+      "for": 0,
+      "function": 0,
+      "if": 0,
+      "implements": 0,
+      "import": 0,
+      "in": 0,
+      "instanceof": 0,
+      "interface": 0,
+      "namespace": 0,
+      "new": 0,
+      "null": 0,
+      "return": 0,
+      "super": 0,
+      "switch": 0,
+      "this": 0,
+      "throw": 0,
+      "true": 0,
+      "try": 0,
+      "typeof": 0,
+      "var": 0,
+      "void": 0,
+      "while": 0,
+      "with": 0,
+
+      # Other special names that must be avoided
+      "arguments": 0,
+      "Symbol": 0,
+    }
+  }
+}

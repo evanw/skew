@@ -984,6 +984,7 @@ namespace Skew.Resolving {
       }
 
       var strings = VariableSymbol.new(.VARIABLE_GLOBAL, parent.scope.generateName("_strings"))
+      strings.range = parent.range
       strings.initializeWithType(_cache.createListType(_cache.stringType))
       strings.value = names
       strings.flags |= .IS_PROTECTED | .IS_CONST

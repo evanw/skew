@@ -25,8 +25,18 @@ if TARGET == .JAVASCRIPT {
     }
 
     def writeFile(path string, contents string) bool {
+      const fs = dynamic.require("fs")
+      const p = dynamic.require("path")
+      var mkdir_p fn(string)
+      mkdir_p = dir => {
+        if dir != p.dirname(dir) {
+          mkdir_p(p.dirname(dir))
+          try { fs.mkdirSync(dir) }
+        }
+      }
+      mkdir_p(p.dirname(path))
       try {
-        dynamic.require("fs").writeFileSync(path, contents)
+        fs.writeFileSync(path, contents)
         return true
       }
       return false

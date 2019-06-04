@@ -88,6 +88,7 @@ namespace Skew.Motion {
 
         else {
           object = ObjectSymbol.new(.OBJECT_NAMESPACE, common.scope.generateName(name))
+          object.range = parent.range
           object.resolvedType = Type.new(.SYMBOL, object)
           object.state = .INITIALIZED
           object.scope = ObjectScope.new(common.scope, object)

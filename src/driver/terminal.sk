@@ -417,6 +417,7 @@ namespace Skew {
   const VALID_TARGETS = {
     "cpp": CPlusPlusTarget.new,
     "cs": CSharpTarget.new,
+    "ts": TypeScriptTarget.new,
     "js": JavaScriptTarget.new,
     "lisp-tree": LispTreeTarget.new,
   }

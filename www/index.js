@@ -9,6 +9,7 @@
 
   var targets = [
     {name: 'JavaScript', option: 'js', extension: 'js'},
+    {name: 'TypeScript', option: 'ts', extension: 'ts'},
     {name: 'C#', option: 'c#', extension: 'cs'},
     {name: 'C++', option: 'c++', extension: 'cpp'},
     {name: 'Lisp Tree', option: 'lisp-tree', extension: 'lisp'},
