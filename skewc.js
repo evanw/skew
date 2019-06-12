@@ -5011,50 +5011,6 @@
     }
   };
 
-  Skew.JavaScriptEmitter.prototype._assignSourceIfNoSideEffects = function(node) {
-    if (node.kind == Skew.NodeKind.ASSIGN) {
-      var right = node.binaryRight();
-      return !node.binaryLeft().hasNoSideEffects() ? null : right.kind == Skew.NodeKind.ASSIGN || right.kind == Skew.NodeKind.ASSIGN_INDEX ? this._assignSourceIfNoSideEffects(right) : right.hasNoSideEffects() ? right : null;
-    }
-
-    if (node.kind == Skew.NodeKind.ASSIGN_INDEX) {
-      var right1 = node.assignIndexRight();
-      return !node.assignIndexLeft().hasNoSideEffects() || !node.assignIndexCenter().hasNoSideEffects() ? null : right1.kind == Skew.NodeKind.ASSIGN || right1.kind == Skew.NodeKind.ASSIGN_INDEX ? this._assignSourceIfNoSideEffects(right1) : right1.hasNoSideEffects() ? right1 : null;
-    }
-
-    return null;
-  };
-
-  Skew.JavaScriptEmitter.prototype._peepholeMangleSequence = function(node) {
-    assert(node.kind == Skew.NodeKind.SEQUENCE);
-
-    // "a = 0, b = 0, c = 0;" => "a = b = c = 0;"
-    // "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
-    // "a = 0, b = 0, c = 1, d = 1;" => "a = b = 0, c = d = 1;"
-    for (var child = node.lastChild(); child != null; child = child.previousSibling()) {
-      var childRight = this._assignSourceIfNoSideEffects(child);
-
-      if (childRight != null) {
-        while (true) {
-          var previous = child.previousSibling();
-
-          if (previous == null) {
-            break;
-          }
-
-          var previousRight = this._assignSourceIfNoSideEffects(previous);
-
-          if (previousRight == null || !previousRight.looksTheSameAs(childRight)) {
-            break;
-          }
-
-          previousRight.become(child.remove());
-          child = previous;
-        }
-      }
-    }
-  };
-
   Skew.JavaScriptEmitter.prototype._peepholeMangleBinary = function(node) {
     var kind = node.kind;
     var left = node.binaryLeft();
@@ -5421,7 +5377,6 @@
 
           else if (previous != null && previous.kind == Skew.NodeKind.EXPRESSION) {
             var sequence = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.expressionValue().remove());
-            this._peepholeMangleSequence(sequence);
             child.become(Skew.Node.createExpression(sequence));
           }
           break;
@@ -5447,7 +5402,6 @@
             // "a; return b;" => "return a, b;"
             else if (child.returnValue() != null && previous.kind == Skew.NodeKind.EXPRESSION) {
               var sequence1 = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.returnValue().remove());
-              this._peepholeMangleSequence(sequence1);
               child.become(Skew.Node.createReturn(sequence1));
             }
 
@@ -5470,7 +5424,6 @@
             // "a; if (b) c;" => "if (a, b) c;"
             else if (previous.kind == Skew.NodeKind.EXPRESSION) {
               var sequence2 = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.ifTest().cloneAndStealChildren());
-              this._peepholeMangleSequence(sequence2);
               child.ifTest().replaceWith(sequence2);
             }
 
@@ -5524,7 +5477,6 @@
                 // "a(); if (b) return; c();" => "a(); if (!b) c();" => "a(); !b && c();" => "a(), !b && c();"
                 if (child.kind == Skew.NodeKind.EXPRESSION && previous != null && previous.kind == Skew.NodeKind.EXPRESSION) {
                   var sequence3 = Skew.Node.createSequence2(previous.remove().expressionValue().remove(), child.expressionValue().remove());
-                  this._peepholeMangleSequence(sequence3);
                   child.become(Skew.Node.createExpression(sequence3));
                 }
 

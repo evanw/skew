@@ -2051,53 +2051,6 @@ namespace Skew {
       }
     }
 
-    def _assignSourceIfNoSideEffects(node Node) Node {
-      if node.kind == .ASSIGN {
-        var right = node.binaryRight
-        return
-          !node.binaryLeft.hasNoSideEffects ? null :
-          right.kind == .ASSIGN || right.kind == .ASSIGN_INDEX ? _assignSourceIfNoSideEffects(right) :
-          right.hasNoSideEffects ? right :
-          null
-      }
-
-      if node.kind == .ASSIGN_INDEX {
-        var right = node.assignIndexRight
-        return
-          !node.assignIndexLeft.hasNoSideEffects || !node.assignIndexCenter.hasNoSideEffects ? null :
-          right.kind == .ASSIGN || right.kind == .ASSIGN_INDEX ? _assignSourceIfNoSideEffects(right) :
-          right.hasNoSideEffects ? right :
-          null
-      }
-
-      return null
-    }
-
-    def _peepholeMangleSequence(node Node) {
-      assert(node.kind == .SEQUENCE)
-
-      # "a = 0, b = 0, c = 0;" => "a = b = c = 0;"
-      # "a = 0, b[c] = 0, d = 0;" => "a = b[c] = d = 0;"
-      # "a = 0, b = 0, c = 1, d = 1;" => "a = b = 0, c = d = 1;"
-      for child = node.lastChild; child != null; child = child.previousSibling {
-        var childRight = _assignSourceIfNoSideEffects(child)
-        if childRight != null {
-          while true {
-            var previous = child.previousSibling
-            if previous == null {
-              break
-            }
-            var previousRight = _assignSourceIfNoSideEffects(previous)
-            if previousRight == null || !previousRight.looksTheSameAs(childRight) {
-              break
-            }
-            previousRight.become(child.remove)
-            child = previous
-          }
-        }
-      }
-    }
-
     def _peepholeMangleBinary(node Node) {
       var kind = node.kind
       var left = node.binaryLeft
@@ -2460,7 +2413,6 @@ namespace Skew {
               child.remove
             } else if previous != null && previous.kind == .EXPRESSION {
               var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.expressionValue.remove)
-              _peepholeMangleSequence(sequence)
               child.become(Node.createExpression(sequence))
             }
           }
@@ -2482,7 +2434,6 @@ namespace Skew {
               # "a; return b;" => "return a, b;"
               else if child.returnValue != null && previous.kind == .EXPRESSION {
                 var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.returnValue.remove)
-                _peepholeMangleSequence(sequence)
                 child.become(Node.createReturn(sequence))
               }
 
@@ -2504,7 +2455,6 @@ namespace Skew {
               # "a; if (b) c;" => "if (a, b) c;"
               else if previous.kind == .EXPRESSION {
                 var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.ifTest.cloneAndStealChildren)
-                _peepholeMangleSequence(sequence)
                 child.ifTest.replaceWith(sequence)
               }
 
@@ -2549,7 +2499,6 @@ namespace Skew {
                   # "a(); if (b) return; c();" => "a(); if (!b) c();" => "a(); !b && c();" => "a(), !b && c();"
                   if child.kind == .EXPRESSION && previous != null && previous.kind == .EXPRESSION {
                     var sequence = Node.createSequence(previous.remove.expressionValue.remove, child.expressionValue.remove)
-                    _peepholeMangleSequence(sequence)
                     child.become(Node.createExpression(sequence))
                   }
                   return
