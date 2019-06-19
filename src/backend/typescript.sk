@@ -13,8 +13,15 @@ namespace Skew {
   }
 
   class TypeScriptEmitter : Emitter {
+    enum SpecialVariable {
+      NONE
+      AS_STRING
+      IS_INT
+    }
+
     const _options CompilerOptions
     const _cache TypeCache
+    const _specialVariables IntMap<VariableSymbol> = {}
     var _previousNode Node = null
     var _previousSymbol Symbol = null
     var _namespaceStack List<Symbol> = []
@@ -33,6 +40,17 @@ namespace Skew {
       if entryPoint != null {
         entryPoint.name = "main"
       }
+
+      # Load special-cased variables
+      for variable in global.variables {
+        var special = _specialVariableMap.get(variable.name, .NONE)
+        if special != .NONE {
+          _specialVariables[special] = variable
+          variable.flags |= .IS_EXPORTED
+        }
+      }
+      assert(SpecialVariable.AS_STRING in _specialVariables)
+      assert(SpecialVariable.IS_INT in _specialVariables)
 
       # Avoid emitting unnecessary stuff
       shakingPass(global, entryPoint, .USE_TYPES)
@@ -159,6 +177,13 @@ namespace Skew {
         _finalizeEmittedFile
         _createSource(_options.outputFile, .ALWAYS_EMIT)
       }
+    }
+
+    def _specialVariable(name SpecialVariable) VariableSymbol {
+      assert(name in _specialVariables)
+      var variable = _specialVariables[name]
+      _handleSymbol(variable)
+      return variable
     }
 
     def _replaceReturnsWithVariable(node Node, variable VariableSymbol) {
@@ -980,7 +1005,7 @@ namespace Skew {
           }
 
           # Cast to int
-          else if unwrappedType == _cache.intType {
+          else if _cache.isInteger(unwrappedType) {
             _emitExpression(Node.createBinary(.BITWISE_OR, value.remove, Node.createInt(0).withType(_cache.intType)).withType(_cache.intType), precedence)
           }
 
@@ -991,7 +1016,7 @@ namespace Skew {
 
           # Cast to string
           else if unwrappedType == _cache.stringType {
-            _emitExpression(Node.createBinary(.ADD, value.remove, Node.createString("").withType(_cache.stringType)).withType(_cache.stringType), precedence)
+            _emitExpression(Node.createSymbolCall(_specialVariable(.AS_STRING)).appendChild(value.remove).withType(_cache.stringType), precedence)
           }
 
           # Only emit a cast if the underlying types are different
@@ -1018,6 +1043,11 @@ namespace Skew {
           var type = node.typeCheckType
           var targetType = _cache.unwrappedType(type.resolvedType)
 
+          if _cache.isInteger(targetType) {
+            _emitExpression(Node.createSymbolCall(_specialVariable(.IS_INT)).appendChild(value.remove).withType(_cache.boolType), precedence)
+            return
+          }
+
           if Precedence.COMPARE < precedence {
             _emit("(")
           }
@@ -1043,7 +1073,11 @@ namespace Skew {
           else {
             _emitExpression(value, .LOWEST)
             _emit(" instanceof ")
-            _emitExpressionOrType(type, type.resolvedType)
+            if type.resolvedType == .DYNAMIC {
+              _emitExpression(type, .LOWEST)
+            } else {
+              _emitExpressionOrType(type, type.resolvedType)
+            }
           }
 
           if Precedence.COMPARE < precedence {
@@ -1272,6 +1306,11 @@ namespace Skew {
       # Other special names that must be avoided
       "arguments": 0,
       "Symbol": 0,
+    }
+
+    const _specialVariableMap = {
+      "__asString": SpecialVariable.AS_STRING,
+      "__isInt": SpecialVariable.IS_INT,
     }
   }
 }
