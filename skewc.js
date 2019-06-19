@@ -7442,8 +7442,13 @@
     }
   };
 
+  Skew.TypeScriptEmitter._isInsideNamespaceOrGlobal = function(symbol) {
+    var parent = symbol.parent;
+    return parent != null && (parent.kind == Skew.SymbolKind.OBJECT_GLOBAL || parent.kind == Skew.SymbolKind.OBJECT_NAMESPACE && Skew.TypeScriptEmitter._isInsideNamespaceOrGlobal(parent));
+  };
+
   Skew.TypeScriptEmitter._shouldFlattenNamespace = function(symbol) {
-    return symbol.kind == Skew.SymbolKind.OBJECT_NAMESPACE && !in_string.startsWith(symbol.name, 'in_');
+    return symbol.kind == Skew.SymbolKind.OBJECT_NAMESPACE && !in_string.startsWith(symbol.name, 'in_') && Skew.TypeScriptEmitter._isInsideNamespaceOrGlobal(symbol);
   };
 
   Skew.TypeScriptEmitter._isCompactNodeKind = function(kind) {

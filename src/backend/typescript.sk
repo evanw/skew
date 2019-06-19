@@ -1190,8 +1190,13 @@ namespace Skew {
   }
 
   namespace TypeScriptEmitter {
+    def _isInsideNamespaceOrGlobal(symbol Symbol) bool {
+      var parent = symbol.parent
+      return parent != null && (parent.kind == .OBJECT_GLOBAL || parent.kind == .OBJECT_NAMESPACE && _isInsideNamespaceOrGlobal(parent))
+    }
+
     def _shouldFlattenNamespace(symbol Symbol) bool {
-      return symbol.kind == .OBJECT_NAMESPACE && !symbol.name.startsWith("in_")
+      return symbol.kind == .OBJECT_NAMESPACE && !symbol.name.startsWith("in_") && _isInsideNamespaceOrGlobal(symbol)
     }
 
     def _isCompactNodeKind(kind NodeKind) bool {
