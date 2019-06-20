@@ -317,12 +317,14 @@ class List {
 }
 
 namespace List {
+  @alwaysinline
   def new List<T> {
     return [] as dynamic
   }
 }
 
 namespace StringMap {
+  @alwaysinline
   def new StringMap<T> {
     return dynamic.Map.new
   }
@@ -385,6 +387,7 @@ class StringMap {
 }
 
 namespace IntMap {
+  @alwaysinline
   def new IntMap<T> {
     return dynamic.Map.new
   }
