@@ -23647,6 +23647,11 @@
     symbol.scope = target.scope;
     symbol.parent = parent;
 
+    // This is a heuristic for getting the range to be from the primary definition
+    if (symbol.kind == target.kind && symbol.variables.length > target.variables.length) {
+      target.range = symbol.range;
+    }
+
     if (symbol.parameters != null) {
       for (var i = 0, list = symbol.parameters, count = list.length; i < count; i = i + 1 | 0) {
         var parameter = in_List.get(list, i);

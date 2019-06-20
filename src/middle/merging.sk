@@ -20,6 +20,11 @@ namespace Skew.Merging {
     symbol.scope = target.scope
     symbol.parent = parent
 
+    # This is a heuristic for getting the range to be from the primary definition
+    if symbol.kind == target.kind && symbol.variables.count > target.variables.count {
+      target.range = symbol.range
+    }
+
     if symbol.parameters != null {
       for parameter in symbol.parameters {
         parameter.scope = parent.scope
