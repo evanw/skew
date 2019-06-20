@@ -1357,7 +1357,7 @@ namespace Skew {
     }
 
     def _shouldFlattenNamespace(symbol Symbol) bool {
-      return symbol.kind == .OBJECT_NAMESPACE && !symbol.name.startsWith("in_") && _isInsideNamespaceOrGlobal(symbol)
+      return symbol.kind == .OBJECT_NAMESPACE && _isInsideNamespaceOrGlobal(symbol)
     }
 
     def _isCompactNodeKind(kind NodeKind) bool {
@@ -1383,6 +1383,14 @@ namespace Skew {
       }
       if !symbol.isImportedOrExported && symbol.name in _isKeyword {
         return "_" + symbol.name
+      }
+      var parent = symbol.parent
+      if parent != null && parent.kind == .OBJECT_NAMESPACE && parent.name.startsWith("in_") {
+        var prefix = _mangleName(parent)
+        if prefix.startsWith("in_") {
+          prefix = prefix.slice(3)
+        }
+        return prefix + "_" + symbol.name
       }
       return symbol.name
     }

@@ -7623,7 +7623,7 @@
   };
 
   Skew.TypeScriptEmitter._shouldFlattenNamespace = function(symbol) {
-    return symbol.kind == Skew.SymbolKind.OBJECT_NAMESPACE && !in_string.startsWith(symbol.name, 'in_') && Skew.TypeScriptEmitter._isInsideNamespaceOrGlobal(symbol);
+    return symbol.kind == Skew.SymbolKind.OBJECT_NAMESPACE && Skew.TypeScriptEmitter._isInsideNamespaceOrGlobal(symbol);
   };
 
   Skew.TypeScriptEmitter._isCompactNodeKind = function(kind) {
@@ -7655,6 +7655,18 @@
 
     if (!symbol.isImportedOrExported() && Skew.TypeScriptEmitter._isKeyword.has(symbol.name)) {
       return '_' + symbol.name;
+    }
+
+    var parent = symbol.parent;
+
+    if (parent != null && parent.kind == Skew.SymbolKind.OBJECT_NAMESPACE && in_string.startsWith(parent.name, 'in_')) {
+      var prefix = Skew.TypeScriptEmitter._mangleName(parent);
+
+      if (in_string.startsWith(prefix, 'in_')) {
+        prefix = in_string.slice1(prefix, 3);
+      }
+
+      return prefix + '_' + symbol.name;
     }
 
     return symbol.name;
