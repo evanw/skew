@@ -6050,6 +6050,7 @@
     this._options = _options;
     this._cache = _cache;
     this._specialVariables = new Map();
+    this._ctors = new Map();
     this._previousNode = null;
     this._previousSymbol = null;
     this._namespaceStack = [];
@@ -6128,8 +6129,8 @@
         add(s1);
       }
 
-      for (var i4 = 0, list4 = p.objects, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
-        var s2 = in_List.get(list4, i4);
+      for (var i3 = 0, list3 = p.objects, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
+        var s2 = in_List.get(list3, i3);
 
         if (Skew.TypeScriptEmitter._shouldFlattenNamespace(s2)) {
           addAll(s2);
@@ -6140,33 +6141,20 @@
 
           // There can only be one constructor in TypeScript
           if (s2.kind == Skew.SymbolKind.OBJECT_CLASS && !s2.isImported()) {
-            var count = 0;
+            var ctors = s2.functions.filter(function(f) {
+              return f.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
+            });
 
-            for (var i3 = 0, list3 = s2.functions, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-              var f = in_List.get(list3, i3);
-
-              if (f.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
-                count = count + 1 | 0;
-
-                if (count > 1) {
-                  f.kind = Skew.SymbolKind.FUNCTION_GLOBAL;
-
-                  if (f.block != null) {
-                    var Object_create = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('create')).appendChild(new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('Object')).withType(Skew.Type.DYNAMIC)).withType(Skew.Type.DYNAMIC);
-                    var Class_prototype = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('prototype')).appendChild(Skew.Node.createSymbolReference(s2).withType(Skew.Type.DYNAMIC)).withType(Skew.Type.DYNAMIC);
-                    f.$this.kind = Skew.SymbolKind.VARIABLE_LOCAL;
-                    f.$this.value = Skew.Node.createCall(Object_create).appendChild(Class_prototype).withType(Skew.Type.DYNAMIC);
-                    f.block.prependChild(new Skew.Node(Skew.NodeKind.VARIABLES).appendChild(Skew.Node.createVariable(f.$this)));
-                    self._replaceReturnsWithVariable(f.block, f.$this);
-
-                    if (!f.block.hasChildren() || f.block.lastChild().kind != Skew.NodeKind.RETURN) {
-                      f.block.appendChild(Skew.Node.createReturn(Skew.Node.createSymbolReference(f.$this)));
-                    }
-                  }
-
-                  f.$this = null;
-                }
-              }
+            if (ctors.length > 1) {
+              s2.functions = s2.functions.filter(function(f) {
+                return f.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
+              });
+              var canUseArgumentCount = ctors.every(function(c1) {
+                return ctors.filter(function(c2) {
+                  return c1.$arguments.length == c2.$arguments.length;
+                }).length == 1;
+              });
+              in_IntMap.set(self._ctors, s2.id, new Skew.TypeScriptEmitter.MultipleCtors(ctors, canUseArgumentCount));
             }
           }
         }
@@ -6243,16 +6231,6 @@
     var variable = in_IntMap.get1(this._specialVariables, name);
     this._handleSymbol(variable);
     return variable;
-  };
-
-  Skew.TypeScriptEmitter.prototype._replaceReturnsWithVariable = function(node, variable) {
-    if (node.kind == Skew.NodeKind.RETURN) {
-      node.become(Skew.Node.createReturn(Skew.Node.createSymbolReference(variable)));
-    }
-
-    for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
-      this._replaceReturnsWithVariable(child, variable);
-    }
   };
 
   Skew.TypeScriptEmitter.prototype._tsFileName = function(skewFile) {
@@ -6464,6 +6442,12 @@
         this._emitVariable(variable);
       }
 
+      var multiple = in_IntMap.get(this._ctors, symbol.id, null);
+
+      if (multiple != null) {
+        this._emitConstructor(symbol, multiple.ctors, multiple.canUseArgumentCount);
+      }
+
       for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
         var $function = in_List.get(list2, i2);
         this._emitFunction($function);
@@ -6500,6 +6484,151 @@
 
       this._decreaseIndent();
       this._emit(this._indent + '}\n');
+    }
+  };
+
+  Skew.TypeScriptEmitter.prototype._emitConstructor = function(object, ctors, canUseArgumentCount) {
+    // Optimize for standard TypeScript idioms if we can
+    if (canUseArgumentCount) {
+      // Forward-declare the function signatures
+      this._emitNewlineBeforeSymbol(in_List.first(ctors));
+
+      for (var i = 0, list = ctors, count = list.length; i < count; i = i + 1 | 0) {
+        var ctor = in_List.get(list, i);
+        this._emitComments(ctor.comments);
+        this._emit(this._indent);
+        this._emit('constructor');
+        this._emitTypeParameters(ctor.parameters);
+        this._emitArgumentList(ctor);
+        this._emit(';\n');
+      }
+
+      this._emitNewlineAfterSymbol(in_List.first(ctors));
+
+      // Define the implementation
+      this._emitNewlineBeforeSymbol(in_List.first(ctors));
+      this._emit(this._indent);
+      this._emit('constructor() {\n');
+      this._increaseIndent();
+
+      for (var i2 = 0, list2 = ctors, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
+        var ctor1 = in_List.get(list2, i2);
+        var block = ctor1.block;
+        var prefix = ctor1 == in_List.first(ctors) ? this._indent : '\n' + this._indent + 'else ';
+        assert(block != null);
+        assert(block.kind == Skew.NodeKind.BLOCK);
+
+        // JavaScript arrow functions have sane capture rules for "this" so no variable insertion is needed
+        if (ctor1.$this != null) {
+          ctor1.$this.name = 'this';
+          ctor1.$this.flags |= Skew.SymbolFlags.IS_EXPORTED;
+        }
+
+        this._enclosingFunction = ctor1;
+        this._emit(prefix + ('if (arguments.length == ' + ctor1.$arguments.length.toString() + ') {\n'));
+        this._increaseIndent();
+
+        if (!(ctor1.$arguments.length == 0)) {
+          this._emit(this._indent + ('let [' + ctor1.$arguments.map(function(arg) {
+            return Skew.TypeScriptEmitter._mangleName(arg);
+          }).join(', ') + ']: ['));
+
+          for (var i1 = 0, list1 = ctor1.$arguments, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+            var arg = in_List.get(list1, i1);
+
+            if (arg != in_List.first(ctor1.$arguments)) {
+              this._emit(', ');
+            }
+
+            this._emitExpressionOrType(arg.type, arg.resolvedType);
+          }
+
+          this._emit('] = arguments as any;\n');
+        }
+
+        this._emitStatements(block);
+        this._decreaseIndent();
+        this._emit(this._indent + '}\n');
+        this._enclosingFunction = null;
+      }
+
+      this._decreaseIndent();
+      this._emit(this._indent);
+      this._emit('}\n');
+      this._emitNewlineAfterSymbol(in_List.first(ctors));
+    }
+
+    // Otherwise, fall back to something that is still correct: disambiguating with an index
+    else {
+      // Forward-declare the function signatures
+      this._emitNewlineBeforeSymbol(in_List.first(ctors));
+
+      for (var i4 = 0, list4 = ctors, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
+        var ctor2 = in_List.get(list4, i4);
+        this._emitComments(ctor2.comments);
+        this._emit(this._indent);
+        this._emit('constructor');
+        this._emitTypeParameters(ctor2.parameters);
+        this._emit('(_: ' + ctors.indexOf(ctor2).toString());
+
+        for (var i3 = 0, list3 = ctor2.$arguments, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
+          var arg1 = in_List.get(list3, i3);
+          this._emit(', ' + Skew.TypeScriptEmitter._mangleName(arg1) + ': ');
+          this._emitExpressionOrType(arg1.type, arg1.resolvedType);
+        }
+
+        this._emit(');\n');
+      }
+
+      this._emitNewlineAfterSymbol(in_List.first(ctors));
+
+      // Define the implementation
+      this._emitNewlineBeforeSymbol(in_List.first(ctors));
+      this._emit(this._indent);
+      this._emit('constructor() {\n');
+      this._increaseIndent();
+
+      for (var i6 = 0, list6 = ctors, count6 = list6.length; i6 < count6; i6 = i6 + 1 | 0) {
+        var ctor3 = in_List.get(list6, i6);
+        var block1 = ctor3.block;
+        var prefix1 = ctor3 == in_List.first(ctors) ? this._indent : '\n' + this._indent + 'else ';
+        assert(block1 != null);
+        assert(block1.kind == Skew.NodeKind.BLOCK);
+
+        // JavaScript arrow functions have sane capture rules for "this" so no variable insertion is needed
+        if (ctor3.$this != null) {
+          ctor3.$this.name = 'this';
+          ctor3.$this.flags |= Skew.SymbolFlags.IS_EXPORTED;
+        }
+
+        this._enclosingFunction = ctor3;
+        this._emit(prefix1 + ('if (arguments[0] == ' + ctors.indexOf(ctor3).toString() + ') {\n'));
+        this._increaseIndent();
+
+        if (!(ctor3.$arguments.length == 0)) {
+          this._emit(this._indent + ('let [' + ctor3.$arguments.map(function(arg) {
+            return ', ' + Skew.TypeScriptEmitter._mangleName(arg);
+          }).join('') + ']: [number'));
+
+          for (var i5 = 0, list5 = ctor3.$arguments, count5 = list5.length; i5 < count5; i5 = i5 + 1 | 0) {
+            var arg2 = in_List.get(list5, i5);
+            this._emit(', ');
+            this._emitExpressionOrType(arg2.type, arg2.resolvedType);
+          }
+
+          this._emit('] = arguments as any;\n');
+        }
+
+        this._emitStatements(block1);
+        this._decreaseIndent();
+        this._emit(this._indent + '}\n');
+        this._enclosingFunction = null;
+      }
+
+      this._decreaseIndent();
+      this._emit(this._indent);
+      this._emit('}\n');
+      this._emitNewlineAfterSymbol(in_List.first(ctors));
     }
   };
 
@@ -6580,7 +6709,7 @@
       this._emit(Skew.TypeScriptEmitter._mangleName(symbol) + ': ');
       this._emitExpressionOrType(symbol.type, symbol.resolvedType);
 
-      if (symbol.value != null) {
+      if (symbol.value != null && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
         this._emit(' = ');
         this._emitExpression(symbol.value, Skew.Precedence.COMMA);
       }
@@ -7183,6 +7312,19 @@
         }
 
         this._emit('(');
+
+        if (symbol != null && symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+          var multiple = in_IntMap.get(this._ctors, symbol.parent.id, null);
+
+          if (multiple != null && !multiple.canUseArgumentCount) {
+            this._emit(multiple.ctors.indexOf(symbol).toString());
+
+            if (value.nextSibling() != null) {
+              this._emit(', ');
+            }
+          }
+        }
+
         this._emitCommaSeparatedExpressions(value.nextSibling(), null);
         this._emit(')');
         break;
@@ -7517,6 +7659,11 @@
     }
 
     return symbol.name;
+  };
+
+  Skew.TypeScriptEmitter.MultipleCtors = function(ctors, canUseArgumentCount) {
+    this.ctors = ctors;
+    this.canUseArgumentCount = canUseArgumentCount;
   };
 
   Skew.TypeScriptEmitter.SpecialVariable = {
@@ -20123,40 +20270,6 @@
     return new Skew.CPlusPlusEmitter(context.options, context.cache);
   };
 
-  Skew.JavaScriptTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.JavaScriptTarget, Skew.CompilerTarget);
-
-  Skew.JavaScriptTarget.prototype.stopAfterResolve = function() {
-    return false;
-  };
-
-  Skew.JavaScriptTarget.prototype.supportsNestedTypes = function() {
-    return true;
-  };
-
-  Skew.JavaScriptTarget.prototype.removeSingletonInterfaces = function() {
-    return true;
-  };
-
-  Skew.JavaScriptTarget.prototype.stringEncoding = function() {
-    return Unicode.Encoding.UTF16;
-  };
-
-  Skew.JavaScriptTarget.prototype.editOptions = function(options) {
-    options.define('TARGET', 'JAVASCRIPT');
-  };
-
-  Skew.JavaScriptTarget.prototype.includeSources = function(sources) {
-    sources.unshift(new Skew.Source('<native-js>', Skew.NATIVE_LIBRARY_JS));
-  };
-
-  Skew.JavaScriptTarget.prototype.createEmitter = function(context) {
-    return new Skew.JavaScriptEmitter(context, context.options, context.cache);
-  };
-
   Skew.CSharpTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -20193,6 +20306,16 @@
 
   Skew.CSharpTarget.prototype.createEmitter = function(context) {
     return new Skew.CSharpEmitter(context.options, context.cache);
+  };
+
+  Skew.LispTreeTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.LispTreeTarget, Skew.CompilerTarget);
+
+  Skew.LispTreeTarget.prototype.createEmitter = function(context) {
+    return new Skew.LispTreeEmitter(context.options);
   };
 
   Skew.TypeScriptTarget = function() {
@@ -20233,14 +20356,38 @@
     return new Skew.TypeScriptEmitter(context.options, context.cache);
   };
 
-  Skew.LispTreeTarget = function() {
+  Skew.JavaScriptTarget = function() {
     Skew.CompilerTarget.call(this);
   };
 
-  __extends(Skew.LispTreeTarget, Skew.CompilerTarget);
+  __extends(Skew.JavaScriptTarget, Skew.CompilerTarget);
 
-  Skew.LispTreeTarget.prototype.createEmitter = function(context) {
-    return new Skew.LispTreeEmitter(context.options);
+  Skew.JavaScriptTarget.prototype.stopAfterResolve = function() {
+    return false;
+  };
+
+  Skew.JavaScriptTarget.prototype.supportsNestedTypes = function() {
+    return true;
+  };
+
+  Skew.JavaScriptTarget.prototype.removeSingletonInterfaces = function() {
+    return true;
+  };
+
+  Skew.JavaScriptTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF16;
+  };
+
+  Skew.JavaScriptTarget.prototype.editOptions = function(options) {
+    options.define('TARGET', 'JAVASCRIPT');
+  };
+
+  Skew.JavaScriptTarget.prototype.includeSources = function(sources) {
+    sources.unshift(new Skew.Source('<native-js>', Skew.NATIVE_LIBRARY_JS));
+  };
+
+  Skew.JavaScriptTarget.prototype.createEmitter = function(context) {
+    return new Skew.JavaScriptEmitter(context, context.options, context.cache);
   };
 
   Skew.Define = function(name, value) {

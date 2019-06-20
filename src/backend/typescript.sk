@@ -19,9 +19,15 @@ namespace Skew {
       IS_INT
     }
 
+    class MultipleCtors {
+      const ctors List<FunctionSymbol>
+      const canUseArgumentCount bool
+    }
+
     const _options CompilerOptions
     const _cache TypeCache
     const _specialVariables IntMap<VariableSymbol> = {}
+    const _ctors IntMap<MultipleCtors> = {}
     var _previousNode Node = null
     var _previousSymbol Symbol = null
     var _namespaceStack List<Symbol> = []
@@ -97,26 +103,11 @@ namespace Skew {
 
             # There can only be one constructor in TypeScript
             if s.kind == .OBJECT_CLASS && !s.isImported {
-              var count = 0
-              for f in s.functions {
-                if f.kind == .FUNCTION_CONSTRUCTOR {
-                  count++
-                  if count > 1 {
-                    f.kind = .FUNCTION_GLOBAL
-                    if f.block != null {
-                      const Object_create = Node.createDot(Node.createName("Object").withType(.DYNAMIC), "create").withType(.DYNAMIC)
-                      const Class_prototype = Node.createDot(Node.createSymbolReference(s).withType(.DYNAMIC), "prototype").withType(.DYNAMIC)
-                      f.this.kind = .VARIABLE_LOCAL
-                      f.this.value = Node.createCall(Object_create).appendChild(Class_prototype).withType(.DYNAMIC)
-                      f.block.prependChild(Node.createVariables.appendChild(Node.createVariable(f.this)))
-                      _replaceReturnsWithVariable(f.block, f.this)
-                      if !f.block.hasChildren || f.block.lastChild.kind != .RETURN {
-                        f.block.appendChild(Node.createReturn(Node.createSymbolReference(f.this)))
-                      }
-                    }
-                    f.this = null
-                  }
-                }
+              var ctors = s.functions.filter(f => f.kind == .FUNCTION_CONSTRUCTOR)
+              if ctors.count > 1 {
+                s.functions = s.functions.filter(f => f.kind != .FUNCTION_CONSTRUCTOR)
+                const canUseArgumentCount = ctors.all(c1 => ctors.filter(c2 => c1.arguments.count == c2.arguments.count).count == 1)
+                _ctors[s.id] = MultipleCtors.new(ctors, canUseArgumentCount)
               }
             }
           }
@@ -371,6 +362,11 @@ namespace Skew {
           _emitVariable(variable)
         }
 
+        var multiple = _ctors.get(symbol.id, null)
+        if multiple != null {
+          _emitConstructor(symbol, multiple.ctors, multiple.canUseArgumentCount)
+        }
+
         for function in symbol.functions {
           _emitFunction(function)
         }
@@ -403,6 +399,128 @@ namespace Skew {
 
         _decreaseIndent
         _emit(_indent + "}\n")
+      }
+    }
+
+    def _emitConstructor(object ObjectSymbol, ctors List<FunctionSymbol>, canUseArgumentCount bool) {
+      # Optimize for standard TypeScript idioms if we can
+      if canUseArgumentCount {
+        # Forward-declare the function signatures
+        _emitNewlineBeforeSymbol(ctors.first)
+        for ctor in ctors {
+          _emitComments(ctor.comments)
+          _emit(_indent)
+          _emit("constructor")
+          _emitTypeParameters(ctor.parameters)
+          _emitArgumentList(ctor)
+          _emit(";\n")
+        }
+        _emitNewlineAfterSymbol(ctors.first)
+
+        # Define the implementation
+        _emitNewlineBeforeSymbol(ctors.first)
+        _emit(_indent)
+        _emit("constructor() {\n")
+        _increaseIndent
+
+        for ctor in ctors {
+          var block = ctor.block
+          var prefix = ctor == ctors.first ? _indent : "\n\(_indent)else "
+          assert(block != null)
+          assert(block.kind == .BLOCK)
+
+          # JavaScript arrow functions have sane capture rules for "this" so no variable insertion is needed
+          if ctor.this != null {
+            ctor.this.name = "this"
+            ctor.this.flags |= .IS_EXPORTED
+          }
+
+          _enclosingFunction = ctor
+          _emit(prefix + "if (arguments.length == \(ctor.arguments.count)) {\n")
+
+          _increaseIndent
+          if !ctor.arguments.isEmpty {
+            _emit(_indent + "let [\(", ".join(ctor.arguments.map<string>(arg => _mangleName(arg))))]: [")
+            for arg in ctor.arguments {
+              if arg != ctor.arguments.first {
+                _emit(", ")
+              }
+              _emitExpressionOrType(arg.type, arg.resolvedType)
+            }
+            _emit("] = arguments as any;\n")
+          }
+          _emitStatements(block)
+          _decreaseIndent
+
+          _emit(_indent + "}\n")
+          _enclosingFunction = null
+        }
+
+        _decreaseIndent
+        _emit(_indent)
+        _emit("}\n")
+        _emitNewlineAfterSymbol(ctors.first)
+      }
+
+      # Otherwise, fall back to something that is still correct: disambiguating with an index
+      else {
+        # Forward-declare the function signatures
+        _emitNewlineBeforeSymbol(ctors.first)
+        for ctor in ctors {
+          _emitComments(ctor.comments)
+          _emit(_indent)
+          _emit("constructor")
+          _emitTypeParameters(ctor.parameters)
+          _emit("(_: \(ctors.indexOf(ctor))")
+          for arg in ctor.arguments {
+            _emit(", \(_mangleName(arg)): ")
+            _emitExpressionOrType(arg.type, arg.resolvedType)
+          }
+          _emit(");\n")
+        }
+        _emitNewlineAfterSymbol(ctors.first)
+
+        # Define the implementation
+        _emitNewlineBeforeSymbol(ctors.first)
+        _emit(_indent)
+        _emit("constructor() {\n")
+        _increaseIndent
+
+        for ctor in ctors {
+          var block = ctor.block
+          var prefix = ctor == ctors.first ? _indent : "\n\(_indent)else "
+          assert(block != null)
+          assert(block.kind == .BLOCK)
+
+          # JavaScript arrow functions have sane capture rules for "this" so no variable insertion is needed
+          if ctor.this != null {
+            ctor.this.name = "this"
+            ctor.this.flags |= .IS_EXPORTED
+          }
+
+          _enclosingFunction = ctor
+          _emit(prefix + "if (arguments[0] == \(ctors.indexOf(ctor))) {\n")
+
+          _increaseIndent
+          if !ctor.arguments.isEmpty {
+            _emit(_indent + "let [\("".join(ctor.arguments.map<string>(arg => ", " + _mangleName(arg))))]: [number")
+            for arg in ctor.arguments {
+              _emit(", ")
+              _emitExpressionOrType(arg.type, arg.resolvedType)
+            }
+            _emit("] = arguments as any;\n")
+          }
+          _emitStatements(block)
+          _decreaseIndent
+
+          _emit(_indent + "}\n")
+          _enclosingFunction = null
+        }
+
+        _decreaseIndent
+        _emit(_indent)
+        _emit("}\n")
+        _emitNewlineAfterSymbol(ctors.first)
       }
     }
 
@@ -465,7 +583,7 @@ namespace Skew {
 
         _emit(_mangleName(symbol) + ": ")
         _emitExpressionOrType(symbol.type, symbol.resolvedType)
-        if symbol.value != null {
+        if symbol.value != null && symbol.kind != .VARIABLE_INSTANCE {
           _emit(" = ")
           _emitExpression(symbol.value, .COMMA)
         }
@@ -975,6 +1093,15 @@ namespace Skew {
           }
 
           _emit("(")
+          if symbol != null && symbol.kind == .FUNCTION_CONSTRUCTOR {
+            var multiple = _ctors.get(symbol.parent.id, null)
+            if multiple != null && !multiple.canUseArgumentCount {
+              _emit("\(multiple.ctors.indexOf(symbol as FunctionSymbol))")
+              if value.nextSibling != null {
+                _emit(", ")
+              }
+            }
+          }
           _emitCommaSeparatedExpressions(value.nextSibling, null)
           _emit(")")
         }
