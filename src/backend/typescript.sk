@@ -358,10 +358,6 @@ namespace Skew {
         _increaseIndent
         _expectedNextEnumValue = 0
 
-        for variable in symbol.variables {
-          _emitVariable(variable)
-        }
-
         var multiple = _ctors.get(symbol.id, null)
         if multiple != null {
           _emitConstructor(symbol, multiple.ctors, multiple.canUseArgumentCount)
@@ -369,6 +365,10 @@ namespace Skew {
 
         for function in symbol.functions {
           _emitFunction(function)
+        }
+
+        for variable in symbol.variables {
+          _emitVariable(variable)
         }
 
         _decreaseIndent
@@ -388,12 +388,12 @@ namespace Skew {
         }
 
         if symbol.kind == .OBJECT_WRAPPED {
-          for variable in symbol.variables {
-            _emitVariable(variable)
-          }
-
           for function in symbol.functions {
             _emitFunction(function)
+          }
+
+          for variable in symbol.variables {
+            _emitVariable(variable)
           }
         }
 

@@ -6436,21 +6436,20 @@
       this._emit(' {\n');
       this._increaseIndent();
       this._expectedNextEnumValue = 0;
-
-      for (var i1 = 0, list1 = symbol.variables, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var variable = in_List.get(list1, i1);
-        this._emitVariable(variable);
-      }
-
       var multiple = in_IntMap.get(this._ctors, symbol.id, null);
 
       if (multiple != null) {
         this._emitConstructor(symbol, multiple.ctors, multiple.canUseArgumentCount);
       }
 
-      for (var i2 = 0, list2 = symbol.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-        var $function = in_List.get(list2, i2);
+      for (var i1 = 0, list1 = symbol.functions, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+        var $function = in_List.get(list1, i1);
         this._emitFunction($function);
+      }
+
+      for (var i2 = 0, list2 = symbol.variables, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
+        var variable = in_List.get(list2, i2);
+        this._emitVariable(variable);
       }
 
       this._decreaseIndent();
@@ -6471,14 +6470,14 @@
       }
 
       if (symbol.kind == Skew.SymbolKind.OBJECT_WRAPPED) {
-        for (var i4 = 0, list4 = symbol.variables, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
-          var variable1 = in_List.get(list4, i4);
-          this._emitVariable(variable1);
+        for (var i4 = 0, list4 = symbol.functions, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
+          var function1 = in_List.get(list4, i4);
+          this._emitFunction(function1);
         }
 
-        for (var i5 = 0, list5 = symbol.functions, count5 = list5.length; i5 < count5; i5 = i5 + 1 | 0) {
-          var function1 = in_List.get(list5, i5);
-          this._emitFunction(function1);
+        for (var i5 = 0, list5 = symbol.variables, count5 = list5.length; i5 < count5; i5 = i5 + 1 | 0) {
+          var variable1 = in_List.get(list5, i5);
+          this._emitVariable(variable1);
         }
       }
 
