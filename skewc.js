@@ -7594,6 +7594,15 @@
         if (Skew.in_NodeKind.isBinary(kind)) {
           var left = node.binaryLeft();
           var right = node.binaryRight();
+
+          // Handle truncating integer division
+          if (node.resolvedType == this._cache.intType && kind == Skew.NodeKind.DIVIDE && node.parent() != null && node.parent().kind != Skew.NodeKind.BITWISE_OR) {
+            var divide = Skew.Node.createBinary(Skew.NodeKind.DIVIDE, left.remove(), right.remove()).withType(this._cache.intType);
+            var zero = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this._cache.intType);
+            this._emitExpression(Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, divide, zero).withType(this._cache.intType), precedence);
+            return;
+          }
+
           var info1 = in_IntMap.get1(Skew.operatorInfo, kind);
 
           if (info1.precedence < precedence) {

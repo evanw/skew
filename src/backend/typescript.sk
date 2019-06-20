@@ -1330,6 +1330,15 @@ namespace Skew {
           if kind.isBinary {
             var left = node.binaryLeft
             var right = node.binaryRight
+
+            # Handle truncating integer division
+            if node.resolvedType == _cache.intType && kind == .DIVIDE && node.parent != null && node.parent.kind != .BITWISE_OR {
+              const divide = Node.createBinary(.DIVIDE, left.remove, right.remove).withType(_cache.intType)
+              const zero = Node.createInt(0).withType(_cache.intType)
+              _emitExpression(Node.createBinary(.BITWISE_OR, divide, zero).withType(_cache.intType), precedence)
+              return
+            }
+
             var info = operatorInfo[kind]
             if info.precedence < precedence {
               _emit("(")
