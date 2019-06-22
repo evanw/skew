@@ -3539,8 +3539,8 @@ def main {
 ", "
 (function() {
   function main() {
-    var x = in_IntMap.$new();
-    var y = in_IntMap.insert(in_IntMap.$new(), 0, 1);
+    var x = new Map();
+    var y = in_IntMap.insert(new Map(), 0, 1);
   }
 
   var in_IntMap = {};
@@ -3553,10 +3553,6 @@ def main {
   in_IntMap.insert = function(self, key, value) {
     in_IntMap.set(self, key, value);
     return self;
-  };
-
-  in_IntMap.$new = function() {
-    return new Map();
   };
 
   main();
