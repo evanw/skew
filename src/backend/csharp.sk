@@ -582,6 +582,8 @@ namespace Skew {
       }
 
       switch node.kind {
+        case .COMMENT_BLOCK {}
+
         case .VARIABLES {
           for child = node.firstChild; child != null; child = child.nextSibling {
             var symbol = child.symbol.asVariableSymbol

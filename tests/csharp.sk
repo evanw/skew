@@ -978,5 +978,49 @@ public class Globals
 }
 ").csharp
 
+# Check block comments before a statement
+test("
+@entry
+def main {
+  # This is
+  # a block
+  # comment
+
+  return
+}
+", "
+public class Globals
+{
+    public static void Main()
+    {
+        // This is
+        // a block
+        // comment
+
+        return;
+    }
+}
+").csharp
+
+# Check trailing block comments
+test("
+@entry
+def main {
+  # This is
+  # a block
+  # comment
+}
+", "
+public class Globals
+{
+    public static void Main()
+    {
+        // This is
+        // a block
+        // comment
+    }
+}
+").csharp
+
   }
 }

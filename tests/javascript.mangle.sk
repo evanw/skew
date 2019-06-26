@@ -2923,5 +2923,63 @@ def main int {
   process.exit(c());
 })();
 ").jsMangle
+
+# Check block comments before a statement
+test("
+@entry
+def main {
+  # This is
+  # a block
+  # comment
+
+  return
+}
+", "
+(function() {
+  function a() {
+    return;
+  }
+
+  a();
+})();
+").jsMangle
+
+# Check trailing block comments
+test("
+@entry
+def main {
+  # This is
+  # a block
+  # comment
+}
+", "
+(function() {
+  function a() {
+  }
+
+  a();
+})();
+").jsMangle
+
+# Check block comments in else statements
+test("
+@export
+def main(x bool) {
+  if x {
+    x = false
+  } else {
+    # This is
+    # a block
+    # comment
+  }
+}
+", "
+(function(b) {
+  b.main = function(a) {
+    a && (a = !1);
+  };
+})(this);
+").jsMangle
+
   }
 }

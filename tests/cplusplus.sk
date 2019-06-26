@@ -2044,5 +2044,41 @@ B::Foo::Foo() : A::Foo::Foo() {
 #endif
 ").cpp
 
+# Check block comments before a statement
+test("
+@entry
+def main {
+  # This is
+  # a block
+  # comment
+
+  return
+}
+", "
+void main() {
+  // This is
+  // a block
+  // comment
+
+  return;
+}
+").cpp
+
+# Check trailing block comments
+test("
+@entry
+def main {
+  # This is
+  # a block
+  # comment
+}
+", "
+void main() {
+  // This is
+  // a block
+  // comment
+}
+").cpp
+
   }
 }

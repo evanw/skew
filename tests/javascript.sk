@@ -3585,12 +3585,88 @@ def main int {
     //#
     return 0;
 
+    //#
+
     //## foo
     return 3;
+
+    //##
   }
 
   process.exit(main());
 })();
+").js
+
+# Check block comments before a statement
+test("
+@entry
+def main {
+  # This is
+  # a block
+  # comment
+
+  return
+}
+", "
+(function() {
+  function main() {
+    // This is
+    // a block
+    // comment
+
+    return;
+  }
+
+  main();
+})();
+").js
+
+# Check trailing block comments
+test("
+@entry
+def main {
+  # This is
+  # a block
+  # comment
+}
+", "
+(function() {
+  function main() {
+    // This is
+    // a block
+    // comment
+  }
+
+  main();
+})();
+").js
+
+# Check block comments in else statements
+test("
+@export
+def main(x bool) {
+  if x {
+    x = false
+  } else {
+    # This is
+    # a block
+    # comment
+  }
+}
+", "
+(function(exports) {
+  exports.main = function(x) {
+    if (x) {
+      x = false;
+    }
+
+    else {
+      // This is
+      // a block
+      // comment
+    }
+  };
+})(this);
 ").js
 
   }

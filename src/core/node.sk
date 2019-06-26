@@ -9,6 +9,7 @@ namespace Skew {
 
     # Statements
     BREAK
+    COMMENT_BLOCK
     CONTINUE
     EXPRESSION
     FOR
@@ -924,6 +925,10 @@ namespace Skew {
 
     def createBreak Node {
       return new(.BREAK)
+    }
+
+    def createCommentBlock Node {
+      return new(.COMMENT_BLOCK)
     }
 
     def createContinue Node {

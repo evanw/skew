@@ -938,7 +938,7 @@ namespace Skew {
       _addMapping(node.range)
       if shouldMinify && !node.hasChildren {
         _emit(";")
-      } else if shouldMinify && node.hasOneChild {
+      } else if shouldMinify && node.hasOneChild && node.firstChild.kind != .COMMENT_BLOCK {
         if after == .AFTER_KEYWORD {
           _emit(" ")
         }
@@ -988,6 +988,8 @@ namespace Skew {
 
     def _emitStatement(node Node) {
       switch node.kind {
+        case .COMMENT_BLOCK {}
+
         case .VARIABLES {
           _emit(_indent)
           _emitVariables(node)
@@ -2188,6 +2190,12 @@ namespace Skew {
       var trueStatement = trueBlock.blockStatement
       var swapped = _peepholeMangleBoolean(test, falseBlock != null || trueStatement != null && trueStatement.kind == .EXPRESSION ? .SWAP : .NO_SWAP)
 
+      # "if (a) b; else ;" => "if (a) b;"
+      if falseBlock != null && !falseBlock.hasChildren {
+        falseBlock.remove
+        falseBlock = null
+      }
+
       if falseBlock != null {
         var falseStatement = falseBlock.blockStatement
 
@@ -2400,6 +2408,11 @@ namespace Skew {
         next = child.nextSibling
 
         switch child.kind {
+          # Make sure we entirely remove blocks only containing comment blocks
+          case .COMMENT_BLOCK {
+            child.remove
+          }
+
           # "var a; var b;" => "var a, b;"
           case .VARIABLES {
             if previous != null && previous.kind == .VARIABLES {

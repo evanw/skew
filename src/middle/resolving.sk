@@ -1299,6 +1299,7 @@ namespace Skew.Resolving {
 
         # Statements
         case .BREAK, .CONTINUE { _resolveJump(node, scope) }
+        case .COMMENT_BLOCK {}
         case .EXPRESSION { _resolveExpression(node, scope) }
         case .FOR { _resolveFor(node, scope) }
         case .FOREACH { _resolveForeach(node, scope) }
