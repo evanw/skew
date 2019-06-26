@@ -6,6 +6,7 @@ namespace Skew {
     GC_STRATEGY
     GLOBALIZE_FUNCTIONS
     HELP
+    IGNORED_COMMENT_WARNING
     INLINE_FUNCTIONS
     JS_MANGLE
     JS_MINIFY
@@ -239,6 +240,7 @@ namespace Skew {
     parser.define(.BOOL, .GLOBALIZE_FUNCTIONS, "--globalize-functions", "Convert instance functions to global functions for better inlining.")
     parser.define(.BOOL, .FIX_ALL, "--fix-all", "Attempt to automatically fix as many errors and warnings as possible. " +
       "THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.")
+    parser.define(.BOOL, .IGNORED_COMMENT_WARNING, "--ignored-comment-warning", "Warn when the compiler doesn't store a comment in the parse tree.")
 
     # Parse the command line arguments
     parser.parse(log, arguments)
@@ -269,6 +271,7 @@ namespace Skew {
     options.jsSourceMap = parser.boolForOption(.JS_SOURCE_MAP, false)
     options.stopAfterResolve = parser.boolForOption(.NO_OUTPUT, false)
     options.verbose = parser.boolForOption(.VERBOSE, false)
+    options.warnAboutIgnoredComments = parser.boolForOption(.IGNORED_COMMENT_WARNING, false)
 
     # Prepare the defines
     if releaseFlag {

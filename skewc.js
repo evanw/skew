@@ -977,6 +977,7 @@
     parser.define(Skew.Options.Type.BOOL, Skew.Option.INLINE_FUNCTIONS, '--inline-functions', 'Uses heuristics to automatically inline simple global functions.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.GLOBALIZE_FUNCTIONS, '--globalize-functions', 'Convert instance functions to global functions for better inlining.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.FIX_ALL, '--fix-all', 'Attempt to automatically fix as many errors and warnings as possible. ' + "THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.IGNORED_COMMENT_WARNING, '--ignored-comment-warning', "Warn when the compiler doesn't store a comment in the parse tree.");
 
     // Parse the command line arguments
     parser.parse(log, $arguments);
@@ -1008,6 +1009,7 @@
     options.jsSourceMap = parser.boolForOption(Skew.Option.JS_SOURCE_MAP, false);
     options.stopAfterResolve = parser.boolForOption(Skew.Option.NO_OUTPUT, false);
     options.verbose = parser.boolForOption(Skew.Option.VERBOSE, false);
+    options.warnAboutIgnoredComments = parser.boolForOption(Skew.Option.IGNORED_COMMENT_WARNING, false);
 
     // Prepare the defines
     if (releaseFlag) {
@@ -11771,6 +11773,10 @@
     }
   };
 
+  Skew.Log.prototype.syntaxWarningIgnoredComment = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'This comment was ignored by the parser'));
+  };
+
   Skew.Log.prototype.syntaxWarningOctal = function(range) {
     var text = range.toString();
 
@@ -12579,14 +12585,25 @@
     }
   };
 
+  Skew.Parsing._warnAboutIgnoredComment = function(context, range) {
+    if (context.warnAboutIgnoredComments) {
+      context.log.syntaxWarningIgnoredComment(range);
+    }
+  };
+
   Skew.Parsing.parseLeadingComments = function(context, parent) {
     var comments = null;
+    var commentsRange = null;
 
     while (context.peek1(Skew.TokenKind.COMMENT)) {
       var range = context.next().range;
 
       if (comments == null) {
         comments = [];
+      }
+
+      if (commentsRange == null) {
+        commentsRange = range;
       }
 
       comments.push(in_string.slice2(range.source.contents, range.start + 1 | 0, range.end));
@@ -12597,7 +12614,12 @@
           parent.appendChild(new Skew.Node(Skew.NodeKind.COMMENT_BLOCK).withComments(comments));
         }
 
+        else {
+          Skew.Parsing._warnAboutIgnoredComment(context, commentsRange);
+        }
+
         comments = null;
+        commentsRange = null;
       }
     }
 
@@ -12759,10 +12781,15 @@
     context.eat(Skew.TokenKind.NEWLINE);
 
     while (!context.peek1(Skew.TokenKind.RIGHT_BRACE)) {
+      var commentsRange = context.current().range;
       var comments = Skew.Parsing.parseLeadingComments(context, null);
 
       // Ignore trailing comments
       if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.peek1(Skew.TokenKind.END_OF_FILE)) {
+        if (comments != null) {
+          Skew.Parsing._warnAboutIgnoredComment(context, commentsRange);
+        }
+
         break;
       }
 
@@ -13103,10 +13130,15 @@
     context.eat(Skew.TokenKind.NEWLINE);
 
     while (!context.peek1(Skew.TokenKind.RIGHT_BRACE) && !context.peek1(Skew.TokenKind.XML_START_CLOSE)) {
+      var commentsRange = context.current().range;
       var comments = Skew.Parsing.parseLeadingComments(context, parent);
 
       // When parsing a C-style switch, stop if it looks like the end of the case
       if (mode == Skew.Parsing.StatementsMode.C_STYLE_SWITCH && (context.peek1(Skew.TokenKind.CASE) || context.peek1(Skew.TokenKind.DEFAULT) || context.peek1(Skew.TokenKind.BREAK))) {
+        if (comments != null) {
+          Skew.Parsing._warnAboutIgnoredComment(context, commentsRange);
+        }
+
         break;
       }
 
@@ -13475,10 +13507,15 @@
 
   Skew.Parsing.parseSymbol = function(context, parent, annotations) {
     // Parse comments before the symbol declaration
+    var commentsRange = context.current().range;
     var comments = Skew.Parsing.parseLeadingComments(context, null);
 
     // Ignore trailing comments
     if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.peek1(Skew.TokenKind.END_OF_FILE)) {
+      if (comments != null) {
+        Skew.Parsing._warnAboutIgnoredComment(context, commentsRange);
+      }
+
       return false;
     }
 
@@ -14510,7 +14547,7 @@
     return pratt;
   };
 
-  Skew.Parsing.parseFile = function(log, tokens, global) {
+  Skew.Parsing.parseFile = function(log, tokens, global, warnAboutIgnoredComments) {
     if (Skew.Parsing.expressionParser == null) {
       Skew.Parsing.expressionParser = Skew.Parsing.createExpressionParser();
     }
@@ -14519,7 +14556,7 @@
       Skew.Parsing.typeParser = Skew.Parsing.createTypeParser();
     }
 
-    var context = new Skew.ParserContext(log, tokens);
+    var context = new Skew.ParserContext(log, tokens, warnAboutIgnoredComments);
     Skew.Parsing.parseSymbols(context, global, null);
     context.expect(Skew.TokenKind.END_OF_FILE);
   };
@@ -14544,11 +14581,12 @@
     LOGICAL: 3
   };
 
-  Skew.ParserContext = function(log, _tokens) {
+  Skew.ParserContext = function(log, _tokens, warnAboutIgnoredComments) {
     this.log = log;
     this.inNonVoidFunction = false;
     this._tokens = _tokens;
     this._index = 0;
+    this.warnAboutIgnoredComments = warnAboutIgnoredComments;
     this._previousSyntaxError = -1;
   };
 
@@ -15273,6 +15311,7 @@
     self.stopAfterResolve = false;
     self.target = new Skew.CompilerTarget();
     self.verbose = false;
+    self.warnAboutIgnoredComments = false;
     self.passes = [
       new Skew.LexingPass(),
       new Skew.ParsingPass(),
@@ -15594,7 +15633,7 @@
   Skew.ParsingPass.prototype.run = function(context) {
     for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
       var tokens = in_List.get(list, i);
-      Skew.Parsing.parseFile(context.log, tokens, context.global);
+      Skew.Parsing.parseFile(context.log, tokens, context.global, context.options.warnAboutIgnoredComments);
     }
   };
 
@@ -24664,18 +24703,19 @@
     FOLD_CONSTANTS: 2,
     GLOBALIZE_FUNCTIONS: 4,
     HELP: 5,
-    INLINE_FUNCTIONS: 6,
-    JS_MANGLE: 7,
-    JS_MINIFY: 8,
-    JS_SOURCE_MAP: 9,
-    MESSAGE_LIMIT: 10,
-    NO_OUTPUT: 11,
-    OUTPUT_DIRECTORY: 12,
-    OUTPUT_FILE: 13,
-    RELEASE: 14,
-    TARGET: 15,
-    VERBOSE: 16,
-    VERSION: 17
+    IGNORED_COMMENT_WARNING: 6,
+    INLINE_FUNCTIONS: 7,
+    JS_MANGLE: 8,
+    JS_MINIFY: 9,
+    JS_SOURCE_MAP: 10,
+    MESSAGE_LIMIT: 11,
+    NO_OUTPUT: 12,
+    OUTPUT_DIRECTORY: 13,
+    OUTPUT_FILE: 14,
+    RELEASE: 15,
+    TARGET: 16,
+    VERBOSE: 17,
+    VERSION: 18
   };
 
   Skew.Options = {};
@@ -25563,9 +25603,14 @@
 
       while (true) {
         context.eat(Skew.TokenKind.NEWLINE);
-        var comments = Skew.Parsing.parseLeadingComments(context, node);
+        var commentsRange = context.current().range;
+        var comments = Skew.Parsing.parseLeadingComments(context, null);
 
         if (context.peek1(end)) {
+          if (comments != null) {
+            Skew.Parsing._warnAboutIgnoredComment(context, commentsRange);
+          }
+
           break;
         }
 

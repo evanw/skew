@@ -157,6 +157,10 @@ namespace Skew {
 
   # Syntax warnings can be thought of as linting
   class Log {
+    def syntaxWarningIgnoredComment(range Range) {
+      append(Diagnostic.warning(range, "This comment was ignored by the parser"))
+    }
+
     def syntaxWarningOctal(range Range) {
       var text = range.toString
       while text.startsWith("0") {
