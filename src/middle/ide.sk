@@ -13,9 +13,12 @@ namespace Skew.IDE {
       }
 
       var text = ""
-      if symbol.comments != null {
-        for comment in symbol.comments {
-          text += "#" + comment
+      if symbol.comments != null && !symbol.comments.isEmpty {
+        var last = symbol.comments.last
+        if !last.hasGapBelow {
+          for line in last.lines {
+            text += "#" + line
+          }
         }
       }
 

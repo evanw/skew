@@ -207,6 +207,12 @@ namespace Skew {
     WAS_NULL_JOIN
   }
 
+  class Comment {
+    const range Range
+    const lines List<string>
+    const hasGapBelow bool
+  }
+
   # Nodes represent executable code (variable initializers and function bodies)
   class Node {
     const id = _createID
@@ -217,7 +223,7 @@ namespace Skew {
     var symbol Symbol = null
     var content Content = null
     var resolvedType Type = null
-    var comments List<string> = null
+    var comments List<Comment> = null
     var _parent Node = null
     var _firstChild Node = null
     var _lastChild Node = null
@@ -372,7 +378,7 @@ namespace Skew {
       return self
     }
 
-    def withComments(value List<string>) Node {
+    def withComments(value List<Comment>) Node {
       assert(comments == null)
       comments = value
       return self

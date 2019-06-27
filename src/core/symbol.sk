@@ -138,7 +138,7 @@ namespace Skew {
     var scope Scope = null # Automatically set by the merging step (resolving step for local variables)
     var state SymbolState = .UNINITIALIZED
     var annotations List<Node> = null
-    var comments List<string> = null
+    var comments List<Comment> = null
     var forwardTo Symbol = null # Set by the interface removal step
     var flags SymbolFlags = 0
     var nextMergedSymbol Symbol = null # This allows traversal of all declarations for IDE tooltips

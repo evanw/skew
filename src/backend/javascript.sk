@@ -729,10 +729,15 @@ namespace Skew {
       _previousNode = node
     }
 
-    def _emitComments(comments List<string>) {
+    def _emitComments(comments List<Comment>) {
       if comments != null && !_minify {
         for comment in comments {
-          _emit(_indent + "//" + comment)
+          for line in comment.lines {
+            _emit(_indent + "//" + line)
+          }
+          if comment.hasGapBelow {
+            _emit("\n")
+          }
         }
       }
     }
