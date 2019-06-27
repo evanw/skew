@@ -147,7 +147,7 @@ namespace Skew {
         }
 
         # Ignore whitespace
-        if yy_act == .WHITESPACE || yy_act == .COMMENT_MULTILINE {
+        if yy_act == .WHITESPACE {
           continue
         }
 

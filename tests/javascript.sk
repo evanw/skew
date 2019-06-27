@@ -3551,7 +3551,7 @@ def main {
 })();
 ").js
 
-# Check multiline comments
+# Check multiline comments (removed)
 test("
 @entry
 def main int {
@@ -3574,15 +3574,25 @@ def main int {
 ", "
 (function() {
   function main() {
-    //#
+    ///
     return 0;
 
-    //#
+    ///
+
+    ////
+    return 1;
+
+    ////
+
+    ////
+    return 2;
+
+    //## foo
 
     //## foo
     return 3;
 
-    //##
+    ////
   }
 
   process.exit(main());
