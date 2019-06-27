@@ -135,6 +135,67 @@ namespace Skew.Parsing {
     }
   }
 
+  def _processCommentLines(lines List<string>) List<string> {
+    # Some people make comment blocks that look like this:
+    #
+    #   ### Example comment
+    #   ### with many '#'
+    #   ### characters
+    #   def someCode {}
+    #
+    # Strip leading '#' from lines if all lines have at least that many '#'
+    if lines.count > 1 {
+      var commonHashCount = 0
+      while true {
+        var allHaveHash = true
+        for line in lines {
+          if commonHashCount >= line.count || line[commonHashCount] != '#' {
+            allHaveHash = false
+            break
+          }
+        }
+        if !allHaveHash {
+          break
+        }
+        commonHashCount++
+      }
+      if commonHashCount > 0 {
+        for i in 0..lines.count {
+          lines[i] = lines[i].slice(commonHashCount)
+        }
+      }
+    }
+
+    # Sometimes code uses long chains of '#' as divider lines:
+    #
+    #   def someCode {
+    #     ##################################
+    #     # Header
+    #   }
+    #
+    # For these lines, change all '#' to '/'
+    for i in 0..lines.count {
+      var line = lines[i]
+      var allHashes = true
+      for j in 0..line.count {
+        var c = line[j]
+        if c != '#' && c != '\n' {
+          allHashes = false
+          break
+        }
+      }
+      if allHashes {
+        var text = ""
+        for j in 0..line.count {
+          text += line[j] == '\n' ? "\n" : "/"
+        }
+        lines[i] = text
+      }
+    }
+
+    return lines
+  }
+
   def parseLeadingComments(context ParserContext) List<Comment> {
     var comments List<Comment> = null
     var blockRange Range = null
@@ -148,7 +209,7 @@ namespace Skew.Parsing {
 
       if context.eat(.NEWLINE) {
         comments ?= []
-        comments.append(Comment.new(blockRange, blockLines, true))
+        comments.append(Comment.new(blockRange, _processCommentLines(blockLines), true))
         blockRange = null
         blockLines = null
       }
@@ -156,7 +217,7 @@ namespace Skew.Parsing {
 
     if blockRange != null {
       comments ?= []
-      comments.append(Comment.new(blockRange, blockLines, false))
+      comments.append(Comment.new(blockRange, _processCommentLines(blockLines), false))
     }
 
     return comments
@@ -172,7 +233,7 @@ namespace Skew.Parsing {
     if !text.endsWith("\n") {
       text += "\n"
     }
-    comments.append(Comment.new(range, [text], false))
+    comments.append(Comment.new(range, _processCommentLines([text]), false))
     return comments
   }
 
