@@ -1012,12 +1012,36 @@ namespace Skew {
     }
 
     def _emitCommaSeparatedExpressions(from Node, to Node) {
+      var isIndented = false
+
+      for child = from; child != to; child = child.nextSibling {
+        if child.comments != null {
+          isIndented = true
+          break
+        }
+      }
+
+      if isIndented {
+        _increaseIndent
+      }
+
       while from != to {
+        if isIndented {
+          _emit("\n")
+          _emitComments(from.comments)
+          _emit(_indent)
+        }
         _emitExpression(from, .COMMA)
         from = from.nextSibling
         if from != to {
-          _emit(", ")
+          _emit(isIndented ? "," : ", ")
         }
+      }
+
+      if isIndented {
+        _decreaseIndent
+        _emit("\n")
+        _emit(_indent)
       }
     }
 

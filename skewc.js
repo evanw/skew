@@ -7273,13 +7273,38 @@
   };
 
   Skew.TypeScriptEmitter.prototype._emitCommaSeparatedExpressions = function(from, to) {
+    var isIndented = false;
+
+    for (var child = from; child != to; child = child.nextSibling()) {
+      if (child.comments != null) {
+        isIndented = true;
+        break;
+      }
+    }
+
+    if (isIndented) {
+      this._increaseIndent();
+    }
+
     while (from != to) {
+      if (isIndented) {
+        this._emit('\n');
+        this._emitComments(from.comments);
+        this._emit(this._indent);
+      }
+
       this._emitExpression(from, Skew.Precedence.COMMA);
       from = from.nextSibling();
 
       if (from != to) {
-        this._emit(', ');
+        this._emit(isIndented ? ',' : ', ');
       }
+    }
+
+    if (isIndented) {
+      this._decreaseIndent();
+      this._emit('\n');
+      this._emit(this._indent);
     }
   };
 
