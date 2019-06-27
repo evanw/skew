@@ -14198,17 +14198,43 @@
 
   Skew.Parsing.parseCommaSeparatedList = function(context, parent, stop) {
     var isFirst = true;
-    context.skipWhitespace();
 
-    while (!context.eat(stop)) {
-      if (!isFirst && !context.expect(Skew.TokenKind.COMMA)) {
-        Skew.Parsing.scanForToken(context, stop);
+    while (true) {
+      context.eat(Skew.TokenKind.NEWLINE);
+      var comments = Skew.Parsing.parseLeadingComments(context);
+      context.skipWhitespace();
+
+      if (isFirst && context.eat(stop)) {
+        Skew.Parsing._warnAboutIgnoredComments(context, comments);
         break;
       }
 
       var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
+      value.comments = comments;
       parent.appendChild(value);
+      comments = Skew.Parsing.parseTrailingComment(context, value.comments);
+
+      if (comments != null) {
+        value.comments = comments;
+      }
+
       context.skipWhitespace();
+
+      if (context.eat(stop)) {
+        break;
+      }
+
+      if (!context.expect(Skew.TokenKind.COMMA)) {
+        Skew.Parsing.scanForToken(context, stop);
+        break;
+      }
+
+      comments = Skew.Parsing.parseTrailingComment(context, value.comments);
+
+      if (comments != null) {
+        value.comments = comments;
+      }
+
       isFirst = false;
     }
   };
@@ -25715,7 +25741,7 @@
         }
 
         first.comments = comments;
-        comments = Skew.Parsing.parseTrailingComment(context, comments);
+        comments = Skew.Parsing.parseTrailingComment(context, first.comments);
 
         if (comments != null) {
           first.comments = comments;
@@ -25725,7 +25751,7 @@
           break;
         }
 
-        comments = Skew.Parsing.parseTrailingComment(context, comments);
+        comments = Skew.Parsing.parseTrailingComment(context, first.comments);
 
         if (comments != null) {
           first.comments = comments;

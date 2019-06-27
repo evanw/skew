@@ -1419,15 +1419,33 @@ namespace Skew.Parsing {
 
   def parseCommaSeparatedList(context ParserContext, parent Node, stop TokenKind) {
     var isFirst = true
-    context.skipWhitespace
-    while !context.eat(stop) {
-      if !isFirst && !context.expect(.COMMA) {
-        scanForToken(context, stop)
+    while true {
+      context.eat(.NEWLINE)
+      var comments = parseLeadingComments(context)
+      context.skipWhitespace
+      if isFirst && context.eat(stop) {
+        _warnAboutIgnoredComments(context, comments)
         break
       }
       var value = expressionParser.parse(context, .LOWEST)
+      value.comments = comments
       parent.appendChild(value)
+      comments = parseTrailingComment(context, value.comments)
+      if comments != null {
+        value.comments = comments
+      }
       context.skipWhitespace
+      if context.eat(stop) {
+        break
+      }
+      if !context.expect(.COMMA) {
+        scanForToken(context, stop)
+        break
+      }
+      comments = parseTrailingComment(context, value.comments)
+      if comments != null {
+        value.comments = comments
+      }
       isFirst = false
     }
   }
@@ -1570,14 +1588,14 @@ namespace Skew.Parsing {
           node.appendChild(first)
         }
         first.comments = comments
-        comments = parseTrailingComment(context, comments)
+        comments = parseTrailingComment(context, first.comments)
         if comments != null {
           first.comments = comments
         }
         if !context.eat(.COMMA) {
           break
         }
-        comments = parseTrailingComment(context, comments)
+        comments = parseTrailingComment(context, first.comments)
         if comments != null {
           first.comments = comments
         }
