@@ -71,7 +71,18 @@ namespace Skew {
     }
 
     def skipWhitespace {
-      while eat(.COMMENT) || eat(.NEWLINE) {
+      while true {
+        if eat(.NEWLINE) {
+          continue
+        }
+        if peek(.COMMENT) {
+          var range = next.range
+          if warnAboutIgnoredComments {
+            log.syntaxWarningIgnoredComment(range)
+          }
+          continue
+        }
+        break
       }
     }
 

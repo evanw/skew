@@ -14836,7 +14836,22 @@
   };
 
   Skew.ParserContext.prototype.skipWhitespace = function() {
-    while (this.eat(Skew.TokenKind.COMMENT) || this.eat(Skew.TokenKind.NEWLINE)) {
+    while (true) {
+      if (this.eat(Skew.TokenKind.NEWLINE)) {
+        continue;
+      }
+
+      if (this.peek1(Skew.TokenKind.COMMENT)) {
+        var range = this.next().range;
+
+        if (this.warnAboutIgnoredComments) {
+          this.log.syntaxWarningIgnoredComment(range);
+        }
+
+        continue;
+      }
+
+      break;
     }
   };
 
