@@ -3587,9 +3587,9 @@ def main int {
     ////
     return 2;
 
-    //## foo
+    //// foo
 
-    //## foo
+    //// foo
     return 3;
 
     ////

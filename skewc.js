@@ -12826,74 +12826,21 @@
     }
   };
 
+  // Replace all leading '#' with '/' to better match '//' comments in target languages
   Skew.Parsing._processCommentLines = function(lines) {
-    // Some people make comment blocks that look like this:
-    //
-    //   ### Example comment
-    //   ### with many '#'
-    //   ### characters
-    //   def someCode {}
-    //
-    // Strip leading '#' from lines if all lines have at least that many '#'
-    if (lines.length > 1) {
-      var commonHashCount = 0;
+    for (var i = 0, count2 = lines.length; i < count2; i = i + 1 | 0) {
+      var line = in_List.get(lines, i);
+      var count = 0;
 
-      while (true) {
-        var allHaveHash = true;
-
-        for (var i2 = 0, list = lines, count = list.length; i2 < count; i2 = i2 + 1 | 0) {
-          var line = in_List.get(list, i2);
-
-          if (commonHashCount >= line.length || in_string.get1(line, commonHashCount) != 35) {
-            allHaveHash = false;
-            break;
-          }
-        }
-
-        if (!allHaveHash) {
+      for (var j = 0, count1 = line.length; j < count1; j = j + 1 | 0) {
+        if (in_string.get1(line, j) != 35) {
           break;
         }
 
-        commonHashCount = commonHashCount + 1 | 0;
+        count = count + 1 | 0;
       }
 
-      if (commonHashCount > 0) {
-        for (var i = 0, count1 = lines.length; i < count1; i = i + 1 | 0) {
-          in_List.set(lines, i, in_string.slice1(in_List.get(lines, i), commonHashCount));
-        }
-      }
-    }
-
-    // Sometimes code uses long chains of '#' as divider lines:
-    //
-    //   def someCode {
-    //     ##################################
-    //     # Header
-    //   }
-    //
-    // For these lines, change all '#' to '/'
-    for (var i1 = 0, count4 = lines.length; i1 < count4; i1 = i1 + 1 | 0) {
-      var line1 = in_List.get(lines, i1);
-      var allHashes = true;
-
-      for (var j = 0, count2 = line1.length; j < count2; j = j + 1 | 0) {
-        var c = in_string.get1(line1, j);
-
-        if (c != 35 && c != 10) {
-          allHashes = false;
-          break;
-        }
-      }
-
-      if (allHashes) {
-        var text = '';
-
-        for (var j1 = 0, count3 = line1.length; j1 < count3; j1 = j1 + 1 | 0) {
-          text += in_string.get1(line1, j1) == 10 ? '\n' : '/';
-        }
-
-        in_List.set(lines, i1, text);
-      }
+      in_List.set(lines, i, in_string.repeat('/', count) + in_string.slice1(line, count));
     }
 
     return lines;
