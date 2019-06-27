@@ -3669,5 +3669,36 @@ def main(x bool) {
 })(this);
 ").js
 
+# Comments in comma-separated lists
+test("
+@entry
+def main {
+  var x = [
+    # leading
+    # comment
+    0,
+    1, # trailing comment
+    # leading and
+    2 # trailing comment
+  ]
+}
+", "
+(function() {
+  function main() {
+    var x = [
+      // leading
+      // comment
+      0,
+      // trailing comment
+      1,
+      // leading and
+      2
+    ];
+  }
+
+  main();
+})();
+").js
+
   }
 }

@@ -13516,6 +13516,10 @@
           previous.comments = comments;
         }
 
+        else {
+          Skew.Parsing._warnAboutIgnoredComments(context, comments);
+        }
+
         context.eat(Skew.TokenKind.NEWLINE);
       }
 
@@ -25682,9 +25686,20 @@
         }
 
         first.comments = comments;
+        comments = Skew.Parsing.parseTrailingComment(context, comments);
+
+        if (comments != null) {
+          first.comments = comments;
+        }
 
         if (!context.eat(Skew.TokenKind.COMMA)) {
           break;
+        }
+
+        comments = Skew.Parsing.parseTrailingComment(context, comments);
+
+        if (comments != null) {
+          first.comments = comments;
         }
       }
 

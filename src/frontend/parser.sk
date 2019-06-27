@@ -750,6 +750,8 @@ namespace Skew.Parsing {
       if comments != null {
         if previous != null {
           previous.comments = comments
+        } else {
+          _warnAboutIgnoredComments(context, comments)
         }
         context.eat(.NEWLINE)
       } else if context.peek(.RIGHT_BRACE) || context.peek(.XML_START_CLOSE) {
@@ -1568,8 +1570,16 @@ namespace Skew.Parsing {
           node.appendChild(first)
         }
         first.comments = comments
+        comments = parseTrailingComment(context, comments)
+        if comments != null {
+          first.comments = comments
+        }
         if !context.eat(.COMMA) {
           break
+        }
+        comments = parseTrailingComment(context, comments)
+        if comments != null {
+          first.comments = comments
         }
       }
       context.skipWhitespace
