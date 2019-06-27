@@ -25,7 +25,6 @@ namespace Skew {
     TokenKind.COMMA: 0,
     TokenKind.DOT: 0,
     TokenKind.QUESTION_MARK: 0,
-    TokenKind.RIGHT_BRACKET: 0,
     TokenKind.RIGHT_PARENTHESIS: 0,
   }
 
