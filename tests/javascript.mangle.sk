@@ -1197,36 +1197,32 @@ def main(args List<string>) int {
 }
 ", "
 (function() {
-  var d = Object.create || function(a) {
+  var c = Object.create || function(a) {
     return {__proto__: a};
   };
 
-  function e(a, b) {
-    a.prototype = d(b.prototype), a.prototype.constructor = a;
+  function d(a, b) {
+    a.prototype = c(b.prototype), a.prototype.constructor = a;
   }
 
-  var f = Math.imul || function(a, b) {
+  var e = Math.imul || function(a, b) {
     return (a * (b >>> 16) << 16) + a * (b & 65535) | 0;
   };
 
-  function i(a) {
-    return new h, f(c(a), 100);
+  function h(a) {
+    return new g, e(a.length, 100);
   }
 
-  function c(a) {
-    return a.length;
+  function f() {
   }
 
   function g() {
+    f.call(this);
   }
 
-  function h() {
-    g.call(this);
-  }
+  d(g, f);
 
-  e(h, g);
-
-  process.exit(i(process.argv.slice(2)));
+  process.exit(h(process.argv.slice(2)));
 })();
 ").jsMangle
 

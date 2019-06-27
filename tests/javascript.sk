@@ -1764,14 +1764,6 @@ def main(x int) string {
     this.buffer = '';
   }
 
-  StringBuilder.prototype.append = function(x) {
-    this.buffer += x;
-  };
-
-  StringBuilder.prototype.toString = function() {
-    return this.buffer;
-  };
-
   var in_List = {};
 
   in_List.get = function(self, index) {
@@ -1786,10 +1778,10 @@ def main(x int) string {
 
     for (var i = 0, count1 = codePoints.length; i < count1; i = i + 1 | 0) {
       var codePoint = in_List.get(codePoints, i);
-      builder.append(in_string.fromCodePoint(codePoint));
+      builder.buffer += in_string.fromCodePoint(codePoint);
     }
 
-    return builder.toString();
+    return builder.buffer;
   };
 
   in_string.fromCodeUnits = function(codeUnits) {

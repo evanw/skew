@@ -37,10 +37,12 @@ class int {}
 
 @rename(\"number\")
 class double {
+  @alwaysinline
   def isFinite bool {
     return dynamic.isFinite(self)
   }
 
+  @alwaysinline
   def isNaN bool {
     return dynamic.isNaN(self)
   }
@@ -73,10 +75,12 @@ class string {
     return after.join(self.split(before))
   }
 
+  @alwaysinline
   def in(value string) bool {
     return indexOf(value) != -1
   }
 
+  @alwaysinline
   def count int {
     return (self as dynamic).length
   }
@@ -99,6 +103,7 @@ class string {
     return result
   }
 
+  @alwaysinline
   def join(parts List<string>) string {
     return (parts as dynamic).join(self)
   }
@@ -132,10 +137,12 @@ class StringBuilder {
   def new {
   }
 
+  @alwaysinline
   def append(x string) {
     buffer += x
   }
 
+  @alwaysinline
   def toString string {
     return buffer
   }
@@ -181,14 +188,17 @@ class List {
     return (self as dynamic)[index] = value
   }
 
+  @alwaysinline
   def in(value T) bool {
     return indexOf(value) != -1
   }
 
+  @alwaysinline
   def isEmpty bool {
     return count == 0
   }
 
+  @alwaysinline
   def count int {
     return (self as dynamic).length
   }
@@ -346,14 +356,17 @@ class StringMap {
     return self
   }
 
+  @alwaysinline
   def in(key string) bool {
     return (self as dynamic).has(key)
   }
 
+  @alwaysinline
   def count int {
     return (self as dynamic).size
   }
 
+  @alwaysinline
   def isEmpty bool {
     return count == 0
   }
@@ -363,18 +376,22 @@ class StringMap {
     return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
   }
 
+  @alwaysinline
   def keys List<string> {
     return dynamic.Array.from((self as dynamic).keys())
   }
 
+  @alwaysinline
   def values List<T> {
     return dynamic.Array.from((self as dynamic).values())
   }
 
+  @alwaysinline
   def clone StringMap<T> {
     return dynamic.Map.new(self)
   }
 
+  @alwaysinline
   def remove(key string) {
     (self as dynamic).delete(key)
   }
@@ -409,14 +426,17 @@ class IntMap {
     return self
   }
 
+  @alwaysinline
   def in(key int) bool {
     return (self as dynamic).has(key)
   }
 
+  @alwaysinline
   def count int {
     return (self as dynamic).size
   }
 
+  @alwaysinline
   def isEmpty bool {
     return count == 0
   }
@@ -426,18 +446,22 @@ class IntMap {
     return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed
   }
 
+  @alwaysinline
   def keys List<int> {
     return dynamic.Array.from((self as dynamic).keys())
   }
 
+  @alwaysinline
   def values List<T> {
     return dynamic.Array.from((self as dynamic).values())
   }
 
+  @alwaysinline
   def clone IntMap<T> {
     return dynamic.Map.new(self)
   }
 
+  @alwaysinline
   def remove(key int) {
     (self as dynamic).delete(key)
   }

@@ -27,14 +27,6 @@
     this.buffer = '';
   }
 
-  StringBuilder.prototype.append = function(x) {
-    this.buffer += x;
-  };
-
-  StringBuilder.prototype.toString = function() {
-    return this.buffer;
-  };
-
   function Box(value) {
     this.value = value;
   }
@@ -168,7 +160,7 @@
 
     // Append long runs of unescaped characters using a single slice for speed
     var start = 0;
-    builder.append(quoteString);
+    builder.buffer += quoteString;
 
     for (var i1 = 0, count2 = count; i1 < count2; i1 = i1 + 1 | 0) {
       var c1 = in_string.get1(text, i1);
@@ -207,14 +199,14 @@
         continue;
       }
 
-      builder.append(in_string.slice2(text, start, i1));
-      builder.append(escaped);
+      builder.buffer += in_string.slice2(text, start, i1);
+      builder.buffer += escaped;
       start = i1 + 1 | 0;
     }
 
-    builder.append(in_string.slice2(text, start, count));
-    builder.append(quoteString);
-    return builder.toString();
+    builder.buffer += in_string.slice2(text, start, count);
+    builder.buffer += quoteString;
+    return builder.buffer;
   };
 
   // A single base 64 digit can contain 6 bits of data. For the base 64 variable
@@ -376,21 +368,21 @@
     var builder = new StringBuilder();
     var start = 1;
     var limit = text.length - 1 | 0;
-    builder.append('"');
+    builder.buffer += '"';
 
     for (var i = start; i < limit; i = i + 1 | 0) {
       var c = in_string.get1(text, i);
 
       if (c == 34) {
-        builder.append(in_string.slice2(text, start, i));
-        builder.append('\\"');
+        builder.buffer += in_string.slice2(text, start, i);
+        builder.buffer += '\\"';
         start = i + 1 | 0;
       }
 
       else if (c == 92) {
         if (in_string.get1(text, i + 1 | 0) == 39) {
-          builder.append(in_string.slice2(text, start, i));
-          builder.append("'");
+          builder.buffer += in_string.slice2(text, start, i);
+          builder.buffer += "'";
           start = i + 2 | 0;
         }
 
@@ -398,9 +390,9 @@
       }
     }
 
-    builder.append(in_string.slice2(text, start, limit));
-    builder.append('"');
-    return builder.toString();
+    builder.buffer += in_string.slice2(text, start, limit);
+    builder.buffer += '"';
+    return builder.buffer;
   };
 
   Skew.argumentCountForOperator = function(text) {
@@ -1207,19 +1199,19 @@
   };
 
   Skew.Emitter.prototype._emit = function(text) {
-    this._code.append(text);
+    this._code.buffer += text;
   };
 
   Skew.Emitter.prototype._emitPrefix = function(text) {
-    this._prefix.append(text);
+    this._prefix.buffer += text;
   };
 
   Skew.Emitter.prototype._createSource = function(name, mode) {
-    var code = this._code.toString();
+    var code = this._code.buffer;
 
     if (mode == Skew.EmitMode.ALWAYS_EMIT || code != '') {
-      this._prefix.append(code);
-      this._sources.push(new Skew.Source(name, this._prefix.toString()));
+      this._prefix.buffer += code;
+      this._sources.push(new Skew.Source(name, this._prefix.buffer));
     }
 
     this._prefix = new StringBuilder();
@@ -3006,7 +2998,7 @@
       }
     }
 
-    this._code.append(text);
+    this._code.buffer += text;
   };
 
   Skew.JavaScriptEmitter.prototype._liftGlobals1 = function(global) {
@@ -9346,11 +9338,11 @@
     }
 
     var builder = new StringBuilder();
-    builder.append('{"version":3,"sources":[');
-    builder.append(sourceNames.join(','));
-    builder.append('],"sourcesContent":[');
-    builder.append(sourceContents.join(','));
-    builder.append('],"names":[],"mappings":"');
+    builder.buffer += '{"version":3,"sources":[';
+    builder.buffer += sourceNames.join(',');
+    builder.buffer += '],"sourcesContent":[';
+    builder.buffer += sourceContents.join(',');
+    builder.buffer += '],"names":[],"mappings":"';
 
     // Sort the mappings in increasing order by generated location
     this._mappings.sort(function(a, b) {
@@ -9374,37 +9366,37 @@
           continue;
         }
 
-        builder.append(',');
+        builder.buffer += ',';
       }
 
       else {
         previousGeneratedColumn = 0;
 
         while (previousGeneratedLine < generatedLine) {
-          builder.append(';');
+          builder.buffer += ';';
           previousGeneratedLine = previousGeneratedLine + 1 | 0;
         }
       }
 
       // Record the generated column (the line is recorded using ';' above)
-      builder.append(Skew.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0));
+      builder.buffer += Skew.encodeVLQ(mapping.generatedColumn - previousGeneratedColumn | 0);
       previousGeneratedColumn = mapping.generatedColumn;
 
       // Record the generated source
-      builder.append(Skew.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0));
+      builder.buffer += Skew.encodeVLQ(mapping.sourceIndex - previousSourceIndex | 0);
       previousSourceIndex = mapping.sourceIndex;
 
       // Record the original line
-      builder.append(Skew.encodeVLQ(mapping.originalLine - previousOriginalLine | 0));
+      builder.buffer += Skew.encodeVLQ(mapping.originalLine - previousOriginalLine | 0);
       previousOriginalLine = mapping.originalLine;
 
       // Record the original column
-      builder.append(Skew.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0));
+      builder.buffer += Skew.encodeVLQ(mapping.originalColumn - previousOriginalColumn | 0);
       previousOriginalColumn = mapping.originalColumn;
     }
 
-    builder.append('"}\n');
-    return builder.toString();
+    builder.buffer += '"}\n';
+    return builder.buffer;
   };
 
   Skew.UnionFind = function() {
@@ -14275,33 +14267,33 @@
 
       if (c == 92) {
         var escape = i - 1 | 0;
-        builder.append(in_string.slice2(text, start, escape));
+        builder.buffer += in_string.slice2(text, start, escape);
 
         if (i < stop) {
           c = in_string.get1(text, (i = i + 1 | 0) + -1 | 0);
 
           if (c == 110) {
-            builder.append('\n');
+            builder.buffer += '\n';
             start = i;
           }
 
           else if (c == 114) {
-            builder.append('\r');
+            builder.buffer += '\r';
             start = i;
           }
 
           else if (c == 116) {
-            builder.append('\t');
+            builder.buffer += '\t';
             start = i;
           }
 
           else if (c == 48) {
-            builder.append('\0');
+            builder.buffer += '\0';
             start = i;
           }
 
           else if (c == 92 || c == 34 || c == 39) {
-            builder.append(String.fromCharCode(c));
+            builder.buffer += String.fromCharCode(c);
             start = i;
           }
 
@@ -14313,7 +14305,7 @@
                 var c1 = Skew.Parsing.parseHexCharacter(in_string.get1(text, (i = i + 1 | 0) + -1 | 0));
 
                 if (c0 != -1 && c1 != -1) {
-                  builder.append(String.fromCharCode(c0 << 4 | c1));
+                  builder.buffer += String.fromCharCode(c0 << 4 | c1);
                   start = i;
                 }
               }
@@ -14327,8 +14319,8 @@
       }
     }
 
-    builder.append(in_string.slice2(text, start, i));
-    return builder.toString();
+    builder.buffer += in_string.slice2(text, start, i);
+    return builder.buffer;
   };
 
   Skew.Parsing.boolLiteral = function(value) {
@@ -21056,17 +21048,17 @@
         }
       }
 
-      builder.append(name + (sources.length == 1 ? '' : 's') + ': ');
-      builder.append(sources.length == 1 ? in_List.first(sources).name : sources.length.toString() + ' files');
-      builder.append(' (' + Skew.bytesToString(totalBytes));
-      builder.append(', ' + Skew.bytesToString(Math.round(totalBytes / totalTime) | 0) + '/s');
+      builder.buffer += name + (sources.length == 1 ? '' : 's') + ': ';
+      builder.buffer += sources.length == 1 ? in_List.first(sources).name : sources.length.toString() + ' files';
+      builder.buffer += ' (' + Skew.bytesToString(totalBytes);
+      builder.buffer += ', ' + Skew.bytesToString(Math.round(totalBytes / totalTime) | 0) + '/s';
 
       if (kind == Skew.StatisticsKind.LONG) {
-        builder.append(', ' + Skew.PrettyPrint.plural1(totalLines, 'line'));
-        builder.append(', ' + Skew.PrettyPrint.plural1(Math.round(totalLines / totalTime) | 0, 'line') + '/s');
+        builder.buffer += ', ' + Skew.PrettyPrint.plural1(totalLines, 'line');
+        builder.buffer += ', ' + Skew.PrettyPrint.plural1(Math.round(totalLines / totalTime) | 0, 'line') + '/s';
       }
 
-      builder.append(')\n');
+      builder.buffer += ')\n';
     };
 
     // Sources
@@ -21074,16 +21066,16 @@
     sourceStatistics('output', this.outputs);
 
     // Compilation time
-    builder.append('time: ' + this.totalTimer.elapsedMilliseconds());
+    builder.buffer += 'time: ' + this.totalTimer.elapsedMilliseconds();
 
     if (kind == Skew.StatisticsKind.LONG) {
       for (var i = 0, list = this.passTimers, count = list.length; i < count; i = i + 1 | 0) {
         var passTimer = in_List.get(list, i);
-        builder.append('\n  ' + in_List.get(Skew.in_PassKind._strings, passTimer.kind) + ': ' + passTimer.timer.elapsedMilliseconds());
+        builder.buffer += '\n  ' + in_List.get(Skew.in_PassKind._strings, passTimer.kind) + ': ' + passTimer.timer.elapsedMilliseconds();
       }
     }
 
-    return builder.toString();
+    return builder.buffer;
   };
 
   Skew.CallGraphPass = function() {
@@ -25577,10 +25569,10 @@
 
     for (var i = 0, list = codePoints, count1 = list.length; i < count1; i = i + 1 | 0) {
       var codePoint = in_List.get(list, i);
-      builder.append(in_string.fromCodePoint(codePoint));
+      builder.buffer += in_string.fromCodePoint(codePoint);
     }
 
-    return builder.toString();
+    return builder.buffer;
   };
 
   in_string.compare = function(self, x) {
@@ -25665,7 +25657,7 @@
   Skew.YY_ACCEPT_LENGTH = 235;
   Skew.NATIVE_LIBRARY_CPP = '\n@import {\n  def __doubleToString(x double) string\n  def __intToString(x int) string\n\n  @rename("std::isnan")\n  def __doubleIsNaN(x double) bool\n\n  @rename("std::isfinite")\n  def __doubleIsFinite(x double) bool\n}\n\nclass bool {\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  def toString string {\n    return __intToString(self)\n  }\n\n  def >>>(x int) int {\n    return (self as dynamic.unsigned >> x) as int\n  }\n}\n\nclass double {\n  def toString string {\n    return __doubleToString(self)\n  }\n\n  def isNaN bool {\n    return __doubleIsNaN(self)\n  }\n\n  def isFinite bool {\n    return __doubleIsFinite(self)\n  }\n}\n\nclass string {\n  @rename("compare")\n  def <=>(x string) int\n\n  @rename("contains")\n  def in(x string) bool\n}\n\n@rename("Skew::List")\nclass List {\n  @rename("contains")\n  def in(x T) bool\n}\n\n@rename("Skew::StringMap")\nclass StringMap {\n  @rename("contains")\n  def in(x string) bool\n}\n\n@rename("Skew::IntMap")\nclass IntMap {\n  @rename("contains")\n  def in(x int) bool\n}\n\n@import\n@rename("Skew::StringBuilder")\nclass StringBuilder {\n}\n\n@import\n@rename("Skew::Math")\nnamespace Math {\n}\n\n@import\ndef assert(truth bool)\n';
   Skew.UNICODE_LIBRARY = '\nnamespace Unicode {\n  enum Encoding {\n    UTF8\n    UTF16\n    UTF32\n  }\n\n  const STRING_ENCODING Encoding =\n    TARGET == .CPLUSPLUS ? .UTF8 :\n    TARGET == .CSHARP || TARGET == .JAVASCRIPT ? .UTF16 :\n    .UTF32\n\n  class StringIterator {\n    var value = ""\n    var index = 0\n    var stop = 0\n\n    def reset(text string, start int) StringIterator {\n      value = text\n      index = start\n      stop = text.count\n      return self\n    }\n\n    def countCodePointsUntil(stop int) int {\n      var count = 0\n      while index < stop && nextCodePoint >= 0 {\n        count++\n      }\n      return count\n    }\n\n    def previousCodePoint int\n    def nextCodePoint int\n\n    if STRING_ENCODING == .UTF8 {\n      def previousCodePoint int {\n        if index <= 0 { return -1 }\n        var a = value[--index]\n        if (a & 0xC0) != 0x80 { return a }\n        if index <= 0 { return -1 }\n        var b = value[--index]\n        if (b & 0xC0) != 0x80 { return ((b & 0x1F) << 6) | (a & 0x3F) }\n        if index <= 0 { return -1 }\n        var c = value[--index]\n        if (c & 0xC0) != 0x80 { return ((c & 0x0F) << 12) | ((b & 0x3F) << 6) | (a & 0x3F) }\n        if index >= stop { return -1 }\n        var d = value[--index]\n        return ((d & 0x07) << 18) | ((c & 0x3F) << 12) | ((b & 0x3F) << 6) | (a & 0x3F)\n      }\n\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index++]\n        if a < 0xC0 { return a }\n        if index >= stop { return -1 }\n        var b = value[index++]\n        if a < 0xE0 { return ((a & 0x1F) << 6) | (b & 0x3F) }\n        if index >= stop { return -1 }\n        var c = value[index++]\n        if a < 0xF0 { return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F) }\n        if index >= stop { return -1 }\n        var d = value[index++]\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)\n      }\n    }\n\n    else if STRING_ENCODING == .UTF16 {\n      def previousCodePoint int {\n        if index <= 0 { return -1 }\n        var a = value[--index]\n        if (a & 0xFC00) != 0xDC00 { return a }\n        if index <= 0 { return -1 }\n        var b = value[--index]\n        return (b << 10) + a + (0x10000 - (0xD800 << 10) - 0xDC00)\n      }\n\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index++]\n        if (a & 0xFC00) != 0xD800 { return a }\n        if index >= stop { return -1 }\n        var b = value[index++]\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)\n      }\n    }\n\n    else {\n      def previousCodePoint int {\n        if index <= 0 { return -1 }\n        return value[--index]\n      }\n\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        return value[index++]\n      }\n    }\n  }\n\n  namespace StringIterator {\n    const INSTANCE = StringIterator.new\n  }\n\n  def codeUnitCountForCodePoints(codePoints List<int>, encoding Encoding) int {\n    var count = 0\n\n    switch encoding {\n      case .UTF8 {\n        for codePoint in codePoints {\n          if codePoint < 0x80 { count++ }\n          else if codePoint < 0x800 { count += 2 }\n          else if codePoint < 0x10000 { count += 3 }\n          else { count += 4 }\n        }\n      }\n\n      case .UTF16 {\n        for codePoint in codePoints {\n          if codePoint < 0x10000 { count++ }\n          else { count += 2 }\n        }\n      }\n\n      case .UTF32 {\n        count = codePoints.count\n      }\n    }\n\n    return count\n  }\n}\n\nclass string {\n  if Unicode.STRING_ENCODING == .UTF32 {\n    def codePoints List<int> {\n      return codeUnits\n    }\n  }\n\n  else {\n    def codePoints List<int> {\n      var codePoints List<int> = []\n      var instance = Unicode.StringIterator.INSTANCE\n      instance.reset(self, 0)\n\n      while true {\n        var codePoint = instance.nextCodePoint\n        if codePoint < 0 {\n          return codePoints\n        }\n        codePoints.append(codePoint)\n      }\n    }\n  }\n}\n\nnamespace string {\n  def fromCodePoints(codePoints List<int>) string {\n    var builder = StringBuilder.new\n    for codePoint in codePoints {\n      builder.append(fromCodePoint(codePoint))\n    }\n    return builder.toString\n  }\n\n  if Unicode.STRING_ENCODING == .UTF8 {\n    def fromCodePoint(codePoint int) string {\n      return\n        codePoint < 0x80 ? fromCodeUnit(codePoint) : (\n          codePoint < 0x800 ? fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0) : (\n            codePoint < 0x10000 ? fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0) : (\n              fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0)\n            ) + fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80)\n          ) + fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80)\n        ) + fromCodeUnit((codePoint & 0x3F) | 0x80)\n    }\n  }\n\n  else if Unicode.STRING_ENCODING == .UTF16 {\n    def fromCodePoint(codePoint int) string {\n      return codePoint < 0x10000 ? fromCodeUnit(codePoint) :\n        fromCodeUnit(((codePoint - 0x10000) >> 10) + 0xD800) +\n        fromCodeUnit(((codePoint - 0x10000) & ((1 << 10) - 1)) + 0xDC00)\n    }\n  }\n\n  else {\n    def fromCodePoint(codePoint int) string {\n      return fromCodeUnit(codePoint)\n    }\n  }\n}\n';
-  Skew.NATIVE_LIBRARY_JS = '\nconst __create fn(dynamic) dynamic = dynamic.Object.create ? dynamic.Object.create : prototype => {\n  return {"__proto__": prototype}\n}\n\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = __create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) => {\n  return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0\n}\n\nconst __prototype dynamic\nconst __isInt = (value dynamic) => value == (value | 0)\nconst __isBool = (value dynamic) => value == !!value\nconst __isDouble = (value dynamic) => dynamic.typeof(value) == "number"\nconst __isString = (value dynamic) => dynamic.typeof(value) == "string"\nconst __asString = (value dynamic) => value == null ? value : value + ""\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error("Assertion failed")\n  }\n}\n\n@import\nnamespace Math {}\n\n@rename("boolean")\nclass bool {}\n\n@rename("number")\nclass int {}\n\n@rename("number")\nclass double {\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  def isNaN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def <=>(x string) int {\n    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)\n  }\n\n  def slice(start int) string {\n    assert(0 <= start && start <= count)\n    return (self as dynamic).slice(start)\n  }\n\n  def slice(start int, end int) string {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).slice(start, end)\n  }\n\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def endsWith(text string) bool {\n    return count >= text.count && slice(count - text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    assert(0 <= index && index < count)\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.String.fromCharCode(codeUnit)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var result = ""\n    for codeUnit in codeUnits {\n      result += string.fromCodeUnit(codeUnit)\n    }\n    return result\n  }\n}\n\nclass StringBuilder {\n  var buffer = ""\n\n  def new {\n  }\n\n  def append(x string) {\n    buffer += x\n  }\n\n  def toString string {\n    return buffer\n  }\n}\n\n@rename("Array")\nclass List {\n  @rename("unshift")\n  def prepend(x T)\n\n  @rename("push")\n  def append(x T)\n\n  @rename("every")\n  def all(x fn(T) bool) bool\n\n  @rename("some")\n  def any(x fn(T) bool) bool\n\n  @rename("slice")\n  def clone List<T>\n\n  @rename("forEach")\n  def each(x fn(T))\n\n  def slice(start int) List<T> {\n    assert(0 <= start && start <= count)\n    return (self as dynamic).slice(start)\n  }\n\n  def slice(start int, end int) List<T> {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).slice(start, end)\n  }\n\n  def [](index int) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index]\n  }\n\n  def []=(index int, value T) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index] = value\n  }\n\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    assert(!isEmpty)\n    return self[0]\n  }\n\n  def last T {\n    assert(!isEmpty)\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    assert(values != self)\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    assert(values != self)\n    for value in values {\n      append(value)\n    }\n  }\n\n  def insert(index int, values List<T>) {\n    assert(values != self)\n    for value in values {\n      insert(index, value)\n      index++\n    }\n  }\n\n  def insert(index int, value T) {\n    assert(0 <= index && index <= count)\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeFirst {\n    assert(!isEmpty)\n    (self as dynamic).shift()\n  }\n\n  def takeFirst T {\n    assert(!isEmpty)\n    return (self as dynamic).shift()\n  }\n\n  def removeLast {\n    assert(!isEmpty)\n    (self as dynamic).pop()\n  }\n\n  def takeLast T {\n    assert(!isEmpty)\n    return (self as dynamic).pop()\n  }\n\n  def removeAt(index int) {\n    assert(0 <= index && index < count)\n    (self as dynamic).splice(index, 1)\n  }\n\n  def takeAt(index int) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic).splice(index, 1)[0]\n  }\n\n  def takeRange(start int, end int) List<T> {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).splice(start, end - start)\n  }\n\n  def appendOne(value T) {\n    if !(value in self) {\n      append(value)\n    }\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    assert(0 <= start && start <= end && end <= count)\n    (self as dynamic).splice(start, end - start)\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def equals(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n}\n\nnamespace List {\n  @alwaysinline\n  def new List<T> {\n    return [] as dynamic\n  }\n}\n\nnamespace StringMap {\n  @alwaysinline\n  def new StringMap<T> {\n    return dynamic.Map.new\n  }\n}\n\nclass StringMap {\n  def [](key string) T {\n    assert(key in self)\n    return (self as dynamic).get(key)\n  }\n\n  def []=(key string, value T) T {\n    (self as dynamic).set(key, value)\n    return value\n  }\n\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def in(key string) bool {\n    return (self as dynamic).has(key)\n  }\n\n  def count int {\n    return (self as dynamic).size\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def get(key string, defaultValue T) T {\n    const value = (self as dynamic).get(key)\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  def keys List<string> {\n    return dynamic.Array.from((self as dynamic).keys())\n  }\n\n  def values List<T> {\n    return dynamic.Array.from((self as dynamic).values())\n  }\n\n  def clone StringMap<T> {\n    return dynamic.Map.new(self)\n  }\n\n  def remove(key string) {\n    (self as dynamic).delete(key)\n  }\n\n  def each(x fn(string, T)) {\n    (self as dynamic).forEach((value, key) => {\n      x(key, value)\n    })\n  }\n}\n\nnamespace IntMap {\n  @alwaysinline\n  def new IntMap<T> {\n    return dynamic.Map.new\n  }\n}\n\nclass IntMap {\n  def [](key int) T {\n    assert(key in self)\n    return (self as dynamic).get(key)\n  }\n\n  def []=(key int, value T) T {\n    (self as dynamic).set(key, value)\n    return value\n  }\n\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  def in(key int) bool {\n    return (self as dynamic).has(key)\n  }\n\n  def count int {\n    return (self as dynamic).size\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def get(key int, defaultValue T) T {\n    const value = (self as dynamic).get(key)\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  def keys List<int> {\n    return dynamic.Array.from((self as dynamic).keys())\n  }\n\n  def values List<T> {\n    return dynamic.Array.from((self as dynamic).values())\n  }\n\n  def clone IntMap<T> {\n    return dynamic.Map.new(self)\n  }\n\n  def remove(key int) {\n    (self as dynamic).delete(key)\n  }\n\n  def each(x fn(int, T)) {\n    (self as dynamic).forEach((value, key) => {\n      x(key, value)\n    })\n  }\n}\n';
+  Skew.NATIVE_LIBRARY_JS = '\nconst __create fn(dynamic) dynamic = dynamic.Object.create ? dynamic.Object.create : prototype => {\n  return {"__proto__": prototype}\n}\n\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = __create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) => {\n  return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0\n}\n\nconst __prototype dynamic\nconst __isInt = (value dynamic) => value == (value | 0)\nconst __isBool = (value dynamic) => value == !!value\nconst __isDouble = (value dynamic) => dynamic.typeof(value) == "number"\nconst __isString = (value dynamic) => dynamic.typeof(value) == "string"\nconst __asString = (value dynamic) => value == null ? value : value + ""\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error("Assertion failed")\n  }\n}\n\n@import\nnamespace Math {}\n\n@rename("boolean")\nclass bool {}\n\n@rename("number")\nclass int {}\n\n@rename("number")\nclass double {\n  @alwaysinline\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  @alwaysinline\n  def isNaN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def <=>(x string) int {\n    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)\n  }\n\n  def slice(start int) string {\n    assert(0 <= start && start <= count)\n    return (self as dynamic).slice(start)\n  }\n\n  def slice(start int, end int) string {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).slice(start, end)\n  }\n\n  def startsWith(text string) bool {\n    return count >= text.count && slice(0, text.count) == text\n  }\n\n  def endsWith(text string) bool {\n    return count >= text.count && slice(count - text.count) == text\n  }\n\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  @alwaysinline\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  @alwaysinline\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def [](index int) int {\n    assert(0 <= index && index < count)\n    return (self as dynamic).charCodeAt(index)\n  }\n\n  def get(index int) string {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index]\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  @alwaysinline\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.String.fromCharCode(codeUnit)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var result = ""\n    for codeUnit in codeUnits {\n      result += string.fromCodeUnit(codeUnit)\n    }\n    return result\n  }\n}\n\nclass StringBuilder {\n  var buffer = ""\n\n  def new {\n  }\n\n  @alwaysinline\n  def append(x string) {\n    buffer += x\n  }\n\n  @alwaysinline\n  def toString string {\n    return buffer\n  }\n}\n\n@rename("Array")\nclass List {\n  @rename("unshift")\n  def prepend(x T)\n\n  @rename("push")\n  def append(x T)\n\n  @rename("every")\n  def all(x fn(T) bool) bool\n\n  @rename("some")\n  def any(x fn(T) bool) bool\n\n  @rename("slice")\n  def clone List<T>\n\n  @rename("forEach")\n  def each(x fn(T))\n\n  def slice(start int) List<T> {\n    assert(0 <= start && start <= count)\n    return (self as dynamic).slice(start)\n  }\n\n  def slice(start int, end int) List<T> {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).slice(start, end)\n  }\n\n  def [](index int) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index]\n  }\n\n  def []=(index int, value T) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic)[index] = value\n  }\n\n  @alwaysinline\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  @alwaysinline\n  def isEmpty bool {\n    return count == 0\n  }\n\n  @alwaysinline\n  def count int {\n    return (self as dynamic).length\n  }\n\n  def first T {\n    assert(!isEmpty)\n    return self[0]\n  }\n\n  def last T {\n    assert(!isEmpty)\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    assert(values != self)\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    assert(values != self)\n    for value in values {\n      append(value)\n    }\n  }\n\n  def insert(index int, values List<T>) {\n    assert(values != self)\n    for value in values {\n      insert(index, value)\n      index++\n    }\n  }\n\n  def insert(index int, value T) {\n    assert(0 <= index && index <= count)\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeFirst {\n    assert(!isEmpty)\n    (self as dynamic).shift()\n  }\n\n  def takeFirst T {\n    assert(!isEmpty)\n    return (self as dynamic).shift()\n  }\n\n  def removeLast {\n    assert(!isEmpty)\n    (self as dynamic).pop()\n  }\n\n  def takeLast T {\n    assert(!isEmpty)\n    return (self as dynamic).pop()\n  }\n\n  def removeAt(index int) {\n    assert(0 <= index && index < count)\n    (self as dynamic).splice(index, 1)\n  }\n\n  def takeAt(index int) T {\n    assert(0 <= index && index < count)\n    return (self as dynamic).splice(index, 1)[0]\n  }\n\n  def takeRange(start int, end int) List<T> {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).splice(start, end - start)\n  }\n\n  def appendOne(value T) {\n    if !(value in self) {\n      append(value)\n    }\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    assert(0 <= start && start <= end && end <= count)\n    (self as dynamic).splice(start, end - start)\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def equals(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n}\n\nnamespace List {\n  @alwaysinline\n  def new List<T> {\n    return [] as dynamic\n  }\n}\n\nnamespace StringMap {\n  @alwaysinline\n  def new StringMap<T> {\n    return dynamic.Map.new\n  }\n}\n\nclass StringMap {\n  def [](key string) T {\n    assert(key in self)\n    return (self as dynamic).get(key)\n  }\n\n  def []=(key string, value T) T {\n    (self as dynamic).set(key, value)\n    return value\n  }\n\n  def {...}(key string, value T) StringMap<T> {\n    self[key] = value\n    return self\n  }\n\n  @alwaysinline\n  def in(key string) bool {\n    return (self as dynamic).has(key)\n  }\n\n  @alwaysinline\n  def count int {\n    return (self as dynamic).size\n  }\n\n  @alwaysinline\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def get(key string, defaultValue T) T {\n    const value = (self as dynamic).get(key)\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  @alwaysinline\n  def keys List<string> {\n    return dynamic.Array.from((self as dynamic).keys())\n  }\n\n  @alwaysinline\n  def values List<T> {\n    return dynamic.Array.from((self as dynamic).values())\n  }\n\n  @alwaysinline\n  def clone StringMap<T> {\n    return dynamic.Map.new(self)\n  }\n\n  @alwaysinline\n  def remove(key string) {\n    (self as dynamic).delete(key)\n  }\n\n  def each(x fn(string, T)) {\n    (self as dynamic).forEach((value, key) => {\n      x(key, value)\n    })\n  }\n}\n\nnamespace IntMap {\n  @alwaysinline\n  def new IntMap<T> {\n    return dynamic.Map.new\n  }\n}\n\nclass IntMap {\n  def [](key int) T {\n    assert(key in self)\n    return (self as dynamic).get(key)\n  }\n\n  def []=(key int, value T) T {\n    (self as dynamic).set(key, value)\n    return value\n  }\n\n  def {...}(key int, value T) IntMap<T> {\n    self[key] = value\n    return self\n  }\n\n  @alwaysinline\n  def in(key int) bool {\n    return (self as dynamic).has(key)\n  }\n\n  @alwaysinline\n  def count int {\n    return (self as dynamic).size\n  }\n\n  @alwaysinline\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def get(key int, defaultValue T) T {\n    const value = (self as dynamic).get(key)\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  @alwaysinline\n  def keys List<int> {\n    return dynamic.Array.from((self as dynamic).keys())\n  }\n\n  @alwaysinline\n  def values List<T> {\n    return dynamic.Array.from((self as dynamic).values())\n  }\n\n  @alwaysinline\n  def clone IntMap<T> {\n    return dynamic.Map.new(self)\n  }\n\n  @alwaysinline\n  def remove(key int) {\n    (self as dynamic).delete(key)\n  }\n\n  def each(x fn(int, T)) {\n    (self as dynamic).forEach((value, key) => {\n      x(key, value)\n    })\n  }\n}\n';
   Skew.NATIVE_LIBRARY = '\nconst RELEASE = false\nconst ASSERTS = !RELEASE\n\nenum Target {\n  NONE\n  CPLUSPLUS\n  CSHARP\n  JAVASCRIPT\n}\n\nconst TARGET Target = .NONE\n\ndef @alwaysinline\ndef @deprecated\ndef @deprecated(message string)\ndef @entry\ndef @export\ndef @import\ndef @neverinline\ndef @prefer\ndef @rename(name string)\ndef @skip\ndef @spreads\n\n@spreads {\n  def @using(name string) # For use with C#\n  def @include(name string) # For use with C++\n}\n\n@import if TARGET == .NONE\n@skip if !ASSERTS\ndef assert(truth bool)\n\n@import if TARGET == .NONE\nnamespace Math {\n  @prefer\n  def abs(x double) double\n  def abs(x int) int\n\n  def acos(x double) double\n  def asin(x double) double\n  def atan(x double) double\n  def atan2(x double, y double) double\n\n  def sin(x double) double\n  def cos(x double) double\n  def tan(x double) double\n\n  def floor(x double) double\n  def ceil(x double) double\n  def round(x double) double\n\n  def exp(x double) double\n  def log(x double) double\n  def pow(x double, y double) double\n  def random double\n  def randomInRange(min double, max double) double\n  def randomInRange(minInclusive int, maxExclusive int) int\n  def sqrt(x double) double\n\n  @prefer {\n    def max(x double, y double) double\n    def min(x double, y double) double\n    def max(x double, y double, z double) double\n    def min(x double, y double, z double) double\n    def max(x double, y double, z double, w double) double\n    def min(x double, y double, z double, w double) double\n    def clamp(x double, min double, max double) double\n  }\n\n  def max(x int, y int) int\n  def min(x int, y int) int\n  def max(x int, y int, z int) int\n  def min(x int, y int, z int) int\n  def max(x int, y int, z int, w int) int\n  def min(x int, y int, z int, w int) int\n  def clamp(x int, min int, max int) int\n\n  def E double        { return 2.718281828459045 }\n  def INFINITY double { return 1 / 0.0 }\n  def NAN double      { return 0 / 0.0 }\n  def PI double       { return 3.141592653589793 }\n  def SQRT_2 double   { return 2 ** 0.5 }\n}\n\n@import\nclass bool {\n  def ! bool\n  def toString string\n}\n\n@import\nclass int {\n  def + int\n  def - int\n  def ~ int\n\n  def +(x int) int\n  def -(x int) int\n  def *(x int) int\n  def /(x int) int\n  def %(x int) int\n  def **(x int) int\n  def <=>(x int) int\n  def <<(x int) int\n  def >>(x int) int\n  def >>>(x int) int\n  def &(x int) int\n  def |(x int) int\n  def ^(x int) int\n\n  def %%(x int) int {\n    return ((self % x) + x) % x\n  }\n\n  def <<=(x int) int\n  def >>=(x int) int\n  def &=(x int) int\n  def |=(x int) int\n  def ^=(x int) int\n\n  if TARGET != .CSHARP && TARGET != .CPLUSPLUS {\n    def >>>=(x int)\n  }\n\n  if TARGET != .JAVASCRIPT {\n    def ++ int\n    def -- int\n\n    def %=(x int) int\n    def +=(x int) int\n    def -=(x int) int\n    def *=(x int) int\n    def /=(x int) int\n  }\n\n  def toString string\n}\n\nnamespace int {\n  def MIN int { return -0x7FFFFFFF - 1 }\n  def MAX int { return 0x7FFFFFFF }\n}\n\n@import\nclass double {\n  def + double\n  def ++ double\n  def - double\n  def -- double\n\n  def *(x double) double\n  def +(x double) double\n  def -(x double) double\n  def /(x double) double\n  def **(x double) double\n  def <=>(x double) int\n\n  def %%(x double) double {\n    return self - Math.floor(self / x) * x\n  }\n\n  def *=(x double) double\n  def +=(x double) double\n  def -=(x double) double\n  def /=(x double) double\n\n  def isFinite bool\n  def isNaN bool\n\n  def toString string\n}\n\n@import\nclass string {\n  def +(x string) string\n  def +=(x string) string\n  def <=>(x string) int\n\n  def count int\n  def in(x string) bool\n  def indexOf(x string) int\n  def lastIndexOf(x string) int\n  def startsWith(x string) bool\n  def endsWith(x string) bool\n\n  def [](x int) int\n  def get(x int) string\n  def slice(start int) string\n  def slice(start int, end int) string\n  def codePoints List<int>\n  def codeUnits List<int>\n\n  def split(x string) List<string>\n  def join(x List<string>) string\n  def repeat(x int) string\n  def replaceAll(before string, after string) string\n\n  def toLowerCase string\n  def toUpperCase string\n  def toString string { return self }\n}\n\nnamespace string {\n  def fromCodePoint(x int) string\n  def fromCodePoints(x List<int>) string\n  def fromCodeUnit(x int) string\n  def fromCodeUnits(x List<int>) string\n}\n\n@import if TARGET == .NONE\nclass StringBuilder {\n  def new\n  def append(x string)\n  def toString string\n}\n\n@import\nclass List<T> {\n  def new\n  def [...](x T) List<T>\n\n  def [](x int) T\n  def []=(x int, y T) T\n\n  def count int\n  def isEmpty bool\n  def resize(count int, defaultValue T)\n\n  @prefer\n  def append(x T)\n  def append(x List<T>)\n  def appendOne(x T)\n\n  @prefer\n  def prepend(x T)\n  def prepend(x List<T>)\n\n  @prefer\n  def insert(x int, value T)\n  def insert(x int, values List<T>)\n\n  def removeAll(x T)\n  def removeAt(x int)\n  def removeDuplicates\n  def removeFirst\n  def removeIf(x fn(T) bool)\n  def removeLast\n  def removeOne(x T)\n  def removeRange(start int, end int)\n\n  def takeFirst T\n  def takeLast T\n  def takeAt(x int) T\n  def takeRange(start int, end int) List<T>\n\n  def first T\n  def first=(x T) T { return self[0] = x }\n  def last T\n  def last=(x T) T { return self[count - 1] = x }\n\n  def in(x T) bool\n  def indexOf(x T) int\n  def lastIndexOf(x T) int\n\n  def all(x fn(T) bool) bool\n  def any(x fn(T) bool) bool\n  def clone List<T>\n  def each(x fn(T))\n  def equals(x List<T>) bool\n  def filter(x fn(T) bool) List<T>\n  def map<R>(x fn(T) R) List<R>\n  def reverse\n  def shuffle\n  def slice(start int) List<T>\n  def slice(start int, end int) List<T>\n  def sort(x fn(T, T) int)\n  def swap(x int, y int)\n}\n\n@import\nclass StringMap<T> {\n  def new\n  def {...}(key string, value T) StringMap<T>\n\n  def [](key string) T\n  def []=(key string, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<string>\n  def values List<T>\n\n  def clone StringMap<T>\n  def each(x fn(string, T))\n  def get(key string, defaultValue T) T\n  def in(key string) bool\n  def remove(key string)\n}\n\n@import\nclass IntMap<T> {\n  def new\n  def {...}(key int, value T) IntMap<T>\n\n  def [](key int) T\n  def []=(key int, value T) T\n\n  def count int\n  def isEmpty bool\n  def keys List<int>\n  def values List<T>\n\n  def clone IntMap<T>\n  def each(x fn(int, T))\n  def get(key int, defaultValue T) T\n  def in(key int) bool\n  def remove(key int)\n}\n\nclass Box<T> {\n  var value T\n}\n\n################################################################################\n# Implementations\n\nclass int {\n  def **(x int) int {\n    var y = self\n    var z = x < 0 ? 0 : 1\n    while x > 0 {\n      if (x & 1) != 0 { z *= y }\n      x >>= 1\n      y *= y\n    }\n    return z\n  }\n\n  def <=>(x int) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass double {\n  def **(x double) double {\n    return Math.pow(self, x)\n  }\n\n  def <=>(x double) int {\n    return ((x < self) as int) - ((x > self) as int)\n  }\n}\n\nclass List {\n  def resize(count int, defaultValue T) {\n    assert(count >= 0)\n    while self.count < count { append(defaultValue) }\n    while self.count > count { removeLast }\n  }\n\n  def removeAll(value T) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if self[i] != value {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def removeDuplicates {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      var found = false\n      var value = self[i]\n      for j in 0..i {\n        if value == self[j] {\n          found = true\n          break\n        }\n      }\n      if !found {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def shuffle {\n    var n = count\n    for i in 0..n - 1 {\n      swap(i, i + ((Math.random * (n - i)) as int))\n    }\n  }\n\n  def swap(i int, j int) {\n    assert(0 <= i && i < count)\n    assert(0 <= j && j < count)\n    var temp = self[i]\n    self[i] = self[j]\n    self[j] = temp\n  }\n}\n\nnamespace Math {\n  def randomInRange(min double, max double) double {\n    assert(min <= max)\n    var value = min + (max - min) * random\n    assert(min <= value && value <= max)\n    return value\n  }\n\n  def randomInRange(minInclusive int, maxExclusive int) int {\n    assert(minInclusive <= maxExclusive)\n    var value = minInclusive + ((maxExclusive - minInclusive) * random) as int\n    assert(minInclusive <= value && (minInclusive != maxExclusive ? value < maxExclusive : value == maxExclusive))\n    return value\n  }\n\n  if TARGET != .JAVASCRIPT {\n    def max(x double, y double, z double) double {\n      return max(max(x, y), z)\n    }\n\n    def min(x double, y double, z double) double {\n      return min(min(x, y), z)\n    }\n\n    def max(x int, y int, z int) int {\n      return max(max(x, y), z)\n    }\n\n    def min(x int, y int, z int) int {\n      return min(min(x, y), z)\n    }\n\n    def max(x double, y double, z double, w double) double {\n      return max(max(x, y), max(z, w))\n    }\n\n    def min(x double, y double, z double, w double) double {\n      return min(min(x, y), min(z, w))\n    }\n\n    def max(x int, y int, z int, w int) int {\n      return max(max(x, y), max(z, w))\n    }\n\n    def min(x int, y int, z int, w int) int {\n      return min(min(x, y), min(z, w))\n    }\n  }\n\n  def clamp(x double, min double, max double) double {\n    return x < min ? min : x > max ? max : x\n  }\n\n  def clamp(x int, min int, max int) int {\n    return x < min ? min : x > max ? max : x\n  }\n}\n';
   Skew.NATIVE_LIBRARY_CS = '\n@using("System.Diagnostics")\ndef assert(truth bool) {\n  dynamic.Debug.Assert(truth)\n}\n\n@using("System")\nvar __random dynamic.Random = null\n\n@using("System")\n@import\nnamespace Math {\n  @rename("Abs") if TARGET == .CSHARP\n  def abs(x double) double\n  @rename("Abs") if TARGET == .CSHARP\n  def abs(x int) int\n\n  @rename("Acos") if TARGET == .CSHARP\n  def acos(x double) double\n  @rename("Asin") if TARGET == .CSHARP\n  def asin(x double) double\n  @rename("Atan") if TARGET == .CSHARP\n  def atan(x double) double\n  @rename("Atan2") if TARGET == .CSHARP\n  def atan2(x double, y double) double\n\n  @rename("Sin") if TARGET == .CSHARP\n  def sin(x double) double\n  @rename("Cos") if TARGET == .CSHARP\n  def cos(x double) double\n  @rename("Tan") if TARGET == .CSHARP\n  def tan(x double) double\n\n  @rename("Floor") if TARGET == .CSHARP\n  def floor(x double) double\n  @rename("Ceiling") if TARGET == .CSHARP\n  def ceil(x double) double\n  @rename("Round") if TARGET == .CSHARP\n  def round(x double) double\n\n  @rename("Exp") if TARGET == .CSHARP\n  def exp(x double) double\n  @rename("Log") if TARGET == .CSHARP\n  def log(x double) double\n  @rename("Pow") if TARGET == .CSHARP\n  def pow(x double, y double) double\n  @rename("Sqrt") if TARGET == .CSHARP\n  def sqrt(x double) double\n\n  @rename("Max") if TARGET == .CSHARP\n  def max(x double, y double) double\n  @rename("Max") if TARGET == .CSHARP\n  def max(x int, y int) int\n\n  @rename("Min") if TARGET == .CSHARP\n  def min(x double, y double) double\n  @rename("Min") if TARGET == .CSHARP\n  def min(x int, y int) int\n\n  def random double {\n    __random ?= dynamic.Random.new()\n    return __random.NextDouble()\n  }\n}\n\nclass double {\n  def isFinite bool {\n    return !isNaN && !dynamic.double.IsInfinity(self)\n  }\n\n  def isNaN bool {\n    return dynamic.double.IsNaN(self)\n  }\n}\n\n@using("System.Text")\n@import\nclass StringBuilder {\n  @rename("Append")\n  def append(x string)\n\n  @rename("ToString")\n  def toString string\n}\n\nclass bool {\n  @rename("ToString")\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  @rename("ToString")\n  def toString string\n\n  def >>>(x int) int {\n    return dynamic.unchecked(self as dynamic.uint >> x) as int\n  }\n}\n\nclass double {\n  @rename("ToString")\n  def toString string\n}\n\nclass string {\n  @rename("CompareTo")\n  def <=>(x string) int\n\n  @rename("StartsWith")\n  def startsWith(x string) bool\n\n  @rename("EndsWith")\n  def endsWith(x string) bool\n\n  @rename("Contains")\n  def in(x string) bool\n\n  @rename("IndexOf")\n  def indexOf(x string) int\n\n  @rename("LastIndexOf")\n  def lastIndexOf(x string) int\n\n  @rename("Replace")\n  def replaceAll(before string, after string) string\n\n  @rename("Substring") {\n    def slice(start int) string\n    def slice(start int, end int) string\n  }\n\n  @rename("ToLower")\n  def toLowerCase string\n\n  @rename("ToUpper")\n  def toUpperCase string\n\n  def count int {\n    return (self as dynamic).Length\n  }\n\n  def get(index int) string {\n    return fromCodeUnit(self[index])\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  @using("System.Linq")\n  @using("System")\n  def split(separator string) List<string> {\n    var separators = [separator]\n    return dynamic.Enumerable.ToList((self as dynamic).Split(dynamic.Enumerable.ToArray(separators as dynamic), dynamic.StringSplitOptions.None))\n  }\n\n  def join(parts List<string>) string {\n    return dynamic.string.Join(self, parts)\n  }\n\n  def slice(start int, end int) string {\n    return (self as dynamic).Substring(start, end - start)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.string.new(codeUnit as dynamic.char, 1)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var builder = StringBuilder.new\n    for codeUnit in codeUnits {\n      builder.append(codeUnit as dynamic.char)\n    }\n    return builder.toString\n  }\n}\n\n@using("System.Collections.Generic")\nclass List {\n  @rename("Contains")\n  def in(x T) bool\n\n  @rename("Add")\n  def append(value T)\n\n  @rename("AddRange")\n  def append(value List<T>)\n\n  def sort(x fn(T, T) int) {\n    # C# doesn\'t allow an anonymous function to be passed directly\n    (self as dynamic).Sort((a T, b T) => x(a, b))\n  }\n\n  @rename("Reverse")\n  def reverse\n\n  @rename("RemoveAll")\n  def removeIf(x fn(T) bool)\n\n  @rename("RemoveAt")\n  def removeAt(x int)\n\n  @rename("Remove")\n  def removeOne(x T)\n\n  @rename("TrueForAll")\n  def all(x fn(T) bool) bool\n\n  @rename("ForEach")\n  def each(x fn(T))\n\n  @rename("FindAll")\n  def filter(x fn(T) bool) List<T>\n\n  @rename("ConvertAll")\n  def map<R>(x fn(T) R) List<R>\n\n  @rename("IndexOf")\n  def indexOf(x T) int\n\n  @rename("LastIndexOf")\n  def lastIndexOf(x T) int\n\n  @rename("Insert")\n  def insert(x int, value T)\n\n  @rename("InsertRange")\n  def insert(x int, value List<T>)\n\n  def appendOne(x T) {\n    if !(x in self) {\n      append(x)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    (self as dynamic).RemoveRange(start, end - start)\n  }\n\n  @using("System.Linq") {\n    @rename("SequenceEqual")\n    def equals(x List<T>) bool\n\n    @rename("First")\n    def first T\n\n    @rename("Last")\n    def last T\n  }\n\n  def any(callback fn(T) bool) bool {\n    return !all(x => !callback(x))\n  }\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def count int {\n    return (self as dynamic).Count\n  }\n\n  def prepend(value T) {\n    insert(0, value)\n  }\n\n  def prepend(values List<T>) {\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def removeFirst {\n    removeAt(0)\n  }\n\n  def removeLast {\n    removeAt(count - 1)\n  }\n\n  def takeFirst T {\n    var value = first\n    removeFirst\n    return value\n  }\n\n  def takeLast T {\n    var value = last\n    removeLast\n    return value\n  }\n\n  def takeAt(x int) T {\n    var value = self[x]\n    removeAt(x)\n    return value\n  }\n\n  def takeRange(start int, end int) List<T> {\n    var value = slice(start, end)\n    removeRange(start, end)\n    return value\n  }\n\n  def slice(start int) List<T> {\n    return slice(start, count)\n  }\n\n  def slice(start int, end int) List<T> {\n    return (self as dynamic).GetRange(start, end - start)\n  }\n\n  def clone List<T> {\n    var clone = new\n    clone.append(self)\n    return clone\n  }\n}\n\n@using("System.Collections.Generic")\n@rename("Dictionary")\nclass StringMap {\n  def count int {\n    return (self as dynamic).Count\n  }\n\n  @rename("ContainsKey")\n  def in(key string) bool\n\n  @rename("Remove")\n  def remove(key string)\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def {...}(key string, value T) StringMap<T> {\n    (self as dynamic).Add(key, value)\n    return self\n  }\n\n  def get(key string, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<string> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Keys)\n  }\n\n  def values List<T> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Values)\n  }\n\n  def clone StringMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def each(x fn(string, T)) {\n    for pair in self as dynamic {\n      x(pair.Key, pair.Value)\n    }\n  }\n}\n\n@using("System.Collections.Generic")\n@rename("Dictionary")\nclass IntMap {\n  def count int {\n    return (self as dynamic).Count\n  }\n\n  @rename("ContainsKey")\n  def in(key int) bool\n\n  @rename("Remove")\n  def remove(key int)\n\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def {...}(key int, value T) IntMap<T> {\n    (self as dynamic).Add(key, value)\n    return self\n  }\n\n  def get(key int, value T) T {\n    return key in self ? self[key] : value\n  }\n\n  def keys List<int> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Keys)\n  }\n\n  def values List<T> {\n    return dynamic.System.Linq.Enumerable.ToList((self as dynamic).Values)\n  }\n\n  def clone IntMap<T> {\n    var clone = new\n    for key in keys {\n      clone[key] = self[key]\n    }\n    return clone\n  }\n\n  def each(x fn(int, T)) {\n    for pair in self as dynamic {\n      x(pair.Key, pair.Value)\n    }\n  }\n}\n';
   Skew.DEFAULT_MESSAGE_LIMIT = 10;
