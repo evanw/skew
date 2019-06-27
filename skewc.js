@@ -426,7 +426,7 @@
   // of flex is pretty bad (obfuscated variable names and the opposite of modular
   // code) but it's fast and somewhat standard for compiler design. The code below
   // replaces a simple hand-coded lexer and offers much better performance.
-  Skew.tokenize = function(log, source) {
+  Skew.tokenize = function(log, source, warnAboutIgnoredComments) {
     var tokens = [];
     var text = source.contents;
     var count = text.length;
@@ -675,6 +675,10 @@
 
       else if ((previousKind == Skew.TokenKind.NEWLINE || previousKind == Skew.TokenKind.COMMENT) && Skew.REMOVE_WHITESPACE_BEFORE.has(token.kind)) {
         while (true) {
+          if (warnAboutIgnoredComments && in_List.last(tokens).kind == Skew.TokenKind.COMMENT) {
+            log.syntaxWarningIgnoredComment(in_List.last(tokens).range);
+          }
+
           in_List.removeLast(tokens);
 
           if (tokens.length == 0 || in_List.last(tokens).kind != Skew.TokenKind.NEWLINE && in_List.last(tokens).kind != Skew.TokenKind.COMMENT) {
@@ -20963,7 +20967,7 @@
   Skew.LexingPass.prototype.run = function(context) {
     for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
       var source = in_List.get(list, i);
-      context.tokens.push(Skew.tokenize(context.log, source));
+      context.tokens.push(Skew.tokenize(context.log, source, context.options.warnAboutIgnoredComments));
     }
   };
 

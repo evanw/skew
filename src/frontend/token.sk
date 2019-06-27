@@ -10,7 +10,7 @@ namespace Skew {
 
     over run(context PassContext) {
       for source in context.inputs {
-        context.tokens.append(tokenize(context.log, source))
+        context.tokens.append(tokenize(context.log, source, context.options.warnAboutIgnoredComments))
       }
     }
   }
@@ -55,7 +55,7 @@ namespace Skew {
   # of flex is pretty bad (obfuscated variable names and the opposite of modular
   # code) but it's fast and somewhat standard for compiler design. The code below
   # replaces a simple hand-coded lexer and offers much better performance.
-  def tokenize(log Log, source Source) List<Token> {
+  def tokenize(log Log, source Source, warnAboutIgnoredComments bool) List<Token> {
     var tokens List<Token> = []
     var text = source.contents
     var count = text.count
@@ -283,6 +283,9 @@ namespace Skew {
         continue
       } else if (previousKind == .NEWLINE || previousKind == .COMMENT) && token.kind in REMOVE_WHITESPACE_BEFORE {
         while true {
+          if warnAboutIgnoredComments && tokens.last.kind == .COMMENT {
+            log.syntaxWarningIgnoredComment(tokens.last.range)
+          }
           tokens.removeLast
           if tokens.isEmpty || tokens.last.kind != .NEWLINE && tokens.last.kind != .COMMENT {
             break
