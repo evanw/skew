@@ -2937,6 +2937,10 @@ def main {
 ", "
 (function() {
   function a() {
+    // This is
+    // a block
+    // comment
+
     return;
   }
 

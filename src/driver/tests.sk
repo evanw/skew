@@ -194,7 +194,11 @@ namespace Skew.Tests {
             if symbol.comments != null {
               var nested = "\n" + indent + " ".repeat(symbol.name.count + 2) + " #"
               for comment in symbol.comments {
-                builder.append(nested + (comment.endsWith("\n") ? comment.slice(0, comment.count - 1) : comment))
+                if !comment.hasGapBelow {
+                  for line in comment.lines {
+                    builder.append(nested + (line.endsWith("\n") ? line.slice(0, line.count - 1) : line))
+                  }
+                }
               }
             }
           }
