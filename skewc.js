@@ -6752,10 +6752,18 @@
         this._emit('let ');
       }
 
-      this._emit(Skew.TypeScriptEmitter._mangleName(symbol) + ': ');
-      this._emitExpressionOrType(symbol.type, symbol.resolvedType);
+      var emitValue = symbol.value != null && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE;
 
-      if (symbol.value != null && symbol.kind != Skew.SymbolKind.VARIABLE_INSTANCE) {
+      if (emitValue && this._canOmitTypeAnnotation(symbol.value)) {
+        this._emit(Skew.TypeScriptEmitter._mangleName(symbol));
+      }
+
+      else {
+        this._emit(Skew.TypeScriptEmitter._mangleName(symbol) + ': ');
+        this._emitExpressionOrType(symbol.type, symbol.resolvedType);
+      }
+
+      if (emitValue) {
         this._emit(' = ');
         this._emitExpression(symbol.value, Skew.Precedence.COMMA);
       }
@@ -6764,6 +6772,33 @@
     }
 
     this._emitNewlineAfterSymbol(symbol);
+  };
+
+  // Various heuristics to make nicer-looking code without introducing too many type errors
+  Skew.TypeScriptEmitter.prototype._canOmitTypeAnnotation = function(value) {
+    var type = this._cache.unwrappedType(value.resolvedType);
+
+    if (type == Skew.Type.DYNAMIC) {
+      return false;
+    }
+
+    if (value.kind == Skew.NodeKind.CALL || value.kind == Skew.NodeKind.DOT) {
+      return true;
+    }
+
+    if (value.kind == Skew.NodeKind.NAME) {
+      return this._enclosingFunction == null || value.symbol != this._enclosingFunction.$this;
+    }
+
+    if (type == this._cache.boolType || this._cache.isNumeric(type)) {
+      return true;
+    }
+
+    if (type == this._cache.stringType && value.kind != Skew.NodeKind.NULL && (value.kind != Skew.NodeKind.CAST || value.castValue().kind != Skew.NodeKind.NULL)) {
+      return true;
+    }
+
+    return false;
   };
 
   Skew.TypeScriptEmitter.prototype._emitFunction = function(symbol) {
@@ -7016,8 +7051,16 @@
       case Skew.NodeKind.VARIABLES: {
         for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
           var symbol = child.symbol.asVariableSymbol();
-          this._emit(this._indent + 'let ' + Skew.TypeScriptEmitter._mangleName(symbol) + ': ');
-          this._emitExpressionOrType(symbol.type, symbol.resolvedType);
+          this._emit(this._indent + 'let ');
+
+          if (symbol.value != null && this._canOmitTypeAnnotation(symbol.value)) {
+            this._emit(Skew.TypeScriptEmitter._mangleName(symbol));
+          }
+
+          else {
+            this._emit(Skew.TypeScriptEmitter._mangleName(symbol) + ': ');
+            this._emitExpressionOrType(symbol.type, symbol.resolvedType);
+          }
 
           if (symbol.value != null) {
             this._emit(' = ');
@@ -7157,8 +7200,15 @@
                 this._emit(', ');
               }
 
-              this._emit(Skew.TypeScriptEmitter._mangleName(symbol1) + ': ');
-              this._emitExpressionOrType(symbol1.type, symbol1.resolvedType);
+              if (this._canOmitTypeAnnotation(symbol1.value)) {
+                this._emit(Skew.TypeScriptEmitter._mangleName(symbol1));
+              }
+
+              else {
+                this._emit(Skew.TypeScriptEmitter._mangleName(symbol1) + ': ');
+                this._emitExpressionOrType(symbol1.type, symbol1.resolvedType);
+              }
+
               this._emit(' = ');
               this._emitExpression(symbol1.value, Skew.Precedence.COMMA);
             }

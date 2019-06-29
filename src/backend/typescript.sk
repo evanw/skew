@@ -586,15 +586,33 @@ namespace Skew {
           _emit("let ")
         }
 
-        _emit(_mangleName(symbol) + ": ")
-        _emitExpressionOrType(symbol.type, symbol.resolvedType)
-        if symbol.value != null && symbol.kind != .VARIABLE_INSTANCE {
+        var emitValue = symbol.value != null && symbol.kind != .VARIABLE_INSTANCE
+
+        if emitValue && _canOmitTypeAnnotation(symbol.value) {
+          _emit(_mangleName(symbol))
+        } else {
+          _emit(_mangleName(symbol) + ": ")
+          _emitExpressionOrType(symbol.type, symbol.resolvedType)
+        }
+
+        if emitValue {
           _emit(" = ")
           _emitExpression(symbol.value, .COMMA)
         }
         _emit(";\n")
       }
       _emitNewlineAfterSymbol(symbol)
+    }
+
+    # Various heuristics to make nicer-looking code without introducing too many type errors
+    def _canOmitTypeAnnotation(value Node) bool {
+      var type = _cache.unwrappedType(value.resolvedType)
+      if type == .DYNAMIC { return false }
+      if value.kind == .CALL || value.kind == .DOT { return true }
+      if value.kind == .NAME { return _enclosingFunction == null || value.symbol != _enclosingFunction.this }
+      if type == _cache.boolType || _cache.isNumeric(type) { return true }
+      if type == _cache.stringType && value.kind != .NULL && (value.kind != .CAST || value.castValue.kind != .NULL) { return true }
+      return false
     }
 
     def _emitFunction(symbol FunctionSymbol) {
@@ -817,8 +835,13 @@ namespace Skew {
         case .VARIABLES {
           for child = node.firstChild; child != null; child = child.nextSibling {
             var symbol = child.symbol.asVariableSymbol
-            _emit(_indent + "let " + _mangleName(symbol) + ": ")
-            _emitExpressionOrType(symbol.type, symbol.resolvedType)
+            _emit(_indent + "let ")
+            if symbol.value != null && _canOmitTypeAnnotation(symbol.value) {
+              _emit(_mangleName(symbol))
+            } else {
+              _emit(_mangleName(symbol) + ": ")
+              _emitExpressionOrType(symbol.type, symbol.resolvedType)
+            }
             if symbol.value != null {
               _emit(" = ")
               _emitExpression(symbol.value, .ASSIGN)
@@ -928,8 +951,12 @@ namespace Skew {
                 if child.previousSibling != null {
                   _emit(", ")
                 }
-                _emit(_mangleName(symbol) + ": ")
-                _emitExpressionOrType(symbol.type, symbol.resolvedType)
+                if _canOmitTypeAnnotation(symbol.value) {
+                  _emit(_mangleName(symbol))
+                } else {
+                  _emit(_mangleName(symbol) + ": ")
+                  _emitExpressionOrType(symbol.type, symbol.resolvedType)
+                }
                 _emit(" = ")
                 _emitExpression(symbol.value, .COMMA)
               }
