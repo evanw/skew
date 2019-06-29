@@ -2743,27 +2743,19 @@ def test {
 }
 ", "
 (function() {
-  function h() {
-    var c = e(e(new Map, 1, 2), 3, 4), a = d(d(new Map, '1', 2), '3', 4);
+  function f() {
+    var d = c(c(new Map, 1, 2), 3, 4), e = b(b(new Map, '1', 2), '3', 4);
   }
 
-  function f(b, c, a) {
-    return b.set(c, a), a;
+  function b(a, d, e) {
+    return a.set(d, e), a;
   }
 
-  function d(b, c, a) {
-    return f(b, c, a), b;
+  function c(a, d, e) {
+    return a.set(d, e), a;
   }
 
-  function g(b, c, a) {
-    return b.set(c, a), a;
-  }
-
-  function e(b, c, a) {
-    return g(b, c, a), b;
-  }
-
-  h();
+  f();
 })();
 ").jsMangle.inlineAllFunctions
 

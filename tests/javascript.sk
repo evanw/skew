@@ -3537,13 +3537,8 @@ def main {
 
   var in_IntMap = {};
 
-  in_IntMap.set = function(self, key, value) {
-    self.set(key, value);
-    return value;
-  };
-
   in_IntMap.insert = function(self, key, value) {
-    in_IntMap.set(self, key, value);
+    self.set(key, value);
     return self;
   };
 
