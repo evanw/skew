@@ -7411,7 +7411,8 @@
         var value1 = node.castValue();
         var unwrappedType = this._cache.unwrappedType(type.resolvedType);
 
-        if (type.kind == Skew.NodeKind.TYPE && type.resolvedType == Skew.Type.DYNAMIC) {
+        // Skip the cast in certain cases
+        if (type.kind == Skew.NodeKind.TYPE && (type.resolvedType == Skew.Type.DYNAMIC || value1.kind == Skew.NodeKind.NULL)) {
           this._emitExpression(value1, precedence);
         }
 

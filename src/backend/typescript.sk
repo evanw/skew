@@ -1143,7 +1143,8 @@ namespace Skew {
           var value = node.castValue
           var unwrappedType = _cache.unwrappedType(type.resolvedType)
 
-          if type.kind == .TYPE && type.resolvedType == .DYNAMIC {
+          # Skip the cast in certain cases
+          if type.kind == .TYPE && (type.resolvedType == .DYNAMIC || value.kind == .NULL) {
             _emitExpression(value, precedence)
           }
 
