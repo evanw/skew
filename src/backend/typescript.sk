@@ -326,7 +326,17 @@ namespace Skew {
       }
       switch symbol.kind {
         case .OBJECT_CLASS { _emit("class ") }
-        case .OBJECT_ENUM, .OBJECT_FLAGS { _emit("enum ") }
+        case .OBJECT_ENUM, .OBJECT_FLAGS {
+          var toString = symbol.members.get("toString", null)
+          if toString != null &&
+              toString.kind.isFunction &&
+              .IS_INLINING_FORCED in toString.flags &&
+              .IS_AUTOMATICALLY_GENERATED in toString.flags &&
+              (toString as FunctionSymbol).inlinedCount == 0 {
+            _emit("const ")
+          }
+          _emit("enum ")
+        }
         case .OBJECT_INTERFACE { _emit("interface ") }
         case .OBJECT_WRAPPED { _emit("type ") }
         case .OBJECT_NAMESPACE { _emit("namespace ") }

@@ -6434,6 +6434,12 @@
 
       case Skew.SymbolKind.OBJECT_ENUM:
       case Skew.SymbolKind.OBJECT_FLAGS: {
+        var toString = in_StringMap.get(symbol.members, 'toString', null);
+
+        if (toString != null && Skew.in_SymbolKind.isFunction(toString.kind) && (Skew.SymbolFlags.IS_INLINING_FORCED & toString.flags) != 0 && (Skew.SymbolFlags.IS_AUTOMATICALLY_GENERATED & toString.flags) != 0 && toString.inlinedCount == 0) {
+          this._emit('const ');
+        }
+
         this._emit('enum ');
         break;
       }
@@ -10041,6 +10047,7 @@
     this.returnType = null;
     this.block = null;
     this.namingGroup = -1;
+    this.inlinedCount = 0;
   };
 
   __extends(Skew.FunctionSymbol, Skew.Symbol);
@@ -21341,6 +21348,8 @@
   Skew.Inlining = {};
 
   Skew.Inlining.inlineSymbol = function(graph, info) {
+    var ref;
+
     if (!info.shouldInline) {
       return;
     }
@@ -21428,6 +21437,7 @@
         }
       }
 
+      (ref = info.symbol).inlinedCount = ref.inlinedCount + 1 | 0;
       var clone = info.inlineValue.clone();
       var value = node.firstChild().remove();
       var values = [];

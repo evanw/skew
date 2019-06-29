@@ -355,6 +355,7 @@ namespace Skew {
     var returnType Node = null
     var block Node = null
     var namingGroup = -1 # Automatically filled out by the renaming step
+    var inlinedCount = 0
 
     def clone FunctionSymbol {
       var clone = new(kind, name)
