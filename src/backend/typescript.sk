@@ -1425,6 +1425,7 @@ namespace Skew {
             _emit("{\n")
             _increaseIndent
             for child = node.firstChild; child != null; child = child.nextSibling {
+              _emitComments(child.comments)
               _emit(_indent)
               _emitExpression(child.firstValue, .COMMA)
               _emit(": ")

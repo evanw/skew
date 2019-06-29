@@ -7834,6 +7834,7 @@
           this._increaseIndent();
 
           for (var child1 = node.firstChild(); child1 != null; child1 = child1.nextSibling()) {
+            this._emitComments(child1.comments);
             this._emit(this._indent);
             this._emitExpression(child1.firstValue(), Skew.Precedence.COMMA);
             this._emit(': ');
