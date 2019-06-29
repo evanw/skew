@@ -6960,6 +6960,10 @@
       in_List.append1(comments, node.comments);
     }
 
+    if (node.innerComments != null) {
+      in_List.append1(comments, node.innerComments);
+    }
+
     for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
       this._scanForComments(child, comments);
     }
@@ -10468,6 +10472,7 @@
     this.content = null;
     this.resolvedType = null;
     this.comments = null;
+    this.innerComments = null;
     this._parent = null;
     this._firstChild = null;
     this._lastChild = null;
@@ -10476,6 +10481,7 @@
   };
 
   Skew.Node.prototype._cloneWithoutChildren = function() {
+    var ref1;
     var ref;
     var clone = new Skew.Node(this.kind);
     clone.flags = this.flags;
@@ -10485,6 +10491,7 @@
     clone.content = this.content;
     clone.resolvedType = this.resolvedType;
     clone.comments = (ref = this.comments) != null ? ref.slice() : null;
+    clone.innerComments = (ref1 = this.innerComments) != null ? ref1.slice() : null;
     return clone;
   };
 
@@ -10664,6 +10671,12 @@
   Skew.Node.prototype.withComments = function(value) {
     assert(this.comments == null);
     this.comments = value;
+    return this;
+  };
+
+  Skew.Node.prototype.withInnerComments = function(value) {
+    assert(this.innerComments == null);
+    this.innerComments = value;
     return this;
   };
 
@@ -12598,6 +12611,19 @@
     this.hasGapBelow = hasGapBelow;
   };
 
+  Skew.Comment.concat = function(left, right) {
+    if (left == null) {
+      return right;
+    }
+
+    if (right == null) {
+      return left;
+    }
+
+    in_List.append1(left, right);
+    return left;
+  };
+
   Skew.Token = function(range, kind, comments) {
     this.range = range;
     this.kind = kind;
@@ -13031,17 +13057,14 @@
     }
   };
 
-  Skew.Parsing.parseTrailingComment = function(context, comments) {
-    if (context.peek1(Skew.TokenKind.NEWLINE) || context.peek1(Skew.TokenKind.END_OF_FILE)) {
-      var trailing = context.stealComments();
-
-      if (trailing != null) {
-        if (comments == null) {
-          comments = [];
-        }
-
-        in_List.append1(comments, trailing);
-        return comments;
+  Skew.Parsing.parseTrailingComment = function(context) {
+    switch (context.current().kind) {
+      case Skew.TokenKind.NEWLINE:
+      case Skew.TokenKind.END_OF_FILE:
+      case Skew.TokenKind.RIGHT_PARENTHESIS:
+      case Skew.TokenKind.RIGHT_BRACE:
+      case Skew.TokenKind.RIGHT_BRACKET: {
+        return context.stealComments();
       }
     }
 
@@ -13197,9 +13220,11 @@
 
       if (context.eat(Skew.TokenKind.CASE)) {
         while (true) {
+          var caseComments = context.stealComments();
           var constant = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
           Skew.Parsing.checkExtraParentheses(context, constant);
           child.appendChild(constant);
+          child.comments = Skew.Comment.concat(caseComments, Skew.Parsing.parseTrailingComment(context));
 
           // A colon isn't valid syntax here, but try to have a nice error message
           if (context.peek1(Skew.TokenKind.COLON)) {
@@ -13220,6 +13245,8 @@
           else if (!context.eat(Skew.TokenKind.COMMA)) {
             break;
           }
+
+          child.comments = Skew.Comment.concat(child.comments, Skew.Parsing.parseTrailingComment(context));
         }
       }
 
@@ -13272,18 +13299,12 @@
       }
 
       // Create the case
-      child.comments = comments;
       node.appendChild(child.appendChild(block).withRange(context.spanSince(start.range)));
 
       // Parse trailing comments and/or newline
-      comments = Skew.Parsing.parseTrailingComment(context, comments);
+      child.comments = Skew.Comment.concat(comments, Skew.Parsing.parseTrailingComment(context));
 
-      if (comments != null) {
-        child.comments = comments;
-        context.eat(Skew.TokenKind.NEWLINE);
-      }
-
-      else if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || colon == null && !context.expect(Skew.TokenKind.NEWLINE)) {
+      if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || colon == null && !context.expect(Skew.TokenKind.NEWLINE)) {
         break;
       }
     }
@@ -13524,20 +13545,13 @@
 
   Skew.Parsing.parseStatements = function(context, parent, mode) {
     var previous = null;
-    var trailing = Skew.Parsing.parseTrailingComment(context, null);
+    var leading = Skew.Parsing.parseTrailingComment(context);
     context.eat(Skew.TokenKind.NEWLINE);
 
     while (!context.peek1(Skew.TokenKind.RIGHT_BRACE) && !context.peek1(Skew.TokenKind.XML_START_CLOSE) && !context.peek1(Skew.TokenKind.END_OF_FILE)) {
-      var comments = context.stealComments();
-
       // The block may start with a trailing comment
-      if (trailing != null) {
-        if (comments != null) {
-          in_List.append1(trailing, comments);
-        }
-
-        comments = trailing;
-      }
+      var comments = Skew.Comment.concat(leading, context.stealComments());
+      leading = null;
 
       // When parsing a C-style switch, stop if it looks like the end of the case
       if (mode == Skew.Parsing.StatementsMode.C_STYLE_SWITCH && (context.peek1(Skew.TokenKind.CASE) || context.peek1(Skew.TokenKind.DEFAULT) || context.peek1(Skew.TokenKind.BREAK))) {
@@ -13691,21 +13705,19 @@
       var semicolon = context.skipSemicolon();
 
       // Parse trailing comments and/or newline
-      comments = Skew.Parsing.parseTrailingComment(context, comments);
+      var trailing = Skew.Parsing.parseTrailingComment(context);
 
-      if (comments != null) {
+      if (trailing != null) {
         if (previous != null) {
-          previous.comments = comments;
+          previous.comments = Skew.Comment.concat(previous.comments, trailing);
         }
 
         else {
-          Skew.Parsing._warnAboutIgnoredComments(context, comments);
+          Skew.Parsing._warnAboutIgnoredComments(context, trailing);
         }
-
-        context.eat(Skew.TokenKind.NEWLINE);
       }
 
-      else if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.peek1(Skew.TokenKind.XML_START_CLOSE)) {
+      if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.peek1(Skew.TokenKind.XML_START_CLOSE)) {
         break;
       }
 
@@ -13721,15 +13733,7 @@
     }
 
     // Convert trailing comments to blocks
-    var comments1 = context.stealComments();
-
-    if (trailing != null) {
-      if (comments1 != null) {
-        in_List.append1(trailing, comments1);
-      }
-
-      comments1 = trailing;
-    }
+    var comments1 = Skew.Comment.concat(leading, context.stealComments());
 
     if (comments1 != null) {
       parent.appendChild(new Skew.Node(Skew.NodeKind.COMMENT_BLOCK).withComments(comments1));
@@ -13740,6 +13744,7 @@
 
   Skew.Parsing.parseBlock = function(context) {
     context.skipWhitespace();
+    var comments = context.stealComments();
     var token = context.current();
 
     if (!context.expect(Skew.TokenKind.LEFT_BRACE)) {
@@ -13752,7 +13757,7 @@
       return null;
     }
 
-    return block.withRange(context.spanSince(token.range));
+    return block.withRange(context.spanSince(token.range)).withComments(comments);
   };
 
   Skew.Parsing.peekType = function(context) {
@@ -13793,15 +13798,13 @@
   };
 
   Skew.Parsing.parseFunctionArguments = function(context, symbol) {
+    var leading = Skew.Parsing.parseTrailingComment(context);
     var usingTypes = false;
 
     while (!context.eat(Skew.TokenKind.RIGHT_PARENTHESIS)) {
-      if (!(symbol.$arguments.length == 0) && !context.expect(Skew.TokenKind.COMMA)) {
-        Skew.Parsing.scanForToken(context, Skew.TokenKind.RIGHT_PARENTHESIS);
-        break;
-      }
-
       context.skipWhitespace();
+      var comments = Skew.Comment.concat(leading, context.stealComments());
+      leading = null;
       var range = context.current().range;
 
       if (!context.expect(Skew.TokenKind.IDENTIFIER)) {
@@ -13831,6 +13834,15 @@
       }
 
       symbol.$arguments.push(arg);
+
+      if (!context.peek1(Skew.TokenKind.RIGHT_PARENTHESIS)) {
+        if (!context.expect(Skew.TokenKind.COMMA)) {
+          Skew.Parsing.scanForToken(context, Skew.TokenKind.RIGHT_PARENTHESIS);
+          break;
+        }
+      }
+
+      arg.comments = Skew.Comment.concat(comments, Skew.Parsing.parseTrailingComment(context));
     }
 
     return true;
@@ -14339,15 +14351,9 @@
     }
 
     symbol.annotations = annotations != null ? annotations.slice() : null;
-    symbol.comments = comments;
-    comments = Skew.Parsing.parseTrailingComment(context, comments);
+    symbol.comments = Skew.Comment.concat(comments, Skew.Parsing.parseTrailingComment(context));
 
-    if (comments != null) {
-      symbol.comments = comments;
-      context.eat(Skew.TokenKind.NEWLINE);
-    }
-
-    else if (!Skew.Parsing.parseAfterBlock(context)) {
+    if (!Skew.Parsing.parseAfterBlock(context)) {
       return false;
     }
 
@@ -14366,11 +14372,12 @@
 
   Skew.Parsing.parseCommaSeparatedList = function(context, parent, stop) {
     var isFirst = true;
+    var leading = Skew.Parsing.parseTrailingComment(context);
+    context.skipWhitespace();
 
     while (true) {
-      context.eat(Skew.TokenKind.NEWLINE);
-      var comments = context.stealComments();
-      context.skipWhitespace();
+      var comments = Skew.Comment.concat(leading, context.stealComments());
+      leading = null;
 
       if (isFirst && context.eat(stop)) {
         Skew.Parsing._warnAboutIgnoredComments(context, comments);
@@ -14378,15 +14385,9 @@
       }
 
       var value = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
-      value.comments = comments;
-      parent.appendChild(value);
-      comments = Skew.Parsing.parseTrailingComment(context, value.comments);
-
-      if (comments != null) {
-        value.comments = comments;
-      }
-
+      value.comments = Skew.Comment.concat(comments, Skew.Parsing.parseTrailingComment(context));
       context.skipWhitespace();
+      parent.appendChild(value);
 
       if (context.eat(stop)) {
         break;
@@ -14397,12 +14398,8 @@
         break;
       }
 
-      comments = Skew.Parsing.parseTrailingComment(context, value.comments);
-
-      if (comments != null) {
-        value.comments = comments;
-      }
-
+      value.comments = Skew.Comment.concat(value.comments, Skew.Parsing.parseTrailingComment(context));
+      context.skipWhitespace();
       isFirst = false;
     }
   };
@@ -15157,6 +15154,7 @@
 
   Skew.Pratt.prototype.parse = function(context, precedence) {
     context.skipWhitespace();
+    var comments = context.stealComments();
     var token = context.current();
     var parselet = in_IntMap.get(this._table, token.kind, null);
 
@@ -15169,6 +15167,7 @@
 
     // Parselets must set the range of every node
     assert(node != null && node.range != null);
+    node.comments = Skew.Comment.concat(comments, node.comments);
     return node;
   };
 
@@ -15214,7 +15213,14 @@
     var self = this;
     self.parselet(kind, precedence).infix = function(context, left) {
       var token = context.next();
-      return callback(context, left, token, self.parse(context, precedence));
+      var comments = context.stealComments();
+      var node = callback(context, left, token, self.parse(context, precedence));
+
+      if (node != null) {
+        node.comments = Skew.Comment.concat(comments, node.comments);
+      }
+
+      return node;
     };
   };
 
@@ -25878,6 +25884,7 @@
   Skew.Parsing.forbiddenGroupDescription = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(new Map(), Skew.Parsing.ForbiddenGroup.ASSIGN, 'value types are not supported by the language'), Skew.Parsing.ForbiddenGroup.COMPARE, 'it\'s automatically implemented using the "<=>" operator (customize the "<=>" operator instead)'), Skew.Parsing.ForbiddenGroup.EQUAL, "that wouldn't work with generics, which are implemented with type erasure"), Skew.Parsing.ForbiddenGroup.LOGICAL, 'of its special short-circuit evaluation behavior');
   Skew.Parsing.assignmentOperators = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(new Map(), Skew.TokenKind.ASSIGN, Skew.NodeKind.ASSIGN), Skew.TokenKind.ASSIGN_BITWISE_AND, Skew.NodeKind.ASSIGN_BITWISE_AND), Skew.TokenKind.ASSIGN_BITWISE_OR, Skew.NodeKind.ASSIGN_BITWISE_OR), Skew.TokenKind.ASSIGN_BITWISE_XOR, Skew.NodeKind.ASSIGN_BITWISE_XOR), Skew.TokenKind.ASSIGN_DIVIDE, Skew.NodeKind.ASSIGN_DIVIDE), Skew.TokenKind.ASSIGN_MINUS, Skew.NodeKind.ASSIGN_SUBTRACT), Skew.TokenKind.ASSIGN_MODULUS, Skew.NodeKind.ASSIGN_MODULUS), Skew.TokenKind.ASSIGN_MULTIPLY, Skew.NodeKind.ASSIGN_MULTIPLY), Skew.TokenKind.ASSIGN_PLUS, Skew.NodeKind.ASSIGN_ADD), Skew.TokenKind.ASSIGN_POWER, Skew.NodeKind.ASSIGN_POWER), Skew.TokenKind.ASSIGN_REMAINDER, Skew.NodeKind.ASSIGN_REMAINDER), Skew.TokenKind.ASSIGN_SHIFT_LEFT, Skew.NodeKind.ASSIGN_SHIFT_LEFT), Skew.TokenKind.ASSIGN_SHIFT_RIGHT, Skew.NodeKind.ASSIGN_SHIFT_RIGHT), Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, Skew.NodeKind.ASSIGN_UNSIGNED_SHIFT_RIGHT);
   Skew.Parsing.dotInfixParselet = function(context, left) {
+    var innerComments = context.stealComments();
     var token = context.next();
     var range = context.current().range;
 
@@ -25886,7 +25893,7 @@
       range = new Skew.Range(token.range.source, token.range.end, token.range.end);
     }
 
-    return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(range.toString())).appendChild(left).withRange(context.spanSince(left.range)).withInternalRange(range);
+    return new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent(range.toString())).appendChild(left).withRange(context.spanSince(left.range)).withInternalRange(range).withInnerComments(innerComments);
   };
   Skew.Parsing.initializerParselet = function(context) {
     var token = context.next();
@@ -25923,22 +25930,13 @@
           node.appendChild(first);
         }
 
-        first.comments = comments;
-        comments = Skew.Parsing.parseTrailingComment(context, first.comments);
-
-        if (comments != null) {
-          first.comments = comments;
-        }
+        first.comments = Skew.Comment.concat(comments, Skew.Parsing.parseTrailingComment(context));
 
         if (!context.eat(Skew.TokenKind.COMMA)) {
           break;
         }
 
-        comments = Skew.Parsing.parseTrailingComment(context, first.comments);
-
-        if (comments != null) {
-          first.comments = comments;
-        }
+        first.comments = Skew.Comment.concat(first.comments, Skew.Parsing.parseTrailingComment(context));
       }
 
       context.skipWhitespace();

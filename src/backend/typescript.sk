@@ -713,6 +713,9 @@ namespace Skew {
       if node.comments != null {
         comments.append(node.comments)
       }
+      if node.innerComments != null {
+        comments.append(node.innerComments)
+      }
       for child = node.firstChild; child != null; child = child.nextSibling {
         _scanForComments(child, comments)
       }

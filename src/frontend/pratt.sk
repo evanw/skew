@@ -156,6 +156,7 @@ namespace Skew {
 
     def parse(context ParserContext, precedence Precedence) Node {
       context.skipWhitespace
+      var comments = context.stealComments
       var token = context.current
       var parselet = _table.get(token.kind, null)
       if parselet == null || parselet.prefix == null {
@@ -164,6 +165,7 @@ namespace Skew {
       }
       var node = resume(context, precedence, parselet.prefix(context))
       assert(node != null && node.range != null) # Parselets must set the range of every node
+      node.comments = Comment.concat(comments, node.comments)
       return node
     }
 
@@ -198,7 +200,12 @@ namespace Skew {
     def infix(kind TokenKind, precedence Precedence, callback fn(ParserContext, Node, Token, Node) Node) {
       parselet(kind, precedence).infix = (context, left) => {
         var token = context.next
-        return callback(context, left, token, parse(context, precedence))
+        var comments = context.stealComments
+        var node = callback(context, left, token, parse(context, precedence))
+        if node != null {
+          node.comments = Comment.concat(comments, node.comments)
+        }
+        return node
       }
     }
 

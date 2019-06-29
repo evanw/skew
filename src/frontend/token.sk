@@ -21,6 +21,15 @@ namespace Skew {
     var hasGapBelow bool
   }
 
+  namespace Comment {
+    def concat(left List<Comment>, right List<Comment>) List<Comment> {
+      if left == null { return right }
+      if right == null { return left }
+      left.append(right)
+      return left
+    }
+  }
+
   class Token {
     var range Range
     var kind TokenKind

@@ -218,6 +218,7 @@ namespace Skew {
     var content Content = null
     var resolvedType Type = null
     var comments List<Comment> = null
+    var innerComments List<Comment> = null
     var _parent Node = null
     var _firstChild Node = null
     var _lastChild Node = null
@@ -233,6 +234,7 @@ namespace Skew {
       clone.content = content
       clone.resolvedType = resolvedType
       clone.comments = comments?.clone
+      clone.innerComments = innerComments?.clone
       return clone
     }
 
@@ -375,6 +377,12 @@ namespace Skew {
     def withComments(value List<Comment>) Node {
       assert(comments == null)
       comments = value
+      return self
+    }
+
+    def withInnerComments(value List<Comment>) Node {
+      assert(innerComments == null)
+      innerComments = value
       return self
     }
 
