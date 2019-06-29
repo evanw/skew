@@ -7405,6 +7405,16 @@
         var value = node.callValue();
         var wrap1 = value.kind == Skew.NodeKind.LAMBDA;
 
+        // Turn "new Object" into "{}"
+        if (value.kind == Skew.NodeKind.DOT && value.asString() == 'new' && value.nextSibling() == null) {
+          var target = value.dotTarget();
+
+          if (target.kind == Skew.NodeKind.NAME && target.asString() == 'Object') {
+            this._emit('{}');
+            return;
+          }
+        }
+
         if (wrap1) {
           this._emit('(');
         }

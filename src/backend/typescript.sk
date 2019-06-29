@@ -1120,6 +1120,15 @@ namespace Skew {
           var value = node.callValue
           var wrap = value.kind == .LAMBDA
 
+          # Turn "new Object" into "{}"
+          if value.kind == .DOT && value.asString == "new" && value.nextSibling == null {
+            var target = value.dotTarget
+            if target.kind == .NAME && target.asString == "Object" {
+              _emit("{}")
+              return
+            }
+          }
+
           if wrap {
             _emit("(")
           }
