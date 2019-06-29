@@ -32,7 +32,6 @@ namespace Skew {
     var _emittedComments List<Comment> = []
     var _previousNode Node = null
     var _previousSymbol Symbol = null
-    var _namespaceStack List<Symbol> = []
     var _symbolsCheckedForImport IntMap<int> = {}
     var _importedFiles StringMap<StringMap<int>> = {}
     var _loopLabels IntMap<VariableSymbol> = {}
@@ -89,6 +88,33 @@ namespace Skew {
 
       var addAll fn(ObjectSymbol)
       addAll = (p ObjectSymbol) => {
+        # If this namespace has comments, move its comments to
+        # the first child of this namespace in the same file
+        if p.comments != null {
+          var all List<Symbol> = []
+          for s in p.variables { all.append(s) }
+          for s in p.functions { all.append(s) }
+          for s in p.objects { all.append(s) }
+
+          # Iterate over the comments in reverse because we are prefixing
+          for i in 0..p.comments.count {
+            var c = p.comments[p.comments.count - i - 1]
+            var best Symbol = null
+            for s in all {
+              if s.range.source == c.range.source {
+                if best == null || best.range.start > s.range.start {
+                  best = s
+                }
+              }
+            }
+            if best != null {
+              best.comments = Comment.concat([c], best.comments)
+            } else if _options.warnAboutIgnoredComments {
+              _log.syntaxWarningIgnoredCommentInEmitter(c.range)
+            }
+          }
+        }
+
         for s in p.variables {
           add(s)
         }

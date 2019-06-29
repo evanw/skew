@@ -6177,7 +6177,6 @@
     this._emittedComments = [];
     this._previousNode = null;
     this._previousSymbol = null;
-    this._namespaceStack = [];
     this._symbolsCheckedForImport = new Map();
     this._importedFiles = new Map();
     this._loopLabels = new Map();
@@ -6243,34 +6242,79 @@
     };
     var addAll = null;
     addAll = function(p) {
-      for (var i1 = 0, list1 = p.variables, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
-        var s = in_List.get(list1, i1);
-        add(s);
+      // If this namespace has comments, move its comments to
+      // the first child of this namespace in the same file
+      if (p.comments != null) {
+        var all = [];
+
+        for (var i1 = 0, list1 = p.variables, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+          var s = in_List.get(list1, i1);
+          all.push(s);
+        }
+
+        for (var i2 = 0, list2 = p.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
+          var s1 = in_List.get(list2, i2);
+          all.push(s1);
+        }
+
+        for (var i3 = 0, list3 = p.objects, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
+          var s2 = in_List.get(list3, i3);
+          all.push(s2);
+        }
+
+        // Iterate over the comments in reverse because we are prefixing
+        for (var i = 0, count5 = p.comments.length; i < count5; i = i + 1 | 0) {
+          var c = in_List.get(p.comments, (p.comments.length - i | 0) - 1 | 0);
+          var best = null;
+
+          for (var i4 = 0, list4 = all, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
+            var s3 = in_List.get(list4, i4);
+
+            if (s3.range.source == c.range.source) {
+              if (best == null || best.range.start > s3.range.start) {
+                best = s3;
+              }
+            }
+          }
+
+          if (best != null) {
+            best.comments = Skew.Comment.concat([c], best.comments);
+          }
+
+          else if (self._options.warnAboutIgnoredComments) {
+            self._log.syntaxWarningIgnoredCommentInEmitter(c.range);
+          }
+        }
       }
 
-      for (var i2 = 0, list2 = p.functions, count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
-        var s1 = in_List.get(list2, i2);
-        add(s1);
+      for (var i5 = 0, list5 = p.variables, count6 = list5.length; i5 < count6; i5 = i5 + 1 | 0) {
+        var s4 = in_List.get(list5, i5);
+        add(s4);
       }
 
-      for (var i3 = 0, list3 = p.objects, count3 = list3.length; i3 < count3; i3 = i3 + 1 | 0) {
-        var s2 = in_List.get(list3, i3);
+      for (var i6 = 0, list6 = p.functions, count7 = list6.length; i6 < count7; i6 = i6 + 1 | 0) {
+        var s5 = in_List.get(list6, i6);
+        add(s5);
+      }
 
-        if (Skew.TypeScriptEmitter._shouldFlattenNamespace(s2)) {
-          addAll(s2);
+      for (var i7 = 0, list7 = p.objects, count8 = list7.length; i7 < count8; i7 = i7 + 1 | 0) {
+        var s6 = in_List.get(list7, i7);
+
+        if (Skew.TypeScriptEmitter._shouldFlattenNamespace(s6)) {
+          addAll(s6);
         }
 
         else {
-          add(s2);
+          add(s6);
 
           // There can only be one constructor in TypeScript
-          if (s2.kind == Skew.SymbolKind.OBJECT_CLASS && !s2.isImported()) {
-            var ctors = s2.functions.filter(function(f) {
+          if (s6.kind == Skew.SymbolKind.OBJECT_CLASS && !s6.isImported()) {
+            var ctors = s6.functions.filter(function(f) {
               return f.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
             });
 
             if (ctors.length > 1) {
-              s2.functions = s2.functions.filter(function(f) {
+              s6.functions = s6.functions.filter(function(f) {
                 return f.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
               });
               var canUseArgumentCount = ctors.every(function(c1) {
@@ -6278,7 +6322,7 @@
                   return c1.$arguments.length == c2.$arguments.length;
                 }).length == 1;
               });
-              in_IntMap.set(self._ctors, s2.id, new Skew.TypeScriptEmitter.MultipleCtors(ctors, canUseArgumentCount));
+              in_IntMap.set(self._ctors, s6.id, new Skew.TypeScriptEmitter.MultipleCtors(ctors, canUseArgumentCount));
             }
           }
         }
