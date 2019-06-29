@@ -1492,7 +1492,7 @@ namespace Skew {
               _emit("(")
             }
             _emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity))
-            _emit(" " + info.text)
+            _emit(" " + info.text + (kind == .EQUAL || kind == .NOT_EQUAL ? "=" : ""))
 
             var comments = right.comments
             if comments != null {

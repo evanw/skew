@@ -7914,7 +7914,7 @@
           }
 
           this._emitExpression(left, info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
-          this._emit(' ' + info1.text);
+          this._emit(' ' + info1.text + (kind == Skew.NodeKind.EQUAL || kind == Skew.NodeKind.NOT_EQUAL ? '=' : ''));
           var comments = right.comments;
 
           if (comments != null) {
