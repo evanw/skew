@@ -977,6 +977,16 @@ namespace Skew.Resolving {
       var names = Node.createList
       _initializeSymbol(parent)
 
+      symbol.returnType = Node.createType(_cache.stringType)
+      symbol.flags |= .IS_GETTER
+
+      # TypeScript has special enum-to-string support that we can use instead
+      if _options.target is TypeScriptTarget {
+        const target = Node.createName(parent.name).withSymbol(parent).withType(.DYNAMIC)
+        symbol.block = Node.createBlock.appendChild(Node.createReturn(Node.createIndex(target, Node.createName("self"))))
+        return
+      }
+
       for variable in parent.variables {
         if variable.kind == .VARIABLE_ENUM_OR_FLAGS {
           assert(variable.value.asInt == names.childCount)
@@ -994,9 +1004,7 @@ namespace Skew.Resolving {
       parent.variables.append(strings)
       _resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType)
 
-      symbol.returnType = Node.createType(_cache.stringType)
       symbol.block = Node.createBlock.appendChild(Node.createReturn(Node.createIndex(Node.createSymbolReference(strings), Node.createName("self"))))
-      symbol.flags |= .IS_GETTER
     }
 
     def _resolveFunction(symbol FunctionSymbol) {

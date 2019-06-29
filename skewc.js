@@ -16593,6 +16593,15 @@
     var parent = symbol.parent.asObjectSymbol();
     var names = new Skew.Node(Skew.NodeKind.INITIALIZER_LIST);
     this._initializeSymbol(parent);
+    symbol.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(this._cache.stringType);
+    symbol.flags |= Skew.SymbolFlags.IS_GETTER;
+
+    // TypeScript has special enum-to-string support that we can use instead
+    if (this._options.target instanceof Skew.TypeScriptTarget) {
+      var target = new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent(parent.name)).withSymbol(parent).withType(Skew.Type.DYNAMIC);
+      symbol.block = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createReturn(Skew.Node.createIndex(target, new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('self')))));
+      return;
+    }
 
     for (var i = 0, list = parent.variables, count = list.length; i < count; i = i + 1 | 0) {
       var variable = in_List.get(list, i);
@@ -16612,9 +16621,7 @@
     strings.scope = parent.scope;
     parent.variables.push(strings);
     this._resolveAsParameterizedExpressionWithConversion(strings.value, strings.scope, strings.resolvedType);
-    symbol.returnType = new Skew.Node(Skew.NodeKind.TYPE).withType(this._cache.stringType);
     symbol.block = new Skew.Node(Skew.NodeKind.BLOCK).appendChild(Skew.Node.createReturn(Skew.Node.createIndex(Skew.Node.createSymbolReference(strings), new Skew.Node(Skew.NodeKind.NAME).withContent(new Skew.StringContent('self')))));
-    symbol.flags |= Skew.SymbolFlags.IS_GETTER;
   };
 
   Skew.Resolving.Resolver.prototype._resolveFunction = function(symbol) {
