@@ -63,12 +63,14 @@ class string {
     return (self as dynamic).slice(start, end)
   }
 
+  @alwaysinline
   def startsWith(text string) bool {
-    return count >= text.count && slice(0, text.count) == text
+    return (self as dynamic).startsWith(text)
   }
 
+  @alwaysinline
   def endsWith(text string) bool {
-    return count >= text.count && slice(count - text.count) == text
+    return (self as dynamic).endsWith(text)
   }
 
   def replaceAll(before string, after string) string {
@@ -118,6 +120,7 @@ class string {
 }
 
 namespace string {
+  @alwaysinline
   def fromCodeUnit(codeUnit int) string {
     return dynamic.String.fromCharCode(codeUnit)
   }

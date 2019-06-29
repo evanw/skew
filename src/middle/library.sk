@@ -345,6 +345,7 @@ class int {
 }
 
 class double {
+  @alwaysinline
   def **(x double) double {
     return Math.pow(self, x)
   }
