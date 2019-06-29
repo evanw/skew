@@ -26,6 +26,9 @@ def assert(truth bool) {
   }
 }
 
+# Override this to true to remove asserts from many of the functions below so that they may be inlined
+const JS_INLINE_NATIVE = false
+
 @import
 namespace Math {}
 
@@ -53,14 +56,28 @@ class string {
     return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)
   }
 
-  def slice(start int) string {
-    assert(0 <= start && start <= count)
-    return (self as dynamic).slice(start)
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def slice(start int) string {
+      return (self as dynamic).slice(start)
+    }
+  } else {
+    def slice(start int) string {
+      assert(0 <= start && start <= count)
+      return (self as dynamic).slice(start)
+    }
   }
 
-  def slice(start int, end int) string {
-    assert(0 <= start && start <= end && end <= count)
-    return (self as dynamic).slice(start, end)
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def slice(start int, end int) string {
+      return (self as dynamic).slice(start, end)
+    }
+  } else {
+    def slice(start int, end int) string {
+      assert(0 <= start && start <= end && end <= count)
+      return (self as dynamic).slice(start, end)
+    }
   }
 
   @alwaysinline
@@ -73,6 +90,7 @@ class string {
     return (self as dynamic).endsWith(text)
   }
 
+  @alwaysinline
   def replaceAll(before string, after string) string {
     return after.join(self.split(before))
   }
@@ -87,14 +105,28 @@ class string {
     return (self as dynamic).length
   }
 
-  def [](index int) int {
-    assert(0 <= index && index < count)
-    return (self as dynamic).charCodeAt(index)
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def [](index int) int {
+      return (self as dynamic).charCodeAt(index)
+    }
+  } else {
+    def [](index int) int {
+      assert(0 <= index && index < count)
+      return (self as dynamic).charCodeAt(index)
+    }
   }
 
-  def get(index int) string {
-    assert(0 <= index && index < count)
-    return (self as dynamic)[index]
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def get(index int) string {
+      return (self as dynamic)[index]
+    }
+  } else {
+    def get(index int) string {
+      assert(0 <= index && index < count)
+      return (self as dynamic)[index]
+    }
   }
 
   def repeat(times int) string {
@@ -171,24 +203,52 @@ class List {
   @rename(\"forEach\")
   def each(x fn(T))
 
-  def slice(start int) List<T> {
-    assert(0 <= start && start <= count)
-    return (self as dynamic).slice(start)
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def slice(start int) List<T> {
+      return (self as dynamic).slice(start)
+    }
+  } else {
+    def slice(start int) List<T> {
+      assert(0 <= start && start <= count)
+      return (self as dynamic).slice(start)
+    }
   }
 
-  def slice(start int, end int) List<T> {
-    assert(0 <= start && start <= end && end <= count)
-    return (self as dynamic).slice(start, end)
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def slice(start int, end int) List<T> {
+      return (self as dynamic).slice(start, end)
+    }
+  } else {
+    def slice(start int, end int) List<T> {
+      assert(0 <= start && start <= end && end <= count)
+      return (self as dynamic).slice(start, end)
+    }
   }
 
-  def [](index int) T {
-    assert(0 <= index && index < count)
-    return (self as dynamic)[index]
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def [](index int) T {
+      return (self as dynamic)[index]
+    }
+  } else {
+    def [](index int) T {
+      assert(0 <= index && index < count)
+      return (self as dynamic)[index]
+    }
   }
 
-  def []=(index int, value T) T {
-    assert(0 <= index && index < count)
-    return (self as dynamic)[index] = value
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def []=(index int, value T) T {
+      return (self as dynamic)[index] = value
+    }
+  } else {
+    def []=(index int, value T) T {
+      assert(0 <= index && index < count)
+      return (self as dynamic)[index] = value
+    }
   }
 
   @alwaysinline
@@ -206,9 +266,16 @@ class List {
     return (self as dynamic).length
   }
 
-  def first T {
-    assert(!isEmpty)
-    return self[0]
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def first T {
+      return self[0]
+    }
+  } else {
+    def first T {
+      assert(!isEmpty)
+      return self[0]
+    }
   }
 
   def last T {
@@ -249,9 +316,16 @@ class List {
     (self as dynamic).shift()
   }
 
-  def takeFirst T {
-    assert(!isEmpty)
-    return (self as dynamic).shift()
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def takeFirst T {
+      return (self as dynamic).shift()
+    }
+  } else {
+    def takeFirst T {
+      assert(!isEmpty)
+      return (self as dynamic).shift()
+    }
   }
 
   def removeLast {
@@ -259,9 +333,16 @@ class List {
     (self as dynamic).pop()
   }
 
-  def takeLast T {
-    assert(!isEmpty)
-    return (self as dynamic).pop()
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def takeLast T {
+      return (self as dynamic).pop()
+    }
+  } else {
+    def takeLast T {
+      assert(!isEmpty)
+      return (self as dynamic).pop()
+    }
   }
 
   def removeAt(index int) {
@@ -269,9 +350,16 @@ class List {
     (self as dynamic).splice(index, 1)
   }
 
-  def takeAt(index int) T {
-    assert(0 <= index && index < count)
-    return (self as dynamic).splice(index, 1)[0]
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def takeAt(index int) T {
+      return (self as dynamic).splice(index, 1)[0]
+    }
+  } else {
+    def takeAt(index int) T {
+      assert(0 <= index && index < count)
+      return (self as dynamic).splice(index, 1)[0]
+    }
   }
 
   def takeRange(start int, end int) List<T> {
@@ -344,9 +432,16 @@ namespace StringMap {
 }
 
 class StringMap {
-  def [](key string) T {
-    assert(key in self)
-    return (self as dynamic).get(key)
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def [](key string) T {
+      return (self as dynamic).get(key)
+    }
+  } else {
+    def [](key string) T {
+      assert(key in self)
+      return (self as dynamic).get(key)
+    }
   }
 
   def []=(key string, value T) T {
@@ -355,7 +450,7 @@ class StringMap {
   }
 
   def {...}(key string, value T) StringMap<T> {
-    self[key] = value
+    (self as dynamic).set(key, value)
     return self
   }
 
@@ -414,9 +509,16 @@ namespace IntMap {
 }
 
 class IntMap {
-  def [](key int) T {
-    assert(key in self)
-    return (self as dynamic).get(key)
+  if JS_INLINE_NATIVE {
+    @alwaysinline
+    def [](key int) T {
+      return (self as dynamic).get(key)
+    }
+  } else {
+    def [](key int) T {
+      assert(key in self)
+      return (self as dynamic).get(key)
+    }
   }
 
   def []=(key int, value T) T {
@@ -425,7 +527,7 @@ class IntMap {
   }
 
   def {...}(key int, value T) IntMap<T> {
-    self[key] = value
+    (self as dynamic).set(key, value)
     return self
   }
 
