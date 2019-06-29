@@ -415,7 +415,8 @@ namespace Skew.Resolving {
       if kind == .OBJECT_ENUM && !symbol.isImported && !("toString" in symbol.members) {
         var generated = FunctionSymbol.new(.FUNCTION_INSTANCE, "toString")
         generated.scope = FunctionScope.new(symbol.scope, generated)
-        generated.flags |= .IS_AUTOMATICALLY_GENERATED
+        generated.flags |= .IS_AUTOMATICALLY_GENERATED | .IS_INLINING_FORCED
+        _options.isAlwaysInlinePresent = true
         generated.parent = symbol
         generated.range = symbol.range
         symbol.functions.append(generated)

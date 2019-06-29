@@ -15948,7 +15948,8 @@
     if (kind == Skew.SymbolKind.OBJECT_ENUM && !symbol.isImported() && !symbol.members.has('toString')) {
       var generated1 = new Skew.FunctionSymbol(Skew.SymbolKind.FUNCTION_INSTANCE, 'toString');
       generated1.scope = new Skew.FunctionScope(symbol.scope, generated1);
-      generated1.flags |= Skew.SymbolFlags.IS_AUTOMATICALLY_GENERATED;
+      generated1.flags |= Skew.SymbolFlags.IS_AUTOMATICALLY_GENERATED | Skew.SymbolFlags.IS_INLINING_FORCED;
+      this._options.isAlwaysInlinePresent = true;
       generated1.parent = symbol;
       generated1.range = symbol.range;
       symbol.functions.push(generated1);
