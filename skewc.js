@@ -7253,7 +7253,7 @@
 
       case Skew.ContentKind.DOUBLE: {
         var value = Skew.in_Content.asDouble(content);
-        this._emit(isNaN(value) ? 'NaN' : value == 1 / 0 ? 'Infinity' : value == -(1 / 0) ? '-Infinity' : Skew.doubleToStringWithDot(value));
+        this._emit(isNaN(value) ? 'NaN' : value == 1 / 0 ? 'Infinity' : value == -(1 / 0) ? '-Infinity' : value.toString());
         break;
       }
 

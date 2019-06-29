@@ -1005,7 +1005,7 @@ namespace Skew {
             value.isNaN ? "NaN" :
             value == Math.INFINITY ? "Infinity" :
             value == -Math.INFINITY ? "-Infinity" :
-            doubleToStringWithDot(value))
+            value.toString)
         }
         case .STRING { _emit(quoteString(content.asString, .DOUBLE, .NORMAL)) }
       }
