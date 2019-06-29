@@ -3698,5 +3698,62 @@ def main {
 })();
 ").js
 
+# Comments on case values
+test("
+@export
+def main(x int) {
+  switch x {
+    # before
+    case
+      0, # 0
+      1, # 1
+      2 # 2
+    {}
+  }
+}
+", "
+(function(exports) {
+  exports.main = function(x) {
+    switch (x) {
+      // before
+      // 0
+      case 0:
+      // 1
+      case 1:
+      // 2
+      case 2: {
+        break;
+      }
+    }
+  };
+})(this);
+").js
+
+# Comments in binary expressions
+test("
+@entry
+def main int {
+  return
+    # 1
+    1 +
+    # 2
+    2 +
+    # 3
+    3
+}
+", "
+(function() {
+  function main() {
+    return (1 +
+      // 2
+      2 | 0) +
+      // 3
+      3 | 0;
+  }
+
+  process.exit(main());
+})();
+").js
+
   }
 }

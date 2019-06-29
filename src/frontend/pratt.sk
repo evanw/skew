@@ -201,11 +201,9 @@ namespace Skew {
       parselet(kind, precedence).infix = (context, left) => {
         var token = context.next
         var comments = context.stealComments
-        var node = callback(context, left, token, parse(context, precedence))
-        if node != null {
-          node.comments = Comment.concat(comments, node.comments)
-        }
-        return node
+        var right = parse(context, precedence)
+        right.comments = Comment.concat(comments, right.comments)
+        return callback(context, left, token, right)
       }
     }
 

@@ -4030,6 +4030,8 @@
             this._emit(this._newline);
           }
 
+          this._emitComments(child.comments);
+
           if (child.hasOneChild()) {
             this._emit(this._indent + 'default:');
           }
@@ -4040,6 +4042,7 @@
                 this._emit(this._newline);
               }
 
+              this._emitComments(value2.comments);
               this._emit(this._indent + 'case');
               this._emitSpaceBeforeKeyword(value2);
               this._emitExpression(value2, Skew.Precedence.LOWEST);
@@ -4615,8 +4618,25 @@
           this._emitExpression(node.binaryLeft(), info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
 
           // Always emit spaces around keyword operators, even when minifying
-          this._emit(kind == Skew.NodeKind.IN ? (left.isString() ? this._space : ' ') + 'in ' : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text) + this._space);
-          this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+          var comments = this._minify ? null : right.comments;
+          this._emit(kind == Skew.NodeKind.IN ? (left.isString() ? this._space : ' ') + 'in' + (comments != null ? '' : ' ') : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text));
+
+          if (comments != null) {
+            this._emit(this._newline);
+            this._increaseIndent();
+            this._emitComments(comments);
+            this._emit(this._indent);
+            this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+            this._decreaseIndent();
+          }
+
+          else {
+            if (kind != Skew.NodeKind.IN) {
+              this._emit(this._space);
+            }
+
+            this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+          }
 
           if (needsParentheses) {
             this._emit(')');
@@ -5577,11 +5597,13 @@
       next = child.nextSibling();
 
       switch (child.kind) {
+        // Make sure we entirely remove blocks only containing comment blocks
         case Skew.NodeKind.COMMENT_BLOCK: {
           child.remove();
           break;
         }
 
+        // "var a; var b;" => "var a, b;"
         case Skew.NodeKind.VARIABLES: {
           if (previous != null && previous.kind == Skew.NodeKind.VARIABLES) {
             child.replaceWith(previous.remove().appendChildrenFrom(child));
@@ -5589,6 +5611,7 @@
           break;
         }
 
+        // "a; b; c;" => "a, b, c;"
         case Skew.NodeKind.EXPRESSION: {
           if (child.expressionValue().hasNoSideEffects()) {
             child.remove();
@@ -7225,6 +7248,8 @@
             this._emit('\n');
           }
 
+          this._emitComments(child1.comments);
+
           if (child1.hasOneChild()) {
             this._emit(this._indent + 'default:');
           }
@@ -7235,6 +7260,7 @@
                 this._emit('\n');
               }
 
+              this._emitComments(value.comments);
               this._emit(this._indent + 'case ');
               this._emitExpression(value, Skew.Precedence.LOWEST);
               this._emit(':');
@@ -7888,8 +7914,22 @@
           }
 
           this._emitExpression(left, info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
-          this._emit(' ' + info1.text + ' ');
-          this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+          this._emit(' ' + info1.text);
+          var comments = right.comments;
+
+          if (comments != null) {
+            this._emit('\n');
+            this._increaseIndent();
+            this._emitComments(comments);
+            this._emit(this._indent);
+            this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+            this._decreaseIndent();
+          }
+
+          else {
+            this._emit(' ');
+            this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+          }
 
           if (info1.precedence < precedence) {
             this._emit(')');
@@ -9305,7 +9345,11 @@
         if (Skew.in_NodeKind.isBinary(kind)) {
           var parent = node.parent();
 
-          if (parent != null && (parent.kind == Skew.NodeKind.LOGICAL_OR && kind == Skew.NodeKind.LOGICAL_AND || parent.kind == Skew.NodeKind.BITWISE_OR && kind == Skew.NodeKind.BITWISE_AND || (parent.kind == Skew.NodeKind.BITWISE_AND || parent.kind == Skew.NodeKind.BITWISE_OR || parent.kind == Skew.NodeKind.BITWISE_XOR || Skew.in_NodeKind.isShift(parent.kind)) && (kind == Skew.NodeKind.ADD || kind == Skew.NodeKind.SUBTRACT))) {
+          if (parent != null &&
+            // Clang warns about "&&" inside "||" or "&" inside "|" without parentheses
+            (parent.kind == Skew.NodeKind.LOGICAL_OR && kind == Skew.NodeKind.LOGICAL_AND || parent.kind == Skew.NodeKind.BITWISE_OR && kind == Skew.NodeKind.BITWISE_AND ||
+              // Clang and GCC also warn about add/subtract inside bitwise operations and shifts without parentheses
+              (parent.kind == Skew.NodeKind.BITWISE_AND || parent.kind == Skew.NodeKind.BITWISE_OR || parent.kind == Skew.NodeKind.BITWISE_XOR || Skew.in_NodeKind.isShift(parent.kind)) && (kind == Skew.NodeKind.ADD || kind == Skew.NodeKind.SUBTRACT))) {
             precedence = Skew.Precedence.MEMBER;
           }
 
@@ -11152,6 +11196,26 @@
         return;
       }
 
+      // Non-equality comparison operators involving floating-point numbers
+      // can't be inverted because one or both of those values may be NAN.
+      // Equality comparisons still work fine because inverting the test
+      // inverts the result as expected:
+      //
+      //   Test        |  Result
+      // --------------+----------
+      //   0 == NAN    |  false
+      //   0 != NAN    |  true
+      //   0 < NAN     |  false
+      //   0 > NAN     |  false
+      //   0 <= NAN    |  false
+      //   0 >= NAN    |  false
+      //   NAN == NAN  |  false
+      //   NAN != NAN  |  true
+      //   NAN < NAN   |  false
+      //   NAN > NAN   |  false
+      //   NAN <= NAN  |  false
+      //   NAN >= NAN  |  false
+      //
       case Skew.NodeKind.LESS_THAN:
       case Skew.NodeKind.GREATER_THAN:
       case Skew.NodeKind.LESS_THAN_OR_EQUAL:
@@ -12932,12 +12996,14 @@
       }
 
       switch (context.current().kind) {
+        // Stop at the next closing token
         case Skew.TokenKind.RIGHT_PARENTHESIS:
         case Skew.TokenKind.RIGHT_BRACKET:
         case Skew.TokenKind.RIGHT_BRACE: {
           return;
         }
 
+        // Optionally recover parsing before the next statement if it's unambiguous
         case Skew.TokenKind.BREAK:
         case Skew.TokenKind.CATCH:
         case Skew.TokenKind.CONST:
@@ -13220,11 +13286,11 @@
 
       if (context.eat(Skew.TokenKind.CASE)) {
         while (true) {
-          var caseComments = context.stealComments();
+          var constantComments = context.stealComments();
           var constant = Skew.Parsing.expressionParser.parse(context, Skew.Precedence.LOWEST);
           Skew.Parsing.checkExtraParentheses(context, constant);
           child.appendChild(constant);
-          child.comments = Skew.Comment.concat(caseComments, Skew.Parsing.parseTrailingComment(context));
+          constant.comments = Skew.Comment.concat(constantComments, Skew.Parsing.parseTrailingComment(context));
 
           // A colon isn't valid syntax here, but try to have a nice error message
           if (context.peek1(Skew.TokenKind.COLON)) {
@@ -13246,7 +13312,7 @@
             break;
           }
 
-          child.comments = Skew.Comment.concat(child.comments, Skew.Parsing.parseTrailingComment(context));
+          constant.comments = Skew.Comment.concat(constant.comments, Skew.Parsing.parseTrailingComment(context));
         }
       }
 
@@ -14066,6 +14132,16 @@
           break;
         }
 
+        // For symbol kinds that can't live inside functions, use contextual
+        // keywords instead of special keyword tokens. This means these names
+        // are still available to be used as regular symbols:
+        //
+        //   class div {
+        //     var class = ""
+        //   }
+        //
+        //   var example = <div class="header"/>
+        //
         case Skew.TokenKind.IDENTIFIER: {
           if (kind == Skew.SymbolKind.OBJECT_GLOBAL) {
             context.unexpectedToken();
@@ -15214,13 +15290,9 @@
     self.parselet(kind, precedence).infix = function(context, left) {
       var token = context.next();
       var comments = context.stealComments();
-      var node = callback(context, left, token, self.parse(context, precedence));
-
-      if (node != null) {
-        node.comments = Skew.Comment.concat(comments, node.comments);
-      }
-
-      return node;
+      var right = self.parse(context, precedence);
+      right.comments = Skew.Comment.concat(comments, right.comments);
+      return callback(context, left, token, right);
     };
   };
 
@@ -15553,6 +15625,7 @@
     }
 
     switch (node.kind) {
+      // The function block is a child node and has already been visited
       case Skew.NodeKind.LAMBDA: {
         var $function = node.symbol.asFunctionSymbol();
 
@@ -15565,6 +15638,7 @@
         break;
       }
 
+      // The variable value is a child node and has already been visited
       case Skew.NodeKind.VARIABLE: {
         this._visitType(node.symbol.asVariableSymbol().resolvedType);
         break;
@@ -17113,6 +17187,7 @@
         break;
       }
 
+      // Statements
       case Skew.NodeKind.BREAK:
       case Skew.NodeKind.CONTINUE: {
         this._resolveJump(node, scope);
@@ -17178,6 +17253,7 @@
         break;
       }
 
+      // Expressions
       case Skew.NodeKind.ASSIGN_INDEX: {
         this._resolveOperatorOverload(node, scope, context);
         break;
@@ -18063,6 +18139,7 @@
     var type = value.resolvedType;
 
     switch (type.kind) {
+      // Each function has its own type for simplicity
       case Skew.TypeKind.SYMBOL: {
         if (this._resolveSymbolCall(node, scope, type)) {
           return;
@@ -18070,6 +18147,7 @@
         break;
       }
 
+      // Lambda types look like "fn(int, int) int"
       case Skew.TypeKind.LAMBDA: {
         if (this._resolveFunctionCall(node, scope, type)) {
           return;
@@ -18077,6 +18155,7 @@
         break;
       }
 
+      // Can't call other types (the null type, for example)
       default: {
         if (type != Skew.Type.DYNAMIC) {
           this._log.semanticErrorInvalidCall(node.internalRangeOrRange(), value.resolvedType);
@@ -18382,6 +18461,7 @@
         break;
       }
 
+      // The literal "0" represents the empty set for "flags" types
       case Skew.ContentKind.INT: {
         node.resolvedType = context != null && context.isFlags() && node.asInt() == 0 ? context : this._cache.intType;
         break;
@@ -23374,6 +23454,7 @@
     // on the generated code and instead slow the compiler down. Only certain
     // ones are implemented below.
     switch (node.kind) {
+      // These are important for dead code elimination
       case Skew.NodeKind.LOGICAL_AND: {
         if (left.isFalse() || right.isTrue()) {
           node.become(left.remove());
@@ -23396,6 +23477,9 @@
         break;
       }
 
+      // Constants are often added up in compound expressions. Folding
+      // addition/subtraction improves minification in JavaScript and often
+      // helps with readability.
       case Skew.NodeKind.ADD:
       case Skew.NodeKind.SUBTRACT: {
         if (left.isInt()) {
@@ -23412,6 +23496,9 @@
         break;
       }
 
+      // Multiplication is special-cased here because in JavaScript, optimizing
+      // away the general-purpose Math.imul function may result in large
+      // speedups when it's implemented with a polyfill.
       case Skew.NodeKind.MULTIPLY: {
         if (right.isInt()) {
           this._foldConstantIntegerMultiply(node, left, right);
@@ -23419,6 +23506,7 @@
         break;
       }
 
+      // This improves generated code for inlined bit packing functions
       case Skew.NodeKind.SHIFT_LEFT:
       case Skew.NodeKind.SHIFT_RIGHT:
       case Skew.NodeKind.UNSIGNED_SHIFT_RIGHT: {
@@ -25150,6 +25238,7 @@
       var textRange = range.fromEnd(text.length);
 
       switch (data.type) {
+        // Parse a single boolean value
         case Skew.Options.Type.BOOL: {
           if (separator < 0) {
             text = 'true';
@@ -25173,6 +25262,7 @@
           break;
         }
 
+        // Parse a single int value
         case Skew.Options.Type.INT: {
           if (separator < 0) {
             log.commandLineErrorMissingValue(textRange, data.nameText());
@@ -25200,6 +25290,7 @@
           break;
         }
 
+        // Parse a single string value
         case Skew.Options.Type.STRING: {
           if (separator < 0) {
             log.commandLineErrorMissingValue(textRange, data.nameText());
@@ -25219,6 +25310,7 @@
           break;
         }
 
+        // Parse an item in a list of string values
         case Skew.Options.Type.STRING_LIST: {
           if (separator < 0) {
             log.commandLineErrorMissingValue(textRange, data.nameText());

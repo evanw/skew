@@ -937,6 +937,7 @@ namespace Skew {
             if child.previousSibling != switchValue {
               _emit("\n")
             }
+            _emitComments(child.comments)
             if child.hasOneChild {
               _emit(_indent + "default:")
             } else {
@@ -944,6 +945,7 @@ namespace Skew {
                 if value.previousSibling != null {
                   _emit("\n")
                 }
+                _emitComments(value.comments)
                 _emit(_indent + "case ")
                 _emitExpression(value, .LOWEST)
                 _emit(":")
@@ -1490,8 +1492,21 @@ namespace Skew {
               _emit("(")
             }
             _emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity))
-            _emit(" " + info.text + " ")
-            _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
+            _emit(" " + info.text)
+
+            var comments = right.comments
+            if comments != null {
+              _emit("\n")
+              _increaseIndent
+              _emitComments(comments)
+              _emit(_indent)
+              _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
+              _decreaseIndent
+            } else {
+              _emit(" ")
+              _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
+            }
+
             if info.precedence < precedence {
               _emit(")")
             }
