@@ -9,7 +9,7 @@ namespace Skew {
     over stringEncoding Unicode.Encoding { return .UTF16 }
     over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }
-    over createEmitter(context PassContext) Emitter { return TypeScriptEmitter.new(context.options, context.cache) }
+    over createEmitter(context PassContext) Emitter { return TypeScriptEmitter.new(context.log, context.options, context.cache) }
   }
 
   class TypeScriptEmitter : Emitter {
@@ -24,10 +24,12 @@ namespace Skew {
       const canUseArgumentCount bool
     }
 
+    const _log Log
     const _options CompilerOptions
     const _cache TypeCache
     const _specialVariables IntMap<VariableSymbol> = {}
     const _ctors IntMap<MultipleCtors> = {}
+    var _emittedComments List<Comment> = []
     var _previousNode Node = null
     var _previousSymbol Symbol = null
     var _namespaceStack List<Symbol> = []
@@ -301,10 +303,13 @@ namespace Skew {
       if comments != null {
         for comment in comments {
           for line in comment.lines {
-            _emit(_indent + "//" + line)
+            _emit(_indent + "//" + line + "\n")
           }
           if comment.hasGapBelow {
             _emit("\n")
+          }
+          if _options.warnAboutIgnoredComments {
+            _emittedComments.append(comment)
           }
         }
       }
@@ -681,12 +686,36 @@ namespace Skew {
       }
 
       else {
+        var comments List<Comment> = []
+        if _options.warnAboutIgnoredComments {
+          _scanForComments(block, comments)
+          _emittedComments = []
+        }
+
         _emitBlock(block)
+
+        if _options.warnAboutIgnoredComments {
+          for c in comments {
+            if !(c in _emittedComments) {
+              _log.syntaxWarningIgnoredCommentInEmitter(c.range)
+            }
+          }
+        }
+
         _emit("\n")
       }
 
       _emitNewlineAfterSymbol(symbol)
       _enclosingFunction = null
+    }
+
+    def _scanForComments(node Node, comments List<Comment>) {
+      if node.comments != null {
+        comments.append(node.comments)
+      }
+      for child = node.firstChild; child != null; child = child.nextSibling {
+        _scanForComments(child, comments)
+      }
     }
 
     def _emitType(type Type) {

@@ -207,12 +207,6 @@ namespace Skew {
     WAS_NULL_JOIN
   }
 
-  class Comment {
-    const range Range
-    const lines List<string>
-    const hasGapBelow bool
-  }
-
   # Nodes represent executable code (variable initializers and function bodies)
   class Node {
     const id = _createID

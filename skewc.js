@@ -429,11 +429,13 @@
   // of flex is pretty bad (obfuscated variable names and the opposite of modular
   // code) but it's fast and somewhat standard for compiler design. The code below
   // replaces a simple hand-coded lexer and offers much better performance.
-  Skew.tokenize = function(log, source, warnAboutIgnoredComments) {
+  Skew.tokenize = function(log, source) {
+    var comments = null;
     var tokens = [];
     var text = source.contents;
     var count = text.length;
     var previousKind = Skew.TokenKind.NULL;
+    var previousWasComment = false;
     var stack = [];
 
     // For backing up
@@ -568,7 +570,7 @@
         break;
       }
 
-      var token = new Skew.Token(new Skew.Range(source, yy_bp, yy_cp), yy_act);
+      var token = new Skew.Token(new Skew.Range(source, yy_bp, yy_cp), yy_act, null);
 
       // Have a nice error message for certain tokens
       if (yy_act == Skew.TokenKind.COMMENT_ERROR) {
@@ -639,7 +641,7 @@
               // Break apart operators that start with a closing angle bracket
               if (tokenKind != Skew.TokenKind.GREATER_THAN) {
                 var start = token.range.start;
-                tokens.push(new Skew.Token(new Skew.Range(source, start, start + 1 | 0), Skew.TokenKind.PARAMETER_LIST_END));
+                tokens.push(new Skew.Token(new Skew.Range(source, start, start + 1 | 0), Skew.TokenKind.PARAMETER_LIST_END, null));
                 token.range = new Skew.Range(source, start + 1 | 0, token.range.end);
                 token.kind = tokenKind == Skew.TokenKind.SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN : tokenKind == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : tokenKind == Skew.TokenKind.GREATER_THAN_OR_EQUAL ? Skew.TokenKind.ASSIGN : tokenKind == Skew.TokenKind.ASSIGN_SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN_OR_EQUAL : tokenKind == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.ASSIGN_SHIFT_RIGHT : Skew.TokenKind.NULL;
                 assert(token.kind != Skew.TokenKind.NULL);
@@ -673,31 +675,71 @@
       // - "var x = 0 \n ### \n multi-line comment \n ### \n return 0"
       //
       if (previousKind == Skew.TokenKind.NEWLINE && token.kind == Skew.TokenKind.NEWLINE) {
+        if (comments != null && !previousWasComment) {
+          in_List.last(comments).hasGapBelow = true;
+        }
+
+        previousWasComment = false;
         continue;
       }
 
-      else if ((previousKind == Skew.TokenKind.NEWLINE || previousKind == Skew.TokenKind.COMMENT) && Skew.REMOVE_WHITESPACE_BEFORE.has(token.kind)) {
-        while (true) {
-          if (warnAboutIgnoredComments && in_List.last(tokens).kind == Skew.TokenKind.COMMENT) {
-            log.syntaxWarningIgnoredComment(in_List.last(tokens).range);
+      else if (previousKind == Skew.TokenKind.NEWLINE && Skew.REMOVE_WHITESPACE_BEFORE.has(token.kind)) {
+        var last = in_List.takeLast(tokens);
+
+        if (last.comments != null) {
+          if (comments == null) {
+            comments = [];
           }
 
-          in_List.removeLast(tokens);
-
-          if (tokens.length == 0 || in_List.last(tokens).kind != Skew.TokenKind.NEWLINE && in_List.last(tokens).kind != Skew.TokenKind.COMMENT) {
-            break;
-          }
+          in_List.append1(comments, last.comments);
         }
       }
 
-      previousKind = token.kind;
+      // Attach comments to tokens instead of having comments be tokens
+      previousWasComment = token.kind == Skew.TokenKind.COMMENT;
+
+      if (previousWasComment) {
+        if (comments == null) {
+          comments = [];
+        }
+
+        if (comments.length == 0 || in_List.last(comments).hasGapBelow) {
+          comments.push(new Skew.Comment(token.range, [], false));
+        }
+
+        var range1 = token.range;
+        var line = in_string.slice2(source.contents, range1.start + 1 | 0, range1.end);
+        var hashes = 0;
+
+        for (var j = 0, count1 = line.length; j < count1; j = j + 1 | 0) {
+          if (in_string.get1(line, j) != 35) {
+            break;
+          }
+
+          hashes = hashes + 1 | 0;
+        }
+
+        if (hashes != 0) {
+          line = in_string.repeat('/', hashes) + in_string.slice1(line, hashes);
+        }
+
+        in_List.last(comments).lines.push(line);
+        continue;
+      }
 
       // Accumulate the token for this iteration
+      previousKind = token.kind;
+
+      if (previousKind != Skew.TokenKind.NEWLINE || !(tokens.length == 0) && comments != null && comments.length == 1 && in_List.first(comments).lines.length == 1 && !in_List.first(comments).hasGapBelow) {
+        token.comments = comments;
+        comments = null;
+      }
+
       tokens.push(token);
     }
 
     // Every token stream ends in END_OF_FILE
-    tokens.push(new Skew.Token(new Skew.Range(source, yy_cp, yy_cp), Skew.TokenKind.END_OF_FILE));
+    tokens.push(new Skew.Token(new Skew.Range(source, yy_cp, yy_cp), Skew.TokenKind.END_OF_FILE, comments));
 
     // Also return preprocessor token presence so the preprocessor can be avoided
     return tokens;
@@ -1711,7 +1753,7 @@
 
         for (var i = 0, list = comment.lines, count = list.length; i < count; i = i + 1 | 0) {
           var line = in_List.get(list, i);
-          this._emit(this._indent + '//' + line);
+          this._emit(this._indent + '//' + line + '\n');
         }
 
         if (comment.hasGapBelow) {
@@ -3557,7 +3599,7 @@
 
         for (var i = 0, list = comment.lines, count = list.length; i < count; i = i + 1 | 0) {
           var line = in_List.get(list, i);
-          this._emit(this._indent + '//' + line);
+          this._emit(this._indent + '//' + line + '\n');
         }
 
         if (comment.hasGapBelow) {
@@ -6095,12 +6137,14 @@
     PROTOTYPE: 9
   };
 
-  Skew.TypeScriptEmitter = function(_options, _cache) {
+  Skew.TypeScriptEmitter = function(_log, _options, _cache) {
     Skew.Emitter.call(this);
+    this._log = _log;
     this._options = _options;
     this._cache = _cache;
     this._specialVariables = new Map();
     this._ctors = new Map();
+    this._emittedComments = [];
     this._previousNode = null;
     this._previousSymbol = null;
     this._namespaceStack = [];
@@ -6400,11 +6444,15 @@
 
         for (var i = 0, list = comment.lines, count = list.length; i < count; i = i + 1 | 0) {
           var line = in_List.get(list, i);
-          this._emit(this._indent + '//' + line);
+          this._emit(this._indent + '//' + line + '\n');
         }
 
         if (comment.hasGapBelow) {
           this._emit('\n');
+        }
+
+        if (this._options.warnAboutIgnoredComments) {
+          this._emittedComments.push(comment);
         }
       }
     }
@@ -6881,12 +6929,40 @@
     }
 
     else {
+      var comments = [];
+
+      if (this._options.warnAboutIgnoredComments) {
+        this._scanForComments(block, comments);
+        this._emittedComments = [];
+      }
+
       this._emitBlock(block);
+
+      if (this._options.warnAboutIgnoredComments) {
+        for (var i = 0, list = comments, count = list.length; i < count; i = i + 1 | 0) {
+          var c = in_List.get(list, i);
+
+          if (!(this._emittedComments.indexOf(c) != -1)) {
+            this._log.syntaxWarningIgnoredCommentInEmitter(c.range);
+          }
+        }
+      }
+
       this._emit('\n');
     }
 
     this._emitNewlineAfterSymbol(symbol);
     this._enclosingFunction = null;
+  };
+
+  Skew.TypeScriptEmitter.prototype._scanForComments = function(node, comments) {
+    if (node.comments != null) {
+      in_List.append1(comments, node.comments);
+    }
+
+    for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+      this._scanForComments(child, comments);
+    }
   };
 
   Skew.TypeScriptEmitter.prototype._emitType = function(type) {
@@ -8119,7 +8195,7 @@
 
         for (var i = 0, list = comment.lines, count = list.length; i < count; i = i + 1 | 0) {
           var line = in_List.get(list, i);
-          this._emit(this._indent + '//' + line);
+          this._emit(this._indent + '//' + line + '\n');
         }
 
         if (comment.hasGapBelow) {
@@ -10378,12 +10454,6 @@
     WAS_NULL_JOIN: 128
   };
 
-  Skew.Comment = function(range, lines, hasGapBelow) {
-    this.range = range;
-    this.lines = lines;
-    this.hasGapBelow = hasGapBelow;
-  };
-
   // Nodes represent executable code (variable initializers and function bodies)
   // Node-specific queries
   // Factory functions
@@ -11837,8 +11907,12 @@
     }
   };
 
-  Skew.Log.prototype.syntaxWarningIgnoredComment = function(range) {
+  Skew.Log.prototype.syntaxWarningIgnoredCommentInParser = function(range) {
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'This comment was ignored by the parser'));
+  };
+
+  Skew.Log.prototype.syntaxWarningIgnoredCommentInEmitter = function(range) {
+    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'This comment was ignored by the emitter'));
   };
 
   Skew.Log.prototype.syntaxWarningOctal = function(range) {
@@ -12518,9 +12592,16 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected integer constant but found "' + value + '" in "' + text + '"'));
   };
 
-  Skew.Token = function(range, kind) {
+  Skew.Comment = function(range, lines, hasGapBelow) {
+    this.range = range;
+    this.lines = lines;
+    this.hasGapBelow = hasGapBelow;
+  };
+
+  Skew.Token = function(range, kind, comments) {
     this.range = range;
     this.kind = kind;
+    this.comments = comments;
   };
 
   Skew.TokenKind = {
@@ -12945,90 +13026,26 @@
     if (comments != null && context.warnAboutIgnoredComments) {
       for (var i = 0, list = comments, count = list.length; i < count; i = i + 1 | 0) {
         var comment = in_List.get(list, i);
-        context.log.syntaxWarningIgnoredComment(comment.range);
+        context.log.syntaxWarningIgnoredCommentInParser(comment.range);
       }
     }
   };
 
-  // Replace all leading '#' with '/' to better match '//' comments in target languages
-  Skew.Parsing._processCommentLines = function(lines) {
-    for (var i = 0, count2 = lines.length; i < count2; i = i + 1 | 0) {
-      var line = in_List.get(lines, i);
-      var count = 0;
+  Skew.Parsing.parseTrailingComment = function(context, comments) {
+    if (context.peek1(Skew.TokenKind.NEWLINE) || context.peek1(Skew.TokenKind.END_OF_FILE)) {
+      var trailing = context.stealComments();
 
-      for (var j = 0, count1 = line.length; j < count1; j = j + 1 | 0) {
-        if (in_string.get1(line, j) != 35) {
-          break;
-        }
-
-        count = count + 1 | 0;
-      }
-
-      in_List.set(lines, i, in_string.repeat('/', count) + in_string.slice1(line, count));
-    }
-
-    return lines;
-  };
-
-  Skew.Parsing.parseLeadingComments = function(context) {
-    var comments = null;
-    var blockRange = null;
-    var blockLines = null;
-
-    while (context.peek1(Skew.TokenKind.COMMENT)) {
-      var range = context.next().range;
-
-      if (blockRange == null) {
-        blockRange = range;
-      }
-
-      if (blockLines == null) {
-        blockLines = [];
-      }
-
-      blockLines.push(in_string.slice2(range.source.contents, range.start + 1 | 0, range.end));
-
-      if (context.eat(Skew.TokenKind.NEWLINE)) {
+      if (trailing != null) {
         if (comments == null) {
           comments = [];
         }
 
-        comments.push(new Skew.Comment(blockRange, Skew.Parsing._processCommentLines(blockLines), true));
-        blockRange = null;
-        blockLines = null;
+        in_List.append1(comments, trailing);
+        return comments;
       }
     }
 
-    if (blockRange != null) {
-      if (comments == null) {
-        comments = [];
-      }
-
-      comments.push(new Skew.Comment(blockRange, Skew.Parsing._processCommentLines(blockLines), false));
-    }
-
-    return comments;
-  };
-
-  Skew.Parsing.parseTrailingComment = function(context, comments) {
-    if (!context.peek1(Skew.TokenKind.COMMENT)) {
-      return null;
-    }
-
-    var range = context.next().range;
-
-    if (comments == null) {
-      comments = [];
-    }
-
-    var text = in_string.slice2(range.source.contents, range.start + 1 | 0, range.end);
-
-    if (!text.endsWith('\n')) {
-      text += '\n';
-    }
-
-    comments.push(new Skew.Comment(range, Skew.Parsing._processCommentLines([text]), false));
-    return comments;
+    return null;
   };
 
   Skew.Parsing.parseAnnotations = function(context, annotations) {
@@ -13165,7 +13182,7 @@
     context.eat(Skew.TokenKind.NEWLINE);
 
     while (!context.peek1(Skew.TokenKind.RIGHT_BRACE)) {
-      var comments = Skew.Parsing.parseLeadingComments(context);
+      var comments = context.stealComments();
 
       // Ignore trailing comments
       if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.peek1(Skew.TokenKind.END_OF_FILE)) {
@@ -13507,23 +13524,24 @@
 
   Skew.Parsing.parseStatements = function(context, parent, mode) {
     var previous = null;
+    var trailing = Skew.Parsing.parseTrailingComment(context, null);
     context.eat(Skew.TokenKind.NEWLINE);
 
-    while (!context.peek1(Skew.TokenKind.RIGHT_BRACE) && !context.peek1(Skew.TokenKind.XML_START_CLOSE)) {
-      var comments = Skew.Parsing.parseLeadingComments(context);
+    while (!context.peek1(Skew.TokenKind.RIGHT_BRACE) && !context.peek1(Skew.TokenKind.XML_START_CLOSE) && !context.peek1(Skew.TokenKind.END_OF_FILE)) {
+      var comments = context.stealComments();
+
+      // The block may start with a trailing comment
+      if (trailing != null) {
+        if (comments != null) {
+          in_List.append1(trailing, comments);
+        }
+
+        comments = trailing;
+      }
 
       // When parsing a C-style switch, stop if it looks like the end of the case
       if (mode == Skew.Parsing.StatementsMode.C_STYLE_SWITCH && (context.peek1(Skew.TokenKind.CASE) || context.peek1(Skew.TokenKind.DEFAULT) || context.peek1(Skew.TokenKind.BREAK))) {
         Skew.Parsing._warnAboutIgnoredComments(context, comments);
-        break;
-      }
-
-      // Conert trailing comments to blocks
-      if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.peek1(Skew.TokenKind.XML_START_CLOSE) || context.peek1(Skew.TokenKind.END_OF_FILE)) {
-        if (comments != null) {
-          parent.appendChild(new Skew.Node(Skew.NodeKind.COMMENT_BLOCK).withComments(comments));
-        }
-
         break;
       }
 
@@ -13702,6 +13720,21 @@
       }
     }
 
+    // Convert trailing comments to blocks
+    var comments1 = context.stealComments();
+
+    if (trailing != null) {
+      if (comments1 != null) {
+        in_List.append1(trailing, comments1);
+      }
+
+      comments1 = trailing;
+    }
+
+    if (comments1 != null) {
+      parent.appendChild(new Skew.Node(Skew.NodeKind.COMMENT_BLOCK).withComments(comments1));
+    }
+
     return true;
   };
 
@@ -13812,8 +13845,8 @@
       symbol.returnType = Skew.Parsing.typeParser.parse(context, Skew.Precedence.LOWEST);
     }
 
-    if (context.eat(Skew.TokenKind.NEWLINE) && !context.peek1(Skew.TokenKind.LEFT_BRACE)) {
-      context.undo();
+    if (context.peek1(Skew.TokenKind.NEWLINE) && context.peek2(Skew.TokenKind.LEFT_BRACE, 1)) {
+      context.next();
     }
 
     return Skew.Parsing.parseFunctionBlock(context, symbol);
@@ -13887,7 +13920,7 @@
 
   Skew.Parsing.parseSymbol = function(context, parent, annotations) {
     // Parse comments before the symbol declaration
-    var comments = Skew.Parsing.parseLeadingComments(context);
+    var comments = context.stealComments();
 
     // Ignore trailing comments
     if (context.peek1(Skew.TokenKind.RIGHT_BRACE) || context.peek1(Skew.TokenKind.END_OF_FILE)) {
@@ -14336,7 +14369,7 @@
 
     while (true) {
       context.eat(Skew.TokenKind.NEWLINE);
-      var comments = Skew.Parsing.parseLeadingComments(context);
+      var comments = context.stealComments();
       context.skipWhitespace();
 
       if (isFirst && context.eat(stop)) {
@@ -14996,8 +15029,19 @@
     return in_List.get(this._tokens, this._index);
   };
 
+  Skew.ParserContext.prototype.stealComments = function() {
+    var token = this.current();
+    var comments = token.comments;
+    token.comments = null;
+    return comments;
+  };
+
   Skew.ParserContext.prototype.next = function() {
     var token = this.current();
+
+    if (this.warnAboutIgnoredComments && token.comments != null) {
+      this.log.syntaxWarningIgnoredCommentInParser(in_List.first(token.comments).range);
+    }
 
     if ((this._index + 1 | 0) < this._tokens.length) {
       this._index = this._index + 1 | 0;
@@ -15030,23 +15074,7 @@
   };
 
   Skew.ParserContext.prototype.skipWhitespace = function() {
-    while (true) {
-      if (this.eat(Skew.TokenKind.NEWLINE)) {
-        continue;
-      }
-
-      if (this.peek1(Skew.TokenKind.COMMENT)) {
-        var range = this.next().range;
-
-        if (this.warnAboutIgnoredComments) {
-          this.log.syntaxWarningIgnoredComment(range);
-        }
-
-        continue;
-      }
-
-      break;
-    }
+    this.eat(Skew.TokenKind.NEWLINE);
   };
 
   Skew.ParserContext.prototype.skipSemicolon = function() {
@@ -20625,6 +20653,44 @@
     return null;
   };
 
+  Skew.CPlusPlusTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
+
+  Skew.CPlusPlusTarget.prototype.stopAfterResolve = function() {
+    return false;
+  };
+
+  Skew.CPlusPlusTarget.prototype.requiresIntegerSwitchStatements = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.supportsListForeach = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.needsLambdaLifting = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF8;
+  };
+
+  Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
+    options.define('TARGET', 'CPLUSPLUS');
+  };
+
+  Skew.CPlusPlusTarget.prototype.includeSources = function(sources) {
+    sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
+  };
+
+  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
+    return new Skew.CPlusPlusEmitter(context.options, context.cache);
+  };
+
   Skew.CSharpTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -20708,7 +20774,7 @@
   };
 
   Skew.TypeScriptTarget.prototype.createEmitter = function(context) {
-    return new Skew.TypeScriptEmitter(context.options, context.cache);
+    return new Skew.TypeScriptEmitter(context.log, context.options, context.cache);
   };
 
   Skew.JavaScriptTarget = function() {
@@ -20743,44 +20809,6 @@
 
   Skew.JavaScriptTarget.prototype.createEmitter = function(context) {
     return new Skew.JavaScriptEmitter(context, context.options, context.cache);
-  };
-
-  Skew.CPlusPlusTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
-
-  Skew.CPlusPlusTarget.prototype.stopAfterResolve = function() {
-    return false;
-  };
-
-  Skew.CPlusPlusTarget.prototype.requiresIntegerSwitchStatements = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.supportsListForeach = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.needsLambdaLifting = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
-    return Unicode.Encoding.UTF8;
-  };
-
-  Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
-    options.define('TARGET', 'CPLUSPLUS');
-  };
-
-  Skew.CPlusPlusTarget.prototype.includeSources = function(sources) {
-    sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
-  };
-
-  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
-    return new Skew.CPlusPlusEmitter(context.options, context.cache);
   };
 
   Skew.Define = function(name, value) {
@@ -21095,24 +21123,18 @@
     return this;
   };
 
-  Skew.ResolvingPass = function() {
+  Skew.LambdaConversionPass = function() {
     Skew.Pass.call(this);
   };
 
-  __extends(Skew.ResolvingPass, Skew.Pass);
+  __extends(Skew.LambdaConversionPass, Skew.Pass);
 
-  Skew.ResolvingPass.prototype.kind = function() {
-    return Skew.PassKind.RESOLVING;
+  Skew.LambdaConversionPass.prototype.kind = function() {
+    return Skew.PassKind.LAMBDA_CONVERSION;
   };
 
-  Skew.ResolvingPass.prototype.run = function(context) {
-    context.cache.loadGlobals(context.log, context.global);
-    new Skew.Resolving.Resolver(context.global, context.options, new Map(context.options.defines), context.cache, context.log).resolve();
-
-    // The tree isn't fully resolved for speed reasons if code completion is requested
-    if (context.options.completionContext == null) {
-      context.isResolvePassComplete = true;
-    }
+  Skew.LambdaConversionPass.prototype.run = function(context) {
+    new Skew.LambdaConversion.Converter(context.global, context.cache).run();
   };
 
   Skew.EmittingPass = function() {
@@ -21151,18 +21173,24 @@
     }
   };
 
-  Skew.LambdaConversionPass = function() {
+  Skew.ResolvingPass = function() {
     Skew.Pass.call(this);
   };
 
-  __extends(Skew.LambdaConversionPass, Skew.Pass);
+  __extends(Skew.ResolvingPass, Skew.Pass);
 
-  Skew.LambdaConversionPass.prototype.kind = function() {
-    return Skew.PassKind.LAMBDA_CONVERSION;
+  Skew.ResolvingPass.prototype.kind = function() {
+    return Skew.PassKind.RESOLVING;
   };
 
-  Skew.LambdaConversionPass.prototype.run = function(context) {
-    new Skew.LambdaConversion.Converter(context.global, context.cache).run();
+  Skew.ResolvingPass.prototype.run = function(context) {
+    context.cache.loadGlobals(context.log, context.global);
+    new Skew.Resolving.Resolver(context.global, context.options, new Map(context.options.defines), context.cache, context.log).resolve();
+
+    // The tree isn't fully resolved for speed reasons if code completion is requested
+    if (context.options.completionContext == null) {
+      context.isResolvePassComplete = true;
+    }
   };
 
   Skew.LexingPass = function() {
@@ -21178,7 +21206,7 @@
   Skew.LexingPass.prototype.run = function(context) {
     for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
       var source = in_List.get(list, i);
-      context.tokens.push(Skew.tokenize(context.log, source, context.options.warnAboutIgnoredComments));
+      context.tokens.push(Skew.tokenize(context.log, source));
     }
   };
 
@@ -25809,15 +25837,15 @@
   Skew.VERSION = '0.9.0';
   Skew.REMOVE_WHITESPACE_BEFORE = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(new Map(), Skew.TokenKind.COLON, 0), Skew.TokenKind.COMMA, 0), Skew.TokenKind.DOT, 0), Skew.TokenKind.QUESTION_MARK, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0);
   Skew.FORBID_XML_AFTER = in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(in_IntMap.insert(new Map(), Skew.TokenKind.CHARACTER, 0), Skew.TokenKind.DECREMENT, 0), Skew.TokenKind.DOUBLE, 0), Skew.TokenKind.DYNAMIC, 0), Skew.TokenKind.STRING_INTERPOLATION_END, 0), Skew.TokenKind.FALSE, 0), Skew.TokenKind.IDENTIFIER, 0), Skew.TokenKind.INCREMENT, 0), Skew.TokenKind.INT, 0), Skew.TokenKind.INT_BINARY, 0), Skew.TokenKind.INT_HEX, 0), Skew.TokenKind.INT_OCTAL, 0), Skew.TokenKind.NULL, 0), Skew.TokenKind.RIGHT_BRACE, 0), Skew.TokenKind.RIGHT_BRACKET, 0), Skew.TokenKind.RIGHT_PARENTHESIS, 0), Skew.TokenKind.STRING, 0), Skew.TokenKind.SUPER, 0), Skew.TokenKind.TRUE, 0);
-  Skew.yy_accept = [Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.END_OF_FILE, Skew.TokenKind.ERROR, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT, Skew.TokenKind.ERROR, Skew.TokenKind.COMMENT, Skew.TokenKind.REMAINDER, Skew.TokenKind.BITWISE_AND, Skew.TokenKind.ERROR, Skew.TokenKind.LEFT_PARENTHESIS, Skew.TokenKind.RIGHT_PARENTHESIS, Skew.TokenKind.MULTIPLY, Skew.TokenKind.PLUS, Skew.TokenKind.COMMA, Skew.TokenKind.MINUS, Skew.TokenKind.DOT, Skew.TokenKind.DIVIDE, Skew.TokenKind.INT, Skew.TokenKind.INT, Skew.TokenKind.COLON, Skew.TokenKind.SEMICOLON, Skew.TokenKind.LESS_THAN, Skew.TokenKind.ASSIGN, Skew.TokenKind.GREATER_THAN, Skew.TokenKind.QUESTION_MARK, Skew.TokenKind.ERROR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACKET, Skew.TokenKind.RIGHT_BRACKET, Skew.TokenKind.BITWISE_XOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACE, Skew.TokenKind.BITWISE_OR, Skew.TokenKind.RIGHT_BRACE, Skew.TokenKind.TILDE, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.STRING, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.COMMENT, Skew.TokenKind.COMMENT, Skew.TokenKind.MODULUS, Skew.TokenKind.ASSIGN_REMAINDER, Skew.TokenKind.LOGICAL_AND, Skew.TokenKind.ASSIGN_BITWISE_AND, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.CHARACTER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.POWER, Skew.TokenKind.ASSIGN_MULTIPLY, Skew.TokenKind.INCREMENT, Skew.TokenKind.ASSIGN_PLUS, Skew.TokenKind.DECREMENT, Skew.TokenKind.ASSIGN_MINUS, Skew.TokenKind.DOT_DOT, Skew.TokenKind.COMMENT_ERROR, Skew.TokenKind.ASSIGN_DIVIDE, Skew.TokenKind.XML_END_EMPTY, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE_COLON, Skew.TokenKind.XML_START_CLOSE, Skew.TokenKind.SHIFT_LEFT, Skew.TokenKind.LESS_THAN_OR_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.EQUAL, Skew.TokenKind.ARROW, Skew.TokenKind.GREATER_THAN_OR_EQUAL, Skew.TokenKind.SHIFT_RIGHT, Skew.TokenKind.NULL_DOT, Skew.TokenKind.ASSIGN_NULL, Skew.TokenKind.NULL_JOIN, Skew.TokenKind.ANNOTATION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_XOR, Skew.TokenKind.AS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IF, Skew.TokenKind.IN, Skew.TokenKind.IS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_OR, Skew.TokenKind.LOGICAL_OR, Skew.TokenKind.NOT_EQUAL_ERROR, Skew.TokenKind.ASSIGN_MODULUS, Skew.TokenKind.ASSIGN_POWER, Skew.TokenKind.COMMENT_ERROR, Skew.TokenKind.COMMENT_ERROR, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.INT_BINARY, Skew.TokenKind.INT_OCTAL, Skew.TokenKind.INT_HEX, Skew.TokenKind.ASSIGN_SHIFT_LEFT, Skew.TokenKind.COMPARE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.EQUAL_ERROR, Skew.TokenKind.ASSIGN_SHIFT_RIGHT, Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, Skew.TokenKind.ANNOTATION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRY, Skew.TokenKind.VAR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.CASE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.ELSE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.NULL, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRUE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.LIST, Skew.TokenKind.LIST_NEW, Skew.TokenKind.BREAK, Skew.TokenKind.CATCH, Skew.TokenKind.CONST, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FALSE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.SUPER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.THROW, Skew.TokenKind.WHILE, Skew.TokenKind.SET, Skew.TokenKind.SET_NEW, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.RETURN, Skew.TokenKind.SWITCH, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.DEFAULT, Skew.TokenKind.DYNAMIC, Skew.TokenKind.FINALLY, Skew.TokenKind.XML_CHILD, Skew.TokenKind.CONTINUE, Skew.TokenKind.YY_INVALID_ACTION];
+  Skew.yy_accept = [Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.END_OF_FILE, Skew.TokenKind.ERROR, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT, Skew.TokenKind.ERROR, Skew.TokenKind.COMMENT, Skew.TokenKind.REMAINDER, Skew.TokenKind.BITWISE_AND, Skew.TokenKind.ERROR, Skew.TokenKind.LEFT_PARENTHESIS, Skew.TokenKind.RIGHT_PARENTHESIS, Skew.TokenKind.MULTIPLY, Skew.TokenKind.PLUS, Skew.TokenKind.COMMA, Skew.TokenKind.MINUS, Skew.TokenKind.DOT, Skew.TokenKind.DIVIDE, Skew.TokenKind.INT, Skew.TokenKind.INT, Skew.TokenKind.COLON, Skew.TokenKind.SEMICOLON, Skew.TokenKind.LESS_THAN, Skew.TokenKind.ASSIGN, Skew.TokenKind.GREATER_THAN, Skew.TokenKind.QUESTION_MARK, Skew.TokenKind.ERROR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACKET, Skew.TokenKind.RIGHT_BRACKET, Skew.TokenKind.BITWISE_XOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.LEFT_BRACE, Skew.TokenKind.BITWISE_OR, Skew.TokenKind.RIGHT_BRACE, Skew.TokenKind.TILDE, Skew.TokenKind.WHITESPACE, Skew.TokenKind.NEWLINE, Skew.TokenKind.NOT_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.STRING, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.COMMENT, Skew.TokenKind.MODULUS, Skew.TokenKind.ASSIGN_REMAINDER, Skew.TokenKind.LOGICAL_AND, Skew.TokenKind.ASSIGN_BITWISE_AND, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.CHARACTER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.POWER, Skew.TokenKind.ASSIGN_MULTIPLY, Skew.TokenKind.INCREMENT, Skew.TokenKind.ASSIGN_PLUS, Skew.TokenKind.DECREMENT, Skew.TokenKind.ASSIGN_MINUS, Skew.TokenKind.DOT_DOT, Skew.TokenKind.COMMENT_ERROR, Skew.TokenKind.ASSIGN_DIVIDE, Skew.TokenKind.XML_END_EMPTY, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE_COLON, Skew.TokenKind.XML_START_CLOSE, Skew.TokenKind.SHIFT_LEFT, Skew.TokenKind.LESS_THAN_OR_EQUAL, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.EQUAL, Skew.TokenKind.ARROW, Skew.TokenKind.GREATER_THAN_OR_EQUAL, Skew.TokenKind.SHIFT_RIGHT, Skew.TokenKind.NULL_DOT, Skew.TokenKind.ASSIGN_NULL, Skew.TokenKind.NULL_JOIN, Skew.TokenKind.ANNOTATION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_XOR, Skew.TokenKind.AS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IF, Skew.TokenKind.IN, Skew.TokenKind.IS, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_BITWISE_OR, Skew.TokenKind.LOGICAL_OR, Skew.TokenKind.NOT_EQUAL_ERROR, Skew.TokenKind.ASSIGN_MODULUS, Skew.TokenKind.ASSIGN_POWER, Skew.TokenKind.COMMENT_ERROR, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.INT_BINARY, Skew.TokenKind.INT_OCTAL, Skew.TokenKind.INT_HEX, Skew.TokenKind.ASSIGN_SHIFT_LEFT, Skew.TokenKind.COMPARE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.EQUAL_ERROR, Skew.TokenKind.ASSIGN_SHIFT_RIGHT, Skew.TokenKind.UNSIGNED_SHIFT_RIGHT, Skew.TokenKind.ANNOTATION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_INDEX, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FOR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRY, Skew.TokenKind.VAR, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.CASE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.ELSE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.NULL, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.TRUE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.DOUBLE, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.LIST, Skew.TokenKind.LIST_NEW, Skew.TokenKind.BREAK, Skew.TokenKind.CATCH, Skew.TokenKind.CONST, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.FALSE, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.SUPER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.THROW, Skew.TokenKind.WHILE, Skew.TokenKind.SET, Skew.TokenKind.SET_NEW, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.RETURN, Skew.TokenKind.SWITCH, Skew.TokenKind.YY_INVALID_ACTION, Skew.TokenKind.IDENTIFIER, Skew.TokenKind.DEFAULT, Skew.TokenKind.DYNAMIC, Skew.TokenKind.FINALLY, Skew.TokenKind.XML_CHILD, Skew.TokenKind.CONTINUE, Skew.TokenKind.YY_INVALID_ACTION];
   Skew.yy_ec = [0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 5, 6, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20, 20, 20, 20, 20, 21, 21, 22, 23, 24, 25, 26, 27, 28, 29, 29, 29, 29, 30, 29, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 32, 33, 34, 35, 31, 1, 36, 37, 38, 39, 40, 41, 31, 42, 43, 31, 44, 45, 46, 47, 48, 49, 31, 50, 51, 52, 53, 54, 55, 56, 57, 31, 58, 59, 60, 61, 1];
-  Skew.yy_meta = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1];
-  Skew.yy_base = [0, 0, 0, 324, 325, 321, 60, 297, 59, 318, 58, 59, 57, 325, 325, 56, 57, 325, 54, 304, 60, 77, 83, 297, 325, 63, 46, 48, 84, 0, 0, 90, 325, 293, 266, 266, 72, 65, 270, 83, 87, 261, 273, 23, 68, 276, 269, 96, 90, 325, 325, 308, 127, 284, 111, 325, 305, 304, 325, 281, 325, 325, 325, 112, 325, 302, 279, 325, 325, 325, 325, 325, 325, 300, 325, 325, 121, 132, 145, 117, 136, 0, 325, 325, 277, 275, 284, 274, 325, 325, 121, 325, 325, 325, 0, 0, 282, 272, 256, 325, 0, 255, 116, 247, 252, 245, 240, 245, 242, 238, 0, 0, 0, 242, 234, 236, 241, 233, 104, 232, 238, 264, 239, 325, 325, 325, 325, 325, 275, 325, 155, 159, 163, 151, 168, 0, 325, 325, 261, 325, 325, 251, 0, 259, 325, 219, 237, 232, 233, 138, 234, 233, 228, 216, 230, 0, 220, 211, 223, 210, 213, 220, 0, 0, 214, 242, 202, 178, 240, 325, 221, 220, 209, 0, 210, 199, 207, 196, 202, 0, 207, 201, 0, 195, 194, 205, 187, 0, 201, 180, 179, 182, 186, 214, 325, 325, 0, 0, 0, 190, 191, 192, 0, 189, 147, 0, 150, 0, 0, 325, 325, 154, 106, 80, 89, 37, 0, 0, 65, 35, 0, 0, 0, 325, 0, 325, 207, 211, 215, 217, 220, 224, 227, 229];
-  Skew.yy_def = [0, 225, 1, 225, 225, 225, 225, 225, 226, 227, 225, 225, 228, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 229, 230, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 225, 225, 225, 225, 226, 225, 226, 227, 225, 225, 225, 225, 225, 228, 225, 228, 225, 225, 225, 225, 225, 225, 225, 231, 225, 225, 225, 225, 225, 225, 225, 232, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 233, 230, 225, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 225, 225, 225, 225, 231, 225, 225, 225, 225, 225, 225, 232, 225, 225, 225, 225, 225, 225, 233, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 225, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 225, 225, 225, 225, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 230, 225, 225, 225, 230, 230, 230, 230, 230, 230, 225, 230, 230, 230, 230, 225, 230, 0, 225, 225, 225, 225, 225, 225, 225, 225];
-  Skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 30, 30, 30, 31, 4, 32, 33, 34, 35, 36, 37, 38, 39, 30, 40, 30, 30, 30, 41, 30, 30, 42, 43, 44, 30, 45, 46, 30, 30, 47, 48, 49, 50, 52, 52, 55, 59, 64, 61, 66, 70, 68, 87, 88, 89, 90, 224, 115, 73, 116, 71, 83, 67, 69, 60, 62, 74, 75, 84, 85, 86, 65, 223, 56, 76, 222, 77, 77, 77, 77, 76, 91, 77, 77, 77, 77, 104, 96, 78, 102, 92, 117, 93, 121, 78, 79, 123, 55, 78, 118, 107, 103, 64, 105, 78, 97, 80, 108, 221, 110, 52, 52, 109, 220, 81, 111, 133, 133, 98, 112, 130, 130, 130, 130, 122, 56, 65, 140, 141, 76, 124, 77, 77, 77, 77, 134, 134, 134, 161, 131, 219, 131, 162, 78, 132, 132, 132, 132, 147, 148, 133, 133, 218, 78, 130, 130, 130, 130, 132, 132, 132, 132, 132, 132, 132, 132, 167, 134, 134, 134, 175, 176, 191, 217, 191, 216, 167, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 192, 54, 54, 54, 54, 57, 57, 57, 57, 63, 63, 63, 63, 94, 94, 95, 95, 95, 128, 128, 128, 128, 135, 135, 142, 142, 142, 215, 214, 213, 212, 211, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 190, 189, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 174, 173, 172, 171, 170, 169, 168, 129, 166, 165, 164, 163, 160, 159, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 146, 145, 144, 143, 139, 138, 137, 136, 129, 127, 225, 126, 58, 225, 125, 51, 120, 119, 114, 113, 106, 101, 100, 99, 82, 72, 58, 53, 51, 225, 3, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225];
-  Skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 6, 8, 10, 12, 11, 15, 18, 16, 26, 26, 27, 27, 219, 43, 20, 43, 18, 25, 15, 16, 10, 11, 20, 20, 25, 25, 25, 12, 218, 8, 21, 215, 21, 21, 21, 21, 22, 28, 22, 22, 22, 22, 37, 31, 21, 36, 28, 44, 28, 47, 22, 21, 48, 54, 21, 44, 39, 36, 63, 37, 22, 31, 21, 39, 214, 40, 52, 52, 39, 213, 21, 40, 79, 79, 31, 40, 76, 76, 76, 76, 47, 54, 63, 90, 90, 77, 48, 77, 77, 77, 77, 80, 80, 80, 118, 78, 212, 78, 118, 77, 78, 78, 78, 78, 102, 102, 133, 133, 211, 77, 130, 130, 130, 130, 131, 131, 131, 131, 132, 132, 132, 132, 130, 134, 134, 134, 149, 149, 167, 206, 167, 204, 130, 167, 167, 167, 167, 191, 191, 191, 191, 192, 192, 192, 192, 226, 226, 226, 226, 227, 227, 227, 227, 228, 228, 228, 228, 229, 229, 230, 230, 230, 231, 231, 231, 231, 232, 232, 233, 233, 233, 203, 201, 200, 199, 193, 190, 189, 188, 186, 185, 184, 183, 181, 180, 178, 177, 176, 175, 174, 172, 171, 170, 168, 166, 165, 164, 161, 160, 159, 158, 157, 156, 154, 153, 152, 151, 150, 148, 147, 146, 145, 143, 141, 138, 128, 122, 121, 120, 119, 117, 116, 115, 114, 113, 109, 108, 107, 106, 105, 104, 103, 101, 98, 97, 96, 87, 86, 85, 84, 73, 66, 65, 59, 57, 56, 53, 51, 46, 45, 42, 41, 38, 35, 34, 33, 23, 19, 9, 7, 5, 3, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225, 225];
-  Skew.YY_JAM_STATE = 225;
-  Skew.YY_ACCEPT_LENGTH = 226;
+  Skew.yy_meta = [0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 4, 4, 5, 1, 1, 1, 1, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 1, 1, 1];
+  Skew.yy_base = [0, 0, 0, 320, 321, 317, 316, 292, 57, 0, 56, 57, 55, 321, 321, 54, 55, 321, 52, 300, 58, 75, 81, 293, 321, 61, 44, 46, 82, 0, 0, 88, 321, 289, 262, 262, 70, 63, 266, 81, 85, 257, 269, 21, 66, 272, 265, 94, 88, 321, 321, 304, 303, 279, 109, 321, 300, 0, 277, 321, 321, 321, 110, 321, 298, 275, 321, 321, 321, 321, 321, 321, 0, 321, 321, 119, 130, 143, 109, 134, 0, 321, 321, 274, 272, 281, 271, 321, 321, 108, 321, 321, 321, 0, 0, 279, 269, 253, 321, 0, 252, 93, 244, 249, 242, 237, 242, 239, 235, 0, 0, 0, 239, 231, 233, 238, 230, 102, 229, 235, 261, 236, 321, 321, 321, 321, 321, 0, 147, 153, 160, 157, 164, 0, 321, 321, 259, 321, 321, 249, 0, 257, 321, 217, 235, 230, 231, 134, 232, 231, 226, 214, 228, 0, 218, 209, 221, 208, 211, 218, 0, 0, 212, 240, 200, 175, 238, 321, 219, 218, 207, 0, 208, 197, 205, 194, 200, 0, 205, 199, 0, 193, 192, 203, 185, 0, 199, 178, 177, 179, 183, 212, 321, 321, 0, 0, 0, 188, 181, 168, 0, 147, 144, 0, 147, 0, 0, 321, 321, 152, 104, 78, 87, 35, 0, 0, 63, 33, 0, 0, 0, 321, 0, 321, 204, 209, 214, 216, 219, 224, 227, 229];
+  Skew.yy_def = [0, 223, 1, 223, 223, 223, 223, 223, 224, 225, 223, 223, 226, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 227, 228, 223, 223, 223, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 223, 223, 223, 223, 223, 223, 223, 224, 223, 224, 225, 223, 223, 223, 223, 226, 223, 226, 223, 223, 223, 223, 223, 223, 223, 229, 223, 223, 223, 223, 223, 223, 223, 230, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 231, 228, 223, 223, 223, 223, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 223, 223, 223, 223, 223, 223, 223, 229, 223, 223, 223, 223, 223, 230, 223, 223, 223, 223, 223, 223, 231, 223, 223, 223, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 223, 223, 223, 223, 223, 223, 223, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 223, 223, 223, 223, 223, 223, 223, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 228, 223, 223, 223, 228, 228, 228, 228, 228, 228, 223, 228, 228, 228, 228, 223, 228, 0, 223, 223, 223, 223, 223, 223, 223, 223];
+  Skew.yy_nxt = [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 22, 22, 23, 24, 25, 26, 27, 28, 29, 30, 30, 30, 31, 4, 32, 33, 34, 35, 36, 37, 38, 39, 30, 40, 30, 30, 30, 41, 30, 30, 42, 43, 44, 30, 45, 46, 30, 30, 47, 48, 49, 50, 55, 58, 63, 60, 65, 69, 67, 86, 87, 88, 89, 222, 114, 72, 115, 70, 82, 66, 68, 59, 61, 73, 74, 83, 84, 85, 64, 221, 56, 75, 220, 76, 76, 76, 76, 75, 90, 76, 76, 76, 76, 103, 95, 77, 101, 91, 116, 92, 120, 77, 78, 122, 55, 77, 117, 106, 102, 63, 104, 77, 96, 79, 107, 219, 109, 131, 131, 108, 218, 80, 110, 138, 139, 97, 111, 128, 128, 128, 128, 121, 56, 64, 145, 146, 75, 123, 76, 76, 76, 76, 132, 132, 132, 159, 129, 217, 129, 160, 77, 130, 130, 130, 130, 128, 128, 128, 128, 216, 77, 130, 130, 130, 130, 131, 131, 165, 130, 130, 130, 130, 132, 132, 132, 173, 174, 165, 189, 215, 189, 214, 213, 190, 190, 190, 190, 190, 190, 190, 190, 190, 190, 190, 190, 54, 54, 54, 54, 54, 57, 212, 57, 57, 57, 62, 62, 62, 62, 62, 93, 93, 94, 94, 94, 127, 211, 127, 127, 127, 133, 133, 140, 140, 140, 210, 209, 208, 207, 206, 205, 204, 203, 202, 201, 200, 199, 198, 197, 196, 195, 194, 193, 192, 191, 188, 187, 186, 185, 184, 183, 182, 181, 180, 179, 178, 177, 176, 175, 172, 171, 170, 169, 168, 167, 166, 164, 163, 162, 161, 158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 144, 143, 142, 141, 137, 136, 135, 134, 126, 223, 125, 223, 124, 52, 51, 119, 118, 113, 112, 105, 100, 99, 98, 81, 71, 53, 52, 51, 223, 3, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223];
+  Skew.yy_chk = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 8, 10, 12, 11, 15, 18, 16, 26, 26, 27, 27, 217, 43, 20, 43, 18, 25, 15, 16, 10, 11, 20, 20, 25, 25, 25, 12, 216, 8, 21, 213, 21, 21, 21, 21, 22, 28, 22, 22, 22, 22, 37, 31, 21, 36, 28, 44, 28, 47, 22, 21, 48, 54, 21, 44, 39, 36, 62, 37, 22, 31, 21, 39, 212, 40, 78, 78, 39, 211, 21, 40, 89, 89, 31, 40, 75, 75, 75, 75, 47, 54, 62, 101, 101, 76, 48, 76, 76, 76, 76, 79, 79, 79, 117, 77, 210, 77, 117, 76, 77, 77, 77, 77, 128, 128, 128, 128, 209, 76, 129, 129, 129, 129, 131, 131, 128, 130, 130, 130, 130, 132, 132, 132, 147, 147, 128, 165, 204, 165, 202, 201, 165, 165, 165, 165, 189, 189, 189, 189, 190, 190, 190, 190, 224, 224, 224, 224, 224, 225, 199, 225, 225, 225, 226, 226, 226, 226, 226, 227, 227, 228, 228, 228, 229, 198, 229, 229, 229, 230, 230, 231, 231, 231, 197, 191, 188, 187, 186, 184, 183, 182, 181, 179, 178, 176, 175, 174, 173, 172, 170, 169, 168, 166, 164, 163, 162, 159, 158, 157, 156, 155, 154, 152, 151, 150, 149, 148, 146, 145, 144, 143, 141, 139, 136, 121, 120, 119, 118, 116, 115, 114, 113, 112, 108, 107, 106, 105, 104, 103, 102, 100, 97, 96, 95, 86, 85, 84, 83, 65, 64, 58, 56, 53, 52, 51, 46, 45, 42, 41, 38, 35, 34, 33, 23, 19, 7, 6, 5, 3, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223, 223];
+  Skew.YY_JAM_STATE = 223;
+  Skew.YY_ACCEPT_LENGTH = 224;
   Skew.NATIVE_LIBRARY_CPP = '\n@import {\n  def __doubleToString(x double) string\n  def __intToString(x int) string\n\n  @rename("std::isnan")\n  def __doubleIsNaN(x double) bool\n\n  @rename("std::isfinite")\n  def __doubleIsFinite(x double) bool\n}\n\nclass bool {\n  def toString string {\n    return self ? "true" : "false"\n  }\n}\n\nclass int {\n  def toString string {\n    return __intToString(self)\n  }\n\n  def >>>(x int) int {\n    return (self as dynamic.unsigned >> x) as int\n  }\n}\n\nclass double {\n  def toString string {\n    return __doubleToString(self)\n  }\n\n  def isNaN bool {\n    return __doubleIsNaN(self)\n  }\n\n  def isFinite bool {\n    return __doubleIsFinite(self)\n  }\n}\n\nclass string {\n  @rename("compare")\n  def <=>(x string) int\n\n  @rename("contains")\n  def in(x string) bool\n}\n\n@rename("Skew::List")\nclass List {\n  @rename("contains")\n  def in(x T) bool\n}\n\n@rename("Skew::StringMap")\nclass StringMap {\n  @rename("contains")\n  def in(x string) bool\n}\n\n@rename("Skew::IntMap")\nclass IntMap {\n  @rename("contains")\n  def in(x int) bool\n}\n\n@import\n@rename("Skew::StringBuilder")\nclass StringBuilder {\n}\n\n@import\n@rename("Skew::Math")\nnamespace Math {\n}\n\n@import\ndef assert(truth bool)\n';
   Skew.UNICODE_LIBRARY = '\nnamespace Unicode {\n  enum Encoding {\n    UTF8\n    UTF16\n    UTF32\n  }\n\n  const STRING_ENCODING Encoding =\n    TARGET == .CPLUSPLUS ? .UTF8 :\n    TARGET == .CSHARP || TARGET == .JAVASCRIPT ? .UTF16 :\n    .UTF32\n\n  class StringIterator {\n    var value = ""\n    var index = 0\n    var stop = 0\n\n    def reset(text string, start int) StringIterator {\n      value = text\n      index = start\n      stop = text.count\n      return self\n    }\n\n    def countCodePointsUntil(stop int) int {\n      var count = 0\n      while index < stop && nextCodePoint >= 0 {\n        count++\n      }\n      return count\n    }\n\n    def previousCodePoint int\n    def nextCodePoint int\n\n    if STRING_ENCODING == .UTF8 {\n      def previousCodePoint int {\n        if index <= 0 { return -1 }\n        var a = value[--index]\n        if (a & 0xC0) != 0x80 { return a }\n        if index <= 0 { return -1 }\n        var b = value[--index]\n        if (b & 0xC0) != 0x80 { return ((b & 0x1F) << 6) | (a & 0x3F) }\n        if index <= 0 { return -1 }\n        var c = value[--index]\n        if (c & 0xC0) != 0x80 { return ((c & 0x0F) << 12) | ((b & 0x3F) << 6) | (a & 0x3F) }\n        if index >= stop { return -1 }\n        var d = value[--index]\n        return ((d & 0x07) << 18) | ((c & 0x3F) << 12) | ((b & 0x3F) << 6) | (a & 0x3F)\n      }\n\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index++]\n        if a < 0xC0 { return a }\n        if index >= stop { return -1 }\n        var b = value[index++]\n        if a < 0xE0 { return ((a & 0x1F) << 6) | (b & 0x3F) }\n        if index >= stop { return -1 }\n        var c = value[index++]\n        if a < 0xF0 { return ((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F) }\n        if index >= stop { return -1 }\n        var d = value[index++]\n        return ((a & 0x07) << 18) | ((b & 0x3F) << 12) | ((c & 0x3F) << 6) | (d & 0x3F)\n      }\n    }\n\n    else if STRING_ENCODING == .UTF16 {\n      def previousCodePoint int {\n        if index <= 0 { return -1 }\n        var a = value[--index]\n        if (a & 0xFC00) != 0xDC00 { return a }\n        if index <= 0 { return -1 }\n        var b = value[--index]\n        return (b << 10) + a + (0x10000 - (0xD800 << 10) - 0xDC00)\n      }\n\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        var a = value[index++]\n        if (a & 0xFC00) != 0xD800 { return a }\n        if index >= stop { return -1 }\n        var b = value[index++]\n        return (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00)\n      }\n    }\n\n    else {\n      def previousCodePoint int {\n        if index <= 0 { return -1 }\n        return value[--index]\n      }\n\n      def nextCodePoint int {\n        if index >= stop { return -1 }\n        return value[index++]\n      }\n    }\n  }\n\n  namespace StringIterator {\n    const INSTANCE = StringIterator.new\n  }\n\n  def codeUnitCountForCodePoints(codePoints List<int>, encoding Encoding) int {\n    var count = 0\n\n    switch encoding {\n      case .UTF8 {\n        for codePoint in codePoints {\n          if codePoint < 0x80 { count++ }\n          else if codePoint < 0x800 { count += 2 }\n          else if codePoint < 0x10000 { count += 3 }\n          else { count += 4 }\n        }\n      }\n\n      case .UTF16 {\n        for codePoint in codePoints {\n          if codePoint < 0x10000 { count++ }\n          else { count += 2 }\n        }\n      }\n\n      case .UTF32 {\n        count = codePoints.count\n      }\n    }\n\n    return count\n  }\n}\n\nclass string {\n  if Unicode.STRING_ENCODING == .UTF32 {\n    def codePoints List<int> {\n      return codeUnits\n    }\n  }\n\n  else {\n    def codePoints List<int> {\n      var codePoints List<int> = []\n      var instance = Unicode.StringIterator.INSTANCE\n      instance.reset(self, 0)\n\n      while true {\n        var codePoint = instance.nextCodePoint\n        if codePoint < 0 {\n          return codePoints\n        }\n        codePoints.append(codePoint)\n      }\n    }\n  }\n}\n\nnamespace string {\n  def fromCodePoints(codePoints List<int>) string {\n    var builder = StringBuilder.new\n    for codePoint in codePoints {\n      builder.append(fromCodePoint(codePoint))\n    }\n    return builder.toString\n  }\n\n  if Unicode.STRING_ENCODING == .UTF8 {\n    def fromCodePoint(codePoint int) string {\n      return\n        codePoint < 0x80 ? fromCodeUnit(codePoint) : (\n          codePoint < 0x800 ? fromCodeUnit(((codePoint >> 6) & 0x1F) | 0xC0) : (\n            codePoint < 0x10000 ? fromCodeUnit(((codePoint >> 12) & 0x0F) | 0xE0) : (\n              fromCodeUnit(((codePoint >> 18) & 0x07) | 0xF0)\n            ) + fromCodeUnit(((codePoint >> 12) & 0x3F) | 0x80)\n          ) + fromCodeUnit(((codePoint >> 6) & 0x3F) | 0x80)\n        ) + fromCodeUnit((codePoint & 0x3F) | 0x80)\n    }\n  }\n\n  else if Unicode.STRING_ENCODING == .UTF16 {\n    def fromCodePoint(codePoint int) string {\n      return codePoint < 0x10000 ? fromCodeUnit(codePoint) :\n        fromCodeUnit(((codePoint - 0x10000) >> 10) + 0xD800) +\n        fromCodeUnit(((codePoint - 0x10000) & ((1 << 10) - 1)) + 0xDC00)\n    }\n  }\n\n  else {\n    def fromCodePoint(codePoint int) string {\n      return fromCodeUnit(codePoint)\n    }\n  }\n}\n';
   Skew.NATIVE_LIBRARY_JS = '\nconst __create fn(dynamic) dynamic = dynamic.Object.create ? dynamic.Object.create : prototype => {\n  return {"__proto__": prototype}\n}\n\nconst __extends = (derived dynamic, base dynamic) => {\n  derived.prototype = __create(base.prototype)\n  derived.prototype.constructor = derived\n}\n\nconst __imul fn(int, int) int = dynamic.Math.imul ? dynamic.Math.imul : (a, b) => {\n  return ((a as dynamic) * (b >>> 16) << 16) + (a as dynamic) * (b & 65535) | 0\n}\n\nconst __prototype dynamic\nconst __isInt = (value dynamic) => value == (value | 0)\nconst __isBool = (value dynamic) => value == !!value\nconst __isDouble = (value dynamic) => dynamic.typeof(value) == "number"\nconst __isString = (value dynamic) => dynamic.typeof(value) == "string"\nconst __asString = (value dynamic) => value == null ? value : value + ""\n\ndef assert(truth bool) {\n  if !truth {\n    throw dynamic.Error("Assertion failed")\n  }\n}\n\n# Override this to true to remove asserts from many of the functions below so that they may be inlined\nconst JS_INLINE_NATIVE = false\n\n@import\nnamespace Math {}\n\n@rename("boolean")\nclass bool {}\n\n@rename("number")\nclass int {}\n\n@rename("number")\nclass double {\n  @alwaysinline\n  def isFinite bool {\n    return dynamic.isFinite(self)\n  }\n\n  @alwaysinline\n  def isNaN bool {\n    return dynamic.isNaN(self)\n  }\n}\n\nclass string {\n  def <=>(x string) int {\n    return ((x as dynamic < self) as int) - ((x as dynamic > self) as int)\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def slice(start int) string {\n      return (self as dynamic).slice(start)\n    }\n  } else {\n    def slice(start int) string {\n      assert(0 <= start && start <= count)\n      return (self as dynamic).slice(start)\n    }\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def slice(start int, end int) string {\n      return (self as dynamic).slice(start, end)\n    }\n  } else {\n    def slice(start int, end int) string {\n      assert(0 <= start && start <= end && end <= count)\n      return (self as dynamic).slice(start, end)\n    }\n  }\n\n  @alwaysinline\n  def startsWith(text string) bool {\n    return (self as dynamic).startsWith(text)\n  }\n\n  @alwaysinline\n  def endsWith(text string) bool {\n    return (self as dynamic).endsWith(text)\n  }\n\n  @alwaysinline\n  def replaceAll(before string, after string) string {\n    return after.join(self.split(before))\n  }\n\n  @alwaysinline\n  def in(value string) bool {\n    return indexOf(value) != -1\n  }\n\n  @alwaysinline\n  def count int {\n    return (self as dynamic).length\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def [](index int) int {\n      return (self as dynamic).charCodeAt(index)\n    }\n  } else {\n    def [](index int) int {\n      assert(0 <= index && index < count)\n      return (self as dynamic).charCodeAt(index)\n    }\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def get(index int) string {\n      return (self as dynamic)[index]\n    }\n  } else {\n    def get(index int) string {\n      assert(0 <= index && index < count)\n      return (self as dynamic)[index]\n    }\n  }\n\n  def repeat(times int) string {\n    var result = ""\n    for i in 0..times {\n      result += self\n    }\n    return result\n  }\n\n  @alwaysinline\n  def join(parts List<string>) string {\n    return (parts as dynamic).join(self)\n  }\n\n  def codeUnits List<int> {\n    var result List<int> = []\n    for i in 0..count {\n      result.append(self[i])\n    }\n    return result\n  }\n}\n\nnamespace string {\n  @alwaysinline\n  def fromCodeUnit(codeUnit int) string {\n    return dynamic.String.fromCharCode(codeUnit)\n  }\n\n  def fromCodeUnits(codeUnits List<int>) string {\n    var result = ""\n    for codeUnit in codeUnits {\n      result += string.fromCodeUnit(codeUnit)\n    }\n    return result\n  }\n}\n\nclass StringBuilder {\n  var buffer = ""\n\n  def new {\n  }\n\n  @alwaysinline\n  def append(x string) {\n    buffer += x\n  }\n\n  @alwaysinline\n  def toString string {\n    return buffer\n  }\n}\n\n@rename("Array")\nclass List {\n  @rename("unshift")\n  def prepend(x T)\n\n  @rename("push")\n  def append(x T)\n\n  @rename("every")\n  def all(x fn(T) bool) bool\n\n  @rename("some")\n  def any(x fn(T) bool) bool\n\n  @rename("slice")\n  def clone List<T>\n\n  @rename("forEach")\n  def each(x fn(T))\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def slice(start int) List<T> {\n      return (self as dynamic).slice(start)\n    }\n  } else {\n    def slice(start int) List<T> {\n      assert(0 <= start && start <= count)\n      return (self as dynamic).slice(start)\n    }\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def slice(start int, end int) List<T> {\n      return (self as dynamic).slice(start, end)\n    }\n  } else {\n    def slice(start int, end int) List<T> {\n      assert(0 <= start && start <= end && end <= count)\n      return (self as dynamic).slice(start, end)\n    }\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def [](index int) T {\n      return (self as dynamic)[index]\n    }\n  } else {\n    def [](index int) T {\n      assert(0 <= index && index < count)\n      return (self as dynamic)[index]\n    }\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def []=(index int, value T) T {\n      return (self as dynamic)[index] = value\n    }\n  } else {\n    def []=(index int, value T) T {\n      assert(0 <= index && index < count)\n      return (self as dynamic)[index] = value\n    }\n  }\n\n  @alwaysinline\n  def in(value T) bool {\n    return indexOf(value) != -1\n  }\n\n  @alwaysinline\n  def isEmpty bool {\n    return count == 0\n  }\n\n  @alwaysinline\n  def count int {\n    return (self as dynamic).length\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def first T {\n      return self[0]\n    }\n  } else {\n    def first T {\n      assert(!isEmpty)\n      return self[0]\n    }\n  }\n\n  def last T {\n    assert(!isEmpty)\n    return self[count - 1]\n  }\n\n  def prepend(values List<T>) {\n    assert(values != self)\n    var count = values.count\n    for i in 0..count {\n      prepend(values[count - i - 1])\n    }\n  }\n\n  def append(values List<T>) {\n    assert(values != self)\n    for value in values {\n      append(value)\n    }\n  }\n\n  def insert(index int, values List<T>) {\n    assert(values != self)\n    for value in values {\n      insert(index, value)\n      index++\n    }\n  }\n\n  def insert(index int, value T) {\n    assert(0 <= index && index <= count)\n    (self as dynamic).splice(index, 0, value)\n  }\n\n  def removeFirst {\n    assert(!isEmpty)\n    (self as dynamic).shift()\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def takeFirst T {\n      return (self as dynamic).shift()\n    }\n  } else {\n    def takeFirst T {\n      assert(!isEmpty)\n      return (self as dynamic).shift()\n    }\n  }\n\n  def removeLast {\n    assert(!isEmpty)\n    (self as dynamic).pop()\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def takeLast T {\n      return (self as dynamic).pop()\n    }\n  } else {\n    def takeLast T {\n      assert(!isEmpty)\n      return (self as dynamic).pop()\n    }\n  }\n\n  def removeAt(index int) {\n    assert(0 <= index && index < count)\n    (self as dynamic).splice(index, 1)\n  }\n\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def takeAt(index int) T {\n      return (self as dynamic).splice(index, 1)[0]\n    }\n  } else {\n    def takeAt(index int) T {\n      assert(0 <= index && index < count)\n      return (self as dynamic).splice(index, 1)[0]\n    }\n  }\n\n  def takeRange(start int, end int) List<T> {\n    assert(0 <= start && start <= end && end <= count)\n    return (self as dynamic).splice(start, end - start)\n  }\n\n  def appendOne(value T) {\n    if !(value in self) {\n      append(value)\n    }\n  }\n\n  def removeOne(value T) {\n    var index = indexOf(value)\n    if index >= 0 {\n      removeAt(index)\n    }\n  }\n\n  def removeRange(start int, end int) {\n    assert(0 <= start && start <= end && end <= count)\n    (self as dynamic).splice(start, end - start)\n  }\n\n  def removeIf(callback fn(T) bool) {\n    var index = 0\n\n    # Remove elements in place\n    for i in 0..count {\n      if !callback(self[i]) {\n        if index < i {\n          self[index] = self[i]\n        }\n        index++\n      }\n    }\n\n    # Shrink the array to the correct size\n    while index < count {\n      removeLast\n    }\n  }\n\n  def equals(other List<T>) bool {\n    if count != other.count {\n      return false\n    }\n    for i in 0..count {\n      if self[i] != other[i] {\n        return false\n      }\n    }\n    return true\n  }\n}\n\nnamespace List {\n  @alwaysinline\n  def new List<T> {\n    return [] as dynamic\n  }\n}\n\nnamespace StringMap {\n  @alwaysinline\n  def new StringMap<T> {\n    return dynamic.Map.new\n  }\n}\n\nclass StringMap {\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def [](key string) T {\n      return (self as dynamic).get(key)\n    }\n  } else {\n    def [](key string) T {\n      assert(key in self)\n      return (self as dynamic).get(key)\n    }\n  }\n\n  def []=(key string, value T) T {\n    (self as dynamic).set(key, value)\n    return value\n  }\n\n  def {...}(key string, value T) StringMap<T> {\n    (self as dynamic).set(key, value)\n    return self\n  }\n\n  @alwaysinline\n  def in(key string) bool {\n    return (self as dynamic).has(key)\n  }\n\n  @alwaysinline\n  def count int {\n    return (self as dynamic).size\n  }\n\n  @alwaysinline\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def get(key string, defaultValue T) T {\n    const value = (self as dynamic).get(key)\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  @alwaysinline\n  def keys List<string> {\n    return dynamic.Array.from((self as dynamic).keys())\n  }\n\n  @alwaysinline\n  def values List<T> {\n    return dynamic.Array.from((self as dynamic).values())\n  }\n\n  @alwaysinline\n  def clone StringMap<T> {\n    return dynamic.Map.new(self)\n  }\n\n  @alwaysinline\n  def remove(key string) {\n    (self as dynamic).delete(key)\n  }\n\n  def each(x fn(string, T)) {\n    (self as dynamic).forEach((value, key) => {\n      x(key, value)\n    })\n  }\n}\n\nnamespace IntMap {\n  @alwaysinline\n  def new IntMap<T> {\n    return dynamic.Map.new\n  }\n}\n\nclass IntMap {\n  if JS_INLINE_NATIVE {\n    @alwaysinline\n    def [](key int) T {\n      return (self as dynamic).get(key)\n    }\n  } else {\n    def [](key int) T {\n      assert(key in self)\n      return (self as dynamic).get(key)\n    }\n  }\n\n  def []=(key int, value T) T {\n    (self as dynamic).set(key, value)\n    return value\n  }\n\n  def {...}(key int, value T) IntMap<T> {\n    (self as dynamic).set(key, value)\n    return self\n  }\n\n  @alwaysinline\n  def in(key int) bool {\n    return (self as dynamic).has(key)\n  }\n\n  @alwaysinline\n  def count int {\n    return (self as dynamic).size\n  }\n\n  @alwaysinline\n  def isEmpty bool {\n    return count == 0\n  }\n\n  def get(key int, defaultValue T) T {\n    const value = (self as dynamic).get(key)\n    return value != dynamic.void(0) ? value : defaultValue # Compare against undefined so the key is only hashed once for speed\n  }\n\n  @alwaysinline\n  def keys List<int> {\n    return dynamic.Array.from((self as dynamic).keys())\n  }\n\n  @alwaysinline\n  def values List<T> {\n    return dynamic.Array.from((self as dynamic).values())\n  }\n\n  @alwaysinline\n  def clone IntMap<T> {\n    return dynamic.Map.new(self)\n  }\n\n  @alwaysinline\n  def remove(key int) {\n    (self as dynamic).delete(key)\n  }\n\n  def each(x fn(int, T)) {\n    (self as dynamic).forEach((value, key) => {\n      x(key, value)\n    })\n  }\n}\n';
@@ -25871,7 +25899,7 @@
 
       while (true) {
         context.eat(Skew.TokenKind.NEWLINE);
-        var comments = Skew.Parsing.parseLeadingComments(context);
+        var comments = context.stealComments();
 
         if (context.peek1(end)) {
           Skew.Parsing._warnAboutIgnoredComments(context, comments);

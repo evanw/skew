@@ -17,7 +17,7 @@ namespace Skew.IDE {
         for comment in symbol.comments {
           if !comment.hasGapBelow {
             for line in comment.lines {
-              text += "#" + line
+              text += "#\(line)\n"
             }
           }
         }

@@ -130,66 +130,21 @@ namespace Skew.Parsing {
   def _warnAboutIgnoredComments(context ParserContext, comments List<Comment>) {
     if comments != null && context.warnAboutIgnoredComments {
       for comment in comments {
-        context.log.syntaxWarningIgnoredComment(comment.range)
+        context.log.syntaxWarningIgnoredCommentInParser(comment.range)
       }
     }
-  }
-
-  # Replace all leading '#' with '/' to better match '//' comments in target languages
-  def _processCommentLines(lines List<string>) List<string> {
-    for i in 0..lines.count {
-      var line = lines[i]
-      var count = 0
-      for j in 0..line.count {
-        if line[j] != '#' {
-          break
-        }
-        count++
-      }
-      lines[i] = "/".repeat(count) + line.slice(count)
-    }
-    return lines
-  }
-
-  def parseLeadingComments(context ParserContext) List<Comment> {
-    var comments List<Comment> = null
-    var blockRange Range = null
-    var blockLines List<string> = null
-
-    while context.peek(.COMMENT) {
-      var range = context.next.range
-      blockRange ?= range
-      blockLines ?= []
-      blockLines.append(range.source.contents.slice(range.start + 1, range.end))
-
-      if context.eat(.NEWLINE) {
-        comments ?= []
-        comments.append(Comment.new(blockRange, _processCommentLines(blockLines), true))
-        blockRange = null
-        blockLines = null
-      }
-    }
-
-    if blockRange != null {
-      comments ?= []
-      comments.append(Comment.new(blockRange, _processCommentLines(blockLines), false))
-    }
-
-    return comments
   }
 
   def parseTrailingComment(context ParserContext, comments List<Comment>) List<Comment> {
-    if !context.peek(.COMMENT) {
-      return null
+    if context.peek(.NEWLINE) || context.peek(.END_OF_FILE) {
+      var trailing = context.stealComments
+      if trailing != null {
+        comments ?= []
+        comments.append(trailing)
+        return comments
+      }
     }
-    var range = context.next.range
-    comments ?= []
-    var text = range.source.contents.slice(range.start + 1, range.end)
-    if !text.endsWith("\n") {
-      text += "\n"
-    }
-    comments.append(Comment.new(range, _processCommentLines([text]), false))
-    return comments
+    return null
   }
 
   def parseAnnotations(context ParserContext, annotations List<Node>) List<Node> {
@@ -319,7 +274,7 @@ namespace Skew.Parsing {
 
     context.eat(.NEWLINE)
     while !context.peek(.RIGHT_BRACE) {
-      var comments = parseLeadingComments(context)
+      var comments = context.stealComments
 
       # Ignore trailing comments
       if context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE) {
@@ -620,22 +575,23 @@ namespace Skew.Parsing {
 
   def parseStatements(context ParserContext, parent Node, mode StatementsMode) bool {
     var previous Node = null
+    var trailing = parseTrailingComment(context, null)
     context.eat(.NEWLINE)
 
-    while !context.peek(.RIGHT_BRACE) && !context.peek(.XML_START_CLOSE) {
-      var comments = parseLeadingComments(context)
+    while !context.peek(.RIGHT_BRACE) && !context.peek(.XML_START_CLOSE) && !context.peek(.END_OF_FILE) {
+      var comments = context.stealComments
+
+      # The block may start with a trailing comment
+      if trailing != null {
+        if comments != null {
+          trailing.append(comments)
+        }
+        comments = trailing
+      }
 
       # When parsing a C-style switch, stop if it looks like the end of the case
       if mode == .C_STYLE_SWITCH && (context.peek(.CASE) || context.peek(.DEFAULT) || context.peek(.BREAK)) {
         _warnAboutIgnoredComments(context, comments)
-        break
-      }
-
-      # Conert trailing comments to blocks
-      if context.peek(.RIGHT_BRACE) || context.peek(.XML_START_CLOSE) || context.peek(.END_OF_FILE) {
-        if comments != null {
-          parent.appendChild(Node.createCommentBlock.withComments(comments))
-        }
         break
       }
 
@@ -781,6 +737,18 @@ namespace Skew.Parsing {
       }
     }
 
+    # Convert trailing comments to blocks
+    var comments = context.stealComments
+    if trailing != null {
+      if comments != null {
+        trailing.append(comments)
+      }
+      comments = trailing
+    }
+    if comments != null {
+      parent.appendChild(Node.createCommentBlock.withComments(comments))
+    }
+
     return true
   }
 
@@ -882,8 +850,8 @@ namespace Skew.Parsing {
       symbol.returnType = parseType(context)
     }
 
-    if context.eat(.NEWLINE) && !context.peek(.LEFT_BRACE) {
-      context.undo
+    if context.peek(.NEWLINE) && context.peek(.LEFT_BRACE, 1) {
+      context.next
     }
 
     return parseFunctionBlock(context, symbol)
@@ -1037,7 +1005,7 @@ namespace Skew.Parsing {
 
   def parseSymbol(context ParserContext, parent ObjectSymbol, annotations List<Node>) bool {
     # Parse comments before the symbol declaration
-    var comments = parseLeadingComments(context)
+    var comments = context.stealComments
 
     # Ignore trailing comments
     if context.peek(.RIGHT_BRACE) || context.peek(.END_OF_FILE) {
@@ -1437,7 +1405,7 @@ namespace Skew.Parsing {
     var isFirst = true
     while true {
       context.eat(.NEWLINE)
-      var comments = parseLeadingComments(context)
+      var comments = context.stealComments
       context.skipWhitespace
       if isFirst && context.eat(stop) {
         _warnAboutIgnoredComments(context, comments)
@@ -1586,7 +1554,7 @@ namespace Skew.Parsing {
       var end TokenKind = expectColon ? .RIGHT_BRACE : .RIGHT_BRACKET
       while true {
         context.eat(.NEWLINE)
-        var comments = parseLeadingComments(context)
+        var comments = context.stealComments
         if context.peek(end) {
           _warnAboutIgnoredComments(context, comments)
           break

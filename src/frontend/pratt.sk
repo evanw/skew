@@ -40,8 +40,18 @@ namespace Skew {
       return _tokens[_index]
     }
 
+    def stealComments List<Comment> {
+      var token = current
+      var comments = token.comments
+      token.comments = null
+      return comments
+    }
+
     def next Token {
       var token = current
+      if warnAboutIgnoredComments && token.comments != null {
+        log.syntaxWarningIgnoredCommentInParser(token.comments.first.range)
+      }
       if _index + 1 < _tokens.count {
         _index++
       }
@@ -71,19 +81,7 @@ namespace Skew {
     }
 
     def skipWhitespace {
-      while true {
-        if eat(.NEWLINE) {
-          continue
-        }
-        if peek(.COMMENT) {
-          var range = next.range
-          if warnAboutIgnoredComments {
-            log.syntaxWarningIgnoredComment(range)
-          }
-          continue
-        }
-        break
-      }
+      eat(.NEWLINE)
     }
 
     def skipSemicolon bool {
