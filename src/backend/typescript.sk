@@ -1138,48 +1138,48 @@ namespace Skew {
         }
 
         case .CAST {
-          var resolvedType = node.resolvedType
           var type = node.castType
           var value = node.castValue
-          var unwrappedType = _cache.unwrappedType(type.resolvedType)
+          var unwrappedSource = _cache.unwrappedType(value.resolvedType)
+          var unwrappedTarget = _cache.unwrappedType(type.resolvedType)
 
           # Skip the cast in certain cases
           if type.kind == .TYPE && (type.resolvedType == .DYNAMIC || value.kind == .NULL) {
             _emitExpression(value, precedence)
           }
 
-          # Automatically promote integer literals to doubles instead of using a cast
-          else if _cache.isEquivalentToDouble(resolvedType) && value.isInt {
-            _emitExpression(_cache.createDouble(value.asInt), precedence)
+          # Conversion from integer to any numeric type can be ignored
+          else if _cache.isInteger(unwrappedSource) && _cache.isNumeric(unwrappedTarget) {
+            _emitExpression(value, precedence)
           }
 
           # Cast from bool to a number
-          else if _cache.isNumeric(unwrappedType) && value.resolvedType == _cache.boolType {
+          else if _cache.isNumeric(unwrappedTarget) && value.resolvedType == _cache.boolType {
             _emitExpression(Node.createHook(value.remove, _cache.createInt(1), _cache.createInt(0)).withType(_cache.intType), precedence)
           }
 
           # Cast to bool
-          else if unwrappedType == _cache.boolType {
+          else if unwrappedTarget == _cache.boolType && unwrappedSource != _cache.boolType {
             _emitExpression(Node.createUnary(.NOT, Node.createUnary(.NOT, value.remove).withType(_cache.boolType)).withType(_cache.boolType), precedence)
           }
 
           # Cast to int
-          else if _cache.isInteger(unwrappedType) {
+          else if _cache.isInteger(unwrappedTarget) && !_cache.isInteger(unwrappedSource) {
             _emitExpression(Node.createBinary(.BITWISE_OR, value.remove, Node.createInt(0).withType(_cache.intType)).withType(_cache.intType), precedence)
           }
 
           # Cast to double
-          else if unwrappedType == _cache.doubleType {
+          else if unwrappedTarget == _cache.doubleType && unwrappedSource != _cache.doubleType {
             _emitExpression(Node.createUnary(.POSITIVE, value.remove).withType(_cache.doubleType), precedence)
           }
 
           # Cast to string
-          else if unwrappedType == _cache.stringType {
+          else if unwrappedTarget == _cache.stringType && unwrappedSource != _cache.stringType {
             _emitExpression(Node.createSymbolCall(_specialVariable(.AS_STRING)).appendChild(value.remove).withType(_cache.stringType), precedence)
           }
 
           # Only emit a cast if the underlying types are different
-          else if _cache.unwrappedType(value.resolvedType) != unwrappedType || type.resolvedType == .DYNAMIC {
+          else if unwrappedSource != unwrappedTarget || type.resolvedType == .DYNAMIC {
             if Precedence.ASSIGN < precedence {
               _emit("(")
             }

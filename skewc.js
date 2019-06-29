@@ -7406,48 +7406,48 @@
       }
 
       case Skew.NodeKind.CAST: {
-        var resolvedType = node.resolvedType;
         var type = node.castType();
         var value1 = node.castValue();
-        var unwrappedType = this._cache.unwrappedType(type.resolvedType);
+        var unwrappedSource = this._cache.unwrappedType(value1.resolvedType);
+        var unwrappedTarget = this._cache.unwrappedType(type.resolvedType);
 
         // Skip the cast in certain cases
         if (type.kind == Skew.NodeKind.TYPE && (type.resolvedType == Skew.Type.DYNAMIC || value1.kind == Skew.NodeKind.NULL)) {
           this._emitExpression(value1, precedence);
         }
 
-        // Automatically promote integer literals to doubles instead of using a cast
-        else if (this._cache.isEquivalentToDouble(resolvedType) && value1.isInt()) {
-          this._emitExpression(this._cache.createDouble(value1.asInt()), precedence);
+        // Conversion from integer to any numeric type can be ignored
+        else if (this._cache.isInteger(unwrappedSource) && this._cache.isNumeric(unwrappedTarget)) {
+          this._emitExpression(value1, precedence);
         }
 
         // Cast from bool to a number
-        else if (this._cache.isNumeric(unwrappedType) && value1.resolvedType == this._cache.boolType) {
+        else if (this._cache.isNumeric(unwrappedTarget) && value1.resolvedType == this._cache.boolType) {
           this._emitExpression(Skew.Node.createHook(value1.remove(), this._cache.createInt(1), this._cache.createInt(0)).withType(this._cache.intType), precedence);
         }
 
         // Cast to bool
-        else if (unwrappedType == this._cache.boolType) {
+        else if (unwrappedTarget == this._cache.boolType && unwrappedSource != this._cache.boolType) {
           this._emitExpression(Skew.Node.createUnary(Skew.NodeKind.NOT, Skew.Node.createUnary(Skew.NodeKind.NOT, value1.remove()).withType(this._cache.boolType)).withType(this._cache.boolType), precedence);
         }
 
         // Cast to int
-        else if (this._cache.isInteger(unwrappedType)) {
+        else if (this._cache.isInteger(unwrappedTarget) && !this._cache.isInteger(unwrappedSource)) {
           this._emitExpression(Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, value1.remove(), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this._cache.intType)).withType(this._cache.intType), precedence);
         }
 
         // Cast to double
-        else if (unwrappedType == this._cache.doubleType) {
+        else if (unwrappedTarget == this._cache.doubleType && unwrappedSource != this._cache.doubleType) {
           this._emitExpression(Skew.Node.createUnary(Skew.NodeKind.POSITIVE, value1.remove()).withType(this._cache.doubleType), precedence);
         }
 
         // Cast to string
-        else if (unwrappedType == this._cache.stringType) {
+        else if (unwrappedTarget == this._cache.stringType && unwrappedSource != this._cache.stringType) {
           this._emitExpression(Skew.Node.createSymbolCall(this._specialVariable(Skew.TypeScriptEmitter.SpecialVariable.AS_STRING)).appendChild(value1.remove()).withType(this._cache.stringType), precedence);
         }
 
         // Only emit a cast if the underlying types are different
-        else if (this._cache.unwrappedType(value1.resolvedType) != unwrappedType || type.resolvedType == Skew.Type.DYNAMIC) {
+        else if (unwrappedSource != unwrappedTarget || type.resolvedType == Skew.Type.DYNAMIC) {
           if (Skew.Precedence.ASSIGN < precedence) {
             this._emit('(');
           }
