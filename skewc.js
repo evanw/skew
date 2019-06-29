@@ -704,7 +704,7 @@
         }
 
         if (comments.length == 0 || in_List.last(comments).hasGapBelow) {
-          comments.push(new Skew.Comment(token.range, [], false));
+          comments.push(new Skew.Comment(token.range, [], false, false));
         }
 
         var range1 = token.range;
@@ -727,14 +727,21 @@
         continue;
       }
 
-      // Accumulate the token for this iteration
       previousKind = token.kind;
 
-      if (previousKind != Skew.TokenKind.NEWLINE || !(tokens.length == 0) && comments != null && comments.length == 1 && in_List.first(comments).lines.length == 1 && !in_List.first(comments).hasGapBelow) {
+      if (previousKind != Skew.TokenKind.NEWLINE) {
         token.comments = comments;
         comments = null;
       }
 
+      // Capture trailing comments
+      if (!(tokens.length == 0) && comments != null && comments.length == 1 && in_List.first(comments).lines.length == 1 && !in_List.first(comments).hasGapBelow) {
+        in_List.first(comments).isTrailing = true;
+        token.comments = comments;
+        comments = null;
+      }
+
+      // Accumulate the token for this iteration
       tokens.push(token);
     }
 
@@ -6437,7 +6444,7 @@
   };
 
   Skew.TypeScriptEmitter.prototype._emitNewlineBeforeSymbol = function(symbol) {
-    if (this._previousSymbol != null && (!Skew.in_SymbolKind.isVariable(this._previousSymbol.kind) || !Skew.in_SymbolKind.isVariable(symbol.kind) || symbol.comments != null)) {
+    if (this._previousSymbol != null && (symbol.comments != null || (!Skew.in_SymbolKind.isVariable(this._previousSymbol.kind) || !Skew.in_SymbolKind.isVariable(symbol.kind)) && (!Skew.in_SymbolKind.isFunction(this._previousSymbol.kind) || this._previousSymbol.asFunctionSymbol().block != null || !Skew.in_SymbolKind.isFunction(symbol.kind) || symbol.asFunctionSymbol().block != null))) {
       this._emit('\n');
     }
 
@@ -6477,6 +6484,17 @@
         if (this._options.warnAboutIgnoredComments) {
           this._emittedComments.push(comment);
         }
+      }
+    }
+  };
+
+  Skew.TypeScriptEmitter.prototype._emitTrailingComment = function(comment) {
+    if (comment != null) {
+      assert(comment.lines.length == 1);
+      this._emit(' //' + in_List.first(comment.lines));
+
+      if (this._options.warnAboutIgnoredComments) {
+        this._emittedComments.push(comment);
       }
     }
   };
@@ -6819,8 +6837,10 @@
       return;
     }
 
+    var trailing = Skew.Comment.lastTrailingComment(symbol.comments);
+    var notTrailing = Skew.Comment.withoutLastTrailingComment(symbol.comments);
     this._emitNewlineBeforeSymbol(symbol);
-    this._emitComments(symbol.comments);
+    this._emitComments(notTrailing);
     this._emit(this._indent);
 
     if (symbol.kind == Skew.SymbolKind.VARIABLE_ENUM_OR_FLAGS) {
@@ -6838,7 +6858,7 @@
         this._expectedNextEnumValue = symbol.value.asInt() + 1 | 0;
       }
 
-      this._emit(',\n');
+      this._emit(',');
     }
 
     else {
@@ -6867,9 +6887,11 @@
         this._emitExpression(symbol.value, Skew.Precedence.COMMA);
       }
 
-      this._emit(';\n');
+      this._emit(';');
     }
 
+    this._emitTrailingComment(trailing);
+    this._emit('\n');
     this._emitNewlineAfterSymbol(symbol);
   };
 
@@ -7463,9 +7485,12 @@
     }
 
     while (from != to) {
+      var trailing = Skew.Comment.lastTrailingComment(from.comments);
+      var notTrailing = Skew.Comment.withoutLastTrailingComment(from.comments);
+
       if (isIndented) {
         this._emit('\n');
-        this._emitComments(from.comments);
+        this._emitComments(notTrailing);
         this._emit(this._indent);
       }
 
@@ -7475,6 +7500,8 @@
       if (from != to) {
         this._emit(isIndented ? ',' : ', ');
       }
+
+      this._emitTrailingComment(trailing);
     }
 
     if (isIndented) {
@@ -12669,10 +12696,11 @@
     this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected integer constant but found "' + value + '" in "' + text + '"'));
   };
 
-  Skew.Comment = function(range, lines, hasGapBelow) {
+  Skew.Comment = function(range, lines, hasGapBelow, isTrailing) {
     this.range = range;
     this.lines = lines;
     this.hasGapBelow = hasGapBelow;
+    this.isTrailing = isTrailing;
   };
 
   Skew.Comment.concat = function(left, right) {
@@ -12686,6 +12714,30 @@
 
     in_List.append1(left, right);
     return left;
+  };
+
+  Skew.Comment.lastTrailingComment = function(comments) {
+    if (comments != null) {
+      var last = in_List.last(comments);
+
+      if (last.isTrailing && last.lines.length == 1) {
+        return last;
+      }
+    }
+
+    return null;
+  };
+
+  Skew.Comment.withoutLastTrailingComment = function(comments) {
+    if (comments != null) {
+      var last = in_List.last(comments);
+
+      if (last.isTrailing && last.lines.length == 1) {
+        return in_List.slice2(comments, 0, comments.length - 1 | 0);
+      }
+    }
+
+    return comments;
   };
 
   Skew.Token = function(range, kind, comments) {

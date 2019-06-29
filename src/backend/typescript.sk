@@ -278,7 +278,11 @@ namespace Skew {
     }
 
     def _emitNewlineBeforeSymbol(symbol Symbol) {
-      if _previousSymbol != null && (!_previousSymbol.kind.isVariable || !symbol.kind.isVariable || symbol.comments != null) {
+      if _previousSymbol != null && (
+          symbol.comments != null ||
+          (!_previousSymbol.kind.isVariable || !symbol.kind.isVariable) &&
+          (!_previousSymbol.kind.isFunction || _previousSymbol.asFunctionSymbol.block != null ||
+            !symbol.kind.isFunction || symbol.asFunctionSymbol.block != null)) {
         _emit("\n")
       }
       _previousSymbol = null
@@ -311,6 +315,16 @@ namespace Skew {
           if _options.warnAboutIgnoredComments {
             _emittedComments.append(comment)
           }
+        }
+      }
+    }
+
+    def _emitTrailingComment(comment Comment) {
+      if comment != null {
+        assert(comment.lines.count == 1)
+        _emit(" //" + comment.lines.first)
+        if _options.warnAboutIgnoredComments {
+          _emittedComments.append(comment)
         }
       }
     }
@@ -586,8 +600,11 @@ namespace Skew {
         return
       }
 
+      var trailing = Comment.lastTrailingComment(symbol.comments)
+      var notTrailing = Comment.withoutLastTrailingComment(symbol.comments)
+
       _emitNewlineBeforeSymbol(symbol)
-      _emitComments(symbol.comments)
+      _emitComments(notTrailing)
       _emit(_indent)
 
       if symbol.kind == .VARIABLE_ENUM_OR_FLAGS {
@@ -600,7 +617,7 @@ namespace Skew {
           }
           _expectedNextEnumValue = symbol.value.asInt + 1
         }
-        _emit(",\n")
+        _emit(",")
       }
 
       else {
@@ -624,8 +641,11 @@ namespace Skew {
           _emit(" = ")
           _emitExpression(symbol.value, .COMMA)
         }
-        _emit(";\n")
+        _emit(";")
       }
+
+      _emitTrailingComment(trailing)
+      _emit("\n")
       _emitNewlineAfterSymbol(symbol)
     }
 
@@ -1107,16 +1127,22 @@ namespace Skew {
       }
 
       while from != to {
+        var trailing = Comment.lastTrailingComment(from.comments)
+        var notTrailing = Comment.withoutLastTrailingComment(from.comments)
+
         if isIndented {
           _emit("\n")
-          _emitComments(from.comments)
+          _emitComments(notTrailing)
           _emit(_indent)
         }
+
         _emitExpression(from, .COMMA)
         from = from.nextSibling
         if from != to {
           _emit(isIndented ? "," : ", ")
         }
+
+        _emitTrailingComment(trailing)
       }
 
       if isIndented {

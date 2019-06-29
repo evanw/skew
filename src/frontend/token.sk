@@ -19,6 +19,7 @@ namespace Skew {
     var range Range
     var lines List<string>
     var hasGapBelow bool
+    var isTrailing bool
   }
 
   namespace Comment {
@@ -27,6 +28,26 @@ namespace Skew {
       if right == null { return left }
       left.append(right)
       return left
+    }
+
+    def lastTrailingComment(comments List<Comment>) Comment {
+      if comments != null {
+        var last = comments.last
+        if last.isTrailing && last.lines.count == 1 {
+          return last
+        }
+      }
+      return null
+    }
+
+    def withoutLastTrailingComment(comments List<Comment>) List<Comment> {
+      if comments != null {
+        var last = comments.last
+        if last.isTrailing && last.lines.count == 1 {
+          return comments.slice(0, comments.count - 1)
+        }
+      }
+      return comments
     }
   }
 
@@ -315,7 +336,7 @@ namespace Skew {
       if previousWasComment {
         comments ?= []
         if comments.isEmpty || comments.last.hasGapBelow {
-          comments.append(Comment.new(token.range, [], false))
+          comments.append(Comment.new(token.range, [], false, false))
         }
         var range = token.range
         var line = source.contents.slice(range.start + 1, range.end)
@@ -333,14 +354,22 @@ namespace Skew {
         continue
       }
 
-      # Accumulate the token for this iteration
       previousKind = token.kind
-      if previousKind != .NEWLINE || (
-          !tokens.isEmpty && comments != null && comments.count == 1 &&
-          comments.first.lines.count == 1 && !comments.first.hasGapBelow) {
+
+      if previousKind != .NEWLINE {
         token.comments = comments
         comments = null
       }
+
+      # Capture trailing comments
+      if !tokens.isEmpty && comments != null && comments.count == 1 &&
+          comments.first.lines.count == 1 && !comments.first.hasGapBelow {
+        comments.first.isTrailing = true
+        token.comments = comments
+        comments = null
+      }
+
+      # Accumulate the token for this iteration
       tokens.append(token)
     }
 
