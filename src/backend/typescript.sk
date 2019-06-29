@@ -363,6 +363,14 @@ namespace Skew {
         _increaseIndent
         _expectedNextEnumValue = 0
 
+        var variablesComeFirst = symbol.kind == .OBJECT_CLASS
+
+        if variablesComeFirst {
+          for variable in symbol.variables {
+            _emitVariable(variable)
+          }
+        }
+
         var multiple = _ctors.get(symbol.id, null)
         if multiple != null {
           _emitConstructor(symbol, multiple.ctors, multiple.canUseArgumentCount)
@@ -372,8 +380,10 @@ namespace Skew {
           _emitFunction(function)
         }
 
-        for variable in symbol.variables {
-          _emitVariable(variable)
+        if !variablesComeFirst {
+          for variable in symbol.variables {
+            _emitVariable(variable)
+          }
         }
 
         _decreaseIndent
