@@ -7336,7 +7336,7 @@
       }
 
       case Skew.ContentKind.STRING: {
-        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.DOUBLE, Skew.QuoteOctal.NORMAL));
+        this._emit(Skew.quoteString(Skew.in_Content.asString(content), Skew.QuoteStyle.SHORTEST, Skew.QuoteOctal.NORMAL));
         break;
       }
     }

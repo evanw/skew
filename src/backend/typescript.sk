@@ -1054,7 +1054,7 @@ namespace Skew {
             value == -Math.INFINITY ? "-Infinity" :
             value.toString)
         }
-        case .STRING { _emit(quoteString(content.asString, .DOUBLE, .NORMAL)) }
+        case .STRING { _emit(quoteString(content.asString, .SHORTEST, .NORMAL)) }
       }
     }
 
