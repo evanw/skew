@@ -155,12 +155,15 @@
 
     var builder = new StringBuilder();
     var quoteString = style == Skew.QuoteStyle.SINGLE ? "'" : '"';
-    var quote = style == Skew.QuoteStyle.SINGLE ? 39 : 34;
+    var quote = style == Skew.QuoteStyle.TYPESCRIPT_TEMPLATE ? 96 : style == Skew.QuoteStyle.SINGLE ? 39 : 34;
     var escaped = '';
 
     // Append long runs of unescaped characters using a single slice for speed
     var start = 0;
-    builder.buffer += quoteString;
+
+    if (style != Skew.QuoteStyle.TYPESCRIPT_TEMPLATE) {
+      builder.buffer += quoteString;
+    }
 
     for (var i1 = 0, count2 = count; i1 < count2; i1 = i1 + 1 | 0) {
       var c1 = in_string.get1(text, i1);
@@ -191,6 +194,10 @@
         escaped = '\\\\';
       }
 
+      else if (c1 == 36 && style == Skew.QuoteStyle.TYPESCRIPT_TEMPLATE) {
+        escaped = '\\$';
+      }
+
       else if (c1 < 32) {
         escaped = '\\x' + in_string.get(Skew.HEX, c1 >> 4) + in_string.get(Skew.HEX, c1 & 15);
       }
@@ -205,7 +212,11 @@
     }
 
     builder.buffer += in_string.slice2(text, start, count);
-    builder.buffer += quoteString;
+
+    if (style != Skew.QuoteStyle.TYPESCRIPT_TEMPLATE) {
+      builder.buffer += quoteString;
+    }
+
     return builder.buffer;
   };
 
@@ -7392,6 +7403,39 @@
         break;
       }
 
+      case Skew.NodeKind.STRING_INTERPOLATION: {
+        this._emit('`');
+        var isString = true;
+
+        for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+          if (isString) {
+            this._emit(Skew.quoteString(child.asString(), Skew.QuoteStyle.TYPESCRIPT_TEMPLATE, Skew.QuoteOctal.NORMAL));
+          }
+
+          else {
+            this._emit('${');
+            var value = child;
+
+            // Omit implied ".toString()" calls on interpolated values
+            if (value.kind == Skew.NodeKind.CALL) {
+              var target = value.callValue();
+
+              if (target.nextSibling() == null && target.kind == Skew.NodeKind.DOT && target.asString() == 'toString') {
+                value = target.dotTarget();
+              }
+            }
+
+            this._emitExpression(value, Skew.Precedence.LOWEST);
+            this._emit('}');
+          }
+
+          isString = !isString;
+        }
+
+        this._emit('`');
+        break;
+      }
+
       case Skew.NodeKind.CONSTANT: {
         var wrap = precedence == Skew.Precedence.MEMBER && node.isNumberLessThanZero() && (!node.isDouble() || isFinite(node.asDouble()));
 
@@ -7413,14 +7457,14 @@
       }
 
       case Skew.NodeKind.CALL: {
-        var value = node.callValue();
-        var wrap1 = value.kind == Skew.NodeKind.LAMBDA;
+        var value1 = node.callValue();
+        var wrap1 = value1.kind == Skew.NodeKind.LAMBDA;
 
         // Turn "new Object" into "{}"
-        if (value.kind == Skew.NodeKind.DOT && value.asString() == 'new' && value.nextSibling() == null) {
-          var target = value.dotTarget();
+        if (value1.kind == Skew.NodeKind.DOT && value1.asString() == 'new' && value1.nextSibling() == null) {
+          var target1 = value1.dotTarget();
 
-          if (target.kind == Skew.NodeKind.NAME && target.asString() == 'Object') {
+          if (target1.kind == Skew.NodeKind.NAME && target1.asString() == 'Object') {
             this._emit('{}');
             return;
           }
@@ -7430,7 +7474,7 @@
           this._emit('(');
         }
 
-        if (value.kind == Skew.NodeKind.SUPER) {
+        if (value1.kind == Skew.NodeKind.SUPER) {
           this._emit('super');
 
           if (symbol.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
@@ -7444,13 +7488,13 @@
           this._emitType(node.resolvedType);
         }
 
-        else if (value.kind == Skew.NodeKind.DOT && value.asString() == 'new') {
+        else if (value1.kind == Skew.NodeKind.DOT && value1.asString() == 'new') {
           this._emit('new ');
-          this._emitExpression(value.dotTarget(), Skew.Precedence.MEMBER);
+          this._emitExpression(value1.dotTarget(), Skew.Precedence.MEMBER);
         }
 
         else {
-          this._emitExpression(value, Skew.Precedence.UNARY_POSTFIX);
+          this._emitExpression(value1, Skew.Precedence.UNARY_POSTFIX);
         }
 
         if (wrap1) {
@@ -7465,56 +7509,56 @@
           if (multiple != null && !multiple.canUseArgumentCount) {
             this._emit(multiple.ctors.indexOf(symbol).toString());
 
-            if (value.nextSibling() != null) {
+            if (value1.nextSibling() != null) {
               this._emit(', ');
             }
           }
         }
 
-        this._emitCommaSeparatedExpressions(value.nextSibling(), null);
+        this._emitCommaSeparatedExpressions(value1.nextSibling(), null);
         this._emit(')');
         break;
       }
 
       case Skew.NodeKind.CAST: {
         var type = node.castType();
-        var value1 = node.castValue();
-        var unwrappedSource = this._cache.unwrappedType(value1.resolvedType);
+        var value2 = node.castValue();
+        var unwrappedSource = this._cache.unwrappedType(value2.resolvedType);
         var unwrappedTarget = this._cache.unwrappedType(type.resolvedType);
 
         // Skip the cast in certain cases
-        if (type.kind == Skew.NodeKind.TYPE && (type.resolvedType == Skew.Type.DYNAMIC || value1.kind == Skew.NodeKind.NULL)) {
-          this._emitExpression(value1, precedence);
+        if (type.kind == Skew.NodeKind.TYPE && (type.resolvedType == Skew.Type.DYNAMIC || value2.kind == Skew.NodeKind.NULL)) {
+          this._emitExpression(value2, precedence);
         }
 
         // Conversion from integer to any numeric type can be ignored
         else if (this._cache.isInteger(unwrappedSource) && this._cache.isNumeric(unwrappedTarget)) {
-          this._emitExpression(value1, precedence);
+          this._emitExpression(value2, precedence);
         }
 
         // Cast from bool to a number
-        else if (this._cache.isNumeric(unwrappedTarget) && value1.resolvedType == this._cache.boolType) {
-          this._emitExpression(Skew.Node.createHook(value1.remove(), this._cache.createInt(1), this._cache.createInt(0)).withType(this._cache.intType), precedence);
+        else if (this._cache.isNumeric(unwrappedTarget) && value2.resolvedType == this._cache.boolType) {
+          this._emitExpression(Skew.Node.createHook(value2.remove(), this._cache.createInt(1), this._cache.createInt(0)).withType(this._cache.intType), precedence);
         }
 
         // Cast to bool
         else if (unwrappedTarget == this._cache.boolType && unwrappedSource != this._cache.boolType) {
-          this._emitExpression(Skew.Node.createUnary(Skew.NodeKind.NOT, Skew.Node.createUnary(Skew.NodeKind.NOT, value1.remove()).withType(this._cache.boolType)).withType(this._cache.boolType), precedence);
+          this._emitExpression(Skew.Node.createUnary(Skew.NodeKind.NOT, Skew.Node.createUnary(Skew.NodeKind.NOT, value2.remove()).withType(this._cache.boolType)).withType(this._cache.boolType), precedence);
         }
 
         // Cast to int
         else if (this._cache.isInteger(unwrappedTarget) && !this._cache.isInteger(unwrappedSource)) {
-          this._emitExpression(Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, value1.remove(), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this._cache.intType)).withType(this._cache.intType), precedence);
+          this._emitExpression(Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, value2.remove(), new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this._cache.intType)).withType(this._cache.intType), precedence);
         }
 
         // Cast to double
         else if (unwrappedTarget == this._cache.doubleType && unwrappedSource != this._cache.doubleType) {
-          this._emitExpression(Skew.Node.createUnary(Skew.NodeKind.POSITIVE, value1.remove()).withType(this._cache.doubleType), precedence);
+          this._emitExpression(Skew.Node.createUnary(Skew.NodeKind.POSITIVE, value2.remove()).withType(this._cache.doubleType), precedence);
         }
 
         // Cast to string
         else if (unwrappedTarget == this._cache.stringType && unwrappedSource != this._cache.stringType) {
-          this._emitExpression(Skew.Node.createSymbolCall(this._specialVariable(Skew.TypeScriptEmitter.SpecialVariable.AS_STRING)).appendChild(value1.remove()).withType(this._cache.stringType), precedence);
+          this._emitExpression(Skew.Node.createSymbolCall(this._specialVariable(Skew.TypeScriptEmitter.SpecialVariable.AS_STRING)).appendChild(value2.remove()).withType(this._cache.stringType), precedence);
         }
 
         // Only emit a cast if the underlying types are different
@@ -7523,7 +7567,7 @@
             this._emit('(');
           }
 
-          this._emitExpression(value1, Skew.Precedence.ASSIGN);
+          this._emitExpression(value2, Skew.Precedence.ASSIGN);
           this._emit(' as ');
           this._emitExpressionOrType(type, type.resolvedType);
 
@@ -7534,18 +7578,18 @@
 
         // Otherwise, pretend the cast isn't there
         else {
-          this._emitExpression(value1, precedence);
+          this._emitExpression(value2, precedence);
         }
         break;
       }
 
       case Skew.NodeKind.TYPE_CHECK: {
-        var value2 = node.typeCheckValue();
+        var value3 = node.typeCheckValue();
         var type1 = node.typeCheckType();
         var targetType = this._cache.unwrappedType(type1.resolvedType);
 
         if (this._cache.isInteger(targetType)) {
-          this._emitExpression(Skew.Node.createSymbolCall(this._specialVariable(Skew.TypeScriptEmitter.SpecialVariable.IS_INT)).appendChild(value2.remove()).withType(this._cache.boolType), precedence);
+          this._emitExpression(Skew.Node.createSymbolCall(this._specialVariable(Skew.TypeScriptEmitter.SpecialVariable.IS_INT)).appendChild(value3.remove()).withType(this._cache.boolType), precedence);
           return;
         }
 
@@ -7555,24 +7599,24 @@
 
         if (targetType == this._cache.doubleType) {
           this._emit('typeof ');
-          this._emitExpression(value2, Skew.Precedence.UNARY_PREFIX);
+          this._emitExpression(value3, Skew.Precedence.UNARY_PREFIX);
           this._emit(" === 'number'");
         }
 
         else if (targetType == this._cache.stringType) {
           this._emit('typeof ');
-          this._emitExpression(value2, Skew.Precedence.UNARY_PREFIX);
+          this._emitExpression(value3, Skew.Precedence.UNARY_PREFIX);
           this._emit(" === 'string'");
         }
 
         else if (targetType == this._cache.boolType) {
           this._emit('typeof ');
-          this._emitExpression(value2, Skew.Precedence.UNARY_PREFIX);
+          this._emitExpression(value3, Skew.Precedence.UNARY_PREFIX);
           this._emit(" === 'boolean'");
         }
 
         else {
-          this._emitExpression(value2, Skew.Precedence.LOWEST);
+          this._emitExpression(value3, Skew.Precedence.LOWEST);
           this._emit(' instanceof ');
 
           if (type1.resolvedType == Skew.Type.DYNAMIC) {
@@ -7606,11 +7650,11 @@
           this._emit('{\n');
           this._increaseIndent();
 
-          for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+          for (var child1 = node.firstChild(); child1 != null; child1 = child1.nextSibling()) {
             this._emit(this._indent);
-            this._emitExpression(child.firstValue(), Skew.Precedence.COMMA);
+            this._emitExpression(child1.firstValue(), Skew.Precedence.COMMA);
             this._emit(': ');
-            this._emitExpression(child.secondValue(), Skew.Precedence.COMMA);
+            this._emitExpression(child1.secondValue(), Skew.Precedence.COMMA);
             this._emit(',\n');
           }
 
@@ -7646,16 +7690,16 @@
       }
 
       case Skew.NodeKind.PARAMETERIZE: {
-        var value3 = node.parameterizeValue();
+        var value4 = node.parameterizeValue();
 
-        if (value3.isType()) {
+        if (value4.isType()) {
           this._emitType(node.resolvedType);
         }
 
         else {
-          this._emitExpression(value3, precedence);
+          this._emitExpression(value4, precedence);
           this._emit('<');
-          this._emitCommaSeparatedExpressions(value3.nextSibling(), null);
+          this._emitCommaSeparatedExpressions(value4.nextSibling(), null);
           this._emit('>');
         }
         break;
@@ -7709,7 +7753,7 @@
       case Skew.NodeKind.POSTFIX_INCREMENT:
       case Skew.NodeKind.PREFIX_DECREMENT:
       case Skew.NodeKind.PREFIX_INCREMENT: {
-        var value4 = node.unaryValue();
+        var value5 = node.unaryValue();
         var info = in_IntMap.get1(Skew.operatorInfo, kind);
         var sign = node.sign();
 
@@ -7721,12 +7765,12 @@
           this._emit(info.text);
 
           // Prevent "x - -1" from becoming "x--1"
-          if (sign != Skew.NodeKind.NULL && sign == value4.sign()) {
+          if (sign != Skew.NodeKind.NULL && sign == value5.sign()) {
             this._emit(' ');
           }
         }
 
-        this._emitExpression(value4, info.precedence);
+        this._emitExpression(value5, info.precedence);
 
         if (Skew.in_NodeKind.isUnaryPostfix(kind)) {
           this._emit(info.text);
@@ -7843,7 +7887,8 @@
   Skew.QuoteStyle = {
     DOUBLE: 0,
     SINGLE: 1,
-    SHORTEST: 2
+    SHORTEST: 2,
+    TYPESCRIPT_TEMPLATE: 3
   };
 
   Skew.QuoteOctal = {
@@ -19060,22 +19105,39 @@
     assert(node.childCount() % 2 == 1);
     this._resolveChildrenAsParameterizedExpressions(node, scope);
 
+    // TypeScript supports string interpolation natively
+    if (this._options.target instanceof Skew.TypeScriptTarget) {
+      for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+        if (child.resolvedType != Skew.Type.DYNAMIC && child.resolvedType != this._cache.stringType) {
+          var temp = new Skew.Node(Skew.NodeKind.NULL);
+          child.replaceWith(temp);
+          child = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('toString')).appendChild(child).withRange(child.range).withFlags(Skew.NodeFlags.IS_IGNORED_BY_IDE);
+          temp.replaceWith(child);
+        }
+
+        this._resolveAsParameterizedExpressionWithConversion(child, scope, this._cache.stringType);
+      }
+
+      node.resolvedType = this._cache.stringType;
+      return;
+    }
+
     // Convert the string interpolation into a series of string concatenations
     var joined = null;
 
     while (node.hasChildren()) {
-      var child = node.firstChild().remove();
+      var child1 = node.firstChild().remove();
 
-      if (child.isString() && child.asString() == '') {
+      if (child1.isString() && child1.asString() == '') {
         continue;
       }
 
-      else if (child.resolvedType != Skew.Type.DYNAMIC && child.resolvedType != this._cache.stringType) {
-        child = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('toString')).appendChild(child).withRange(child.range).withFlags(Skew.NodeFlags.IS_IGNORED_BY_IDE);
-        this._resolveAsParameterizedExpressionWithConversion(child, scope, this._cache.stringType);
+      else if (child1.resolvedType != Skew.Type.DYNAMIC && child1.resolvedType != this._cache.stringType) {
+        child1 = new Skew.Node(Skew.NodeKind.DOT).withContent(new Skew.StringContent('toString')).appendChild(child1).withRange(child1.range).withFlags(Skew.NodeFlags.IS_IGNORED_BY_IDE);
+        this._resolveAsParameterizedExpressionWithConversion(child1, scope, this._cache.stringType);
       }
 
-      joined = joined != null ? Skew.Node.createBinary(Skew.NodeKind.ADD, joined, child).withRange(Skew.Range.span(joined.range, child.range)).withFlags(Skew.NodeFlags.IS_IGNORED_BY_IDE) : child;
+      joined = joined != null ? Skew.Node.createBinary(Skew.NodeKind.ADD, joined, child1).withRange(Skew.Range.span(joined.range, child1.range)).withFlags(Skew.NodeFlags.IS_IGNORED_BY_IDE) : child1;
       this._resolveAsParameterizedExpressionWithConversion(joined, scope, this._cache.stringType);
     }
 

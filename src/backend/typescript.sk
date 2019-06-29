@@ -1108,6 +1108,32 @@ namespace Skew {
           _emit("." + (symbol != null ? _mangleName(symbol) : node.asString))
         }
 
+        case .STRING_INTERPOLATION {
+          _emit("`")
+          var isString = true
+          for child = node.firstChild; child != null; child = child.nextSibling {
+            if isString {
+              _emit(quoteString(child.asString, .TYPESCRIPT_TEMPLATE, .NORMAL))
+            } else {
+              _emit("${")
+              var value = child
+
+              # Omit implied ".toString()" calls on interpolated values
+              if value.kind == .CALL {
+                var target = value.callValue
+                if target.nextSibling == null && target.kind == .DOT && target.asString == "toString" {
+                  value = target.dotTarget
+                }
+              }
+
+              _emitExpression(value, .LOWEST)
+              _emit("}")
+            }
+            isString = !isString
+          }
+          _emit("`")
+        }
+
         case .CONSTANT {
           var wrap = precedence == .MEMBER && node.isNumberLessThanZero && (!node.isDouble || node.asDouble.isFinite)
           if wrap {

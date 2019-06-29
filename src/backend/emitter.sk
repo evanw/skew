@@ -156,6 +156,7 @@ namespace Skew {
     DOUBLE
     SINGLE
     SHORTEST
+    TYPESCRIPT_TEMPLATE
   }
 
   enum QuoteOctal {
@@ -180,10 +181,10 @@ namespace Skew {
 
     var builder = StringBuilder.new
     var quoteString = style == .SINGLE ? "'" : "\""
-    var quote = style == .SINGLE ? '\'' : '"'
+    var quote = style == .TYPESCRIPT_TEMPLATE ? '`' : style == .SINGLE ? '\'' : '"'
     var escaped = ""
     var start = 0 # Append long runs of unescaped characters using a single slice for speed
-    builder.append(quoteString)
+    if style != .TYPESCRIPT_TEMPLATE { builder.append(quoteString) }
     for i in 0..count {
       var c = text[i]
       if c == quote { escaped = "\\" + quoteString }
@@ -196,6 +197,7 @@ namespace Skew {
         escaped = octal == .OCTAL_WORKAROUND && next >= '0' && next <= '9' ? "\\000" : "\\0"
       }
       else if c == '\\' { escaped = "\\\\" }
+      else if c == '$' && style == .TYPESCRIPT_TEMPLATE { escaped = "\\$" }
       else if c < ' ' { escaped = "\\x" + HEX.get(c >> 4) + HEX.get(c & 15) }
       else { continue }
       builder.append(text.slice(start, i))
@@ -203,7 +205,7 @@ namespace Skew {
       start = i + 1
     }
     builder.append(text.slice(start, count))
-    builder.append(quoteString)
+    if style != .TYPESCRIPT_TEMPLATE { builder.append(quoteString) }
     return builder.toString
   }
 

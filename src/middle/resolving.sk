@@ -2988,6 +2988,21 @@ namespace Skew.Resolving {
       assert(node.childCount % 2 == 1)
       _resolveChildrenAsParameterizedExpressions(node, scope)
 
+      # TypeScript supports string interpolation natively
+      if _options.target is TypeScriptTarget {
+        for child = node.firstChild; child != null; child = child.nextSibling {
+          if child.resolvedType != .DYNAMIC && child.resolvedType != _cache.stringType {
+            var temp = Node.createNull
+            child.replaceWith(temp)
+            child = Node.createDot(child, "toString").withRange(child.range).withFlags(.IS_IGNORED_BY_IDE)
+            temp.replaceWith(child)
+          }
+          _resolveAsParameterizedExpressionWithConversion(child, scope, _cache.stringType)
+        }
+        node.resolvedType = _cache.stringType
+        return
+      }
+
       # Convert the string interpolation into a series of string concatenations
       var joined Node = null
       while node.hasChildren {
