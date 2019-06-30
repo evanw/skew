@@ -7282,9 +7282,10 @@
       case Skew.NodeKind.VARIABLES: {
         for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
           var symbol = child.symbol.asVariableSymbol();
+          var value = symbol.value;
           this._emit(this._indent + 'let ');
 
-          if (symbol.value != null && this._canOmitTypeAnnotation(symbol.value)) {
+          if (value != null && this._canOmitTypeAnnotation(value)) {
             this._emit(Skew.TypeScriptEmitter._mangleName(symbol));
           }
 
@@ -7293,9 +7294,22 @@
             this._emitExpressionOrType(symbol.type, symbol.resolvedType);
           }
 
-          if (symbol.value != null) {
-            this._emit(' = ');
-            this._emitExpression(symbol.value, Skew.Precedence.ASSIGN);
+          if (value != null) {
+            var comments = this._commentsIncludingInsideCasts(value);
+
+            if (comments != null) {
+              this._emit(' =\n');
+              this._increaseIndent();
+              this._emitComments(comments);
+              this._emit(this._indent);
+              this._emitExpression(value, Skew.Precedence.ASSIGN);
+              this._decreaseIndent();
+            }
+
+            else {
+              this._emit(' = ');
+              this._emitExpression(value, Skew.Precedence.ASSIGN);
+            }
           }
 
           this._emit(';\n');
@@ -7356,14 +7370,14 @@
           }
 
           else {
-            for (var value = child1.firstChild(); value != block; value = value.nextSibling()) {
-              if (value.previousSibling() != null) {
+            for (var value1 = child1.firstChild(); value1 != block; value1 = value1.nextSibling()) {
+              if (value1.previousSibling() != null) {
                 this._emit('\n');
               }
 
-              this._emitComments(this._commentsIncludingInsideCasts(value));
+              this._emitComments(this._commentsIncludingInsideCasts(value1));
               this._emit(this._indent + 'case ');
-              this._emitExpression(value, Skew.Precedence.LOWEST);
+              this._emitExpression(value1, Skew.Precedence.LOWEST);
               this._emit(':');
             }
           }
@@ -7397,11 +7411,11 @@
 
       case Skew.NodeKind.RETURN: {
         this._emit(this._indent + 'return');
-        var value1 = node.returnValue();
+        var value2 = node.returnValue();
 
-        if (value1 != null) {
+        if (value2 != null) {
           this._emit(' ');
-          this._emitExpression(value1, Skew.Precedence.LOWEST);
+          this._emitExpression(value2, Skew.Precedence.LOWEST);
         }
 
         this._emit(';\n');
@@ -7416,10 +7430,10 @@
       }
 
       case Skew.NodeKind.FOREACH: {
-        var value2 = node.foreachValue();
+        var value3 = node.foreachValue();
         this._emit(this._indent + 'for (const ' + Skew.TypeScriptEmitter._mangleName(node.symbol));
-        this._emit(this._cache.isList(value2.resolvedType) ? ' of ' : ' in ');
-        this._emitExpression(value2, Skew.Precedence.LOWEST);
+        this._emit(this._cache.isList(value3.resolvedType) ? ' of ' : ' in ');
+        this._emitExpression(value3, Skew.Precedence.LOWEST);
         this._emit(')');
         this._emitBlock(node.foreachBlock());
         this._emit('\n');

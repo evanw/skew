@@ -948,16 +948,27 @@ namespace Skew {
         case .VARIABLES {
           for child = node.firstChild; child != null; child = child.nextSibling {
             var symbol = child.symbol.asVariableSymbol
+            var value = symbol.value
             _emit(_indent + "let ")
-            if symbol.value != null && _canOmitTypeAnnotation(symbol.value) {
+            if value != null && _canOmitTypeAnnotation(value) {
               _emit(_mangleName(symbol))
             } else {
               _emit(_mangleName(symbol) + ": ")
               _emitExpressionOrType(symbol.type, symbol.resolvedType)
             }
-            if symbol.value != null {
-              _emit(" = ")
-              _emitExpression(symbol.value, .ASSIGN)
+            if value != null {
+              var comments = _commentsIncludingInsideCasts(value)
+              if comments != null {
+                _emit(" =\n")
+                _increaseIndent
+                _emitComments(comments)
+                _emit(_indent)
+                _emitExpression(value, .ASSIGN)
+                _decreaseIndent
+              } else {
+                _emit(" = ")
+                _emitExpression(value, .ASSIGN)
+              }
             }
             _emit(";\n")
           }
