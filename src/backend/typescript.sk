@@ -957,7 +957,7 @@ namespace Skew {
               _emitExpressionOrType(symbol.type, symbol.resolvedType)
             }
             if value != null {
-              var comments = _commentsIncludingInsideCasts(value)
+              var comments = _commentsFromExpression(value)
               if comments != null {
                 _emit(" =\n")
                 _increaseIndent
@@ -1018,7 +1018,7 @@ namespace Skew {
                 if value.previousSibling != null {
                   _emit("\n")
                 }
-                _emitComments(_commentsIncludingInsideCasts(value))
+                _emitComments(_commentsFromExpression(value))
                 _emit(_indent + "case ")
                 _emitExpression(value, .LOWEST)
                 _emit(":")
@@ -1174,10 +1174,11 @@ namespace Skew {
       }
     }
 
-    def _commentsIncludingInsideCasts(node Node) List<Comment> {
+    def _commentsFromExpression(node Node) List<Comment> {
       var comments = node.comments
-      if node.kind == .CAST {
-        comments = Comment.concat(comments, node.castValue.comments)
+      switch node.kind {
+        case .CAST { return Comment.concat(comments, node.castValue.comments) }
+        case .CALL { return Comment.concat(comments, node.callValue.comments) }
       }
       return comments
     }
@@ -1186,7 +1187,7 @@ namespace Skew {
       var isIndented = false
 
       for child = from; child != to; child = child.nextSibling {
-        if _commentsIncludingInsideCasts(child) != null {
+        if _commentsFromExpression(child) != null {
           isIndented = true
           break
         }
@@ -1197,7 +1198,7 @@ namespace Skew {
       }
 
       while from != to {
-        var comments = _commentsIncludingInsideCasts(from)
+        var comments = _commentsFromExpression(from)
         var trailing = Comment.lastTrailingComment(comments)
         var notTrailing = Comment.withoutLastTrailingComment(comments)
 
@@ -1543,7 +1544,7 @@ namespace Skew {
           _emit(" :")
 
           var last = node.hookFalse
-          var comments = _commentsIncludingInsideCasts(last)
+          var comments = _commentsFromExpression(last)
           if comments != null {
             _emit("\n")
             _increaseIndent
@@ -1614,7 +1615,7 @@ namespace Skew {
             _emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity))
             _emit(" " + info.text + (kind == .EQUAL || kind == .NOT_EQUAL ? "=" : ""))
 
-            var comments = _commentsIncludingInsideCasts(right)
+            var comments = _commentsFromExpression(right)
             if comments != null {
               _emit("\n")
               _increaseIndent

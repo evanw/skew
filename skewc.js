@@ -7295,7 +7295,7 @@
           }
 
           if (value != null) {
-            var comments = this._commentsIncludingInsideCasts(value);
+            var comments = this._commentsFromExpression(value);
 
             if (comments != null) {
               this._emit(' =\n');
@@ -7375,7 +7375,7 @@
                 this._emit('\n');
               }
 
-              this._emitComments(this._commentsIncludingInsideCasts(value1));
+              this._emitComments(this._commentsFromExpression(value1));
               this._emit(this._indent + 'case ');
               this._emitExpression(value1, Skew.Precedence.LOWEST);
               this._emit(':');
@@ -7573,11 +7573,17 @@
     }
   };
 
-  Skew.TypeScriptEmitter.prototype._commentsIncludingInsideCasts = function(node) {
+  Skew.TypeScriptEmitter.prototype._commentsFromExpression = function(node) {
     var comments = node.comments;
 
-    if (node.kind == Skew.NodeKind.CAST) {
-      comments = Skew.Comment.concat(comments, node.castValue().comments);
+    switch (node.kind) {
+      case Skew.NodeKind.CAST: {
+        return Skew.Comment.concat(comments, node.castValue().comments);
+      }
+
+      case Skew.NodeKind.CALL: {
+        return Skew.Comment.concat(comments, node.callValue().comments);
+      }
     }
 
     return comments;
@@ -7587,7 +7593,7 @@
     var isIndented = false;
 
     for (var child = from; child != to; child = child.nextSibling()) {
-      if (this._commentsIncludingInsideCasts(child) != null) {
+      if (this._commentsFromExpression(child) != null) {
         isIndented = true;
         break;
       }
@@ -7598,7 +7604,7 @@
     }
 
     while (from != to) {
-      var comments = this._commentsIncludingInsideCasts(from);
+      var comments = this._commentsFromExpression(from);
       var trailing = Skew.Comment.lastTrailingComment(comments);
       var notTrailing = Skew.Comment.withoutLastTrailingComment(comments);
 
@@ -7992,7 +7998,7 @@
         this._emitExpression(node.hookTrue(), Skew.Precedence.ASSIGN);
         this._emit(' :');
         var last = node.hookFalse();
-        var comments = this._commentsIncludingInsideCasts(last);
+        var comments = this._commentsFromExpression(last);
 
         if (comments != null) {
           this._emit('\n');
@@ -8082,7 +8088,7 @@
 
           this._emitExpression(left, info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
           this._emit(' ' + info1.text + (kind == Skew.NodeKind.EQUAL || kind == Skew.NodeKind.NOT_EQUAL ? '=' : ''));
-          var comments1 = this._commentsIncludingInsideCasts(right);
+          var comments1 = this._commentsFromExpression(right);
 
           if (comments1 != null) {
             this._emit('\n');
