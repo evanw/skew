@@ -7111,8 +7111,6 @@
       return;
     }
 
-    type = this._cache.unwrappedType(type);
-
     if (type == Skew.Type.DYNAMIC) {
       this._emit('any');
     }
