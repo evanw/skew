@@ -49,6 +49,26 @@ namespace Skew {
       }
       return comments
     }
+
+    def firstTrailingComment(comments List<Comment>) Comment {
+      if comments != null {
+        var first = comments.first
+        if first.isTrailing && first.lines.count == 1 {
+          return first
+        }
+      }
+      return null
+    }
+
+    def withoutFirstTrailingComment(comments List<Comment>) List<Comment> {
+      if comments != null {
+        var first = comments.first
+        if first.isTrailing && first.lines.count == 1 {
+          return comments.slice(1)
+        }
+      }
+      return comments
+    }
   }
 
   class Token {

@@ -844,9 +844,11 @@ namespace Skew {
       _previousNode = null
 
       for child = node.firstChild; child != null; child = child.nextSibling {
+        var trailing = Comment.lastTrailingComment(child.comments)
+        var notTrailing = Comment.withoutLastTrailingComment(child.comments)
         _emitNewlineBeforeStatement(child)
-        _emitComments(child.comments)
-        _emitStatement(child)
+        _emitComments(notTrailing)
+        _emitStatement(child, trailing)
         _emitNewlineAfterStatement(child)
       }
 
@@ -933,7 +935,7 @@ namespace Skew {
       }
     }
 
-    def _emitStatement(node Node) {
+    def _emitStatement(node Node, trailing Comment) {
       if node.kind.isLoop {
         _scanForSwitchBreak(node, node)
 
@@ -971,31 +973,42 @@ namespace Skew {
                 _emitExpression(value, .ASSIGN)
               }
             }
-            _emit(";\n")
+            _emit(";")
+            _emitTrailingComment(trailing)
+            _emit("\n")
           }
         }
 
         case .EXPRESSION {
           _emit(_indent)
           _emitExpression(node.expressionValue, .LOWEST)
-          _emit(";\n")
+          _emit(";")
+          _emitTrailingComment(trailing)
+          _emit("\n")
         }
 
         case .BREAK {
           var label = _loopLabels.get(node.id, null)
           if label != null {
-            _emit(_indent + "break " + _mangleName(label) + ";\n")
+            _emit(_indent + "break " + _mangleName(label) + ";")
           } else {
-            _emit(_indent + "break;\n")
+            _emit(_indent + "break;")
           }
+          _emitTrailingComment(trailing)
+          _emit("\n")
         }
 
         case .CONTINUE {
-          _emit(_indent + "continue;\n")
+          _emit(_indent + "continue;")
+          _emitTrailingComment(trailing)
+          _emit("\n")
         }
 
         case .IF {
           _emit(_indent)
+          if trailing != null {
+            _emitComments([trailing])
+          }
           _emitIf(node)
         }
 
@@ -1044,7 +1057,9 @@ namespace Skew {
             _emit(_indent + "}\n")
           }
           _decreaseIndent
-          _emit(_indent + "}\n")
+          _emit(_indent + "}")
+          _emitTrailingComment(trailing)
+          _emit("\n")
         }
 
         case .RETURN {
@@ -1054,13 +1069,17 @@ namespace Skew {
             _emit(" ")
             _emitExpression(value, .LOWEST)
           }
-          _emit(";\n")
+          _emit(";")
+          _emitTrailingComment(trailing)
+          _emit("\n")
         }
 
         case .THROW {
           _emit(_indent + "throw ")
           _emitExpression(node.throwValue, .LOWEST)
-          _emit(";\n")
+          _emit(";")
+          _emitTrailingComment(trailing)
+          _emit("\n")
         }
 
         case .FOREACH {
@@ -1070,6 +1089,7 @@ namespace Skew {
           _emitExpression(value, .LOWEST)
           _emit(")")
           _emitBlock(node.foreachBlock)
+          _emitTrailingComment(trailing)
           _emit("\n")
         }
 
@@ -1111,12 +1131,18 @@ namespace Skew {
           }
           _emit(")")
           _emitBlock(node.forBlock)
+          _emitTrailingComment(trailing)
           _emit("\n")
         }
 
         case .TRY {
           var tryBlock = node.tryBlock
           var finallyBlock = node.finallyBlock
+
+          if trailing != null {
+            _emitComments([trailing])
+          }
+
           _emit(_indent + "try")
           _emitBlock(tryBlock)
           _emit("\n")
@@ -1150,6 +1176,7 @@ namespace Skew {
           _emitExpression(node.whileTest, .LOWEST)
           _emit(")")
           _emitBlock(node.whileBlock)
+          _emitTrailingComment(trailing)
           _emit("\n")
         }
 
@@ -1618,9 +1645,12 @@ namespace Skew {
 
             var comments = _commentsFromExpression(right)
             if comments != null {
+              var leading = Comment.firstTrailingComment(comments)
+              var notLeading = Comment.withoutFirstTrailingComment(comments)
+              _emitTrailingComment(leading)
               _emit("\n")
               _increaseIndent
-              _emitComments(comments)
+              _emitComments(notLeading)
               _emit(_indent)
               _emitExpression(right, info.precedence.incrementIfLeftAssociative(info.associativity))
               _decreaseIndent

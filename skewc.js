@@ -7163,9 +7163,11 @@
     this._previousNode = null;
 
     for (var child = node.firstChild(); child != null; child = child.nextSibling()) {
+      var trailing = Skew.Comment.lastTrailingComment(child.comments);
+      var notTrailing = Skew.Comment.withoutLastTrailingComment(child.comments);
       this._emitNewlineBeforeStatement(child);
-      this._emitComments(child.comments);
-      this._emitStatement(child);
+      this._emitComments(notTrailing);
+      this._emitStatement(child, trailing);
       this._emitNewlineAfterStatement(child);
     }
 
@@ -7265,7 +7267,7 @@
     }
   };
 
-  Skew.TypeScriptEmitter.prototype._emitStatement = function(node) {
+  Skew.TypeScriptEmitter.prototype._emitStatement = function(node, trailing) {
     if (Skew.in_NodeKind.isLoop(node.kind)) {
       this._scanForSwitchBreak(node, node);
       var label = in_IntMap.get(this._loopLabels, node.id, null);
@@ -7313,7 +7315,9 @@
             }
           }
 
-          this._emit(';\n');
+          this._emit(';');
+          this._emitTrailingComment(trailing);
+          this._emit('\n');
         }
         break;
       }
@@ -7321,7 +7325,9 @@
       case Skew.NodeKind.EXPRESSION: {
         this._emit(this._indent);
         this._emitExpression(node.expressionValue(), Skew.Precedence.LOWEST);
-        this._emit(';\n');
+        this._emit(';');
+        this._emitTrailingComment(trailing);
+        this._emit('\n');
         break;
       }
 
@@ -7329,22 +7335,32 @@
         var label1 = in_IntMap.get(this._loopLabels, node.id, null);
 
         if (label1 != null) {
-          this._emit(this._indent + 'break ' + Skew.TypeScriptEmitter._mangleName(label1) + ';\n');
+          this._emit(this._indent + 'break ' + Skew.TypeScriptEmitter._mangleName(label1) + ';');
         }
 
         else {
-          this._emit(this._indent + 'break;\n');
+          this._emit(this._indent + 'break;');
         }
+
+        this._emitTrailingComment(trailing);
+        this._emit('\n');
         break;
       }
 
       case Skew.NodeKind.CONTINUE: {
-        this._emit(this._indent + 'continue;\n');
+        this._emit(this._indent + 'continue;');
+        this._emitTrailingComment(trailing);
+        this._emit('\n');
         break;
       }
 
       case Skew.NodeKind.IF: {
         this._emit(this._indent);
+
+        if (trailing != null) {
+          this._emitComments([trailing]);
+        }
+
         this._emitIf(node);
         break;
       }
@@ -7406,7 +7422,9 @@
         }
 
         this._decreaseIndent();
-        this._emit(this._indent + '}\n');
+        this._emit(this._indent + '}');
+        this._emitTrailingComment(trailing);
+        this._emit('\n');
         break;
       }
 
@@ -7419,14 +7437,18 @@
           this._emitExpression(value2, Skew.Precedence.LOWEST);
         }
 
-        this._emit(';\n');
+        this._emit(';');
+        this._emitTrailingComment(trailing);
+        this._emit('\n');
         break;
       }
 
       case Skew.NodeKind.THROW: {
         this._emit(this._indent + 'throw ');
         this._emitExpression(node.throwValue(), Skew.Precedence.LOWEST);
-        this._emit(';\n');
+        this._emit(';');
+        this._emitTrailingComment(trailing);
+        this._emit('\n');
         break;
       }
 
@@ -7437,6 +7459,7 @@
         this._emitExpression(value3, Skew.Precedence.LOWEST);
         this._emit(')');
         this._emitBlock(node.foreachBlock());
+        this._emitTrailingComment(trailing);
         this._emit('\n');
         break;
       }
@@ -7493,6 +7516,7 @@
 
         this._emit(')');
         this._emitBlock(node.forBlock());
+        this._emitTrailingComment(trailing);
         this._emit('\n');
         break;
       }
@@ -7500,6 +7524,11 @@
       case Skew.NodeKind.TRY: {
         var tryBlock = node.tryBlock();
         var finallyBlock = node.finallyBlock();
+
+        if (trailing != null) {
+          this._emitComments([trailing]);
+        }
+
         this._emit(this._indent + 'try');
         this._emitBlock(tryBlock);
         this._emit('\n');
@@ -7538,6 +7567,7 @@
         this._emitExpression(node.whileTest(), Skew.Precedence.LOWEST);
         this._emit(')');
         this._emitBlock(node.whileBlock());
+        this._emitTrailingComment(trailing);
         this._emit('\n');
         break;
       }
@@ -8092,9 +8122,12 @@
           var comments1 = this._commentsFromExpression(right);
 
           if (comments1 != null) {
+            var leading = Skew.Comment.firstTrailingComment(comments1);
+            var notLeading = Skew.Comment.withoutFirstTrailingComment(comments1);
+            this._emitTrailingComment(leading);
             this._emit('\n');
             this._increaseIndent();
-            this._emitComments(comments1);
+            this._emitComments(notLeading);
             this._emit(this._indent);
             this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
             this._decreaseIndent();
@@ -12882,6 +12915,30 @@
 
       if (last.isTrailing && last.lines.length == 1) {
         return in_List.slice2(comments, 0, comments.length - 1 | 0);
+      }
+    }
+
+    return comments;
+  };
+
+  Skew.Comment.firstTrailingComment = function(comments) {
+    if (comments != null) {
+      var first = in_List.first(comments);
+
+      if (first.isTrailing && first.lines.length == 1) {
+        return first;
+      }
+    }
+
+    return null;
+  };
+
+  Skew.Comment.withoutFirstTrailingComment = function(comments) {
+    if (comments != null) {
+      var first = in_List.first(comments);
+
+      if (first.isTrailing && first.lines.length == 1) {
+        return in_List.slice1(comments, 1);
       }
     }
 
@@ -17924,7 +17981,9 @@
         var $function = scope.findEnclosingFunctionOrLambda().symbol;
 
         if ($function.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR && $function.resolvedType.returnType != null) {
-          child.appendChild(next.remove().expressionValue().remove());
+          var statement = next.remove();
+          child.appendChild(statement.expressionValue().remove());
+          child.comments = Skew.Comment.concat(child.comments, statement.comments);
           next = child.nextSibling();
           assert(child.returnValue() != null);
         }
@@ -25967,6 +26026,11 @@
     }
 
     return true;
+  };
+
+  in_List.slice1 = function(self, start) {
+    assert(0 <= start && start <= self.length);
+    return self.slice(start);
   };
 
   in_List.slice2 = function(self, start, end) {
