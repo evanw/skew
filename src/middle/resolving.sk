@@ -1636,8 +1636,14 @@ namespace Skew.Resolving {
           var function = scope.findEnclosingFunctionOrLambda.symbol
           if function.kind != .FUNCTION_CONSTRUCTOR && function.resolvedType.returnType != null {
             var statement = next.remove
-            child.appendChild(statement.expressionValue.remove)
-            child.comments = Comment.concat(child.comments, statement.comments)
+            var value = statement.expressionValue.remove
+            child.appendChild(value)
+            var trailing = Comment.lastTrailingComment(statement.comments)
+            var notTrailing = Comment.withoutLastTrailingComment(statement.comments)
+            if trailing != null {
+              child.comments = Comment.concat(child.comments, [trailing])
+            }
+            value.comments = Comment.concat(notTrailing, value.comments)
             next = child.nextSibling
             assert(child.returnValue != null)
           }

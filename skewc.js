@@ -3945,8 +3945,23 @@
         var value = node.returnValue();
 
         if (value != null) {
-          this._emitSpaceBeforeKeyword(value);
-          this._emitExpression(value, Skew.Precedence.LOWEST);
+          var comments = value.comments;
+
+          if (!this._minify && comments != null) {
+            // JavaScript needs parentheses here to avoid ASI issues
+            this._emit(' (\n');
+            this._increaseIndent();
+            this._emitComments(comments);
+            this._emit(this._indent);
+            this._emitExpression(value, Skew.Precedence.LOWEST);
+            this._decreaseIndent();
+            this._emit(')');
+          }
+
+          else {
+            this._emitSpaceBeforeKeyword(value);
+            this._emitExpression(value, Skew.Precedence.LOWEST);
+          }
         }
 
         this._emitSemicolonAfterStatement();
@@ -4521,24 +4536,38 @@
         }
 
         this._emitExpression(node.hookTest(), Skew.Precedence.LOGICAL_OR);
-        this._emit(this._space + '?' + this._space);
-        this._emitExpression(node.hookTrue(), Skew.Precedence.ASSIGN);
-        this._emit(this._space + ':');
-        var last = node.hookFalse();
-        var comments = last.comments;
+        this._emit(this._space + '?');
+        var left = node.hookTrue();
 
-        if (comments != null) {
+        if (left.comments != null) {
           this._emit(this._newline);
           this._increaseIndent();
-          this._emitComments(comments);
+          this._emitComments(left.comments);
           this._emit(this._indent);
-          this._emitExpression(last, Skew.Precedence.ASSIGN);
+          this._emitExpression(left, Skew.Precedence.ASSIGN);
           this._decreaseIndent();
         }
 
         else {
           this._emit(this._space);
-          this._emitExpression(last, Skew.Precedence.ASSIGN);
+          this._emitExpression(left, Skew.Precedence.ASSIGN);
+        }
+
+        this._emit(this._space + ':');
+        var right = node.hookFalse();
+
+        if (right.comments != null) {
+          this._emit(this._newline);
+          this._increaseIndent();
+          this._emitComments(right.comments);
+          this._emit(this._indent);
+          this._emitExpression(right, Skew.Precedence.ASSIGN);
+          this._decreaseIndent();
+        }
+
+        else {
+          this._emit(this._space);
+          this._emitExpression(right, Skew.Precedence.ASSIGN);
         }
 
         if (Skew.Precedence.ASSIGN < precedence) {
@@ -4630,9 +4659,9 @@
       default: {
         if (Skew.in_NodeKind.isBinary(kind)) {
           var info1 = in_IntMap.get1(Skew.operatorInfo, kind);
-          var left = node.binaryLeft();
-          var right = node.binaryRight();
-          var extraEquals = left.resolvedType == Skew.Type.DYNAMIC || right.resolvedType == Skew.Type.DYNAMIC ? '=' : '';
+          var left1 = node.binaryLeft();
+          var right1 = node.binaryRight();
+          var extraEquals = left1.resolvedType == Skew.Type.DYNAMIC || right1.resolvedType == Skew.Type.DYNAMIC ? '=' : '';
           var needsParentheses = info1.precedence < precedence || kind == Skew.NodeKind.IN && this._parenthesizeInExpressions != 0;
 
           if (needsParentheses) {
@@ -4642,15 +4671,15 @@
           this._emitExpression(node.binaryLeft(), info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
 
           // Always emit spaces around keyword operators, even when minifying
-          var comments1 = this._minify ? null : right.comments;
-          this._emit(kind == Skew.NodeKind.IN ? (left.isString() ? this._space : ' ') + 'in' + (comments1 != null ? '' : ' ') : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text));
+          var comments = this._minify ? null : right1.comments;
+          this._emit(kind == Skew.NodeKind.IN ? (left1.isString() ? this._space : ' ') + 'in' + (comments != null ? '' : ' ') : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text));
 
-          if (comments1 != null) {
+          if (comments != null) {
             this._emit(this._newline);
             this._increaseIndent();
-            this._emitComments(comments1);
+            this._emitComments(comments);
             this._emit(this._indent);
-            this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+            this._emitExpression(right1, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
             this._decreaseIndent();
           }
 
@@ -4659,7 +4688,7 @@
               this._emit(this._space);
             }
 
-            this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+            this._emitExpression(right1, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
           }
 
           if (needsParentheses) {
@@ -7433,8 +7462,23 @@
         var value2 = node.returnValue();
 
         if (value2 != null) {
-          this._emit(' ');
-          this._emitExpression(value2, Skew.Precedence.LOWEST);
+          var comments1 = value2.comments;
+
+          if (comments1 != null) {
+            // JavaScript needs parentheses here to avoid ASI issues
+            this._emit(' (\n');
+            this._increaseIndent();
+            this._emitComments(comments1);
+            this._emit(this._indent);
+            this._emitExpression(value2, Skew.Precedence.LOWEST);
+            this._decreaseIndent();
+            this._emit(')');
+          }
+
+          else {
+            this._emit(' ');
+            this._emitExpression(value2, Skew.Precedence.LOWEST);
+          }
         }
 
         this._emit(';');
@@ -8025,24 +8069,40 @@
         }
 
         this._emitExpression(node.hookTest(), Skew.Precedence.LOGICAL_OR);
-        this._emit(' ? ');
-        this._emitExpression(node.hookTrue(), Skew.Precedence.ASSIGN);
-        this._emit(' :');
-        var last = node.hookFalse();
-        var comments = this._commentsFromExpression(last);
+        this._emit(' ?');
+        var left = node.hookTrue();
+        var leftComments = this._commentsFromExpression(left);
 
-        if (comments != null) {
+        if (leftComments != null) {
           this._emit('\n');
           this._increaseIndent();
-          this._emitComments(comments);
+          this._emitComments(leftComments);
           this._emit(this._indent);
-          this._emitExpression(last, Skew.Precedence.ASSIGN);
+          this._emitExpression(left, Skew.Precedence.ASSIGN);
           this._decreaseIndent();
         }
 
         else {
           this._emit(' ');
-          this._emitExpression(last, Skew.Precedence.ASSIGN);
+          this._emitExpression(left, Skew.Precedence.ASSIGN);
+        }
+
+        this._emit(' :');
+        var right = node.hookFalse();
+        var rightComments = this._commentsFromExpression(right);
+
+        if (rightComments != null) {
+          this._emit('\n');
+          this._increaseIndent();
+          this._emitComments(rightComments);
+          this._emit(this._indent);
+          this._emitExpression(right, Skew.Precedence.ASSIGN);
+          this._decreaseIndent();
+        }
+
+        else {
+          this._emit(' ');
+          this._emitExpression(right, Skew.Precedence.ASSIGN);
         }
 
         if (Skew.Precedence.ASSIGN < precedence) {
@@ -8100,12 +8160,12 @@
 
       default: {
         if (Skew.in_NodeKind.isBinary(kind)) {
-          var left = node.binaryLeft();
-          var right = node.binaryRight();
+          var left1 = node.binaryLeft();
+          var right1 = node.binaryRight();
 
           // Handle truncating integer division
           if (node.resolvedType == this._cache.intType && kind == Skew.NodeKind.DIVIDE && node.parent() != null && node.parent().kind != Skew.NodeKind.BITWISE_OR) {
-            var divide = Skew.Node.createBinary(Skew.NodeKind.DIVIDE, left.remove(), right.remove()).withType(this._cache.intType);
+            var divide = Skew.Node.createBinary(Skew.NodeKind.DIVIDE, left1.remove(), right1.remove()).withType(this._cache.intType);
             var zero = new Skew.Node(Skew.NodeKind.CONSTANT).withContent(new Skew.IntContent(0)).withType(this._cache.intType);
             this._emitExpression(Skew.Node.createBinary(Skew.NodeKind.BITWISE_OR, divide, zero).withType(this._cache.intType), precedence);
             return;
@@ -8117,25 +8177,25 @@
             this._emit('(');
           }
 
-          this._emitExpression(left, info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
+          this._emitExpression(left1, info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
           this._emit(' ' + info1.text + (kind == Skew.NodeKind.EQUAL || kind == Skew.NodeKind.NOT_EQUAL ? '=' : ''));
-          var comments1 = this._commentsFromExpression(right);
+          var comments = this._commentsFromExpression(right1);
 
-          if (comments1 != null) {
-            var leading = Skew.Comment.firstTrailingComment(comments1);
-            var notLeading = Skew.Comment.withoutFirstTrailingComment(comments1);
+          if (comments != null) {
+            var leading = Skew.Comment.firstTrailingComment(comments);
+            var notLeading = Skew.Comment.withoutFirstTrailingComment(comments);
             this._emitTrailingComment(leading);
             this._emit('\n');
             this._increaseIndent();
             this._emitComments(notLeading);
             this._emit(this._indent);
-            this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+            this._emitExpression(right1, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
             this._decreaseIndent();
           }
 
           else {
             this._emit(' ');
-            this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
+            this._emitExpression(right1, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
           }
 
           if (info1.precedence < precedence) {
@@ -17982,8 +18042,16 @@
 
         if ($function.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR && $function.resolvedType.returnType != null) {
           var statement = next.remove();
-          child.appendChild(statement.expressionValue().remove());
-          child.comments = Skew.Comment.concat(child.comments, statement.comments);
+          var value = statement.expressionValue().remove();
+          child.appendChild(value);
+          var trailing = Skew.Comment.lastTrailingComment(statement.comments);
+          var notTrailing = Skew.Comment.withoutLastTrailingComment(statement.comments);
+
+          if (trailing != null) {
+            child.comments = Skew.Comment.concat(child.comments, [trailing]);
+          }
+
+          value.comments = Skew.Comment.concat(notTrailing, value.comments);
           next = child.nextSibling();
           assert(child.returnValue() != null);
         }
@@ -18000,9 +18068,9 @@
 
       // The "@skip" annotation removes function calls after type checking
       if (child.kind == Skew.NodeKind.EXPRESSION) {
-        var value = child.expressionValue();
+        var value1 = child.expressionValue();
 
-        if (value.kind == Skew.NodeKind.CALL && value.symbol != null && value.symbol.isSkipped()) {
+        if (value1.kind == Skew.NodeKind.CALL && value1.symbol != null && value1.symbol.isSkipped()) {
           child.remove();
         }
       }

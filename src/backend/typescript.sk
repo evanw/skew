@@ -1066,8 +1066,20 @@ namespace Skew {
           _emit(_indent + "return")
           var value = node.returnValue
           if value != null {
-            _emit(" ")
-            _emitExpression(value, .LOWEST)
+            var comments = value.comments
+            if comments != null {
+              # JavaScript needs parentheses here to avoid ASI issues
+              _emit(" (\n")
+              _increaseIndent
+              _emitComments(comments)
+              _emit(_indent)
+              _emitExpression(value, .LOWEST)
+              _decreaseIndent
+              _emit(")")
+            } else {
+              _emit(" ")
+              _emitExpression(value, .LOWEST)
+            }
           }
           _emit(";")
           _emitTrailingComment(trailing)
@@ -1566,23 +1578,38 @@ namespace Skew {
           if Precedence.ASSIGN < precedence {
             _emit("(")
           }
-          _emitExpression(node.hookTest, .LOGICAL_OR)
-          _emit(" ? ")
-          _emitExpression(node.hookTrue, .ASSIGN)
-          _emit(" :")
 
-          var last = node.hookFalse
-          var comments = _commentsFromExpression(last)
-          if comments != null {
+          _emitExpression(node.hookTest, .LOGICAL_OR)
+          _emit(" ?")
+
+          var left = node.hookTrue
+          var leftComments = _commentsFromExpression(left)
+          if leftComments != null {
             _emit("\n")
             _increaseIndent
-            _emitComments(comments)
+            _emitComments(leftComments)
             _emit(_indent)
-            _emitExpression(last, .ASSIGN)
+            _emitExpression(left, .ASSIGN)
             _decreaseIndent
           } else {
             _emit(" ")
-            _emitExpression(last, .ASSIGN)
+            _emitExpression(left, .ASSIGN)
+          }
+
+          _emit(" :")
+
+          var right = node.hookFalse
+          var rightComments = _commentsFromExpression(right)
+          if rightComments != null {
+            _emit("\n")
+            _increaseIndent
+            _emitComments(rightComments)
+            _emit(_indent)
+            _emitExpression(right, .ASSIGN)
+            _decreaseIndent
+          } else {
+            _emit(" ")
+            _emitExpression(right, .ASSIGN)
           }
 
           if Precedence.ASSIGN < precedence {

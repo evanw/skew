@@ -1025,8 +1025,20 @@ namespace Skew {
           _emit(_indent + "return")
           var value = node.returnValue
           if value != null {
-            _emitSpaceBeforeKeyword(value)
-            _emitExpression(value, .LOWEST)
+            var comments = value.comments
+            if !_minify && comments != null {
+              # JavaScript needs parentheses here to avoid ASI issues
+              _emit(" (\n")
+              _increaseIndent
+              _emitComments(comments)
+              _emit(_indent)
+              _emitExpression(value, .LOWEST)
+              _decreaseIndent
+              _emit(")")
+            } else {
+              _emitSpaceBeforeKeyword(value)
+              _emitExpression(value, .LOWEST)
+            }
           }
           _emitSemicolonAfterStatement
         }
@@ -1488,23 +1500,36 @@ namespace Skew {
           if Precedence.ASSIGN < precedence {
             _emit("(")
           }
-          _emitExpression(node.hookTest, .LOGICAL_OR)
-          _emit(_space + "?" + _space)
-          _emitExpression(node.hookTrue, .ASSIGN)
-          _emit(_space + ":")
 
-          var last = node.hookFalse
-          var comments = last.comments
-          if comments != null {
+          _emitExpression(node.hookTest, .LOGICAL_OR)
+          _emit(_space + "?")
+
+          var left = node.hookTrue
+          if left.comments != null {
             _emit(_newline)
             _increaseIndent
-            _emitComments(comments)
+            _emitComments(left.comments)
             _emit(_indent)
-            _emitExpression(last, .ASSIGN)
+            _emitExpression(left, .ASSIGN)
             _decreaseIndent
           } else {
             _emit(_space)
-            _emitExpression(last, .ASSIGN)
+            _emitExpression(left, .ASSIGN)
+          }
+
+          _emit(_space + ":")
+
+          var right = node.hookFalse
+          if right.comments != null {
+            _emit(_newline)
+            _increaseIndent
+            _emitComments(right.comments)
+            _emit(_indent)
+            _emitExpression(right, .ASSIGN)
+            _decreaseIndent
+          } else {
+            _emit(_space)
+            _emitExpression(right, .ASSIGN)
           }
 
           if Precedence.ASSIGN < precedence {

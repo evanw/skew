@@ -3770,9 +3770,13 @@ def main(x bool) int {
 ", "
 (function(exports) {
   exports.main = function(x) {
-    return x ? 1 :
-      // 2
-      2;
+    return (
+      // x
+      x ?
+        // 1
+        1 :
+        // 2
+        2);
   };
 })(this);
 ").js
