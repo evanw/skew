@@ -1209,7 +1209,15 @@ namespace Skew {
         }
 
         case .DOT {
+          var innerComments = node.innerComments
           _emitExpression(node.dotTarget, .MEMBER)
+          if innerComments != null {
+            _increaseIndent
+            _emit("\n")
+            _emitComments(innerComments)
+            _emit(_indent)
+            _decreaseIndent
+          }
           _emit("." + (symbol != null ? _mangleName(symbol) : node.asString))
         }
 

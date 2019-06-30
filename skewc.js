@@ -7609,7 +7609,17 @@
       }
 
       case Skew.NodeKind.DOT: {
+        var innerComments = node.innerComments;
         this._emitExpression(node.dotTarget(), Skew.Precedence.MEMBER);
+
+        if (innerComments != null) {
+          this._increaseIndent();
+          this._emit('\n');
+          this._emitComments(innerComments);
+          this._emit(this._indent);
+          this._decreaseIndent();
+        }
+
         this._emit('.' + (symbol != null ? Skew.TypeScriptEmitter._mangleName(symbol) : node.asString()));
         break;
       }
