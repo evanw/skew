@@ -441,6 +441,7 @@ namespace Skew {
           }
         }
 
+        _emitComments(symbol.commentsInsideEndOfBlock)
         _decreaseIndent
         _emit(_indent + "}\n")
         _emitNewlineAfterSymbol(symbol)

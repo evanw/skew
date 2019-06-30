@@ -326,6 +326,7 @@ namespace Skew {
     var guards List<Guard> = null # Compile-time if statements
     var hasCheckedInterfacesAndAbstractStatus = false
     var isAbstractBecauseOf FunctionSymbol = null # Used for diagnostics
+    var commentsInsideEndOfBlock List<Comment> = null # These have nowhere else to go right now
 
     def isAbstract bool {
       return isAbstractBecauseOf != null

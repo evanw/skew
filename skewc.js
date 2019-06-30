@@ -6677,6 +6677,7 @@
         }
       }
 
+      this._emitComments(symbol.commentsInsideEndOfBlock);
       this._decreaseIndent();
       this._emit(this._indent + '}\n');
       this._emitNewlineAfterSymbol(symbol);
@@ -10310,6 +10311,7 @@
     this.guards = null;
     this.hasCheckedInterfacesAndAbstractStatus = false;
     this.isAbstractBecauseOf = null;
+    this.commentsInsideEndOfBlock = null;
   };
 
   __extends(Skew.ObjectSymbol, Skew.Symbol);
@@ -14601,6 +14603,7 @@
             }
 
             Skew.Parsing.parseSymbols(context, object, null);
+            object.commentsInsideEndOfBlock = context.stealComments();
 
             if (!context.expect(Skew.TokenKind.RIGHT_BRACE)) {
               return false;

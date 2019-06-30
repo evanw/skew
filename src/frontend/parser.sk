@@ -1349,6 +1349,7 @@ namespace Skew.Parsing {
             }
 
             parseSymbols(context, object, null)
+            object.commentsInsideEndOfBlock = context.stealComments
 
             if !context.expect(.RIGHT_BRACE) {
               return false
