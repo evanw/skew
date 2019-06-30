@@ -865,7 +865,22 @@ namespace Skew {
       _emit("if (")
       _emitExpression(node.ifTest, .LOWEST)
       _emit(")")
-      _emitBlock(node.ifTrue)
+
+      var then = node.ifTrue
+      var thenComments = then.comments
+
+      # Some people put comments before blocks in if statements
+      if thenComments != null {
+        _emit("\n")
+        _emitComments(thenComments)
+        _emit(_indent + "{\n")
+        _increaseIndent
+        _emitStatements(then)
+        _decreaseIndent
+        _emit(_indent + "}")
+      } else {
+        _emitBlock(then)
+      }
 
       var block = node.ifFalse
       if block != null {
@@ -980,6 +995,7 @@ namespace Skew {
           _increaseIndent
           for child = switchValue.nextSibling; child != null; child = child.nextSibling {
             var block = child.caseBlock
+            var blockComments = block.comments
             if child.previousSibling != switchValue {
               _emit("\n")
             }
@@ -997,7 +1013,16 @@ namespace Skew {
                 _emit(":")
               }
             }
-            _emit(" {\n")
+
+            # Some people put comments before blocks in case statements
+            if blockComments != null {
+              _emit("\n")
+              _emitComments(blockComments)
+              _emit(_indent + "{\n")
+            } else {
+              _emit(" {\n")
+            }
+
             _increaseIndent
             _emitStatements(block)
             if block.hasControlFlowAtEnd {

@@ -7184,7 +7184,24 @@
     this._emit('if (');
     this._emitExpression(node.ifTest(), Skew.Precedence.LOWEST);
     this._emit(')');
-    this._emitBlock(node.ifTrue());
+    var then = node.ifTrue();
+    var thenComments = then.comments;
+
+    // Some people put comments before blocks in if statements
+    if (thenComments != null) {
+      this._emit('\n');
+      this._emitComments(thenComments);
+      this._emit(this._indent + '{\n');
+      this._increaseIndent();
+      this._emitStatements(then);
+      this._decreaseIndent();
+      this._emit(this._indent + '}');
+    }
+
+    else {
+      this._emitBlock(then);
+    }
+
     var block = node.ifFalse();
 
     if (block != null) {
@@ -7326,6 +7343,7 @@
 
         for (var child1 = switchValue.nextSibling(); child1 != null; child1 = child1.nextSibling()) {
           var block = child1.caseBlock();
+          var blockComments = block.comments;
 
           if (child1.previousSibling() != switchValue) {
             this._emit('\n');
@@ -7350,7 +7368,17 @@
             }
           }
 
-          this._emit(' {\n');
+          // Some people put comments before blocks in case statements
+          if (blockComments != null) {
+            this._emit('\n');
+            this._emitComments(blockComments);
+            this._emit(this._indent + '{\n');
+          }
+
+          else {
+            this._emit(' {\n');
+          }
+
           this._increaseIndent();
           this._emitStatements(block);
 
