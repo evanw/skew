@@ -21920,6 +21920,18 @@
       var index = $arguments.indexOf(symbol.asVariableSymbol());
 
       if (index != -1) {
+        var parent = node.parent();
+
+        // If we're in a wrapped type cast, replace the cast itself
+        if (parent.kind == Skew.NodeKind.CAST) {
+          var valueType = parent.castValue().resolvedType;
+          var targetType = parent.castType().resolvedType;
+
+          if (valueType.isWrapped() && targetType.symbol != null && valueType.symbol.asObjectSymbol().wrappedType.symbol == targetType.symbol) {
+            node = parent;
+          }
+        }
+
         if (node == root) {
           node.become(in_List.get(values, index));
         }
