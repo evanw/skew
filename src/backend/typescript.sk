@@ -6,6 +6,7 @@ namespace Skew {
     over requiresIntegerSwitchStatements bool { return true }
     over supportsListForeach bool { return true }
     over supportsNestedTypes bool { return true }
+    over removeSingletonInterfaces bool { return true }
     over stringEncoding Unicode.Encoding { return .UTF16 }
     over editOptions(options CompilerOptions) { options.define("TARGET", "JAVASCRIPT") }
     over includeSources(sources List<Source>) { sources.prepend(Source.new("<native-js>", NATIVE_LIBRARY_JS)) }

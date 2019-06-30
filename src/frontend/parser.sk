@@ -1009,6 +1009,7 @@ namespace Skew.Parsing {
 
     # Parse a compile-time if statement
     if context.peek(.IF) {
+      _warnAboutIgnoredComments(context, comments)
       var guard = recursiveParseGuard(context, parent, annotations)
       if guard == null {
         return false
@@ -1020,10 +1021,8 @@ namespace Skew.Parsing {
 
     # Parse annotations before the symbol declaration
     if context.peek(.ANNOTATION) {
+      _warnAboutIgnoredComments(context, comments)
       annotations = parseAnnotations(context, annotations != null ? annotations.clone : [])
-      if annotations == null {
-        return false
-      }
 
       # Parse an annotation block
       if context.eat(.LEFT_BRACE) {

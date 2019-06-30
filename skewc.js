@@ -14325,6 +14325,7 @@
 
     // Parse a compile-time if statement
     if (context.peek1(Skew.TokenKind.IF)) {
+      Skew.Parsing._warnAboutIgnoredComments(context, comments);
       var guard = Skew.Parsing.recursiveParseGuard(context, parent, annotations);
 
       if (guard == null) {
@@ -14341,11 +14342,8 @@
 
     // Parse annotations before the symbol declaration
     if (context.peek1(Skew.TokenKind.ANNOTATION)) {
+      Skew.Parsing._warnAboutIgnoredComments(context, comments);
       annotations = Skew.Parsing.parseAnnotations(context, annotations != null ? annotations.slice() : []);
-
-      if (annotations == null) {
-        return false;
-      }
 
       // Parse an annotation block
       if (context.eat(Skew.TokenKind.LEFT_BRACE)) {
@@ -21172,6 +21170,10 @@
   };
 
   Skew.TypeScriptTarget.prototype.supportsNestedTypes = function() {
+    return true;
+  };
+
+  Skew.TypeScriptTarget.prototype.removeSingletonInterfaces = function() {
     return true;
   };
 
