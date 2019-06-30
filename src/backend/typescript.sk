@@ -1487,8 +1487,22 @@ namespace Skew {
           _emitExpression(node.hookTest, .LOGICAL_OR)
           _emit(" ? ")
           _emitExpression(node.hookTrue, .ASSIGN)
-          _emit(" : ")
-          _emitExpression(node.hookFalse, .ASSIGN)
+          _emit(" :")
+
+          var last = node.hookFalse
+          var comments = last.comments
+          if comments != null {
+            _emit("\n")
+            _increaseIndent
+            _emitComments(comments)
+            _emit(_indent)
+            _emitExpression(last, .ASSIGN)
+            _decreaseIndent
+          } else {
+            _emit(" ")
+            _emitExpression(last, .ASSIGN)
+          }
+
           if Precedence.ASSIGN < precedence {
             _emit(")")
           }

@@ -4194,7 +4194,9 @@
 
       case Skew.ContentKind.DOUBLE: {
         var value = Skew.in_Content.asDouble(content);
-        var text = isNaN(value) ? 'NaN' : value == 1 / 0 ? 'Infinity' : value == -(1 / 0) ? '-Infinity' : TARGET == Target.CSHARP ? value.toString().toLowerCase() : value.toString();
+        var text = isNaN(value) ? 'NaN' : value == 1 / 0 ? 'Infinity' : value == -(1 / 0) ? '-Infinity' :
+          // The C# implementation of double.ToString() uses an uppercase "E"
+          TARGET == Target.CSHARP ? value.toString().toLowerCase() : value.toString();
 
         // "0.123" => ".123"
         // "-0.123" => "-.123"
@@ -4521,8 +4523,23 @@
         this._emitExpression(node.hookTest(), Skew.Precedence.LOGICAL_OR);
         this._emit(this._space + '?' + this._space);
         this._emitExpression(node.hookTrue(), Skew.Precedence.ASSIGN);
-        this._emit(this._space + ':' + this._space);
-        this._emitExpression(node.hookFalse(), Skew.Precedence.ASSIGN);
+        this._emit(this._space + ':');
+        var last = node.hookFalse();
+        var comments = last.comments;
+
+        if (comments != null) {
+          this._emit(this._newline);
+          this._increaseIndent();
+          this._emitComments(comments);
+          this._emit(this._indent);
+          this._emitExpression(last, Skew.Precedence.ASSIGN);
+          this._decreaseIndent();
+        }
+
+        else {
+          this._emit(this._space);
+          this._emitExpression(last, Skew.Precedence.ASSIGN);
+        }
 
         if (Skew.Precedence.ASSIGN < precedence) {
           this._emit(')');
@@ -4625,13 +4642,13 @@
           this._emitExpression(node.binaryLeft(), info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
 
           // Always emit spaces around keyword operators, even when minifying
-          var comments = this._minify ? null : right.comments;
-          this._emit(kind == Skew.NodeKind.IN ? (left.isString() ? this._space : ' ') + 'in' + (comments != null ? '' : ' ') : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text));
+          var comments1 = this._minify ? null : right.comments;
+          this._emit(kind == Skew.NodeKind.IN ? (left.isString() ? this._space : ' ') + 'in' + (comments1 != null ? '' : ' ') : this._space + (kind == Skew.NodeKind.EQUAL ? '==' + extraEquals : kind == Skew.NodeKind.NOT_EQUAL ? '!=' + extraEquals : info1.text));
 
-          if (comments != null) {
+          if (comments1 != null) {
             this._emit(this._newline);
             this._increaseIndent();
-            this._emitComments(comments);
+            this._emitComments(comments1);
             this._emit(this._indent);
             this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
             this._decreaseIndent();
@@ -7910,8 +7927,23 @@
         this._emitExpression(node.hookTest(), Skew.Precedence.LOGICAL_OR);
         this._emit(' ? ');
         this._emitExpression(node.hookTrue(), Skew.Precedence.ASSIGN);
-        this._emit(' : ');
-        this._emitExpression(node.hookFalse(), Skew.Precedence.ASSIGN);
+        this._emit(' :');
+        var last = node.hookFalse();
+        var comments = last.comments;
+
+        if (comments != null) {
+          this._emit('\n');
+          this._increaseIndent();
+          this._emitComments(comments);
+          this._emit(this._indent);
+          this._emitExpression(last, Skew.Precedence.ASSIGN);
+          this._decreaseIndent();
+        }
+
+        else {
+          this._emit(' ');
+          this._emitExpression(last, Skew.Precedence.ASSIGN);
+        }
 
         if (Skew.Precedence.ASSIGN < precedence) {
           this._emit(')');
@@ -7987,12 +8019,12 @@
 
           this._emitExpression(left, info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
           this._emit(' ' + info1.text + (kind == Skew.NodeKind.EQUAL || kind == Skew.NodeKind.NOT_EQUAL ? '=' : ''));
-          var comments = right.comments;
+          var comments1 = right.comments;
 
-          if (comments != null) {
+          if (comments1 != null) {
             this._emit('\n');
             this._increaseIndent();
-            this._emitComments(comments);
+            this._emitComments(comments1);
             this._emit(this._indent);
             this._emitExpression(right, info1.precedence + (info1.associativity == Skew.Associativity.LEFT | 0) | 0);
             this._decreaseIndent();
