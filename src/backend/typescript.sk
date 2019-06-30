@@ -991,7 +991,7 @@ namespace Skew {
                 if value.previousSibling != null {
                   _emit("\n")
                 }
-                _emitComments(value.comments)
+                _emitComments(_commentsIncludingInsideCasts(value))
                 _emit(_indent + "case ")
                 _emitExpression(value, .LOWEST)
                 _emit(":")
@@ -1138,11 +1138,19 @@ namespace Skew {
       }
     }
 
+    def _commentsIncludingInsideCasts(node Node) List<Comment> {
+      var comments = node.comments
+      if node.kind == .CAST {
+        comments = Comment.concat(comments, node.castValue.comments)
+      }
+      return comments
+    }
+
     def _emitCommaSeparatedExpressions(from Node, to Node) {
       var isIndented = false
 
       for child = from; child != to; child = child.nextSibling {
-        if child.comments != null {
+        if _commentsIncludingInsideCasts(child) != null {
           isIndented = true
           break
         }
@@ -1153,8 +1161,9 @@ namespace Skew {
       }
 
       while from != to {
-        var trailing = Comment.lastTrailingComment(from.comments)
-        var notTrailing = Comment.withoutLastTrailingComment(from.comments)
+        var comments = _commentsIncludingInsideCasts(from)
+        var trailing = Comment.lastTrailingComment(comments)
+        var notTrailing = Comment.withoutLastTrailingComment(comments)
 
         if isIndented {
           _emit("\n")
@@ -1490,7 +1499,7 @@ namespace Skew {
           _emit(" :")
 
           var last = node.hookFalse
-          var comments = last.comments
+          var comments = _commentsIncludingInsideCasts(last)
           if comments != null {
             _emit("\n")
             _increaseIndent
@@ -1561,7 +1570,7 @@ namespace Skew {
             _emitExpression(left, info.precedence.incrementIfRightAssociative(info.associativity))
             _emit(" " + info.text + (kind == .EQUAL || kind == .NOT_EQUAL ? "=" : ""))
 
-            var comments = right.comments
+            var comments = _commentsIncludingInsideCasts(right)
             if comments != null {
               _emit("\n")
               _increaseIndent

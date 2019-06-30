@@ -7343,7 +7343,7 @@
                 this._emit('\n');
               }
 
-              this._emitComments(value.comments);
+              this._emitComments(this._commentsIncludingInsideCasts(value));
               this._emit(this._indent + 'case ');
               this._emitExpression(value, Skew.Precedence.LOWEST);
               this._emit(':');
@@ -7531,11 +7531,21 @@
     }
   };
 
+  Skew.TypeScriptEmitter.prototype._commentsIncludingInsideCasts = function(node) {
+    var comments = node.comments;
+
+    if (node.kind == Skew.NodeKind.CAST) {
+      comments = Skew.Comment.concat(comments, node.castValue().comments);
+    }
+
+    return comments;
+  };
+
   Skew.TypeScriptEmitter.prototype._emitCommaSeparatedExpressions = function(from, to) {
     var isIndented = false;
 
     for (var child = from; child != to; child = child.nextSibling()) {
-      if (child.comments != null) {
+      if (this._commentsIncludingInsideCasts(child) != null) {
         isIndented = true;
         break;
       }
@@ -7546,8 +7556,9 @@
     }
 
     while (from != to) {
-      var trailing = Skew.Comment.lastTrailingComment(from.comments);
-      var notTrailing = Skew.Comment.withoutLastTrailingComment(from.comments);
+      var comments = this._commentsIncludingInsideCasts(from);
+      var trailing = Skew.Comment.lastTrailingComment(comments);
+      var notTrailing = Skew.Comment.withoutLastTrailingComment(comments);
 
       if (isIndented) {
         this._emit('\n');
@@ -7929,7 +7940,7 @@
         this._emitExpression(node.hookTrue(), Skew.Precedence.ASSIGN);
         this._emit(' :');
         var last = node.hookFalse();
-        var comments = last.comments;
+        var comments = this._commentsIncludingInsideCasts(last);
 
         if (comments != null) {
           this._emit('\n');
@@ -8019,7 +8030,7 @@
 
           this._emitExpression(left, info1.precedence + (info1.associativity == Skew.Associativity.RIGHT | 0) | 0);
           this._emit(' ' + info1.text + (kind == Skew.NodeKind.EQUAL || kind == Skew.NodeKind.NOT_EQUAL ? '=' : ''));
-          var comments1 = right.comments;
+          var comments1 = this._commentsIncludingInsideCasts(right);
 
           if (comments1 != null) {
             this._emit('\n');
