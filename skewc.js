@@ -851,6 +851,11 @@
     var fixAll = parser.boolForOption(Skew.Option.FIX_ALL, false);
     var fixCount = 0;
 
+    // Optionally have the log transform warnings into errors
+    if (options != null) {
+      log.warningsAreErrors = options.warningsAreErrors;
+    }
+
     // Suppress logging during fixes
     if (fixAll) {
       log = new Skew.Log();
@@ -978,7 +983,16 @@
 
     if (hasWarnings || hasErrors) {
       process.stdout.write(summary + ' generated');
-      Skew.printWithColor(Terminal.Color.GRAY, diagnosticLimit == 0 || log.diagnostics.length <= diagnosticLimit ? '\n' : ' (only showing ' + Skew.PrettyPrint.plural1(diagnosticLimit, 'message') + ', use "--message-limit=0" to see all)\n');
+
+      if (log.wasWarningCount() > 0) {
+        process.stdout.write(' (warnings are being treated as errors due to "--warnings-are-errors")');
+      }
+
+      if (diagnosticLimit > 0 && log.diagnostics.length > diagnosticLimit) {
+        Skew.printWithColor(Terminal.Color.GRAY, ' (only showing ' + Skew.PrettyPrint.plural1(diagnosticLimit, 'message') + ', use "--message-limit=0" to see all)');
+      }
+
+      process.stdout.write('\n');
     }
   };
 
@@ -1048,7 +1062,7 @@
     parser.define(Skew.Options.Type.BOOL, Skew.Option.GLOBALIZE_FUNCTIONS, '--globalize-functions', 'Convert instance functions to global functions for better inlining.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.FIX_ALL, '--fix-all', 'Attempt to automatically fix as many errors and warnings as possible. ' + "THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.IGNORED_COMMENT_WARNING, '--ignored-comment-warning', "Warn when the compiler doesn't store a comment in the parse tree.");
-    parser.define(Skew.Options.Type.BOOL, Skew.Option.WARNINGS_ARE_ERRORS, '--warnings-are-errors', 'Uses a non-zero exit code for warnings in addition to errors.');
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.WARNINGS_ARE_ERRORS, '--warnings-are-errors', 'Turns warnings into errors.');
 
     // Parse the command line arguments
     parser.parse(log, $arguments);
@@ -12194,10 +12208,11 @@
     VOID_RETURN: 24
   };
 
-  Skew.Diagnostic = function(kind, range, text) {
+  Skew.Diagnostic = function(kind, range, text, wasWarning) {
     this.kind = kind;
     this.range = range;
     this.text = text;
+    this.wasWarning = wasWarning;
     this.noteRange = null;
     this.noteText = '';
     this.fixes = null;
@@ -12224,8 +12239,10 @@
   Skew.Log = function() {
     this.diagnostics = [];
     this.appendCallback = null;
+    this.warningsAreErrors = false;
     this._warningCount = 0;
     this._errorCount = 0;
+    this._wasWarningCount = 0;
   };
 
   Skew.Log.prototype.hasErrors = function() {
@@ -12244,6 +12261,18 @@
     return this._errorCount;
   };
 
+  Skew.Log.prototype.wasWarningCount = function() {
+    return this._wasWarningCount;
+  };
+
+  Skew.Log.prototype.newError = function(range, text) {
+    return new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, text, false);
+  };
+
+  Skew.Log.prototype.newWarning = function(range, text) {
+    return new Skew.Diagnostic(this.warningsAreErrors ? Skew.DiagnosticKind.ERROR : Skew.DiagnosticKind.WARNING, range, text, this.warningsAreErrors);
+  };
+
   Skew.Log.prototype.append = function(diagnostic) {
     this.diagnostics.push(diagnostic);
 
@@ -12255,17 +12284,21 @@
       this._warningCount = this._warningCount + 1 | 0;
     }
 
+    if (diagnostic.wasWarning) {
+      this._wasWarningCount = this._wasWarningCount + 1 | 0;
+    }
+
     if (this.appendCallback != null) {
       this.appendCallback(diagnostic);
     }
   };
 
   Skew.Log.prototype.syntaxWarningIgnoredCommentInParser = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'This comment was ignored by the parser'));
+    this.append(this.newWarning(range, 'This comment was ignored by the parser'));
   };
 
   Skew.Log.prototype.syntaxWarningIgnoredCommentInEmitter = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'This comment was ignored by the emitter'));
+    this.append(this.newWarning(range, 'This comment was ignored by the emitter'));
   };
 
   Skew.Log.prototype.syntaxWarningOctal = function(range) {
@@ -12275,78 +12308,78 @@
       text = in_string.slice1(text, 1);
     }
 
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Number interpreted as decimal (use the prefix "0o" for octal numbers)').withFix(Skew.FixKind.OCTAL_REMOVE_ZEROS, range, 'Remove the leading zeros to avoid confusion', text).withFix(Skew.FixKind.OCTAL_ADD_PREFIX, range, 'Add the prefix "0o" to interpret the number as octal', '0o' + text));
+    this.append(this.newWarning(range, 'Number interpreted as decimal (use the prefix "0o" for octal numbers)').withFix(Skew.FixKind.OCTAL_REMOVE_ZEROS, range, 'Remove the leading zeros to avoid confusion', text).withFix(Skew.FixKind.OCTAL_ADD_PREFIX, range, 'Add the prefix "0o" to interpret the number as octal', '0o' + text));
   };
 
   Skew.Log.prototype.syntaxWarningExtraParentheses = function(range) {
     var leftSpace = range.rangeIncludingLeftWhitespace().start == range.start ? ' ' : '';
     var rightSpace = range.rangeIncludingRightWhitespace().end == range.end ? ' ' : '';
     var text = range.toString();
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Unnecessary parentheses').withFix(Skew.FixKind.UNNECESSARY_PARENTHESES, range, 'Remove parentheses', leftSpace + in_string.slice2(text, 1, text.length - 1 | 0) + rightSpace));
+    this.append(this.newWarning(range, 'Unnecessary parentheses').withFix(Skew.FixKind.UNNECESSARY_PARENTHESES, range, 'Remove parentheses', leftSpace + in_string.slice2(text, 1, text.length - 1 | 0) + rightSpace));
   };
 
   Skew.Log.prototype.syntaxWarningExtraComma = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Unnecessary comma').withFix(Skew.FixKind.EXTRA_COMMA, range, 'Remove comma', ''));
+    this.append(this.newWarning(range, 'Unnecessary comma').withFix(Skew.FixKind.EXTRA_COMMA, range, 'Remove comma', ''));
   };
 
   Skew.Log.prototype.syntaxErrorInvalidEscapeSequence = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Invalid escape sequence'));
+    this.append(this.newError(range, 'Invalid escape sequence'));
   };
 
   Skew.Log.prototype.syntaxErrorIntegerLiteralTooLarge = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Integer literal is too big to fit in 32 bits'));
+    this.append(this.newError(range, 'Integer literal is too big to fit in 32 bits'));
   };
 
   Skew.Log.prototype.syntaxErrorInvalidCharacter = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use double quotes for strings (single quotes are for character literals)').withFix(Skew.FixKind.SINGLE_QUOTES, range, 'Replace single quotes with double quotes', Skew.replaceSingleQuotesWithDoubleQuotes(range.toString())));
+    this.append(this.newError(range, 'Use double quotes for strings (single quotes are for character literals)').withFix(Skew.FixKind.SINGLE_QUOTES, range, 'Replace single quotes with double quotes', Skew.replaceSingleQuotesWithDoubleQuotes(range.toString())));
   };
 
   Skew.Log.prototype.syntaxErrorExtraData = function(range, text) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Syntax error "' + (text == '"' ? '\\"' : text) + '"'));
+    this.append(this.newError(range, 'Syntax error "' + (text == '"' ? '\\"' : text) + '"'));
   };
 
   Skew.Log.prototype.syntaxErrorExtraColonBeforeType = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Do not use a colon before a type expression').withFix(Skew.FixKind.EXTRA_COLON, range, 'Remove the colon', ''));
+    this.append(this.newError(range, 'Do not use a colon before a type expression').withFix(Skew.FixKind.EXTRA_COLON, range, 'Remove the colon', ''));
   };
 
   Skew.Log.prototype.syntaxErrorNewOperator = function(range, correction) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no "new" operator, use "' + correction + '" instead').withFix(Skew.FixKind.NEW_OPERATOR, range, 'Replace with "' + correction + '"', correction));
+    this.append(this.newError(range, 'There is no "new" operator, use "' + correction + '" instead').withFix(Skew.FixKind.NEW_OPERATOR, range, 'Replace with "' + correction + '"', correction));
   };
 
   Skew.Log.prototype.syntaxErrorExtendsKeyword = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use ":" instead of "extends" to indicate a base class').withFix(Skew.FixKind.EXTENDS_IMPLEMENTS, range, 'Replace "extends" with ":"', ':'));
+    this.append(this.newError(range, 'Use ":" instead of "extends" to indicate a base class').withFix(Skew.FixKind.EXTENDS_IMPLEMENTS, range, 'Replace "extends" with ":"', ':'));
   };
 
   Skew.Log.prototype.syntaxErrorImplementsKeyword = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use "::" instead of "implements" to indicate implemented interfaces').withFix(Skew.FixKind.EXTENDS_IMPLEMENTS, range, 'Replace "implements" with "::"', '::'));
+    this.append(this.newError(range, 'Use "::" instead of "implements" to indicate implemented interfaces').withFix(Skew.FixKind.EXTENDS_IMPLEMENTS, range, 'Replace "implements" with "::"', '::'));
   };
 
   Skew.Log.prototype.syntaxErrorMissingVar = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use "var" before variable declarations').withFix(Skew.FixKind.MISSING_VAR, range, 'Insert "var"', 'var ' + range.toString()));
+    this.append(this.newError(range, 'Use "var" before variable declarations').withFix(Skew.FixKind.MISSING_VAR, range, 'Insert "var"', 'var ' + range.toString()));
   };
 
   Skew.Log.prototype.syntaxErrorMissingDef = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use "def" before function declarations').withFix(Skew.FixKind.MISSING_DEF, range, 'Insert "def"', 'def ' + range.toString()));
+    this.append(this.newError(range, 'Use "def" before function declarations').withFix(Skew.FixKind.MISSING_DEF, range, 'Insert "def"', 'def ' + range.toString()));
   };
 
   Skew.Log.prototype.syntaxErrorStaticKeyword = function(range, parentKind, parentName) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, parentKind == Skew.SymbolKind.OBJECT_GLOBAL || parentKind == Skew.SymbolKind.OBJECT_NAMESPACE ? 'There is no "static" keyword' : 'There is no "static" keyword (declare this symbol in a namespace called "' + parentName + '" instead)'));
+    this.append(this.newError(range, parentKind == Skew.SymbolKind.OBJECT_GLOBAL || parentKind == Skew.SymbolKind.OBJECT_NAMESPACE ? 'There is no "static" keyword' : 'There is no "static" keyword (declare this symbol in a namespace called "' + parentName + '" instead)'));
   };
 
   Skew.Log.prototype.syntaxErrorPublicKeyword = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no "public" keyword'));
+    this.append(this.newError(range, 'There is no "public" keyword'));
   };
 
   Skew.Log.prototype.syntaxErrorPrivateOrProtected = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no "' + range.toString() + '" keyword (to give something protected access, use a name starting with "_" instead)'));
+    this.append(this.newError(range, 'There is no "' + range.toString() + '" keyword (to give something protected access, use a name starting with "_" instead)'));
   };
 
   Skew.Log.prototype.syntaxErrorExpectedCommaBetweenCases = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use a comma between multiple values in a case statement (example: "case 1, 2, 3 { ... }")').withFix(Skew.FixKind.CASE_COMMA, range, 'Replace this with a comma', ','));
+    this.append(this.newError(range, 'Use a comma between multiple values in a case statement (example: "case 1, 2, 3 { ... }")').withFix(Skew.FixKind.CASE_COMMA, range, 'Replace this with a comma', ','));
   };
 
   Skew.Log.prototype.syntaxErrorColonAfterCaseOrDefault = function(range, breakRange) {
-    var diagnostic = new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Surround the body of case and default statements with "{" and "}" instead of ":" and "break"');
+    var diagnostic = this.newError(range, 'Surround the body of case and default statements with "{" and "}" instead of ":" and "break"');
 
     if (breakRange != null) {
       assert(range.source == breakRange.source);
@@ -12366,15 +12399,15 @@
   };
 
   Skew.Log.prototype.syntaxErrorOperatorTypo = function(range, correction) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use the "' + correction + '" operator instead').withFix(Skew.FixKind.OPERATOR_TYPO, range, 'Replace with "' + correction + '"', correction));
+    this.append(this.newError(range, 'Use the "' + correction + '" operator instead').withFix(Skew.FixKind.OPERATOR_TYPO, range, 'Replace with "' + correction + '"', correction));
   };
 
   Skew.Log.prototype.syntaxErrorExtraVarInForLoop = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The "var" keyword is unnecessary here since for loops automatically declare their variables').withFix(Skew.FixKind.FOR_LOOP_VAR, range != null ? range.rangeIncludingRightWhitespace() : null, 'Remove "var"', ''));
+    this.append(this.newError(range, 'The "var" keyword is unnecessary here since for loops automatically declare their variables').withFix(Skew.FixKind.FOR_LOOP_VAR, range != null ? range.rangeIncludingRightWhitespace() : null, 'Remove "var"', ''));
   };
 
   Skew.Log.prototype.syntaxErrorWrongListSyntax = function(range, correction) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The array type is "List<T>"').withFix(Skew.FixKind.ARRAY_SYNTAX, range, 'Replace with "' + correction + '"', correction));
+    this.append(this.newError(range, 'The array type is "List<T>"').withFix(Skew.FixKind.ARRAY_SYNTAX, range, 'Replace with "' + correction + '"', correction));
   };
 
   Skew.Log.prototype.syntaxErrorSlashComment = function(range) {
@@ -12401,15 +12434,15 @@
       }
     }
 
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Comments start with "#" instead of "//"').withFix(Skew.FixKind.SLASH_COMMENT, range, 'Replace "//" with "#"', replacement));
+    this.append(this.newError(range, 'Comments start with "#" instead of "//"').withFix(Skew.FixKind.SLASH_COMMENT, range, 'Replace "//" with "#"', replacement));
   };
 
   Skew.Log.prototype.syntaxErrorUnexpectedToken = function(token) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, token.range, 'Unexpected ' + Skew.in_TokenKind.toString(token.kind)));
+    this.append(this.newError(token.range, 'Unexpected ' + Skew.in_TokenKind.toString(token.kind)));
   };
 
   Skew.Log.prototype.syntaxErrorExpectedToken = function(range, found, expected) {
-    var diagnostic = new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected ' + Skew.in_TokenKind.toString(expected) + ' but found ' + Skew.in_TokenKind.toString(found));
+    var diagnostic = this.newError(range, 'Expected ' + Skew.in_TokenKind.toString(expected) + ' but found ' + Skew.in_TokenKind.toString(found));
 
     if (found == Skew.TokenKind.SEMICOLON && expected == Skew.TokenKind.NEWLINE) {
       diagnostic.withFix(Skew.FixKind.EXTRA_SEMICOLON, range, 'Remove ";"', '');
@@ -12419,27 +12452,27 @@
   };
 
   Skew.Log.prototype.syntaxErrorEmptyFunctionParentheses = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Functions without arguments do not use parentheses').withFix(Skew.FixKind.EXTRA_DEF_PARENTHESES, range, 'Remove parentheses', ''));
+    this.append(this.newError(range, 'Functions without arguments do not use parentheses').withFix(Skew.FixKind.EXTRA_DEF_PARENTHESES, range, 'Remove parentheses', ''));
   };
 
   Skew.Log.prototype.syntaxErrorBadDeclarationInsideType = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot use this declaration here'));
+    this.append(this.newError(range, 'Cannot use this declaration here'));
   };
 
   Skew.Log.prototype.syntaxErrorBadOperatorCustomization = function(range, kind, why) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The ' + Skew.in_TokenKind.toString(kind) + ' operator is not customizable because ' + why));
+    this.append(this.newError(range, 'The ' + Skew.in_TokenKind.toString(kind) + ' operator is not customizable because ' + why));
   };
 
   Skew.Log.prototype.syntaxErrorVariableDeclarationNeedsVar = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Declare variables using "var" and put the type after the variable name').withFix(Skew.FixKind.NEED_VAR, Skew.Range.span(range, name), 'Declare "' + name.toString() + '" correctly', 'var ' + name.toString() + ' ' + range.toString()));
+    this.append(this.newError(range, 'Declare variables using "var" and put the type after the variable name').withFix(Skew.FixKind.NEED_VAR, Skew.Range.span(range, name), 'Declare "' + name.toString() + '" correctly', 'var ' + name.toString() + ' ' + range.toString()));
   };
 
   Skew.Log.prototype.syntaxErrorXMLClosingTagMismatch = function(range, found, expected, openingRange) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected "' + expected + '" but found "' + found + '" in XML literal').withNote(openingRange, 'Attempted to match opening tag here'));
+    this.append(this.newError(range, 'Expected "' + expected + '" but found "' + found + '" in XML literal').withNote(openingRange, 'Attempted to match opening tag here'));
   };
 
   Skew.Log.prototype.syntaxErrorOptionalArgument = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, "Optional arguments aren't supported yet"));
+    this.append(this.newError(range, "Optional arguments aren't supported yet"));
   };
 
   Skew.Log._expectedCountText = function(singular, expected, found) {
@@ -12462,55 +12495,55 @@
   };
 
   Skew.Log.prototype.semanticWarningInliningFailed = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Cannot inline function "' + name + '"'));
+    this.append(this.newWarning(range, 'Cannot inline function "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticWarningIdenticalOperands = function(range, operator) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Both sides of "' + operator + '" are identical, is this a bug?'));
+    this.append(this.newWarning(range, 'Both sides of "' + operator + '" are identical, is this a bug?'));
   };
 
   Skew.Log.prototype.semanticWarningSuspiciousAssignmentLocation = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Use of "=" here looks like a bug, did you mean to use "=="?'));
+    this.append(this.newWarning(range, 'Use of "=" here looks like a bug, did you mean to use "=="?'));
   };
 
   Skew.Log.prototype.semanticWarningShiftByZero = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, "Shifting an integer by zero doesn't do anything, is this a bug?"));
+    this.append(this.newWarning(range, "Shifting an integer by zero doesn't do anything, is this a bug?"));
   };
 
   Skew.Log.prototype.semanticWarningUnusedExpression = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Unused expression'));
+    this.append(this.newWarning(range, 'Unused expression'));
   };
 
   Skew.Log.prototype.semanticErrorXMLMissingAppend = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Implement a function called "<>...</>" on type "' + type.toString() + '" to add support for child elements'));
+    this.append(this.newError(range, 'Implement a function called "<>...</>" on type "' + type.toString() + '" to add support for child elements'));
   };
 
   Skew.Log.prototype.semanticErrorComparisonOperatorNotInt = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The comparison operator must have a return type of "int"'));
+    this.append(this.newError(range, 'The comparison operator must have a return type of "int"'));
   };
 
   Skew.Log.prototype.semanticErrorDuplicateSymbol = function(range, name, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" is already declared').withNote(previous, 'The previous declaration is here'));
+    this.append(this.newError(range, '"' + name + '" is already declared').withNote(previous, 'The previous declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorShadowedSymbol = function(range, name, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" shadows a previous declaration').withNote(previous, 'The previous declaration is here'));
+    this.append(this.newError(range, '"' + name + '" shadows a previous declaration').withNote(previous, 'The previous declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorDuplicateTypeParameters = function(range, name, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" already has type parameters').withNote(previous, 'Type parameters were previously declared here'));
+    this.append(this.newError(range, '"' + name + '" already has type parameters').withNote(previous, 'Type parameters were previously declared here'));
   };
 
   Skew.Log.prototype.semanticErrorDuplicateBaseType = function(range, name, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" already has a base type').withNote(previous, 'The previous base type is here'));
+    this.append(this.newError(range, '"' + name + '" already has a base type').withNote(previous, 'The previous base type is here'));
   };
 
   Skew.Log.prototype.semanticErrorCyclicDeclaration = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cyclic declaration of "' + name + '"'));
+    this.append(this.newError(range, 'Cyclic declaration of "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticErrorUndeclaredSymbol = function(range, name, correction, correctionRange) {
-    var diagnostic = new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" is not declared' + (correction != null ? ', did you mean "' + correction + '"?' : ''));
+    var diagnostic = this.newError(range, '"' + name + '" is not declared' + (correction != null ? ', did you mean "' + correction + '"?' : ''));
 
     if (correction != null && correctionRange != null) {
       diagnostic.withNote(correctionRange, '"' + correction + '" is defined here').withFix(Skew.FixKind.SYMBOL_TYPO, range, 'Replace with "' + correction + '"', correction);
@@ -12520,11 +12553,11 @@
   };
 
   Skew.Log.prototype.semanticErrorUndeclaredSelfSymbol = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" is not declared (use "self" to refer to the object instance)').withFix(Skew.FixKind.SELF_VS_THIS, range, 'Replace "' + name + '" with "self"', 'self'));
+    this.append(this.newError(range, '"' + name + '" is not declared (use "self" to refer to the object instance)').withFix(Skew.FixKind.SELF_VS_THIS, range, 'Replace "' + name + '" with "self"', 'self'));
   };
 
   Skew.Log.prototype.semanticErrorUnknownMemberSymbol = function(range, name, type, correction, correctionRange) {
-    var diagnostic = new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" is not declared on type "' + type.toString() + '"' + (correction != null ? ', did you mean "' + correction + '"?' : ''));
+    var diagnostic = this.newError(range, '"' + name + '" is not declared on type "' + type.toString() + '"' + (correction != null ? ', did you mean "' + correction + '"?' : ''));
 
     if (correction != null && correctionRange != null) {
       diagnostic.withNote(correctionRange, '"' + correction + '" is defined here').withFix(Skew.FixKind.SYMBOL_TYPO, range, 'Replace with "' + correction + '"', correction);
@@ -12534,39 +12567,39 @@
   };
 
   Skew.Log.prototype.semanticErrorVarMissingType = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Unable to determine the type of "' + name + '"'));
+    this.append(this.newError(range, 'Unable to determine the type of "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticErrorVarMissingValue = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The implicitly typed variable "' + name + '" must be initialized'));
+    this.append(this.newError(range, 'The implicitly typed variable "' + name + '" must be initialized'));
   };
 
   Skew.Log.prototype.semanticErrorConstMissingValue = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The constant "' + name + '" must be initialized'));
+    this.append(this.newError(range, 'The constant "' + name + '" must be initialized'));
   };
 
   Skew.Log.prototype.semanticErrorInvalidCall = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot call value of type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Cannot call value of type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorCannotParameterize = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot parameterize "' + type.toString() + '"' + (type.isParameterized() ? ' because it is already parameterized' : ' because it has no type parameters')));
+    this.append(this.newError(range, 'Cannot parameterize "' + type.toString() + '"' + (type.isParameterized() ? ' because it is already parameterized' : ' because it has no type parameters')));
   };
 
   Skew.Log.prototype.semanticErrorParameterCount = function(range, expected, found) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, Skew.Log._expectedCountText('type parameter', expected, found)));
+    this.append(this.newError(range, Skew.Log._expectedCountText('type parameter', expected, found)));
   };
 
   Skew.Log.prototype.semanticErrorArgumentCount = function(range, expected, found, name, $function) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, Skew.Log._expectedCountText('argument', expected, found) + (name != null ? ' when calling "' + name + '"' : '')).withNote($function, 'The function declaration is here'));
+    this.append(this.newError(range, Skew.Log._expectedCountText('argument', expected, found) + (name != null ? ' when calling "' + name + '"' : '')).withNote($function, 'The function declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorGetterRequiresWrap = function(range, name, $function) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Wrap calls to the function "' + name + '" in parentheses to call the returned lambda').withNote($function, 'The function declaration is here'));
+    this.append(this.newError(range, 'Wrap calls to the function "' + name + '" in parentheses to call the returned lambda').withNote($function, 'The function declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorGetterCalledTwice = function(range, name, $function) {
-    var diagnostic = new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot call the value returned from the function "' + name + '" (this function was called automatically because it takes no arguments)').withNote($function, 'The function declaration is here');
+    var diagnostic = this.newError(range, 'Cannot call the value returned from the function "' + name + '" (this function was called automatically because it takes no arguments)').withNote($function, 'The function declaration is here');
 
     if (range.toString() == '()') {
       diagnostic.withFix(Skew.FixKind.EXTRA_CALL_PARENTHESES, range, 'Remove the unnecessary "()"', '');
@@ -12576,75 +12609,75 @@
   };
 
   Skew.Log.prototype.semanticErrorUseOfVoidFunction = function(range, name, $function) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The function "' + name + '" does not return a value').withNote($function, 'The function declaration is here'));
+    this.append(this.newError(range, 'The function "' + name + '" does not return a value').withNote($function, 'The function declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorUseOfVoidLambda = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'This call does not return a value'));
+    this.append(this.newError(range, 'This call does not return a value'));
   };
 
   Skew.Log.prototype.semanticErrorBadImplicitVariableType = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Implicitly typed variables cannot be of type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Implicitly typed variables cannot be of type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorNoDefaultValue = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot construct a default value of type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Cannot construct a default value of type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorMemberUnexpectedGlobal = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot access global member "' + name + '" from an instance context'));
+    this.append(this.newError(range, 'Cannot access global member "' + name + '" from an instance context'));
   };
 
   Skew.Log.prototype.semanticErrorMemberUnexpectedInstance = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot access instance member "' + name + '" from a global context'));
+    this.append(this.newError(range, 'Cannot access instance member "' + name + '" from a global context'));
   };
 
   Skew.Log.prototype.semanticErrorMemberUnexpectedTypeParameter = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot access type parameter "' + name + '" here'));
+    this.append(this.newError(range, 'Cannot access type parameter "' + name + '" here'));
   };
 
   Skew.Log.prototype.semanticErrorConstructorReturnType = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Constructors cannot have a return type').withFix(Skew.FixKind.NEW_RETURN_TYPE, range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove the return type', ''));
+    this.append(this.newError(range, 'Constructors cannot have a return type').withFix(Skew.FixKind.NEW_RETURN_TYPE, range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove the return type', ''));
   };
 
   Skew.Log.prototype.semanticErrorNoMatchingOverload = function(range, name, count, types) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'No overload of "' + name + '" was found that takes ' + Skew.PrettyPrint.plural1(count, 'argument') + Skew.Log._formatArgumentTypes(types)));
+    this.append(this.newError(range, 'No overload of "' + name + '" was found that takes ' + Skew.PrettyPrint.plural1(count, 'argument') + Skew.Log._formatArgumentTypes(types)));
   };
 
   Skew.Log.prototype.semanticErrorAmbiguousOverload = function(range, name, count, types) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Multiple matching overloads of "' + name + '" were found that can take ' + Skew.PrettyPrint.plural1(count, 'argument') + Skew.Log._formatArgumentTypes(types)));
+    this.append(this.newError(range, 'Multiple matching overloads of "' + name + '" were found that can take ' + Skew.PrettyPrint.plural1(count, 'argument') + Skew.Log._formatArgumentTypes(types)));
   };
 
   Skew.Log.prototype.semanticErrorUnexpectedExpression = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Unexpected expression of type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Unexpected expression of type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorUnexpectedType = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Unexpected type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Unexpected type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorIncompatibleTypes = function(range, from, to, isCastAllowed) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot convert from type "' + from.toString() + '" to type "' + to.toString() + '"' + (isCastAllowed ? ' without a cast' : '')));
+    this.append(this.newError(range, 'Cannot convert from type "' + from.toString() + '" to type "' + to.toString() + '"' + (isCastAllowed ? ' without a cast' : '')));
   };
 
   Skew.Log.prototype.semanticErrorInvalidDefine1 = function(range, value, type, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot convert "' + value + '" to type "' + type.toString() + '" for variable "' + name + '"'));
+    this.append(this.newError(range, 'Cannot convert "' + value + '" to type "' + type.toString() + '" for variable "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticWarningExtraCast = function(range, from, to) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Unnecessary cast from type "' + from.toString() + '" to type "' + to.toString() + '"').withFix(Skew.FixKind.EXTRA_CAST, range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove the cast', ''));
+    this.append(this.newWarning(range, 'Unnecessary cast from type "' + from.toString() + '" to type "' + to.toString() + '"').withFix(Skew.FixKind.EXTRA_CAST, range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove the cast', ''));
   };
 
   Skew.Log.prototype.semanticWarningExtraTypeCheck = function(range, from, to) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Unnecessary type check, type "' + from.toString() + '" is always type "' + to.toString() + '"'));
+    this.append(this.newWarning(range, 'Unnecessary type check, type "' + from.toString() + '" is always type "' + to.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticWarningBadTypeCheck = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot check against interface type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Cannot check against interface type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorWrongArgumentCount = function(range, name, count) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected "' + name + '" to take ' + Skew.PrettyPrint.plural1(count, 'argument')));
+    this.append(this.newError(range, 'Expected "' + name + '" to take ' + Skew.PrettyPrint.plural1(count, 'argument')));
   };
 
   Skew.Log.prototype.semanticErrorWrongArgumentCountRange = function(range, name, values) {
@@ -12685,264 +12718,264 @@
         text = 'Expected "' + name + '" to take either ' + Skew.PrettyPrint.join(counts, 'or') + ' arguments';
       }
 
-      this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, text));
+      this.append(this.newError(range, text));
     }
   };
 
   Skew.Log.prototype.semanticErrorExpectedList = function(range, name, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected argument "' + name + '" to be of type "List<T>" instead of type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Expected argument "' + name + '" to be of type "List<T>" instead of type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorUnexpectedReturnValue = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot return a value inside a function without a return type'));
+    this.append(this.newError(range, 'Cannot return a value inside a function without a return type'));
   };
 
   Skew.Log.prototype.semanticErrorBadReturnType = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot create a function with a return type of "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Cannot create a function with a return type of "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorVoidReturnType = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'There is no explicit "void" return type (to indicate that there\'s nothing to return, just don\'t put a return type)').withFix(Skew.FixKind.VOID_RETURN, range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove "void"', ''));
+    this.append(this.newError(range, 'There is no explicit "void" return type (to indicate that there\'s nothing to return, just don\'t put a return type)').withFix(Skew.FixKind.VOID_RETURN, range != null ? range.rangeIncludingLeftWhitespace() : null, 'Remove "void"', ''));
   };
 
   Skew.Log.prototype.semanticErrorExpectedReturnValue = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Must return a value of type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Must return a value of type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorMissingReturn = function(range, name, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'All control paths for "' + name + '" must return a value of type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'All control paths for "' + name + '" must return a value of type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorBadStorage = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot store to this location'));
+    this.append(this.newError(range, 'Cannot store to this location'));
   };
 
   Skew.Log.prototype.semanticErrorStorageToConstSymbol = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot store to constant symbol "' + name + '"'));
+    this.append(this.newError(range, 'Cannot store to constant symbol "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticErrorAccessViolation = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot access protected symbol "' + name + '" here'));
+    this.append(this.newError(range, 'Cannot access protected symbol "' + name + '" here'));
   };
 
   Skew.Log.prototype.semanticWarningDeprecatedUsage = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Use of deprecated symbol "' + name + '"'));
+    this.append(this.newWarning(range, 'Use of deprecated symbol "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticErrorUnparameterizedType = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot use unparameterized type "' + type.toString() + '" here'));
+    this.append(this.newError(range, 'Cannot use unparameterized type "' + type.toString() + '" here'));
   };
 
   Skew.Log.prototype.semanticErrorParameterizedType = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot use parameterized type "' + type.toString() + '" here'));
+    this.append(this.newError(range, 'Cannot use parameterized type "' + type.toString() + '" here'));
   };
 
   Skew.Log.prototype.semanticErrorNoCommonType = function(range, left, right) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'No common type for "' + left.toString() + '" and "' + right.toString() + '"'));
+    this.append(this.newError(range, 'No common type for "' + left.toString() + '" and "' + right.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorInvalidAnnotation = function(range, annotation, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot use the annotation "' + annotation + '" on "' + name + '"'));
+    this.append(this.newError(range, 'Cannot use the annotation "' + annotation + '" on "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticWarningDuplicateAnnotation = function(range, annotation, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Duplicate annotation "' + annotation + '" on "' + name + '"'));
+    this.append(this.newWarning(range, 'Duplicate annotation "' + annotation + '" on "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticWarningRedundantAnnotation = function(range, annotation, name, parent) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Redundant annotation "' + annotation + '" on "' + name + '" is already inherited from type "' + parent + '"'));
+    this.append(this.newWarning(range, 'Redundant annotation "' + annotation + '" on "' + name + '" is already inherited from type "' + parent + '"'));
   };
 
   Skew.Log.prototype.semanticErrorBadForValue = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot iterate over type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Cannot iterate over type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticWarningEmptyRange = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'This range is empty'));
+    this.append(this.newWarning(range, 'This range is empty'));
   };
 
   Skew.Log.prototype.semanticErrorMissingDotContext = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot access "' + name + '" without type context'));
+    this.append(this.newError(range, 'Cannot access "' + name + '" without type context'));
   };
 
   Skew.Log.prototype.semanticErrorInitializerTypeInferenceFailed = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot infer a type for this literal'));
+    this.append(this.newError(range, 'Cannot infer a type for this literal'));
   };
 
   Skew.Log.prototype.semanticErrorInitializerRecursiveExpansion = function(range, newRange) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Attempting to resolve this literal led to recursive expansion').withNote(newRange, 'The constructor that was called recursively is here'));
+    this.append(this.newError(range, 'Attempting to resolve this literal led to recursive expansion').withNote(newRange, 'The constructor that was called recursively is here'));
   };
 
   Skew.Log.prototype.semanticErrorXMLCannotConstruct = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot construct type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Cannot construct type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorDuplicateOverload = function(range, name, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Duplicate overloaded function "' + name + '"').withNote(previous, 'The previous declaration is here'));
+    this.append(this.newError(range, 'Duplicate overloaded function "' + name + '"').withNote(previous, 'The previous declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorInvalidExtends = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot extend type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Cannot extend type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorInvalidImplements = function(range, type) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot implement type "' + type.toString() + '"'));
+    this.append(this.newError(range, 'Cannot implement type "' + type.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorDuplicateImplements = function(range, type, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Duplicate implemented type "' + type.toString() + '"').withNote(previous, 'The first occurrence is here'));
+    this.append(this.newError(range, 'Duplicate implemented type "' + type.toString() + '"').withNote(previous, 'The first occurrence is here'));
   };
 
   Skew.Log.prototype.semanticErrorBadInterfaceImplementation = function(range, classType, interfaceType, name, reason) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Type "' + classType.toString() + '" is missing an implementation of function "' + name + '" from interface "' + interfaceType.toString() + '"').withNote(reason, 'The function declaration is here'));
+    this.append(this.newError(range, 'Type "' + classType.toString() + '" is missing an implementation of function "' + name + '" from interface "' + interfaceType.toString() + '"').withNote(reason, 'The function declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorBadInterfaceImplementationReturnType = function(range, name, found, expected, interfaceType, reason) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, found != null && expected != null ? 'Function "' + name + '" has unexpected return type "' + found.toString() + '", expected return type "' + expected.toString() + '" ' + ('to match the function with the same name and argument types from interface "' + interfaceType.toString() + '"') : 'Expected the return type of function "' + name + '" to match the function with the same name and argument types from interface "' + interfaceType.toString() + '"').withNote(reason, 'The function declaration is here'));
+    this.append(this.newError(range, found != null && expected != null ? 'Function "' + name + '" has unexpected return type "' + found.toString() + '", expected return type "' + expected.toString() + '" ' + ('to match the function with the same name and argument types from interface "' + interfaceType.toString() + '"') : 'Expected the return type of function "' + name + '" to match the function with the same name and argument types from interface "' + interfaceType.toString() + '"').withNote(reason, 'The function declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorBadOverride = function(range, name, base, overridden) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" overrides another declaration with the same name in base type "' + base.toString() + '"').withNote(overridden, 'The overridden declaration is here'));
+    this.append(this.newError(range, '"' + name + '" overrides another declaration with the same name in base type "' + base.toString() + '"').withNote(overridden, 'The overridden declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorBadOverrideReturnType = function(range, name, base, overridden) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" overrides another function with the same name and argument types but a different return type in base type "' + base.toString() + '"').withNote(overridden, 'The overridden function is here'));
+    this.append(this.newError(range, '"' + name + '" overrides another function with the same name and argument types but a different return type in base type "' + base.toString() + '"').withNote(overridden, 'The overridden function is here'));
   };
 
   Skew.Log.prototype.semanticErrorModifierMissingOverride = function(range, name, overridden) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" overrides another symbol with the same name but is declared using "def" instead of "over"').withNote(overridden, 'The overridden declaration is here'));
+    this.append(this.newError(range, '"' + name + '" overrides another symbol with the same name but is declared using "def" instead of "over"').withNote(overridden, 'The overridden declaration is here'));
   };
 
   Skew.Log.prototype.semanticErrorModifierUnusedOverride = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, '"' + name + '" is declared using "over" instead of "def" but does not override anything'));
+    this.append(this.newError(range, '"' + name + '" is declared using "over" instead of "def" but does not override anything'));
   };
 
   Skew.Log.prototype.semanticErrorBadSuper = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot use "super" here'));
+    this.append(this.newError(range, 'Cannot use "super" here'));
   };
 
   Skew.Log.prototype.semanticErrorBadJump = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot use "' + name + '" outside a loop'));
+    this.append(this.newError(range, 'Cannot use "' + name + '" outside a loop'));
   };
 
   Skew.Log.prototype.semanticErrorMustCallFunction = function(range, name, lower, upper) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, lower == upper ? 'The function "' + name + '" takes ' + Skew.PrettyPrint.plural1(lower, 'argument') + ' and must be called' : 'The function "' + name + '" takes between ' + lower.toString() + ' and ' + upper.toString() + ' arguments and must be called'));
+    this.append(this.newError(range, lower == upper ? 'The function "' + name + '" takes ' + Skew.PrettyPrint.plural1(lower, 'argument') + ' and must be called' : 'The function "' + name + '" takes between ' + lower.toString() + ' and ' + upper.toString() + ' arguments and must be called'));
   };
 
   Skew.Log.prototype.semanticErrorDuplicateEntryPoint = function(range, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Multiple entry points are declared').withNote(previous, 'The first entry point is here'));
+    this.append(this.newError(range, 'Multiple entry points are declared').withNote(previous, 'The first entry point is here'));
   };
 
   Skew.Log.prototype.semanticErrorInvalidEntryPointArguments = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Entry point "' + name + '" must take either no arguments or one argument of type "List<string>"'));
+    this.append(this.newError(range, 'Entry point "' + name + '" must take either no arguments or one argument of type "List<string>"'));
   };
 
   Skew.Log.prototype.semanticErrorInvalidEntryPointReturnType = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Entry point "' + name + '" must return either nothing or a value of type "int"'));
+    this.append(this.newError(range, 'Entry point "' + name + '" must return either nothing or a value of type "int"'));
   };
 
   Skew.Log.prototype.semanticErrorInvalidDefine2 = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Could not find a variable named "' + name + '" to override'));
+    this.append(this.newError(range, 'Could not find a variable named "' + name + '" to override'));
   };
 
   Skew.Log.prototype.semanticErrorExpectedConstant = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'This value must be a compile-time constant'));
+    this.append(this.newError(range, 'This value must be a compile-time constant'));
   };
 
   Skew.Log.prototype.semanticWarningUnreadLocalVariable = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Local variable "' + name + '" is never read'));
+    this.append(this.newWarning(range, 'Local variable "' + name + '" is never read'));
   };
 
   Skew.Log.prototype.semanticErrorAbstractNew = function(range, type, reason, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot construct abstract type "' + type.toString() + '"').withNote(reason, 'The type "' + type.toString() + '" is abstract due to member "' + name + '"'));
+    this.append(this.newError(range, 'Cannot construct abstract type "' + type.toString() + '"').withNote(reason, 'The type "' + type.toString() + '" is abstract due to member "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticErrorUnimplementedFunction = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Non-imported function "' + name + '" is missing an implementation (use the "@import" annotation if it\'s implemented externally)'));
+    this.append(this.newError(range, 'Non-imported function "' + name + '" is missing an implementation (use the "@import" annotation if it\'s implemented externally)'));
   };
 
   Skew.Log.prototype.semanticErrorDefaultCaseNotLast = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The default case in a switch statement must come last'));
+    this.append(this.newError(range, 'The default case in a switch statement must come last'));
   };
 
   Skew.Log.prototype.semanticErrorForLoopDifferentType = function(range, name, found, expected) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected loop variable "' + name + '" to be of type "' + expected.toString() + '" instead of type "' + found.toString() + '"'));
+    this.append(this.newError(range, 'Expected loop variable "' + name + '" to be of type "' + expected.toString() + '" instead of type "' + found.toString() + '"'));
   };
 
   Skew.Log.prototype.semanticErrorDuplicateCase = function(range, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Duplicate case value').withNote(previous, 'The first occurrence is here'));
+    this.append(this.newError(range, 'Duplicate case value').withNote(previous, 'The first occurrence is here'));
   };
 
   Skew.Log.prototype.semanticErrorMissingWrappedType = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Missing base type for wrapped type "' + name + '"'));
+    this.append(this.newError(range, 'Missing base type for wrapped type "' + name + '"'));
   };
 
   Skew.Log.prototype.semanticErrorDuplicateRename = function(range, name, optionA, optionB) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot rename "' + name + '" to both "' + optionA + '" and "' + optionB + '"'));
+    this.append(this.newError(range, 'Cannot rename "' + name + '" to both "' + optionA + '" and "' + optionB + '"'));
   };
 
   Skew.Log.prototype.semanticErrorMissingSuper = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Constructors for derived types must start with a call to "super"'));
+    this.append(this.newError(range, 'Constructors for derived types must start with a call to "super"'));
   };
 
   Skew.Log.prototype.semanticErrorTooManyFlags = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'The type "' + name + '" cannot have more than 32 flags'));
+    this.append(this.newError(range, 'The type "' + name + '" cannot have more than 32 flags'));
   };
 
   Skew.Log.prototype.commandLineErrorExpectedDefineValue = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use "--define:' + name + '=___" to provide a value'));
+    this.append(this.newError(range, 'Use "--define:' + name + '=___" to provide a value'));
   };
 
   Skew.Log.prototype.commandLineErrorMissingOutput = function(range, first, second) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Specify the output location using either "' + first + '" or "' + second + '"'));
+    this.append(this.newError(range, 'Specify the output location using either "' + first + '" or "' + second + '"'));
   };
 
   Skew.Log.prototype.commandLineErrorDuplicateOutput = function(range, first, second) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Cannot specify both "' + first + '" and "' + second + '"'));
+    this.append(this.newError(range, 'Cannot specify both "' + first + '" and "' + second + '"'));
   };
 
   Skew.Log.prototype.commandLineErrorUnreadableFile = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Could not read from "' + name + '"'));
+    this.append(this.newError(range, 'Could not read from "' + name + '"'));
   };
 
   Skew.Log.prototype.commandLineErrorUnwritableFile = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Could not write to "' + name + '"'));
+    this.append(this.newError(range, 'Could not write to "' + name + '"'));
   };
 
   Skew.Log.prototype.commandLineErrorNoInputFiles = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Missing input files'));
+    this.append(this.newError(range, 'Missing input files'));
   };
 
   Skew.Log.prototype.commandLineErrorMissingTarget = function(range) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Specify the target format using "--target"'));
+    this.append(this.newError(range, 'Specify the target format using "--target"'));
   };
 
   Skew.Log.prototype.commandLineErrorInvalidEnum = function(range, name, found, expected) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Invalid ' + name + ' "' + found + '", must be either ' + Skew.PrettyPrint.joinQuoted(expected, 'or')));
+    this.append(this.newError(range, 'Invalid ' + name + ' "' + found + '", must be either ' + Skew.PrettyPrint.joinQuoted(expected, 'or')));
   };
 
   Skew.Log.prototype.commandLineWarningDuplicateFlagValue = function(range, name, previous) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, 'Multiple values are specified for "' + name + '", using the later value').withNote(previous, 'Ignoring the previous value'));
+    this.append(this.newWarning(range, 'Multiple values are specified for "' + name + '", using the later value').withNote(previous, 'Ignoring the previous value'));
   };
 
   Skew.Log.prototype.commandLineErrorBadFlag = function(range, name) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Unknown command line flag "' + name + '"'));
+    this.append(this.newError(range, 'Unknown command line flag "' + name + '"'));
   };
 
   Skew.Log.prototype.commandLineErrorMissingValue = function(range, text) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Use "' + text + '" to provide a value'));
+    this.append(this.newError(range, 'Use "' + text + '" to provide a value'));
   };
 
   Skew.Log.prototype.commandLineErrorExpectedToken = function(range, expected, found, text) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected "' + expected + '" but found "' + found + '" in "' + text + '"'));
+    this.append(this.newError(range, 'Expected "' + expected + '" but found "' + found + '" in "' + text + '"'));
   };
 
   Skew.Log.prototype.commandLineErrorNonBooleanValue = function(range, value, text) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected "true" or "false" but found "' + value + '" in "' + text + '"'));
+    this.append(this.newError(range, 'Expected "true" or "false" but found "' + value + '" in "' + text + '"'));
   };
 
   Skew.Log.prototype.commandLineErrorNonIntegerValue = function(range, value, text) {
-    this.append(new Skew.Diagnostic(Skew.DiagnosticKind.ERROR, range, 'Expected integer constant but found "' + value + '" in "' + text + '"'));
+    this.append(this.newError(range, 'Expected integer constant but found "' + value + '" in "' + text + '"'));
   };
 
   Skew.Comment = function(range, lines, hasGapBelow, isTrailing) {
@@ -17863,7 +17896,7 @@
             var last = value.lastChild();
 
             if (last.kind == Skew.NodeKind.CONSTANT && last.content.kind() == Skew.ContentKind.STRING) {
-              this._log.append(new Skew.Diagnostic(Skew.DiagnosticKind.WARNING, range, Skew.in_Content.asString(last.content)));
+              this._log.append(this._log.newWarning(range, Skew.in_Content.asString(last.content)));
               return;
             }
           }

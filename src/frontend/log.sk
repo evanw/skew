@@ -43,6 +43,7 @@ namespace Skew {
     const kind DiagnosticKind
     const range Range
     const text string
+    const wasWarning bool
     var noteRange Range = null
     var noteText = ""
     var fixes List<Fix> = null
@@ -71,21 +72,15 @@ namespace Skew {
       var formatted = range.format(0)
       return "\(range.locationString): \(kind): \(text)\n\(formatted.line)\n\(formatted.range)\n"
     }
-
-    def error(range Range, text string) Diagnostic {
-      return new(.ERROR, range, text)
-    }
-
-    def warning(range Range, text string) Diagnostic {
-      return new(.WARNING, range, text)
-    }
   }
 
   class Log {
     var diagnostics List<Diagnostic> = []
     var appendCallback fn(Diagnostic) = null
+    var warningsAreErrors = false
     var _warningCount = 0
     var _errorCount = 0
+    var _wasWarningCount = 0
 
     def isEmpty bool {
       return diagnostics.isEmpty
@@ -105,6 +100,18 @@ namespace Skew {
 
     def errorCount int {
       return _errorCount
+    }
+
+    def wasWarningCount int {
+      return _wasWarningCount
+    }
+
+    def newError(range Range, text string) Diagnostic {
+      return Diagnostic.new(.ERROR, range, text, false)
+    }
+
+    def newWarning(range Range, text string) Diagnostic {
+      return Diagnostic.new(warningsAreErrors ? .ERROR : .WARNING, range, text, warningsAreErrors)
     }
 
     def toString string {
@@ -149,6 +156,9 @@ namespace Skew {
       } else {
         _warningCount++
       }
+      if diagnostic.wasWarning {
+        _wasWarningCount++
+      }
       if appendCallback != null {
         appendCallback(diagnostic)
       }
@@ -158,11 +168,11 @@ namespace Skew {
   # Syntax warnings can be thought of as linting
   class Log {
     def syntaxWarningIgnoredCommentInParser(range Range) {
-      append(Diagnostic.warning(range, "This comment was ignored by the parser"))
+      append(newWarning(range, "This comment was ignored by the parser"))
     }
 
     def syntaxWarningIgnoredCommentInEmitter(range Range) {
-      append(Diagnostic.warning(range, "This comment was ignored by the emitter"))
+      append(newWarning(range, "This comment was ignored by the emitter"))
     }
 
     def syntaxWarningOctal(range Range) {
@@ -170,7 +180,7 @@ namespace Skew {
       while text.startsWith("0") {
         text = text.slice(1)
       }
-      append(Diagnostic.warning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)")
+      append(newWarning(range, "Number interpreted as decimal (use the prefix \"0o\" for octal numbers)")
         .withFix(.OCTAL_REMOVE_ZEROS, range, "Remove the leading zeros to avoid confusion", text)
         .withFix(.OCTAL_ADD_PREFIX, range, "Add the prefix \"0o\" to interpret the number as octal", "0o" + text))
     }
@@ -179,96 +189,96 @@ namespace Skew {
       var leftSpace = range.rangeIncludingLeftWhitespace.start == range.start ? " " : ""
       var rightSpace = range.rangeIncludingRightWhitespace.end == range.end ? " " : ""
       var text = range.toString
-      append(Diagnostic
-        .warning(range, "Unnecessary parentheses")
+      append(
+        newWarning(range, "Unnecessary parentheses")
         .withFix(.UNNECESSARY_PARENTHESES, range, "Remove parentheses", leftSpace + text.slice(1, text.count - 1) + rightSpace))
     }
 
     def syntaxWarningExtraComma(range Range) {
-      append(Diagnostic
-        .warning(range, "Unnecessary comma")
+      append(
+        newWarning(range, "Unnecessary comma")
         .withFix(.EXTRA_COMMA, range, "Remove comma", ""))
     }
   }
 
   class Log {
     def syntaxErrorInvalidEscapeSequence(range Range) {
-      append(Diagnostic.error(range, "Invalid escape sequence"))
+      append(newError(range, "Invalid escape sequence"))
     }
 
     def syntaxErrorIntegerLiteralTooLarge(range Range) {
-      append(Diagnostic.error(range, "Integer literal is too big to fit in 32 bits"))
+      append(newError(range, "Integer literal is too big to fit in 32 bits"))
     }
 
     def syntaxErrorInvalidCharacter(range Range) {
-      append(Diagnostic
-        .error(range, "Use double quotes for strings (single quotes are for character literals)")
+      append(
+        newError(range, "Use double quotes for strings (single quotes are for character literals)")
         .withFix(.SINGLE_QUOTES, range, "Replace single quotes with double quotes", replaceSingleQuotesWithDoubleQuotes(range.toString)))
     }
 
     def syntaxErrorExtraData(range Range, text string) {
-      append(Diagnostic.error(range, "Syntax error \"\(text == "\"" ? "\\\"": text)\""))
+      append(newError(range, "Syntax error \"\(text == "\"" ? "\\\"": text)\""))
     }
 
     def syntaxErrorExtraColonBeforeType(range Range) {
-      append(Diagnostic
-        .error(range, "Do not use a colon before a type expression")
+      append(
+        newError(range, "Do not use a colon before a type expression")
         .withFix(.EXTRA_COLON, range, "Remove the colon", ""))
     }
 
     def syntaxErrorNewOperator(range Range, correction string) {
-      append(Diagnostic
-        .error(range, "There is no \"new\" operator, use \"\(correction)\" instead")
+      append(
+        newError(range, "There is no \"new\" operator, use \"\(correction)\" instead")
         .withFix(.NEW_OPERATOR, range, "Replace with \"\(correction)\"", correction))
     }
 
     def syntaxErrorExtendsKeyword(range Range) {
-      append(Diagnostic
-        .error(range, "Use \":\" instead of \"extends\" to indicate a base class")
+      append(
+        newError(range, "Use \":\" instead of \"extends\" to indicate a base class")
         .withFix(.EXTENDS_IMPLEMENTS, range, "Replace \"extends\" with \":\"", ":"))
     }
 
     def syntaxErrorImplementsKeyword(range Range) {
-      append(Diagnostic
-        .error(range, "Use \"::\" instead of \"implements\" to indicate implemented interfaces")
+      append(
+        newError(range, "Use \"::\" instead of \"implements\" to indicate implemented interfaces")
         .withFix(.EXTENDS_IMPLEMENTS, range, "Replace \"implements\" with \"::\"", "::"))
     }
 
     def syntaxErrorMissingVar(range Range) {
-      append(Diagnostic
-        .error(range, "Use \"var\" before variable declarations")
+      append(
+        newError(range, "Use \"var\" before variable declarations")
         .withFix(.MISSING_VAR, range, "Insert \"var\"", "var \(range)"))
     }
 
     def syntaxErrorMissingDef(range Range) {
-      append(Diagnostic
-        .error(range, "Use \"def\" before function declarations")
+      append(
+        newError(range, "Use \"def\" before function declarations")
         .withFix(.MISSING_DEF, range, "Insert \"def\"", "def \(range)"))
     }
 
     def syntaxErrorStaticKeyword(range Range, parentKind SymbolKind, parentName string) {
-      append(Diagnostic
-        .error(range, parentKind == .OBJECT_GLOBAL || parentKind == .OBJECT_NAMESPACE
+      append(
+        newError(range, parentKind == .OBJECT_GLOBAL || parentKind == .OBJECT_NAMESPACE
           ? "There is no \"static\" keyword"
           : "There is no \"static\" keyword (declare this symbol in a namespace called \"\(parentName)\" instead)"))
     }
 
     def syntaxErrorPublicKeyword(range Range) {
-      append(Diagnostic.error(range, "There is no \"public\" keyword"))
+      append(newError(range, "There is no \"public\" keyword"))
     }
 
     def syntaxErrorPrivateOrProtected(range Range) {
-      append(Diagnostic.error(range, "There is no \"\(range)\" keyword (to give something protected access, use a name starting with \"_\" instead)"))
+      append(newError(range, "There is no \"\(range)\" keyword (to give something protected access, use a name starting with \"_\" instead)"))
     }
 
     def syntaxErrorExpectedCommaBetweenCases(range Range) {
-      append(Diagnostic
-        .error(range, "Use a comma between multiple values in a case statement (example: \"case 1, 2, 3 { ... }\")")
+      append(
+        newError(range, "Use a comma between multiple values in a case statement (example: \"case 1, 2, 3 { ... }\")")
         .withFix(.CASE_COMMA, range, "Replace this with a comma", ","))
     }
 
     def syntaxErrorColonAfterCaseOrDefault(range Range, breakRange Range) {
-      var diagnostic = Diagnostic.error(range, "Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"")
+      var diagnostic = newError(range, "Surround the body of case and default statements with \"{\" and \"}\" instead of \":\" and \"break\"")
 
       if breakRange != null {
         assert(range.source == breakRange.source)
@@ -292,20 +302,20 @@ namespace Skew {
     }
 
     def syntaxErrorOperatorTypo(range Range, correction string) {
-      append(Diagnostic
-        .error(range, "Use the \"\(correction)\" operator instead")
+      append(
+        newError(range, "Use the \"\(correction)\" operator instead")
         .withFix(.OPERATOR_TYPO, range, "Replace with \"\(correction)\"", correction))
     }
 
     def syntaxErrorExtraVarInForLoop(range Range) {
-      append(Diagnostic
-        .error(range, "The \"var\" keyword is unnecessary here since for loops automatically declare their variables")
+      append(
+        newError(range, "The \"var\" keyword is unnecessary here since for loops automatically declare their variables")
         .withFix(.FOR_LOOP_VAR, range?.rangeIncludingRightWhitespace, "Remove \"var\"", ""))
     }
 
     def syntaxErrorWrongListSyntax(range Range, correction string) {
-      append(Diagnostic
-        .error(range, "The array type is \"List<T>\"")
+      append(
+        newError(range, "The array type is \"List<T>\"")
         .withFix(.ARRAY_SYNTAX, range, "Replace with \"\(correction)\"", correction))
     }
 
@@ -329,17 +339,17 @@ namespace Skew {
         }
       }
 
-      append(Diagnostic
-        .error(range, "Comments start with \"#\" instead of \"//\"")
+      append(
+        newError(range, "Comments start with \"#\" instead of \"//\"")
         .withFix(.SLASH_COMMENT, range, "Replace \"//\" with \"#\"", replacement))
     }
 
     def syntaxErrorUnexpectedToken(token Token) {
-      append(Diagnostic.error(token.range, "Unexpected \(token.kind)"))
+      append(newError(token.range, "Unexpected \(token.kind)"))
     }
 
     def syntaxErrorExpectedToken(range Range, found TokenKind, expected TokenKind) {
-      var diagnostic = Diagnostic.error(range, "Expected \(expected) but found \(found)")
+      var diagnostic = newError(range, "Expected \(expected) but found \(found)")
       if found == .SEMICOLON && expected == .NEWLINE {
         diagnostic.withFix(.EXTRA_SEMICOLON, range, "Remove \";\"", "")
       }
@@ -347,33 +357,33 @@ namespace Skew {
     }
 
     def syntaxErrorEmptyFunctionParentheses(range Range) {
-      append(Diagnostic
-        .error(range, "Functions without arguments do not use parentheses")
+      append(
+        newError(range, "Functions without arguments do not use parentheses")
         .withFix(.EXTRA_DEF_PARENTHESES, range, "Remove parentheses", ""))
     }
 
     def syntaxErrorBadDeclarationInsideType(range Range) {
-      append(Diagnostic.error(range, "Cannot use this declaration here"))
+      append(newError(range, "Cannot use this declaration here"))
     }
 
     def syntaxErrorBadOperatorCustomization(range Range, kind TokenKind, why string) {
-      append(Diagnostic.error(range, "The \(kind) operator is not customizable because \(why)"))
+      append(newError(range, "The \(kind) operator is not customizable because \(why)"))
     }
 
     def syntaxErrorVariableDeclarationNeedsVar(range Range, name Range) {
-      append(Diagnostic
-        .error(range, "Declare variables using \"var\" and put the type after the variable name")
+      append(
+        newError(range, "Declare variables using \"var\" and put the type after the variable name")
         .withFix(.NEED_VAR, Range.span(range, name), "Declare \"\(name)\" correctly", "var \(name) \(range)"))
     }
 
     def syntaxErrorXMLClosingTagMismatch(range Range, found string, expected string, openingRange Range) {
-      append(Diagnostic
-        .error(range, "Expected \"\(expected)\" but found \"\(found)\" in XML literal")
+      append(
+        newError(range, "Expected \"\(expected)\" but found \"\(found)\" in XML literal")
         .withNote(openingRange, "Attempted to match opening tag here"))
     }
 
     def syntaxErrorOptionalArgument(range Range) {
-      append(Diagnostic.error(range, "Optional arguments aren't supported yet"))
+      append(newError(range, "Optional arguments aren't supported yet"))
     }
   }
 
@@ -396,63 +406,63 @@ namespace Skew {
 
   class Log {
     def semanticWarningInliningFailed(range Range, name string) {
-      append(Diagnostic.warning(range, "Cannot inline function \"\(name)\""))
+      append(newWarning(range, "Cannot inline function \"\(name)\""))
     }
 
     def semanticWarningIdenticalOperands(range Range, operator string) {
-      append(Diagnostic.warning(range, "Both sides of \"\(operator)\" are identical, is this a bug?"))
+      append(newWarning(range, "Both sides of \"\(operator)\" are identical, is this a bug?"))
     }
 
     def semanticWarningSuspiciousAssignmentLocation(range Range) {
-      append(Diagnostic.warning(range, "Use of \"=\" here looks like a bug, did you mean to use \"==\"?"))
+      append(newWarning(range, "Use of \"=\" here looks like a bug, did you mean to use \"==\"?"))
     }
 
     def semanticWarningShiftByZero(range Range) {
-      append(Diagnostic.warning(range, "Shifting an integer by zero doesn't do anything, is this a bug?"))
+      append(newWarning(range, "Shifting an integer by zero doesn't do anything, is this a bug?"))
     }
 
     def semanticWarningUnusedExpression(range Range) {
-      append(Diagnostic.warning(range, "Unused expression"))
+      append(newWarning(range, "Unused expression"))
     }
 
     def semanticErrorXMLMissingAppend(range Range, type Type) {
-      append(Diagnostic.error(range, "Implement a function called \"<>...</>\" on type \"\(type)\" to add support for child elements"))
+      append(newError(range, "Implement a function called \"<>...</>\" on type \"\(type)\" to add support for child elements"))
     }
 
     def semanticErrorComparisonOperatorNotInt(range Range) {
-      append(Diagnostic.error(range, "The comparison operator must have a return type of \"int\""))
+      append(newError(range, "The comparison operator must have a return type of \"int\""))
     }
 
     def semanticErrorDuplicateSymbol(range Range, name string, previous Range) {
-      append(Diagnostic
-        .error(range, "\"\(name)\" is already declared")
+      append(
+        newError(range, "\"\(name)\" is already declared")
         .withNote(previous, "The previous declaration is here"))
     }
 
     def semanticErrorShadowedSymbol(range Range, name string, previous Range) {
-      append(Diagnostic
-        .error(range, "\"\(name)\" shadows a previous declaration")
+      append(
+        newError(range, "\"\(name)\" shadows a previous declaration")
         .withNote(previous, "The previous declaration is here"))
     }
 
     def semanticErrorDuplicateTypeParameters(range Range, name string, previous Range) {
-      append(Diagnostic
-        .error(range, "\"\(name)\" already has type parameters")
+      append(
+        newError(range, "\"\(name)\" already has type parameters")
         .withNote(previous, "Type parameters were previously declared here"))
     }
 
     def semanticErrorDuplicateBaseType(range Range, name string, previous Range) {
-      append(Diagnostic
-        .error(range, "\"\(name)\" already has a base type")
+      append(
+        newError(range, "\"\(name)\" already has a base type")
         .withNote(previous, "The previous base type is here"))
     }
 
     def semanticErrorCyclicDeclaration(range Range, name string) {
-      append(Diagnostic.error(range, "Cyclic declaration of \"\(name)\""))
+      append(newError(range, "Cyclic declaration of \"\(name)\""))
     }
 
     def semanticErrorUndeclaredSymbol(range Range, name string, correction string, correctionRange Range) {
-      var diagnostic = Diagnostic.error(range, "\"\(name)\" is not declared" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
+      var diagnostic = newError(range, "\"\(name)\" is not declared" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
       if correction != null && correctionRange != null {
         diagnostic
           .withNote(correctionRange, "\"\(correction)\" is defined here")
@@ -462,13 +472,13 @@ namespace Skew {
     }
 
     def semanticErrorUndeclaredSelfSymbol(range Range, name string) {
-      append(Diagnostic
-        .error(range, "\"\(name)\" is not declared (use \"self\" to refer to the object instance)")
+      append(
+        newError(range, "\"\(name)\" is not declared (use \"self\" to refer to the object instance)")
         .withFix(.SELF_VS_THIS, range, "Replace \"\(name)\" with \"self\"", "self"))
     }
 
     def semanticErrorUnknownMemberSymbol(range Range, name string, type Type, correction string, correctionRange Range) {
-      var diagnostic = Diagnostic.error(range, "\"\(name)\" is not declared on type \"\(type)\"" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
+      var diagnostic = newError(range, "\"\(name)\" is not declared on type \"\(type)\"" + (correction != null ? ", did you mean \"\(correction)\"?" : ""))
       if correction != null && correctionRange != null {
         diagnostic
           .withNote(correctionRange, "\"\(correction)\" is defined here")
@@ -478,45 +488,45 @@ namespace Skew {
     }
 
     def semanticErrorVarMissingType(range Range, name string) {
-      append(Diagnostic.error(range, "Unable to determine the type of \"\(name)\""))
+      append(newError(range, "Unable to determine the type of \"\(name)\""))
     }
 
     def semanticErrorVarMissingValue(range Range, name string) {
-      append(Diagnostic.error(range, "The implicitly typed variable \"\(name)\" must be initialized"))
+      append(newError(range, "The implicitly typed variable \"\(name)\" must be initialized"))
     }
 
     def semanticErrorConstMissingValue(range Range, name string) {
-      append(Diagnostic.error(range, "The constant \"\(name)\" must be initialized"))
+      append(newError(range, "The constant \"\(name)\" must be initialized"))
     }
 
     def semanticErrorInvalidCall(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot call value of type \"\(type)\""))
+      append(newError(range, "Cannot call value of type \"\(type)\""))
     }
 
     def semanticErrorCannotParameterize(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot parameterize \"\(type)\"" + (
+      append(newError(range, "Cannot parameterize \"\(type)\"" + (
         type.isParameterized ? " because it is already parameterized" : " because it has no type parameters")))
     }
 
     def semanticErrorParameterCount(range Range, expected int, found int) {
-      append(Diagnostic.error(range, _expectedCountText("type parameter", expected, found)))
+      append(newError(range, _expectedCountText("type parameter", expected, found)))
     }
 
     def semanticErrorArgumentCount(range Range, expected int, found int, name string, function Range) {
-      append(Diagnostic
-        .error(range, _expectedCountText("argument", expected, found) + (name != null ? " when calling \"\(name)\"" : ""))
+      append(
+        newError(range, _expectedCountText("argument", expected, found) + (name != null ? " when calling \"\(name)\"" : ""))
         .withNote(function, "The function declaration is here"))
     }
 
     def semanticErrorGetterRequiresWrap(range Range, name string, function Range) {
-      append(Diagnostic
-        .error(range, "Wrap calls to the function \"\(name)\" in parentheses to call the returned lambda")
+      append(
+        newError(range, "Wrap calls to the function \"\(name)\" in parentheses to call the returned lambda")
         .withNote(function, "The function declaration is here"))
     }
 
     def semanticErrorGetterCalledTwice(range Range, name string, function Range) {
-      var diagnostic = Diagnostic
-        .error(range, "Cannot call the value returned from the function \"\(name)\" (this function was called automatically because it takes no arguments)")
+      var diagnostic =
+        newError(range, "Cannot call the value returned from the function \"\(name)\" (this function was called automatically because it takes no arguments)")
         .withNote(function, "The function declaration is here")
       if range.toString == "()" {
         diagnostic.withFix(.EXTRA_CALL_PARENTHESES, range, "Remove the unnecessary \"()\"", "")
@@ -525,81 +535,81 @@ namespace Skew {
     }
 
     def semanticErrorUseOfVoidFunction(range Range, name string, function Range) {
-      append(Diagnostic
-        .error(range, "The function \"\(name)\" does not return a value")
+      append(
+        newError(range, "The function \"\(name)\" does not return a value")
         .withNote(function, "The function declaration is here"))
     }
 
     def semanticErrorUseOfVoidLambda(range Range) {
-      append(Diagnostic.error(range, "This call does not return a value"))
+      append(newError(range, "This call does not return a value"))
     }
 
     def semanticErrorBadImplicitVariableType(range Range, type Type) {
-      append(Diagnostic.error(range, "Implicitly typed variables cannot be of type \"\(type)\""))
+      append(newError(range, "Implicitly typed variables cannot be of type \"\(type)\""))
     }
 
     def semanticErrorNoDefaultValue(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot construct a default value of type \"\(type)\""))
+      append(newError(range, "Cannot construct a default value of type \"\(type)\""))
     }
 
     def semanticErrorMemberUnexpectedGlobal(range Range, name string) {
-      append(Diagnostic.error(range, "Cannot access global member \"\(name)\" from an instance context"))
+      append(newError(range, "Cannot access global member \"\(name)\" from an instance context"))
     }
 
     def semanticErrorMemberUnexpectedInstance(range Range, name string) {
-      append(Diagnostic.error(range, "Cannot access instance member \"\(name)\" from a global context"))
+      append(newError(range, "Cannot access instance member \"\(name)\" from a global context"))
     }
 
     def semanticErrorMemberUnexpectedTypeParameter(range Range, name string) {
-      append(Diagnostic.error(range, "Cannot access type parameter \"\(name)\" here"))
+      append(newError(range, "Cannot access type parameter \"\(name)\" here"))
     }
 
     def semanticErrorConstructorReturnType(range Range) {
-      append(Diagnostic
-        .error(range, "Constructors cannot have a return type")
+      append(
+        newError(range, "Constructors cannot have a return type")
         .withFix(.NEW_RETURN_TYPE, range?.rangeIncludingLeftWhitespace, "Remove the return type", ""))
     }
 
     def semanticErrorNoMatchingOverload(range Range, name string, count int, types List<Type>) {
-      append(Diagnostic.error(range, "No overload of \"\(name)\" was found that takes \(PrettyPrint.plural(count, "argument"))\(_formatArgumentTypes(types))"))
+      append(newError(range, "No overload of \"\(name)\" was found that takes \(PrettyPrint.plural(count, "argument"))\(_formatArgumentTypes(types))"))
     }
 
     def semanticErrorAmbiguousOverload(range Range, name string, count int, types List<Type>) {
-      append(Diagnostic.error(range, "Multiple matching overloads of \"\(name)\" were found that can take \(PrettyPrint.plural(count, "argument"))\(_formatArgumentTypes(types))"))
+      append(newError(range, "Multiple matching overloads of \"\(name)\" were found that can take \(PrettyPrint.plural(count, "argument"))\(_formatArgumentTypes(types))"))
     }
 
     def semanticErrorUnexpectedExpression(range Range, type Type) {
-      append(Diagnostic.error(range, "Unexpected expression of type \"\(type)\""))
+      append(newError(range, "Unexpected expression of type \"\(type)\""))
     }
 
     def semanticErrorUnexpectedType(range Range, type Type) {
-      append(Diagnostic.error(range, "Unexpected type \"\(type)\""))
+      append(newError(range, "Unexpected type \"\(type)\""))
     }
 
     def semanticErrorIncompatibleTypes(range Range, from Type, to Type, isCastAllowed bool) {
-      append(Diagnostic.error(range, "Cannot convert from type \"\(from)\" to type \"\(to)\"\(isCastAllowed ? " without a cast" : "")"))
+      append(newError(range, "Cannot convert from type \"\(from)\" to type \"\(to)\"\(isCastAllowed ? " without a cast" : "")"))
     }
 
     def semanticErrorInvalidDefine(range Range, value string, type Type, name string) {
-      append(Diagnostic.error(range, "Cannot convert \"\(value)\" to type \"\(type)\" for variable \"\(name)\""))
+      append(newError(range, "Cannot convert \"\(value)\" to type \"\(type)\" for variable \"\(name)\""))
     }
 
     def semanticWarningExtraCast(range Range, from Type, to Type) {
-      append(Diagnostic
-        .warning(range, "Unnecessary cast from type \"\(from)\" to type \"\(to)\"")
+      append(
+        newWarning(range, "Unnecessary cast from type \"\(from)\" to type \"\(to)\"")
         .withFix(.EXTRA_CAST, range?.rangeIncludingLeftWhitespace, "Remove the cast", ""))
     }
 
     def semanticWarningExtraTypeCheck(range Range, from Type, to Type) {
-      append(Diagnostic.warning(range, "Unnecessary type check, type \"\(from)\" is always type \"\(to)\""))
+      append(newWarning(range, "Unnecessary type check, type \"\(from)\" is always type \"\(to)\""))
     }
 
     def semanticWarningBadTypeCheck(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot check against interface type \"\(type)\""))
+      append(newError(range, "Cannot check against interface type \"\(type)\""))
     }
 
     def semanticErrorWrongArgumentCount(range Range, name string, count int) {
-      append(Diagnostic.error(range, "Expected \"\(name)\" to take \(PrettyPrint.plural(count, "argument"))"))
+      append(newError(range, "Expected \"\(name)\" to take \(PrettyPrint.plural(count, "argument"))"))
     }
 
     def semanticErrorWrongArgumentCountRange(range Range, name string, values List<int>) {
@@ -638,131 +648,131 @@ namespace Skew {
           text = "Expected \"\(name)\" to take either \(PrettyPrint.join(counts, "or")) arguments"
         }
 
-        append(Diagnostic.error(range, text))
+        append(newError(range, text))
       }
     }
 
     def semanticErrorExpectedList(range Range, name string, type Type) {
-      append(Diagnostic.error(range, "Expected argument \"\(name)\" to be of type \"List<T>\" instead of type \"\(type)\""))
+      append(newError(range, "Expected argument \"\(name)\" to be of type \"List<T>\" instead of type \"\(type)\""))
     }
 
     def semanticErrorUnexpectedReturnValue(range Range) {
-      append(Diagnostic.error(range, "Cannot return a value inside a function without a return type"))
+      append(newError(range, "Cannot return a value inside a function without a return type"))
     }
 
     def semanticErrorBadReturnType(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot create a function with a return type of \"\(type)\""))
+      append(newError(range, "Cannot create a function with a return type of \"\(type)\""))
     }
 
     def semanticErrorVoidReturnType(range Range) {
-      append(Diagnostic
-        .error(range, "There is no explicit \"void\" return type (to indicate that there's nothing to return, just don't put a return type)")
+      append(
+        newError(range, "There is no explicit \"void\" return type (to indicate that there's nothing to return, just don't put a return type)")
         .withFix(.VOID_RETURN, range?.rangeIncludingLeftWhitespace, "Remove \"void\"", ""))
     }
 
     def semanticErrorExpectedReturnValue(range Range, type Type) {
-      append(Diagnostic.error(range, "Must return a value of type \"\(type)\""))
+      append(newError(range, "Must return a value of type \"\(type)\""))
     }
 
     def semanticErrorMissingReturn(range Range, name string, type Type) {
-      append(Diagnostic.error(range, "All control paths for \"\(name)\" must return a value of type \"\(type)\""))
+      append(newError(range, "All control paths for \"\(name)\" must return a value of type \"\(type)\""))
     }
 
     def semanticErrorBadStorage(range Range) {
-      append(Diagnostic.error(range, "Cannot store to this location"))
+      append(newError(range, "Cannot store to this location"))
     }
 
     def semanticErrorStorageToConstSymbol(range Range, name string) {
-      append(Diagnostic.error(range, "Cannot store to constant symbol \"\(name)\""))
+      append(newError(range, "Cannot store to constant symbol \"\(name)\""))
     }
 
     def semanticErrorAccessViolation(range Range, name string) {
-      append(Diagnostic.error(range, "Cannot access protected symbol \"\(name)\" here"))
+      append(newError(range, "Cannot access protected symbol \"\(name)\" here"))
     }
 
     def semanticWarningDeprecatedUsage(range Range, name string) {
-      append(Diagnostic.warning(range, "Use of deprecated symbol \"\(name)\""))
+      append(newWarning(range, "Use of deprecated symbol \"\(name)\""))
     }
 
     def semanticErrorUnparameterizedType(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot use unparameterized type \"\(type)\" here"))
+      append(newError(range, "Cannot use unparameterized type \"\(type)\" here"))
     }
 
     def semanticErrorParameterizedType(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot use parameterized type \"\(type)\" here"))
+      append(newError(range, "Cannot use parameterized type \"\(type)\" here"))
     }
 
     def semanticErrorNoCommonType(range Range, left Type, right Type) {
-      append(Diagnostic.error(range, "No common type for \"\(left)\" and \"\(right)\""))
+      append(newError(range, "No common type for \"\(left)\" and \"\(right)\""))
     }
 
     def semanticErrorInvalidAnnotation(range Range, annotation string, name string) {
-      append(Diagnostic.error(range, "Cannot use the annotation \"\(annotation)\" on \"\(name)\""))
+      append(newError(range, "Cannot use the annotation \"\(annotation)\" on \"\(name)\""))
     }
 
     def semanticWarningDuplicateAnnotation(range Range, annotation string, name string) {
-      append(Diagnostic.warning(range, "Duplicate annotation \"\(annotation)\" on \"\(name)\""))
+      append(newWarning(range, "Duplicate annotation \"\(annotation)\" on \"\(name)\""))
     }
 
     def semanticWarningRedundantAnnotation(range Range, annotation string, name string, parent string) {
-      append(Diagnostic.warning(range, "Redundant annotation \"\(annotation)\" on \"\(name)\" is already inherited from type \"\(parent)\""))
+      append(newWarning(range, "Redundant annotation \"\(annotation)\" on \"\(name)\" is already inherited from type \"\(parent)\""))
     }
 
     def semanticErrorBadForValue(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot iterate over type \"\(type)\""))
+      append(newError(range, "Cannot iterate over type \"\(type)\""))
     }
 
     def semanticWarningEmptyRange(range Range) {
-      append(Diagnostic.warning(range, "This range is empty"))
+      append(newWarning(range, "This range is empty"))
     }
 
     def semanticErrorMissingDotContext(range Range, name string) {
-      append(Diagnostic.error(range, "Cannot access \"\(name)\" without type context"))
+      append(newError(range, "Cannot access \"\(name)\" without type context"))
     }
 
     def semanticErrorInitializerTypeInferenceFailed(range Range) {
-      append(Diagnostic.error(range, "Cannot infer a type for this literal"))
+      append(newError(range, "Cannot infer a type for this literal"))
     }
 
     def semanticErrorInitializerRecursiveExpansion(range Range, newRange Range) {
-      append(Diagnostic
-        .error(range, "Attempting to resolve this literal led to recursive expansion")
+      append(
+        newError(range, "Attempting to resolve this literal led to recursive expansion")
         .withNote(newRange, "The constructor that was called recursively is here"))
     }
 
     def semanticErrorXMLCannotConstruct(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot construct type \"\(type)\""))
+      append(newError(range, "Cannot construct type \"\(type)\""))
     }
 
     def semanticErrorDuplicateOverload(range Range, name string, previous Range) {
-      append(Diagnostic
-        .error(range, "Duplicate overloaded function \"\(name)\"")
+      append(
+        newError(range, "Duplicate overloaded function \"\(name)\"")
         .withNote(previous, "The previous declaration is here"))
     }
 
     def semanticErrorInvalidExtends(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot extend type \"\(type)\""))
+      append(newError(range, "Cannot extend type \"\(type)\""))
     }
 
     def semanticErrorInvalidImplements(range Range, type Type) {
-      append(Diagnostic.error(range, "Cannot implement type \"\(type)\""))
+      append(newError(range, "Cannot implement type \"\(type)\""))
     }
 
     def semanticErrorDuplicateImplements(range Range, type Type, previous Range) {
-      append(Diagnostic
-        .error(range, "Duplicate implemented type \"\(type)\"")
+      append(
+        newError(range, "Duplicate implemented type \"\(type)\"")
         .withNote(previous, "The first occurrence is here"))
     }
 
     def semanticErrorBadInterfaceImplementation(range Range, classType Type, interfaceType Type, name string, reason Range) {
-      append(Diagnostic
-        .error(range, "Type \"\(classType)\" is missing an implementation of function \"\(name)\" from interface \"\(interfaceType)\"")
+      append(
+        newError(range, "Type \"\(classType)\" is missing an implementation of function \"\(name)\" from interface \"\(interfaceType)\"")
         .withNote(reason, "The function declaration is here"))
     }
 
     def semanticErrorBadInterfaceImplementationReturnType(range Range, name string, found Type, expected Type, interfaceType Type, reason Range) {
-      append(Diagnostic
-        .error(range, found != null && expected != null
+      append(
+        newError(range, found != null && expected != null
           ? "Function \"\(name)\" has unexpected return type \"\(found)\", expected return type \"\(expected)\" " +
             "to match the function with the same name and argument types from interface \"\(interfaceType)\""
           : "Expected the return type of function \"\(name)\" to match the function with the same name and argument types from interface \"\(interfaceType)\"")
@@ -770,105 +780,105 @@ namespace Skew {
     }
 
     def semanticErrorBadOverride(range Range, name string, base Type, overridden Range) {
-      append(Diagnostic
-        .error(range, "\"\(name)\" overrides another declaration with the same name in base type \"\(base)\"")
+      append(
+        newError(range, "\"\(name)\" overrides another declaration with the same name in base type \"\(base)\"")
         .withNote(overridden, "The overridden declaration is here"))
     }
 
     def semanticErrorBadOverrideReturnType(range Range, name string, base Type, overridden Range) {
-      append(Diagnostic
-        .error(range, "\"\(name)\" overrides another function with the same name and argument types but a different return type in base type \"\(base)\"")
+      append(
+        newError(range, "\"\(name)\" overrides another function with the same name and argument types but a different return type in base type \"\(base)\"")
         .withNote(overridden, "The overridden function is here"))
     }
 
     def semanticErrorModifierMissingOverride(range Range, name string, overridden Range) {
-      append(Diagnostic
-        .error(range, "\"\(name)\" overrides another symbol with the same name but is declared using \"def\" instead of \"over\"")
+      append(
+        newError(range, "\"\(name)\" overrides another symbol with the same name but is declared using \"def\" instead of \"over\"")
         .withNote(overridden, "The overridden declaration is here"))
     }
 
     def semanticErrorModifierUnusedOverride(range Range, name string) {
-      append(Diagnostic.error(range, "\"\(name)\" is declared using \"over\" instead of \"def\" but does not override anything"))
+      append(newError(range, "\"\(name)\" is declared using \"over\" instead of \"def\" but does not override anything"))
     }
 
     def semanticErrorBadSuper(range Range) {
-      append(Diagnostic.error(range, "Cannot use \"super\" here"))
+      append(newError(range, "Cannot use \"super\" here"))
     }
 
     def semanticErrorBadJump(range Range, name string) {
-      append(Diagnostic.error(range, "Cannot use \"\(name)\" outside a loop"))
+      append(newError(range, "Cannot use \"\(name)\" outside a loop"))
     }
 
     def semanticErrorMustCallFunction(range Range, name string, lower int, upper int) {
-      append(Diagnostic.error(range, lower == upper
+      append(newError(range, lower == upper
         ? "The function \"\(name)\" takes \(PrettyPrint.plural(lower, "argument")) and must be called"
         : "The function \"\(name)\" takes between \(lower) and \(upper) arguments and must be called"))
     }
 
     def semanticErrorDuplicateEntryPoint(range Range, previous Range) {
-      append(Diagnostic
-        .error(range, "Multiple entry points are declared")
+      append(
+        newError(range, "Multiple entry points are declared")
         .withNote(previous, "The first entry point is here"))
     }
 
     def semanticErrorInvalidEntryPointArguments(range Range, name string) {
-      append(Diagnostic.error(range, "Entry point \"\(name)\" must take either no arguments or one argument of type \"List<string>\""))
+      append(newError(range, "Entry point \"\(name)\" must take either no arguments or one argument of type \"List<string>\""))
     }
 
     def semanticErrorInvalidEntryPointReturnType(range Range, name string) {
-      append(Diagnostic.error(range, "Entry point \"\(name)\" must return either nothing or a value of type \"int\""))
+      append(newError(range, "Entry point \"\(name)\" must return either nothing or a value of type \"int\""))
     }
 
     def semanticErrorInvalidDefine(range Range, name string) {
-      append(Diagnostic.error(range, "Could not find a variable named \"\(name)\" to override"))
+      append(newError(range, "Could not find a variable named \"\(name)\" to override"))
     }
 
     def semanticErrorExpectedConstant(range Range) {
-      append(Diagnostic.error(range, "This value must be a compile-time constant"))
+      append(newError(range, "This value must be a compile-time constant"))
     }
 
     def semanticWarningUnreadLocalVariable(range Range, name string) {
-      append(Diagnostic.warning(range, "Local variable \"\(name)\" is never read"))
+      append(newWarning(range, "Local variable \"\(name)\" is never read"))
     }
 
     def semanticErrorAbstractNew(range Range, type Type, reason Range, name string) {
-      append(Diagnostic
-        .error(range, "Cannot construct abstract type \"\(type)\"")
+      append(
+        newError(range, "Cannot construct abstract type \"\(type)\"")
         .withNote(reason, "The type \"\(type)\" is abstract due to member \"\(name)\""))
     }
 
     def semanticErrorUnimplementedFunction(range Range, name string) {
-      append(Diagnostic.error(range, "Non-imported function \"\(name)\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)"))
+      append(newError(range, "Non-imported function \"\(name)\" is missing an implementation (use the \"@import\" annotation if it's implemented externally)"))
     }
 
     def semanticErrorDefaultCaseNotLast(range Range) {
-      append(Diagnostic.error(range, "The default case in a switch statement must come last"))
+      append(newError(range, "The default case in a switch statement must come last"))
     }
 
     def semanticErrorForLoopDifferentType(range Range, name string, found Type, expected Type) {
-      append(Diagnostic.error(range, "Expected loop variable \"\(name)\" to be of type \"\(expected)\" instead of type \"\(found)\""))
+      append(newError(range, "Expected loop variable \"\(name)\" to be of type \"\(expected)\" instead of type \"\(found)\""))
     }
 
     def semanticErrorDuplicateCase(range Range, previous Range) {
-      append(Diagnostic
-        .error(range, "Duplicate case value")
+      append(
+        newError(range, "Duplicate case value")
         .withNote(previous, "The first occurrence is here"))
     }
 
     def semanticErrorMissingWrappedType(range Range, name string) {
-      append(Diagnostic.error(range, "Missing base type for wrapped type \"\(name)\""))
+      append(newError(range, "Missing base type for wrapped type \"\(name)\""))
     }
 
     def semanticErrorDuplicateRename(range Range, name string, optionA string, optionB string) {
-      append(Diagnostic.error(range, "Cannot rename \"\(name)\" to both \"\(optionA)\" and \"\(optionB)\""))
+      append(newError(range, "Cannot rename \"\(name)\" to both \"\(optionA)\" and \"\(optionB)\""))
     }
 
     def semanticErrorMissingSuper(range Range) {
-      append(Diagnostic.error(range, "Constructors for derived types must start with a call to \"super\""))
+      append(newError(range, "Constructors for derived types must start with a call to \"super\""))
     }
 
     def semanticErrorTooManyFlags(range Range, name string) {
-      append(Diagnostic.error(range, "The type \"\(name)\" cannot have more than 32 flags"))
+      append(newError(range, "The type \"\(name)\" cannot have more than 32 flags"))
     }
   }
 }

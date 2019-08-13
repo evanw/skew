@@ -64,6 +64,11 @@ namespace Skew {
     var fixAll = parser.boolForOption(.FIX_ALL, false)
     var fixCount = 0
 
+    # Optionally have the log transform warnings into errors
+    if options != null {
+      log.warningsAreErrors = options.warningsAreErrors
+    }
+
     # Suppress logging during fixes
     if fixAll {
       log = Log.new
@@ -181,8 +186,13 @@ namespace Skew {
     }
     if hasWarnings || hasErrors {
       Terminal.write(summary + " generated")
-      printWithColor(.GRAY, diagnosticLimit == 0 || log.diagnostics.count <= diagnosticLimit ? "\n" :
-        " (only showing \(PrettyPrint.plural(diagnosticLimit, "message")), use \"--message-limit=0\" to see all)\n")
+      if log.wasWarningCount > 0 {
+        Terminal.write(" (warnings are being treated as errors due to \"--warnings-are-errors\")")
+      }
+      if diagnosticLimit > 0 && log.diagnostics.count > diagnosticLimit {
+        printWithColor(.GRAY, " (only showing \(PrettyPrint.plural(diagnosticLimit, "message")), use \"--message-limit=0\" to see all)")
+      }
+      Terminal.write("\n")
     }
   }
 
@@ -248,7 +258,7 @@ namespace Skew {
     parser.define(.BOOL, .FIX_ALL, "--fix-all", "Attempt to automatically fix as many errors and warnings as possible. " +
       "THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.")
     parser.define(.BOOL, .IGNORED_COMMENT_WARNING, "--ignored-comment-warning", "Warn when the compiler doesn't store a comment in the parse tree.")
-    parser.define(.BOOL, .WARNINGS_ARE_ERRORS, "--warnings-are-errors", "Uses a non-zero exit code for warnings in addition to errors.")
+    parser.define(.BOOL, .WARNINGS_ARE_ERRORS, "--warnings-are-errors", "Turns warnings into errors.")
 
     # Parse the command line arguments
     parser.parse(log, arguments)
@@ -376,35 +386,35 @@ namespace Skew {
 
   class Log {
     def commandLineErrorExpectedDefineValue(range Range, name string) {
-      append(Diagnostic.error(range, "Use \"--define:\(name)=___\" to provide a value"))
+      append(newError(range, "Use \"--define:\(name)=___\" to provide a value"))
     }
 
     def commandLineErrorMissingOutput(range Range, first string, second string) {
-      append(Diagnostic.error(range, "Specify the output location using either \"\(first)\" or \"\(second)\""))
+      append(newError(range, "Specify the output location using either \"\(first)\" or \"\(second)\""))
     }
 
     def commandLineErrorDuplicateOutput(range Range, first string, second string) {
-      append(Diagnostic.error(range, "Cannot specify both \"\(first)\" and \"\(second)\""))
+      append(newError(range, "Cannot specify both \"\(first)\" and \"\(second)\""))
     }
 
     def commandLineErrorUnreadableFile(range Range, name string) {
-      append(Diagnostic.error(range, "Could not read from \"\(name)\""))
+      append(newError(range, "Could not read from \"\(name)\""))
     }
 
     def commandLineErrorUnwritableFile(range Range, name string) {
-      append(Diagnostic.error(range, "Could not write to \"\(name)\""))
+      append(newError(range, "Could not write to \"\(name)\""))
     }
 
     def commandLineErrorNoInputFiles(range Range) {
-      append(Diagnostic.error(range, "Missing input files"))
+      append(newError(range, "Missing input files"))
     }
 
     def commandLineErrorMissingTarget(range Range) {
-      append(Diagnostic.error(range, "Specify the target format using \"--target\""))
+      append(newError(range, "Specify the target format using \"--target\""))
     }
 
     def commandLineErrorInvalidEnum(range Range, name string, found string, expected List<string>) {
-      append(Diagnostic.error(range, "Invalid \(name) \"\(found)\", must be either \(PrettyPrint.joinQuoted(expected, "or"))"))
+      append(newError(range, "Invalid \(name) \"\(found)\", must be either \(PrettyPrint.joinQuoted(expected, "or"))"))
     }
   }
 
