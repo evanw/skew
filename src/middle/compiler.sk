@@ -53,6 +53,7 @@ namespace Skew {
     var target = CompilerTarget.new
     var verbose = false
     var warnAboutIgnoredComments = false
+    var warningsAreErrors = false
 
     def new {
       passes = [

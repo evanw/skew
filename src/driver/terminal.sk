@@ -19,6 +19,7 @@ namespace Skew {
     TARGET
     VERBOSE
     VERSION
+    WARNINGS_ARE_ERRORS
   }
 
   const DEFAULT_MESSAGE_LIMIT = 10
@@ -129,7 +130,13 @@ namespace Skew {
 
     # Print any errors and warnings
     printLogSummary(log, diagnosticLimit)
-    return log.hasErrors ? 1 : 0
+
+    # Optionally report a failure if any warnings were found
+    if options != null && options.warningsAreErrors {
+      return log.hasErrors || log.hasWarnings ? 1 : 0
+    } else {
+      return log.hasErrors ? 1 : 0
+    }
   }
 
   def printWithColor(color Terminal.Color, text string) {
@@ -241,6 +248,7 @@ namespace Skew {
     parser.define(.BOOL, .FIX_ALL, "--fix-all", "Attempt to automatically fix as many errors and warnings as possible. " +
       "THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.")
     parser.define(.BOOL, .IGNORED_COMMENT_WARNING, "--ignored-comment-warning", "Warn when the compiler doesn't store a comment in the parse tree.")
+    parser.define(.BOOL, .WARNINGS_ARE_ERRORS, "--warnings-are-errors", "Uses a non-zero exit code for warnings in addition to errors.")
 
     # Parse the command line arguments
     parser.parse(log, arguments)
@@ -272,6 +280,7 @@ namespace Skew {
     options.stopAfterResolve = parser.boolForOption(.NO_OUTPUT, false)
     options.verbose = parser.boolForOption(.VERBOSE, false)
     options.warnAboutIgnoredComments = parser.boolForOption(.IGNORED_COMMENT_WARNING, false)
+    options.warningsAreErrors = parser.boolForOption(.WARNINGS_ARE_ERRORS, false)
 
     # Prepare the defines
     if releaseFlag {

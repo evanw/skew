@@ -921,7 +921,15 @@
 
     // Print any errors and warnings
     Skew.printLogSummary(log, diagnosticLimit);
-    return log.hasErrors() ? 1 : 0;
+
+    // Optionally report a failure if any warnings were found
+    if (options != null && options.warningsAreErrors) {
+      return log.hasErrors() || log.hasWarnings() ? 1 : 0;
+    }
+
+    else {
+      return log.hasErrors() ? 1 : 0;
+    }
   };
 
   Skew.printWithColor = function(color, text) {
@@ -1040,6 +1048,7 @@
     parser.define(Skew.Options.Type.BOOL, Skew.Option.GLOBALIZE_FUNCTIONS, '--globalize-functions', 'Convert instance functions to global functions for better inlining.');
     parser.define(Skew.Options.Type.BOOL, Skew.Option.FIX_ALL, '--fix-all', 'Attempt to automatically fix as many errors and warnings as possible. ' + "THIS WILL WRITE OVER YOUR SOURCE CODE. Make sure you know what you're doing.");
     parser.define(Skew.Options.Type.BOOL, Skew.Option.IGNORED_COMMENT_WARNING, '--ignored-comment-warning', "Warn when the compiler doesn't store a comment in the parse tree.");
+    parser.define(Skew.Options.Type.BOOL, Skew.Option.WARNINGS_ARE_ERRORS, '--warnings-are-errors', 'Uses a non-zero exit code for warnings in addition to errors.');
 
     // Parse the command line arguments
     parser.parse(log, $arguments);
@@ -1072,6 +1081,7 @@
     options.stopAfterResolve = parser.boolForOption(Skew.Option.NO_OUTPUT, false);
     options.verbose = parser.boolForOption(Skew.Option.VERBOSE, false);
     options.warnAboutIgnoredComments = parser.boolForOption(Skew.Option.IGNORED_COMMENT_WARNING, false);
+    options.warningsAreErrors = parser.boolForOption(Skew.Option.WARNINGS_ARE_ERRORS, false);
 
     // Prepare the defines
     if (releaseFlag) {
@@ -21248,6 +21258,7 @@
     self.target = new Skew.CompilerTarget();
     self.verbose = false;
     self.warnAboutIgnoredComments = false;
+    self.warningsAreErrors = false;
     self.passes = [
       new Skew.LexingPass(),
       new Skew.ParsingPass(),
@@ -25453,7 +25464,8 @@
     RELEASE: 15,
     TARGET: 16,
     VERBOSE: 17,
-    VERSION: 18
+    VERSION: 18,
+    WARNINGS_ARE_ERRORS: 19
   };
 
   Skew.Options = {};
