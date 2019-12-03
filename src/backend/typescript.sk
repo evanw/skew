@@ -1793,6 +1793,18 @@ namespace Skew {
       "while": 0,
       "with": 0,
 
+      # Strict mode reserved words
+      "as": 0,
+      "implements": 0,
+      "interface": 0,
+      "let": 0,
+      "package": 0,
+      "private": 0,
+      "protected": 0,
+      "public": 0,
+      "static": 0,
+      "yield": 0,
+
       # Other special names that must be avoided
       "arguments": 0,
       "Symbol": 0,
