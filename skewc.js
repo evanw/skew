@@ -6310,6 +6310,34 @@
         in_StringMap.set(collisions, s.name, list);
       }
     };
+
+    // There can only be one constructor in TypeScript
+    var fixAllMultipleCtors = null;
+    fixAllMultipleCtors = function(p) {
+      for (var i1 = 0, list1 = p.objects, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+        var s = in_List.get(list1, i1);
+        fixAllMultipleCtors(s);
+
+        if (s.kind == Skew.SymbolKind.OBJECT_CLASS && !s.isImported()) {
+          var ctors = s.functions.filter(function(f) {
+            return f.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
+          });
+
+          if (ctors.length > 1) {
+            s.functions = s.functions.filter(function(f) {
+              return f.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
+            });
+            var canUseArgumentCount = ctors.every(function(c1) {
+              return ctors.filter(function(c2) {
+                return c1.$arguments.length == c2.$arguments.length;
+              }).length == 1;
+            });
+            in_IntMap.set(self._ctors, s.id, new Skew.TypeScriptEmitter.MultipleCtors(ctors, canUseArgumentCount));
+          }
+        }
+      }
+    };
+    fixAllMultipleCtors(global);
     var addAll = null;
     addAll = function(p) {
       // If this namespace has comments, move its comments to
@@ -6376,25 +6404,6 @@
 
         else {
           add(s6);
-
-          // There can only be one constructor in TypeScript
-          if (s6.kind == Skew.SymbolKind.OBJECT_CLASS && !s6.isImported()) {
-            var ctors = s6.functions.filter(function(f) {
-              return f.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
-            });
-
-            if (ctors.length > 1) {
-              s6.functions = s6.functions.filter(function(f) {
-                return f.kind != Skew.SymbolKind.FUNCTION_CONSTRUCTOR;
-              });
-              var canUseArgumentCount = ctors.every(function(c1) {
-                return ctors.filter(function(c2) {
-                  return c1.$arguments.length == c2.$arguments.length;
-                }).length == 1;
-              });
-              in_IntMap.set(self._ctors, s6.id, new Skew.TypeScriptEmitter.MultipleCtors(ctors, canUseArgumentCount));
-            }
-          }
         }
       }
     };

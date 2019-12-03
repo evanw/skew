@@ -87,6 +87,23 @@ namespace Skew {
         }
       }
 
+      # There can only be one constructor in TypeScript
+      var fixAllMultipleCtors fn(ObjectSymbol)
+      fixAllMultipleCtors = (p ObjectSymbol) => {
+        for s in p.objects {
+          fixAllMultipleCtors(s)
+          if s.kind == .OBJECT_CLASS && !s.isImported {
+            var ctors = s.functions.filter(f => f.kind == .FUNCTION_CONSTRUCTOR)
+            if ctors.count > 1 {
+              s.functions = s.functions.filter(f => f.kind != .FUNCTION_CONSTRUCTOR)
+              const canUseArgumentCount = ctors.all(c1 => ctors.filter(c2 => c1.arguments.count == c2.arguments.count).count == 1)
+              _ctors[s.id] = MultipleCtors.new(ctors, canUseArgumentCount)
+            }
+          }
+        }
+      }
+      fixAllMultipleCtors(global)
+
       var addAll fn(ObjectSymbol)
       addAll = (p ObjectSymbol) => {
         # If this namespace has comments, move its comments to
@@ -129,16 +146,6 @@ namespace Skew {
             addAll(s)
           } else {
             add(s)
-
-            # There can only be one constructor in TypeScript
-            if s.kind == .OBJECT_CLASS && !s.isImported {
-              var ctors = s.functions.filter(f => f.kind == .FUNCTION_CONSTRUCTOR)
-              if ctors.count > 1 {
-                s.functions = s.functions.filter(f => f.kind != .FUNCTION_CONSTRUCTOR)
-                const canUseArgumentCount = ctors.all(c1 => ctors.filter(c2 => c1.arguments.count == c2.arguments.count).count == 1)
-                _ctors[s.id] = MultipleCtors.new(ctors, canUseArgumentCount)
-              }
-            }
           }
         }
       }
