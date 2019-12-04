@@ -1021,11 +1021,11 @@ namespace Skew.Parsing {
 
     # Parse annotations before the symbol declaration
     if context.peek(.ANNOTATION) {
-      _warnAboutIgnoredComments(context, comments)
       annotations = parseAnnotations(context, annotations != null ? annotations.clone : [])
 
       # Parse an annotation block
       if context.eat(.LEFT_BRACE) {
+        _warnAboutIgnoredComments(context, comments)
         parseSymbols(context, parent, annotations)
         return context.expect(.RIGHT_BRACE) && parseAfterBlock(context)
       }

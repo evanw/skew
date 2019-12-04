@@ -14392,11 +14392,11 @@
 
     // Parse annotations before the symbol declaration
     if (context.peek1(Skew.TokenKind.ANNOTATION)) {
-      Skew.Parsing._warnAboutIgnoredComments(context, comments);
       annotations = Skew.Parsing.parseAnnotations(context, annotations != null ? annotations.slice() : []);
 
       // Parse an annotation block
       if (context.eat(Skew.TokenKind.LEFT_BRACE)) {
+        Skew.Parsing._warnAboutIgnoredComments(context, comments);
         Skew.Parsing.parseSymbols(context, parent, annotations);
         return context.expect(Skew.TokenKind.RIGHT_BRACE) && Skew.Parsing.parseAfterBlock(context);
       }
