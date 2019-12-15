@@ -936,6 +936,7 @@ namespace Skew.Resolving {
           var call = Node.createCall(base)
           for variable in arguments {
             var argument = VariableSymbol.new(.VARIABLE_ARGUMENT, variable.name)
+            argument.range = variable.range
             argument.initializeWithType(variable.resolvedType)
             symbol.arguments.append(argument)
             call.appendChild(Node.createSymbolReference(argument))
