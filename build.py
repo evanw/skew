@@ -137,35 +137,6 @@ def load_version():
 def update_version(version):
   open('src/frontend/version.sk', 'w').write('namespace Skew {\n  const VERSION = %s\n}\n' % json.dumps(version))
 
-def github_authorization():
-  name = 'authorization.txt'
-  if os.path.exists(name):
-    return open(name).read().strip()
-  username = raw_input('GitHub username: ')
-  password = raw_input('GitHub password: ')
-  authorization = 'Basic ' + ('%s:%s' % (username, password)).encode('base64').strip()
-  open(name, 'w').write(authorization)
-  return authorization
-
-def https_post(url, data):
-  opener = urllib2.build_opener(urllib2.HTTPSHandler)
-  request = urllib2.Request(url, data=data)
-  request.get_method = lambda: 'POST'
-  request.add_header('Authorization', github_authorization())
-  request.add_header('Content-Type', 'application/octet-stream')
-  return json.loads(opener.open(request).read())
-
-def create_github_release(version):
-  url = 'https://api.github.com/repos/evanw/skew/releases'
-  response = https_post(url, json.dumps({'tag_name': version}))
-  return response["id"]
-
-def upload_github_release(id, name, content):
-  gzip.open(content + '.gz', 'wb').write(open(content, 'rb').read())
-  url = 'https://uploads.github.com/repos/evanw/skew/releases/%s/assets?name=%s' % (id, name)
-  response = https_post(url, open(content + '.gz', 'rb').read())
-  assert response['state'] == 'uploaded'
-
 def check_same(a, b):
   run(['diff', a, b])
 
@@ -382,16 +353,14 @@ def publish():
   version = load_version()
   update_version(version)
   replace()
-  run(['git', 'commit', '-am', 'publish ' + version])
-  run(['git', 'push'])
   skewc_js('skewc.js', 'out/skewc.min.js', sources=SOURCES_SKEWC, release=True)
   skewc_js('skewc.js', 'npm/skew.js', sources=SOURCES_API, release=True)
   open('npm/skewc', 'w').write('#!/usr/bin/env node\n' + open('out/skewc.min.js').read())
   run(['chmod', '+x', 'npm/skewc'])
+  shutil.copyfile('src/driver/jsapi.d.ts', 'npm/skew.d.ts')
   for name in PUBLIC_CPP_FILES:
     shutil.copyfile(name, 'npm/' + os.path.basename(name))
   run(['npm', 'publish'], cwd='npm')
-  release = create_github_release(version)
 
 ################################################################################
 

@@ -299,7 +299,7 @@ namespace Skew.API {
           "name": symbol.name,
           "kind": symbol.kind.toString,
           "type": IDE.completionType(symbol),
-          "comments": symbol.comments?.clone,
+          "comments": symbol.comments == null ? null : symbol.comments.map<string>(comment => "\n".join(comment.lines)),
         })),
       }
     }
