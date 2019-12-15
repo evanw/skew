@@ -149,7 +149,7 @@ declare module "skew" {
   export interface Symbol {
     name: string
     kind: SymbolKind
-    parent: string | null
+    parent: number // This is an index into the symbols array or -1
     fullName: string
     range: Range
   }

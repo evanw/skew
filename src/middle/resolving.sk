@@ -999,7 +999,7 @@ namespace Skew.Resolving {
       strings.range = parent.range
       strings.initializeWithType(_cache.createListType(_cache.stringType))
       strings.value = names
-      strings.flags |= .IS_PROTECTED | .IS_CONST
+      strings.flags |= .IS_PROTECTED | .IS_CONST | .IS_AUTOMATICALLY_GENERATED
       strings.parent = parent
       strings.scope = parent.scope
       parent.variables.append(strings)

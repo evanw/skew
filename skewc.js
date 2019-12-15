@@ -17493,7 +17493,7 @@
     strings.range = parent.range;
     strings.initializeWithType(this._cache.createListType(this._cache.stringType));
     strings.value = names;
-    strings.flags |= Skew.SymbolFlags.IS_PROTECTED | Skew.SymbolFlags.IS_CONST;
+    strings.flags |= Skew.SymbolFlags.IS_PROTECTED | Skew.SymbolFlags.IS_CONST | Skew.SymbolFlags.IS_AUTOMATICALLY_GENERATED;
     strings.parent = parent;
     strings.scope = parent.scope;
     parent.variables.push(strings);

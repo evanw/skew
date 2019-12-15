@@ -205,14 +205,7 @@ namespace Skew.API {
     }
 
     var handleSymbolsQuery = (message dynamic) dynamic => {
-      var convertSymbol = (symbol Symbol) dynamic => ({
-        "name": symbol.name,
-        "kind": symbol.kind.toString,
-        "parent": symbol.parent?.name,
-        "fullName": symbol.fullName,
-        "range": rangeToJSON(symbol.range),
-      })
-      var symbols List<dynamic> = null
+      var symbols List<Symbol> = []
 
       # List all symbols in a given source file
       if message.source {
@@ -223,7 +216,7 @@ namespace Skew.API {
               if result != null && result.global != null {
                 var query = IDE.SymbolsQuery.new(source)
                 query.run(result.global)
-                symbols = query.symbols.map<dynamic>(convertSymbol)
+                symbols = query.symbols
               }
               break
             }
@@ -240,8 +233,7 @@ namespace Skew.API {
           query.run(result.global)
           for symbol in query.symbols {
             if symbol.name.toLowerCase.indexOf(nameSubstring) >= 0 {
-              symbols ?= []
-              symbols.append(convertSymbol(symbol))
+              symbols.append(symbol)
             }
           }
         }
@@ -250,7 +242,13 @@ namespace Skew.API {
       return {
         "type": "symbols-query",
         "id": message.id,
-        "symbols": symbols,
+        "symbols": symbols.isEmpty ? null : symbols.map<dynamic>(symbol => ({
+          "name": symbol.name,
+          "kind": symbol.kind.toString,
+          "parent": symbol.parent == null || symbol == result.global ? -1 : symbols.indexOf(symbol.parent),
+          "fullName": symbol.fullName,
+          "range": rangeToJSON(symbol.range),
+        })),
       }
     }
 
