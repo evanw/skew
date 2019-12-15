@@ -709,7 +709,7 @@
     }
 
     // Set up the options for the compiler
-    var options = new Skew.CompilerOptions();
+    var options = new Skew.CompilerOptions(null);
     var releaseFlag = parser.boolForOption(Skew.Option.RELEASE, false);
     options.foldAllConstants = parser.boolForOption(Skew.Option.FOLD_CONSTANTS, releaseFlag);
     options.globalizeAllFunctions = parser.boolForOption(Skew.Option.GLOBALIZE_FUNCTIONS, releaseFlag);
@@ -13267,6 +13267,13 @@
     return this;
   };
 
+  Skew.LexingCache = {};
+  Skew.LexingCache.Entry = function(contents, log, tokens) {
+    this.contents = contents;
+    this.log = log;
+    this.tokens = tokens;
+  };
+
   Skew.Comment = function(range, lines, hasGapBelow, isTrailing) {
     this.range = range;
     this.lines = lines;
@@ -21421,78 +21428,6 @@
     return null;
   };
 
-  Skew.JavaScriptTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.JavaScriptTarget, Skew.CompilerTarget);
-
-  Skew.JavaScriptTarget.prototype.stopAfterResolve = function() {
-    return false;
-  };
-
-  Skew.JavaScriptTarget.prototype.supportsNestedTypes = function() {
-    return true;
-  };
-
-  Skew.JavaScriptTarget.prototype.removeSingletonInterfaces = function() {
-    return true;
-  };
-
-  Skew.JavaScriptTarget.prototype.stringEncoding = function() {
-    return Unicode.Encoding.UTF16;
-  };
-
-  Skew.JavaScriptTarget.prototype.editOptions = function(options) {
-    options.define('TARGET', 'JAVASCRIPT');
-  };
-
-  Skew.JavaScriptTarget.prototype.includeSources = function(sources) {
-    sources.unshift(new Skew.Source('<native-js>', Skew.NATIVE_LIBRARY_JS));
-  };
-
-  Skew.JavaScriptTarget.prototype.createEmitter = function(context) {
-    return new Skew.JavaScriptEmitter(context, context.options, context.cache);
-  };
-
-  Skew.CPlusPlusTarget = function() {
-    Skew.CompilerTarget.call(this);
-  };
-
-  __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
-
-  Skew.CPlusPlusTarget.prototype.stopAfterResolve = function() {
-    return false;
-  };
-
-  Skew.CPlusPlusTarget.prototype.requiresIntegerSwitchStatements = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.supportsListForeach = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.needsLambdaLifting = function() {
-    return true;
-  };
-
-  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
-    return Unicode.Encoding.UTF8;
-  };
-
-  Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
-    options.define('TARGET', 'CPLUSPLUS');
-  };
-
-  Skew.CPlusPlusTarget.prototype.includeSources = function(sources) {
-    sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
-  };
-
-  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
-    return new Skew.CPlusPlusEmitter(context.options, context.cache);
-  };
-
   Skew.CSharpTarget = function() {
     Skew.CompilerTarget.call(this);
   };
@@ -21583,12 +21518,84 @@
     return new Skew.TypeScriptEmitter(context.log, context.options, context.cache);
   };
 
+  Skew.JavaScriptTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.JavaScriptTarget, Skew.CompilerTarget);
+
+  Skew.JavaScriptTarget.prototype.stopAfterResolve = function() {
+    return false;
+  };
+
+  Skew.JavaScriptTarget.prototype.supportsNestedTypes = function() {
+    return true;
+  };
+
+  Skew.JavaScriptTarget.prototype.removeSingletonInterfaces = function() {
+    return true;
+  };
+
+  Skew.JavaScriptTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF16;
+  };
+
+  Skew.JavaScriptTarget.prototype.editOptions = function(options) {
+    options.define('TARGET', 'JAVASCRIPT');
+  };
+
+  Skew.JavaScriptTarget.prototype.includeSources = function(sources) {
+    sources.unshift(new Skew.Source('<native-js>', Skew.NATIVE_LIBRARY_JS));
+  };
+
+  Skew.JavaScriptTarget.prototype.createEmitter = function(context) {
+    return new Skew.JavaScriptEmitter(context, context.options, context.cache);
+  };
+
+  Skew.CPlusPlusTarget = function() {
+    Skew.CompilerTarget.call(this);
+  };
+
+  __extends(Skew.CPlusPlusTarget, Skew.CompilerTarget);
+
+  Skew.CPlusPlusTarget.prototype.stopAfterResolve = function() {
+    return false;
+  };
+
+  Skew.CPlusPlusTarget.prototype.requiresIntegerSwitchStatements = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.supportsListForeach = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.needsLambdaLifting = function() {
+    return true;
+  };
+
+  Skew.CPlusPlusTarget.prototype.stringEncoding = function() {
+    return Unicode.Encoding.UTF8;
+  };
+
+  Skew.CPlusPlusTarget.prototype.editOptions = function(options) {
+    options.define('TARGET', 'CPLUSPLUS');
+  };
+
+  Skew.CPlusPlusTarget.prototype.includeSources = function(sources) {
+    sources.unshift(new Skew.Source('<native-cpp>', Skew.NATIVE_LIBRARY_CPP));
+  };
+
+  Skew.CPlusPlusTarget.prototype.createEmitter = function(context) {
+    return new Skew.CPlusPlusEmitter(context.options, context.cache);
+  };
+
   Skew.Define = function(name, value) {
     this.name = name;
     this.value = value;
   };
 
-  Skew.CompilerOptions = function() {
+  Skew.CompilerOptions = function(cache) {
     var self = this;
     self.completionContext = null;
     self.defines = new Map();
@@ -21608,7 +21615,7 @@
     self.warnAboutIgnoredComments = false;
     self.warningsAreErrors = false;
     self.passes = [
-      new Skew.LexingPass(),
+      new Skew.LexingPass(cache),
       new Skew.ParsingPass(),
       new Skew.MergingPass(),
       new Skew.ResolvingPass(),
@@ -21896,6 +21903,69 @@
     return this;
   };
 
+  Skew.EmittingPass = function() {
+    Skew.Pass.call(this);
+  };
+
+  __extends(Skew.EmittingPass, Skew.Pass);
+
+  Skew.EmittingPass.prototype.kind = function() {
+    return Skew.PassKind.EMITTING;
+  };
+
+  Skew.EmittingPass.prototype.run = function(context) {
+    var emitter = context.options.target.createEmitter(context);
+
+    if (emitter != null) {
+      emitter.visit(context.global);
+      context.outputs = emitter.sources();
+    }
+  };
+
+  Skew.LexingPass = function(_cache) {
+    Skew.Pass.call(this);
+    this._cache = _cache;
+  };
+
+  __extends(Skew.LexingPass, Skew.Pass);
+
+  Skew.LexingPass.prototype.kind = function() {
+    return Skew.PassKind.LEXING;
+  };
+
+  Skew.LexingPass.prototype.run = function(context) {
+    if (this._cache != null) {
+      for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
+        var source = in_List.get(list, i);
+        context.tokens.push(this._cache.tokenize(context.log, source));
+      }
+    }
+
+    else {
+      for (var i1 = 0, list1 = context.inputs, count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
+        var source1 = in_List.get(list1, i1);
+        context.tokens.push(Skew.tokenize(context.log, source1));
+      }
+    }
+  };
+
+  Skew.ParsingPass = function() {
+    Skew.Pass.call(this);
+  };
+
+  __extends(Skew.ParsingPass, Skew.Pass);
+
+  Skew.ParsingPass.prototype.kind = function() {
+    return Skew.PassKind.PARSING;
+  };
+
+  Skew.ParsingPass.prototype.run = function(context) {
+    for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
+      var tokens = in_List.get(list, i);
+      Skew.Parsing.parseFile(context.log, tokens, context.global, context.options.warnAboutIgnoredComments);
+    }
+  };
+
   Skew.LambdaConversionPass = function() {
     Skew.Pass.call(this);
   };
@@ -21927,59 +21997,6 @@
     // The tree isn't fully resolved for speed reasons if code completion is requested
     if (context.options.completionContext == null) {
       context.isResolvePassComplete = true;
-    }
-  };
-
-  Skew.ParsingPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.ParsingPass, Skew.Pass);
-
-  Skew.ParsingPass.prototype.kind = function() {
-    return Skew.PassKind.PARSING;
-  };
-
-  Skew.ParsingPass.prototype.run = function(context) {
-    for (var i = 0, list = context.tokens, count = list.length; i < count; i = i + 1 | 0) {
-      var tokens = in_List.get(list, i);
-      Skew.Parsing.parseFile(context.log, tokens, context.global, context.options.warnAboutIgnoredComments);
-    }
-  };
-
-  Skew.EmittingPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.EmittingPass, Skew.Pass);
-
-  Skew.EmittingPass.prototype.kind = function() {
-    return Skew.PassKind.EMITTING;
-  };
-
-  Skew.EmittingPass.prototype.run = function(context) {
-    var emitter = context.options.target.createEmitter(context);
-
-    if (emitter != null) {
-      emitter.visit(context.global);
-      context.outputs = emitter.sources();
-    }
-  };
-
-  Skew.LexingPass = function() {
-    Skew.Pass.call(this);
-  };
-
-  __extends(Skew.LexingPass, Skew.Pass);
-
-  Skew.LexingPass.prototype.kind = function() {
-    return Skew.PassKind.LEXING;
-  };
-
-  Skew.LexingPass.prototype.run = function(context) {
-    for (var i = 0, list = context.inputs, count = list.length; i < count; i = i + 1 | 0) {
-      var source = in_List.get(list, i);
-      context.tokens.push(Skew.tokenize(context.log, source));
     }
   };
 

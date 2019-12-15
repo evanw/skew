@@ -4,14 +4,48 @@ namespace Skew {
   }
 
   class LexingPass : Pass {
+    const _cache LexingCache
+
     over kind PassKind {
       return .LEXING
     }
 
     over run(context PassContext) {
-      for source in context.inputs {
-        context.tokens.append(tokenize(context.log, source))
+      if _cache != null {
+        for source in context.inputs {
+          context.tokens.append(_cache.tokenize(context.log, source))
+        }
+      } else {
+        for source in context.inputs {
+          context.tokens.append(tokenize(context.log, source))
+        }
       }
+    }
+  }
+
+  class LexingCache {
+    var _map = StringMap<Entry>.new
+
+    def tokenize(log Log, source Source) List<Token> {
+      var entry = _map.get(source.name, null)
+
+      if entry == null || entry.contents != source.contents {
+        const tempLog = Log.new
+        const tokens = Skew.tokenize(tempLog, source)
+        entry = Entry.new(source.contents, tempLog, tokens)
+        _map[source.name] = entry
+      }
+
+      log.diagnostics.append(entry.log.diagnostics)
+      return entry.tokens
+    }
+  }
+
+  namespace LexingCache {
+    class Entry {
+      const contents string
+      const log Log
+      const tokens List<Token>
     }
   }
 
