@@ -205,26 +205,44 @@ namespace Skew.API {
     }
 
     var handleSymbolsQuery = (message dynamic) dynamic => {
-      var name string = message.source + ""
+      var convertSymbol = (symbol Symbol) dynamic => ({
+        "name": symbol.name,
+        "kind": symbol.kind.toString,
+        "parent": symbol.parent?.name,
+        "fullName": symbol.fullName,
+        "range": rangeToJSON(symbol.range),
+      })
       var symbols List<dynamic> = null
 
-      if inputs != null {
-        for source in inputs {
-          if source.name == name {
-            if result != null && result.global != null {
-              var query = IDE.SymbolsQuery.new(source)
-              query.run(result.global)
-              symbols = query.symbols.map<dynamic>(symbol => {
-                return {
-                  "name": symbol.name,
-                  "kind": symbol.kind.toString,
-                  "parent": symbol.parent?.name,
-                  "fullName": symbol.fullName,
-                  "range": rangeToJSON(symbol.range),
-                }
-              })
+      # List all symbols in a given source file
+      if message.source {
+        var name string = message.source + ""
+        if inputs != null {
+          for source in inputs {
+            if source.name == name {
+              if result != null && result.global != null {
+                var query = IDE.SymbolsQuery.new(source)
+                query.run(result.global)
+                symbols = query.symbols.map<dynamic>(convertSymbol)
+              }
+              break
             }
-            break
+          }
+        }
+      }
+
+      # List all symbols matching a given substring
+      else if message.fuzzyName {
+        var nameSubstring string = message.fuzzyName + ""
+        nameSubstring = nameSubstring.toLowerCase
+        if inputs != null && result != null && result.global != null {
+          var query = IDE.SymbolsQuery.new(null)
+          query.run(result.global)
+          for symbol in query.symbols {
+            if symbol.name.toLowerCase.indexOf(nameSubstring) >= 0 {
+              symbols ?= []
+              symbols.append(convertSymbol(symbol))
+            }
           }
         }
       }
@@ -232,7 +250,6 @@ namespace Skew.API {
       return {
         "type": "symbols-query",
         "id": message.id,
-        "source": name,
         "symbols": symbols,
       }
     }

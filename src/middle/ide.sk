@@ -253,7 +253,7 @@ namespace Skew.IDE {
     }
 
     def _collectSymbol(symbol Symbol) {
-      if symbol.range != null && symbol.range.source == source && !symbol.isAutomaticallyGenerated {
+      if symbol.range != null && (source == null || symbol.range.source == source) && !symbol.isAutomaticallyGenerated {
         symbols.append(symbol)
       }
     }

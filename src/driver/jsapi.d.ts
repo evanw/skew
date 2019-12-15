@@ -136,13 +136,13 @@ declare module "skew" {
   export interface SymbolsQueryReq {
     type?: "symbols-query",
     id?: any
-    source: string
+    source?: string
+    fuzzyName?: string
   }
 
   export interface SymbolsQueryRes {
     type: "symbols-query",
     id: any
-    source: string
     symbols: Symbol[] | null
   }
 
