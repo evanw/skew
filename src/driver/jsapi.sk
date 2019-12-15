@@ -365,8 +365,8 @@ namespace Skew.API {
     }
   }
 
-  @entry
-  def main {
+  @entry if BUILD == .API
+  def apiMain {
     # JavaScript API
     var this = (=> dynamic.this)()
     var api = dynamic.typeof(dynamic.exports) != "undefined" ? dynamic.exports : this.Skew ? this.Skew : this.Skew = {}

@@ -24,8 +24,8 @@ namespace Skew {
 
   const DEFAULT_MESSAGE_LIMIT = 10
 
-  @entry
-  def main(arguments List<string>) int {
+  @entry if BUILD == .SKEWC
+  def skewcMain(arguments List<string>) int {
     var log = Log.new
     var diagnosticLimit = 0
     var printDiagnostic = (diagnostic Diagnostic) => {
