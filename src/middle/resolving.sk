@@ -2677,11 +2677,12 @@ namespace Skew.Resolving {
 
       # Use simple call chaining when there's an add operator present
       if add != null {
-        var chain = Node.createDot(Node.createType(context).withRange(node.range), new != null ? new.name : "new").withRange(node.range)
+        var type = Node.createType(context).withRange(node.range).withFlags(.IS_IGNORED_BY_IDE)
+        var chain = Node.createDot(type, new != null ? new.name : "new").withRange(node.range).withFlags(.IS_IGNORED_BY_IDE)
         while node.hasChildren {
           var child = node.firstChild.remove
-          var dot = Node.createDot(chain, add.name).withRange(child.range)
-          chain = Node.createCall(dot).withRange(child.range)
+          var dot = Node.createDot(chain, add.name).withRange(child.range).withFlags(.IS_IGNORED_BY_IDE)
+          chain = Node.createCall(dot).withRange(child.range).withFlags(.IS_IGNORED_BY_IDE)
           if child.kind == .PAIR {
             chain.appendChildrenFrom(child)
           } else {
