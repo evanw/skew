@@ -896,7 +896,7 @@
 
       if (c == 41) {
         for (var i = stack.length - 1 | 0; i >= 0; i = i - 1 | 0) {
-          var kind = in_List.get(stack, i).kind;
+          var kind = in_List.get(tokens, in_List.get(stack, i)).kind;
 
           if (kind == Skew.TokenKind.STRING_INTERPOLATION_START) {
             isStringInterpolation = true;
@@ -936,7 +936,7 @@
       }
 
       // Special-case XML literals
-      else if (c == 62 && !(stack.length == 0) && in_List.last(stack).kind == Skew.TokenKind.XML_START) {
+      else if (c == 62 && !(stack.length == 0) && in_List.get(tokens, in_List.last(stack)).kind == Skew.TokenKind.XML_START) {
         yy_cp = yy_cp + 1 | 0;
         yy_act = Skew.TokenKind.XML_END;
       }
@@ -1007,36 +1007,37 @@
         break;
       }
 
-      var token = new Skew.Token(new Skew.Range(source, yy_bp, yy_cp), yy_act, null);
+      var tokenRange = new Skew.Range(source, yy_bp, yy_cp);
+      var tokenKind = yy_act;
+      var tokenComments = null;
 
       // Have a nice error message for certain tokens
       if (yy_act == Skew.TokenKind.COMMENT_ERROR) {
-        log.syntaxErrorSlashComment(token.range);
-        token.kind = Skew.TokenKind.COMMENT;
+        log.syntaxErrorSlashComment(tokenRange);
+        tokenKind = Skew.TokenKind.COMMENT;
       }
 
       else if (yy_act == Skew.TokenKind.NOT_EQUAL_ERROR) {
-        log.syntaxErrorOperatorTypo(token.range, '!=');
-        token.kind = Skew.TokenKind.NOT_EQUAL;
+        log.syntaxErrorOperatorTypo(tokenRange, '!=');
+        tokenKind = Skew.TokenKind.NOT_EQUAL;
       }
 
       else if (yy_act == Skew.TokenKind.EQUAL_ERROR) {
-        log.syntaxErrorOperatorTypo(token.range, '==');
-        token.kind = Skew.TokenKind.EQUAL;
+        log.syntaxErrorOperatorTypo(tokenRange, '==');
+        tokenKind = Skew.TokenKind.EQUAL;
       }
 
       // Tokens that start with a greater than may need to be split, potentially multiple times
       var loop = true;
 
       while (loop) {
-        var tokenStartsWithGreaterThan = in_string.get1(text, token.range.start) == 62;
-        var tokenKind = token.kind;
+        var tokenStartsWithGreaterThan = in_string.get1(text, tokenRange.start) == 62;
         loop = false;
 
         // Remove tokens from the stack if they aren't working out
         while (!(stack.length == 0)) {
           var top = in_List.last(stack);
-          var topKind = top.kind;
+          var topKind = in_List.get(tokens, top).kind;
 
           // Stop parsing a type if we find a token that no type expression uses
           if (topKind == Skew.TokenKind.LESS_THAN && tokenKind != Skew.TokenKind.LESS_THAN && tokenKind != Skew.TokenKind.IDENTIFIER && tokenKind != Skew.TokenKind.COMMA && tokenKind != Skew.TokenKind.DYNAMIC && tokenKind != Skew.TokenKind.DOT && tokenKind != Skew.TokenKind.LEFT_PARENTHESIS && tokenKind != Skew.TokenKind.RIGHT_PARENTHESIS && !tokenStartsWithGreaterThan) {
@@ -1050,7 +1051,7 @@
 
         // Group open
         if (tokenKind == Skew.TokenKind.LEFT_PARENTHESIS || tokenKind == Skew.TokenKind.LEFT_BRACE || tokenKind == Skew.TokenKind.LEFT_BRACKET || tokenKind == Skew.TokenKind.LESS_THAN || tokenKind == Skew.TokenKind.STRING_INTERPOLATION_START || tokenKind == Skew.TokenKind.XML_START) {
-          stack.push(token);
+          stack.push(tokens.length);
         }
 
         // Group close
@@ -1058,7 +1059,7 @@
           // Search for a matching opposite token
           while (!(stack.length == 0)) {
             var top1 = in_List.last(stack);
-            var topKind1 = top1.kind;
+            var topKind1 = in_List.get(tokens, top1).kind;
 
             // Don't match ">" that don't work since they are just operators
             if (tokenStartsWithGreaterThan && topKind1 != Skew.TokenKind.LESS_THAN) {
@@ -1077,22 +1078,23 @@
             if (topKind1 == Skew.TokenKind.LESS_THAN && tokenStartsWithGreaterThan) {
               // Break apart operators that start with a closing angle bracket
               if (tokenKind != Skew.TokenKind.GREATER_THAN) {
-                var start = token.range.start;
+                var start = tokenRange.start;
                 tokens.push(new Skew.Token(new Skew.Range(source, start, start + 1 | 0), Skew.TokenKind.PARAMETER_LIST_END, null));
-                token.range = new Skew.Range(source, start + 1 | 0, token.range.end);
-                token.kind = tokenKind == Skew.TokenKind.SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN : tokenKind == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : tokenKind == Skew.TokenKind.GREATER_THAN_OR_EQUAL ? Skew.TokenKind.ASSIGN : tokenKind == Skew.TokenKind.ASSIGN_SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN_OR_EQUAL : tokenKind == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.ASSIGN_SHIFT_RIGHT : Skew.TokenKind.NULL;
-                assert(token.kind != Skew.TokenKind.NULL);
+                tokenRange = new Skew.Range(source, start + 1 | 0, tokenRange.end);
+                tokenKind = tokenKind == Skew.TokenKind.SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN : tokenKind == Skew.TokenKind.UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.SHIFT_RIGHT : tokenKind == Skew.TokenKind.GREATER_THAN_OR_EQUAL ? Skew.TokenKind.ASSIGN : tokenKind == Skew.TokenKind.ASSIGN_SHIFT_RIGHT ? Skew.TokenKind.GREATER_THAN_OR_EQUAL : tokenKind == Skew.TokenKind.ASSIGN_UNSIGNED_SHIFT_RIGHT ? Skew.TokenKind.ASSIGN_SHIFT_RIGHT : Skew.TokenKind.NULL;
+                assert(tokenKind != Skew.TokenKind.NULL);
 
                 // Split this token again
                 loop = tokenKind != Skew.TokenKind.GREATER_THAN_OR_EQUAL;
               }
 
               else {
-                token.kind = Skew.TokenKind.PARAMETER_LIST_END;
+                tokenKind = Skew.TokenKind.PARAMETER_LIST_END;
               }
 
               // Convert the "<" into a bound for type parameter lists
-              top1.kind = Skew.TokenKind.PARAMETER_LIST_START;
+              var topToken = in_List.get(tokens, top1);
+              in_List.set(tokens, top1, new Skew.Token(topToken.range, Skew.TokenKind.PARAMETER_LIST_START, topToken.comments));
 
               // Stop the search since we found a match
               break;
@@ -1111,7 +1113,7 @@
       // - "var x = 0 \n # comment \n .toString"
       // - "var x = 0 \n ### \n multi-line comment \n ### \n return 0"
       //
-      if (previousKind == Skew.TokenKind.NEWLINE && token.kind == Skew.TokenKind.NEWLINE) {
+      if (previousKind == Skew.TokenKind.NEWLINE && tokenKind == Skew.TokenKind.NEWLINE) {
         if (comments != null && !previousWasComment) {
           in_List.last(comments).hasGapBelow = true;
         }
@@ -1120,7 +1122,7 @@
         continue;
       }
 
-      else if (previousKind == Skew.TokenKind.NEWLINE && Skew.REMOVE_WHITESPACE_BEFORE.has(token.kind)) {
+      else if (previousKind == Skew.TokenKind.NEWLINE && Skew.REMOVE_WHITESPACE_BEFORE.has(tokenKind)) {
         var last = in_List.takeLast(tokens);
 
         if (last.comments != null) {
@@ -1133,7 +1135,7 @@
       }
 
       // Attach comments to tokens instead of having comments be tokens
-      previousWasComment = token.kind == Skew.TokenKind.COMMENT;
+      previousWasComment = tokenKind == Skew.TokenKind.COMMENT;
 
       if (previousWasComment) {
         if (comments == null) {
@@ -1141,11 +1143,10 @@
         }
 
         if (comments.length == 0 || in_List.last(comments).hasGapBelow) {
-          comments.push(new Skew.Comment(token.range, [], false, false));
+          comments.push(new Skew.Comment(tokenRange, [], false, false));
         }
 
-        var range1 = token.range;
-        var line = in_string.slice2(source.contents, range1.start + 1 | 0, range1.end);
+        var line = in_string.slice2(source.contents, tokenRange.start + 1 | 0, tokenRange.end);
         var hashes = 0;
 
         for (var j = 0, count1 = line.length; j < count1; j = j + 1 | 0) {
@@ -1164,22 +1165,22 @@
         continue;
       }
 
-      previousKind = token.kind;
+      previousKind = tokenKind;
 
       if (previousKind != Skew.TokenKind.NEWLINE) {
-        token.comments = comments;
+        tokenComments = comments;
         comments = null;
       }
 
       // Capture trailing comments
       if (!(tokens.length == 0) && comments != null && comments.length == 1 && in_List.first(comments).lines.length == 1 && !in_List.first(comments).hasGapBelow) {
         in_List.first(comments).isTrailing = true;
-        token.comments = comments;
+        tokenComments = comments;
         comments = null;
       }
 
       // Accumulate the token for this iteration
-      tokens.push(token);
+      tokens.push(new Skew.Token(tokenRange, tokenKind, tokenComments));
     }
 
     // Every token stream ends in END_OF_FILE
@@ -13282,8 +13283,9 @@
       return left;
     }
 
-    in_List.append1(left, right);
-    return left;
+    var clone = left.slice();
+    in_List.append1(clone, right);
+    return clone;
   };
 
   Skew.Comment.lastTrailingComment = function(comments) {
@@ -15740,6 +15742,7 @@
     this.inNonVoidFunction = false;
     this._tokens = _tokens;
     this._index = 0;
+    this._stolen = null;
     this.warnAboutIgnoredComments = warnAboutIgnoredComments;
     this._previousSyntaxError = -1;
   };
@@ -15750,9 +15753,13 @@
 
   Skew.ParserContext.prototype.stealComments = function() {
     var token = this.current();
-    var comments = token.comments;
-    token.comments = null;
-    return comments;
+
+    if (this._stolen == token) {
+      return null;
+    }
+
+    this._stolen = token;
+    return token.comments;
   };
 
   Skew.ParserContext.prototype.next = function() {
