@@ -631,6 +631,7 @@ var x i
 <stdin>:1:7: completions:
 var x i
       ^
+      [IntMap] # \"class\"
       [int] # \"class\"
 ")
 
@@ -740,6 +741,7 @@ var bat = 0
 <stdin>:8:7: completions:
       ba
       ~~
+      [Bar] # \"class\"
       [ban] # \"int\"
       [bat] # \"int\"
       [bax] # \"int\"
@@ -879,6 +881,7 @@ def main {
 <stdin>:9:3: completions:
   ma
   ~~
+  [Math] # \"namespace\"
   [main] # \"()\"
          # This is the
          # first paragraph
@@ -971,6 +974,20 @@ var foo F
 var foo F
         ^
         [Foo] # \"type\"
+")
+
+# Completion: enum with inferred target
+testCompletion("
+enum Foo { FOO }
+var foo Foo = .F
+", 1, 15, "
+<stdin>:2:16: error: \"F\" is not declared on type \"Foo\"
+var foo Foo = .F
+               ^
+<stdin>:2:16: completions:
+var foo Foo = .F
+               ^
+               [FOO] # \"Foo\"
 ")
 
 # Signatures: test basic signature queries

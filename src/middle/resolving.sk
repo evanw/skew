@@ -2387,7 +2387,7 @@ namespace Skew.Resolving {
 
         for member in object.members.values {
           var isOnInstances = member.kind.isOnInstances
-          if (check == .INSTANCE_ONLY ? isOnInstances : check == .GLOBAL_ONLY ? !isOnInstances : true) && member.name.startsWith(prefix) {
+          if (check == .INSTANCE_ONLY ? isOnInstances : check == .GLOBAL_ONLY ? !isOnInstances : true) && _matchCompletion(member, prefix) {
             _initializeSymbol(member)
             completionContext.addCompletion(member)
           }
@@ -2408,7 +2408,7 @@ namespace Skew.Resolving {
             case .OBJECT {
               var object = scope.asObjectScope.symbol
               for symbol in object.members.values {
-                if symbol.name.startsWith(prefix) && (!symbol.kind.isOnInstances || object == thisObject) {
+                if _matchCompletion(symbol, prefix) && (!symbol.kind.isOnInstances || object == thisObject) {
                   _initializeSymbol(symbol)
                   completionContext.addCompletion(symbol)
                 }
@@ -2417,7 +2417,7 @@ namespace Skew.Resolving {
 
             case .FUNCTION {
               for symbol in scope.asFunctionScope.parameters.values {
-                if symbol.name.startsWith(prefix) {
+                if _matchCompletion(symbol, prefix) {
                   _initializeSymbol(symbol)
                   completionContext.addCompletion(symbol)
                 }
@@ -2426,7 +2426,7 @@ namespace Skew.Resolving {
 
             case .LOCAL {
               for symbol in scope.asLocalScope.locals.values {
-                if symbol.name.startsWith(prefix) {
+                if _matchCompletion(symbol, prefix) {
                   _initializeSymbol(symbol)
                   completionContext.addCompletion(symbol)
                 }
@@ -2472,6 +2472,9 @@ namespace Skew.Resolving {
         target = Node.createType(context)
         node.appendChild(target)
         assert(node.dotTarget == target)
+
+        # Support IDE code completion
+        _checkForMemberCompletions(target.resolvedType, node.internalRange, name, target.isType ? .GLOBAL_ONLY : .INSTANCE_ONLY)
       }
 
       # Search for a setter first, then search for a normal member
@@ -3828,6 +3831,17 @@ namespace Skew.Resolving {
         overloaded.scope = overloaded.parent.scope
         symbol.overloaded = overloaded
       }
+    }
+
+    def _matchCompletion(symbol Symbol, prefix string) bool {
+      if symbol.state == .INITIALIZING {
+        return false
+      }
+      var name = symbol.name.toLowerCase
+      if name[0] == '_' && prefix[0] != '_' {
+        name = name.slice(1)
+      }
+      return name.startsWith(prefix.toLowerCase)
     }
   }
 }

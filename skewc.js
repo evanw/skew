@@ -19198,7 +19198,7 @@
         var member = in_List.get(list, i);
         var isOnInstances = Skew.in_SymbolKind.isOnInstances(member.kind);
 
-        if ((check == Skew.Resolving.Resolver.CompletionCheck.INSTANCE_ONLY ? isOnInstances : check == Skew.Resolving.Resolver.CompletionCheck.GLOBAL_ONLY ? !isOnInstances : true) && member.name.startsWith(prefix)) {
+        if ((check == Skew.Resolving.Resolver.CompletionCheck.INSTANCE_ONLY ? isOnInstances : check == Skew.Resolving.Resolver.CompletionCheck.GLOBAL_ONLY ? !isOnInstances : true) && Skew.Resolving.Resolver._matchCompletion(member, prefix)) {
           this._initializeSymbol(member);
           completionContext.addCompletion(member);
         }
@@ -19221,7 +19221,7 @@
             for (var i = 0, list = Array.from(object.members.values()), count = list.length; i < count; i = i + 1 | 0) {
               var symbol = in_List.get(list, i);
 
-              if (symbol.name.startsWith(prefix) && (!Skew.in_SymbolKind.isOnInstances(symbol.kind) || object == thisObject)) {
+              if (Skew.Resolving.Resolver._matchCompletion(symbol, prefix) && (!Skew.in_SymbolKind.isOnInstances(symbol.kind) || object == thisObject)) {
                 this._initializeSymbol(symbol);
                 completionContext.addCompletion(symbol);
               }
@@ -19233,7 +19233,7 @@
             for (var i1 = 0, list1 = Array.from(scope.asFunctionScope().parameters.values()), count1 = list1.length; i1 < count1; i1 = i1 + 1 | 0) {
               var symbol1 = in_List.get(list1, i1);
 
-              if (symbol1.name.startsWith(prefix)) {
+              if (Skew.Resolving.Resolver._matchCompletion(symbol1, prefix)) {
                 this._initializeSymbol(symbol1);
                 completionContext.addCompletion(symbol1);
               }
@@ -19245,7 +19245,7 @@
             for (var i2 = 0, list2 = Array.from(scope.asLocalScope().locals.values()), count2 = list2.length; i2 < count2; i2 = i2 + 1 | 0) {
               var symbol2 = in_List.get(list2, i2);
 
-              if (symbol2.name.startsWith(prefix)) {
+              if (Skew.Resolving.Resolver._matchCompletion(symbol2, prefix)) {
                 this._initializeSymbol(symbol2);
                 completionContext.addCompletion(symbol2);
               }
@@ -19294,6 +19294,9 @@
       target = new Skew.Node(Skew.NodeKind.TYPE).withType(context);
       node.appendChild(target);
       assert(node.dotTarget() == target);
+
+      // Support IDE code completion
+      this._checkForMemberCompletions(target.resolvedType, node.internalRange, name, target.isType() ? Skew.Resolving.Resolver.CompletionCheck.GLOBAL_ONLY : Skew.Resolving.Resolver.CompletionCheck.INSTANCE_ONLY);
     }
 
     // Search for a setter first, then search for a normal member
@@ -20741,6 +20744,20 @@
 
   Skew.Resolving.Resolver._needsTypeContext = function(node) {
     return node.kind == Skew.NodeKind.DOT && node.dotTarget() == null || node.kind == Skew.NodeKind.HOOK && Skew.Resolving.Resolver._needsTypeContext(node.hookTrue()) && Skew.Resolving.Resolver._needsTypeContext(node.hookFalse()) || Skew.in_NodeKind.isInitializer(node.kind);
+  };
+
+  Skew.Resolving.Resolver._matchCompletion = function(symbol, prefix) {
+    if (symbol.state == Skew.SymbolState.INITIALIZING) {
+      return false;
+    }
+
+    var name = symbol.name.toLowerCase();
+
+    if (in_string.get1(name, 0) == 95 && in_string.get1(prefix, 0) != 95) {
+      name = in_string.slice1(name, 1);
+    }
+
+    return name.startsWith(prefix.toLowerCase());
   };
 
   Skew.Resolving.Resolver.CompletionCheck = {
