@@ -27,8 +27,7 @@ namespace Skew.IDE {
         case .FUNCTION_ANNOTATION, .FUNCTION_CONSTRUCTOR, .FUNCTION_GLOBAL, .FUNCTION_INSTANCE {
           var arguments = symbol.asFunctionSymbol.arguments
           text += "\(symbol.isOver ? "over" : "def") \(symbol.name)\(_parameters(symbol.asFunctionSymbol.parameters))"
-          if resolvedType != null {
-            assert(resolvedType.argumentTypes != null)
+          if resolvedType != null && resolvedType.argumentTypes != null {
             if !arguments.isEmpty {
               text += "("
               for i in 0..arguments.count {
