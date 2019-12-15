@@ -742,7 +742,8 @@ namespace Skew.Parsing {
     var comments = context.stealComments
     var token = context.current
     if !context.expect(.LEFT_BRACE) {
-      return null
+      # Return a block to try to recover and continue parsing
+      return Node.createBlock
     }
     var block = Node.createBlock
     if !parseStatements(context, block, .NORMAL) || !context.expect(.RIGHT_BRACE) {

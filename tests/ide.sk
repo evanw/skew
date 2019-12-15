@@ -990,6 +990,24 @@ var foo Foo = .F
                [FOO] # \"Foo\"
 ")
 
+# Completion: inside partial if statement
+testCompletion("
+def foo {
+  if f
+}
+", 1, 6, "
+<stdin>:3:1: error: Expected \"{\" but found \"}\"
+}
+^
+<stdin>:2:6: error: \"f\" is not declared
+  if f
+     ^
+<stdin>:2:6: completions:
+  if f
+     ^
+     [foo] # \"()\"
+")
+
 # Signatures: test basic signature queries
 testIDE("
 def test(foo int, bar bool) double {
