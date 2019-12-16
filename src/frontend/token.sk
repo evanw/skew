@@ -24,16 +24,27 @@ namespace Skew {
   }
 
   class LexingCache {
-    var _map = StringMap<Entry>.new
+    var _sourceCache = StringMap<Source>.new
+    var _tokenCache = StringMap<Entry>.new
+
+    # Deduplicate sources so object identity doesn't change if the source doesn't change
+    def source(name string, contents string) Source {
+      var source = _sourceCache.get(name, null)
+      if source == null || source.contents != contents {
+        source = Source.new(name, contents)
+        _sourceCache[name] = source
+      }
+      return source
+    }
 
     def tokenize(log Log, source Source) List<Token> {
-      var entry = _map.get(source.name, null)
+      var entry = _tokenCache.get(source.name, null)
 
-      if entry == null || entry.contents != source.contents {
+      if entry == null || entry.source != source {
         const tempLog = Log.new
         const tokens = Skew.tokenize(tempLog, source)
-        entry = Entry.new(source.contents, tempLog, tokens)
-        _map[source.name] = entry
+        entry = Entry.new(source, tempLog, tokens)
+        _tokenCache[source.name] = entry
       }
 
       log.diagnostics.append(entry.log.diagnostics)
@@ -43,7 +54,7 @@ namespace Skew {
 
   namespace LexingCache {
     class Entry {
-      const contents string
+      const source Source
       const log Log
       const tokens List<Token>
     }
