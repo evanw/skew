@@ -55,9 +55,9 @@ namespace Skew {
     var warnAboutIgnoredComments = false
     var warningsAreErrors = false
 
-    def new(cache LexingCache) {
+    def new {
       passes = [
-        LexingPass.new(cache),
+        LexingPass.new,
         ParsingPass.new,
         MergingPass.new,
         ResolvingPass.new,
@@ -100,12 +100,6 @@ namespace Skew {
         }
       }
       return false
-    }
-  }
-
-  namespace CompilerOptions {
-    def new CompilerOptions {
-      return new(null)
     }
   }
 

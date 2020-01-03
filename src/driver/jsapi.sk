@@ -47,12 +47,12 @@ namespace Skew.API {
     }
   }
 
-  def parseOptions(cache LexingCache, args dynamic, inputs List<Source>) CompilerOptions {
+  def parseOptions(args dynamic, inputs List<Source>) CompilerOptions {
     if !(args.inputs is List<dynamic>) {
       throw dynamic.Error.new("Missing the required 'inputs' array")
     }
 
-    var options = CompilerOptions.new(cache)
+    var options = CompilerOptions.new
     var release = !!args.release
     options.foldAllConstants = !!args.foldAllConstants || release
     options.globalizeAllFunctions = !!args.globalizeAllFunctions || release
@@ -99,13 +99,12 @@ namespace Skew.API {
   var createCompilerInstance fn() dynamic = => {
     var result CompilerResult = null
     var inputs List<Source> = null
-    var cache = LexingCache.new
     var log Log = null
 
     var handleCompile = (message dynamic) dynamic => {
       inputs = []
       log = Log.new
-      result = compile(log, parseOptions(cache, message, inputs), inputs)
+      result = compile(log, parseOptions(message, inputs), inputs)
 
       return {
         "type": "compile",
@@ -289,7 +288,7 @@ namespace Skew.API {
       var completions List<Symbol> = null
       var inputs List<Source> = []
       var log = Log.new
-      var options = parseOptions(cache, message, inputs)
+      var options = parseOptions(message, inputs)
 
       # Completion queries involve compiling the source code again because it requires scope information
       for input in inputs {
