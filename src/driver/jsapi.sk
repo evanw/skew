@@ -90,7 +90,7 @@ namespace Skew.API {
 
     for i in 0..args.inputs.length {
       var input = args.inputs[i]
-      inputs.append(cache.source(input.name + "", input.contents + ""))
+      inputs.append(Source.new(input.name + "", input.contents + ""))
     }
 
     return options
