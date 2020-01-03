@@ -26,9 +26,8 @@ namespace Skew {
     def concat(left List<Comment>, right List<Comment>) List<Comment> {
       if left == null { return right }
       if right == null { return left }
-      const clone = left.clone
-      clone.append(right)
-      return clone
+      left.append(right)
+      return left
     }
 
     def lastTrailingComment(comments List<Comment>) Comment {
@@ -73,9 +72,9 @@ namespace Skew {
   }
 
   class Token {
-    const range Range
-    const kind TokenKind
-    const comments List<Comment>
+    var range Range
+    var kind TokenKind
+    var comments List<Comment>
   }
 
   const REMOVE_WHITESPACE_BEFORE = {
@@ -119,7 +118,7 @@ namespace Skew {
     var count = text.count
     var previousKind TokenKind = .NULL
     var previousWasComment = false
-    var stack List<int> = []
+    var stack List<Token> = []
 
     # For backing up
     var yy_last_accepting_state = 0
@@ -138,7 +137,7 @@ namespace Skew {
       var isStringInterpolation = c == '"'
       if c == ')' {
         for i = stack.count - 1; i >= 0; i-- {
-          var kind = tokens[stack[i]].kind
+          var kind = stack[i].kind
           if kind == .STRING_INTERPOLATION_START {
             isStringInterpolation = true
           } else if kind != .LESS_THAN {
@@ -169,7 +168,7 @@ namespace Skew {
       }
 
       # Special-case XML literals
-      else if c == '>' && !stack.isEmpty && tokens[stack.last].kind == .XML_START {
+      else if c == '>' && !stack.isEmpty && stack.last.kind == .XML_START {
         yy_cp++
         yy_act = .XML_END
       }
@@ -231,32 +230,31 @@ namespace Skew {
         break
       }
 
-      var tokenRange = Range.new(source, yy_bp, yy_cp)
-      var tokenKind = yy_act
-      var tokenComments List<Comment>
+      var token = Token.new(Range.new(source, yy_bp, yy_cp), yy_act, null)
 
       # Have a nice error message for certain tokens
       if yy_act == .COMMENT_ERROR {
-        log.syntaxErrorSlashComment(tokenRange)
-        tokenKind = .COMMENT
+        log.syntaxErrorSlashComment(token.range)
+        token.kind = .COMMENT
       } else if yy_act == .NOT_EQUAL_ERROR {
-        log.syntaxErrorOperatorTypo(tokenRange, "!=")
-        tokenKind = .NOT_EQUAL
+        log.syntaxErrorOperatorTypo(token.range, "!=")
+        token.kind = .NOT_EQUAL
       } else if yy_act == .EQUAL_ERROR {
-        log.syntaxErrorOperatorTypo(tokenRange, "==")
-        tokenKind = .EQUAL
+        log.syntaxErrorOperatorTypo(token.range, "==")
+        token.kind = .EQUAL
       }
 
       # Tokens that start with a greater than may need to be split, potentially multiple times
       var loop = true
       while loop {
-        const tokenStartsWithGreaterThan = text[tokenRange.start] == '>'
+        var tokenStartsWithGreaterThan = text[token.range.start] == '>'
+        var tokenKind = token.kind
         loop = false
 
         # Remove tokens from the stack if they aren't working out
         while !stack.isEmpty {
-          const top = stack.last
-          const topKind = tokens[top].kind
+          var top = stack.last
+          var topKind = top.kind
 
           # Stop parsing a type if we find a token that no type expression uses
           if topKind == .LESS_THAN && tokenKind != .LESS_THAN && tokenKind != .IDENTIFIER && tokenKind != .COMMA && tokenKind != .DYNAMIC &&
@@ -270,7 +268,7 @@ namespace Skew {
         # Group open
         if tokenKind == .LEFT_PARENTHESIS || tokenKind == .LEFT_BRACE || tokenKind == .LEFT_BRACKET ||
             tokenKind == .LESS_THAN || tokenKind == .STRING_INTERPOLATION_START || tokenKind == .XML_START {
-          stack.append(tokens.count)
+          stack.append(token)
         }
 
         # Group close
@@ -279,8 +277,8 @@ namespace Skew {
 
           # Search for a matching opposite token
           while !stack.isEmpty {
-            const top = stack.last
-            const topKind = tokens[top].kind
+            var top = stack.last
+            var topKind = top.kind
 
             # Don't match ">" that don't work since they are just operators
             if tokenStartsWithGreaterThan && topKind != .LESS_THAN {
@@ -303,25 +301,24 @@ namespace Skew {
 
               # Break apart operators that start with a closing angle bracket
               if tokenKind != .GREATER_THAN {
-                var start = tokenRange.start
+                var start = token.range.start
                 tokens.append(Token.new(Range.new(source, start, start + 1), .PARAMETER_LIST_END, null))
-                tokenRange = Range.new(source, start + 1, tokenRange.end)
-                tokenKind =
+                token.range = Range.new(source, start + 1, token.range.end)
+                token.kind =
                   tokenKind == .SHIFT_RIGHT ? .GREATER_THAN :
                   tokenKind == .UNSIGNED_SHIFT_RIGHT ? .SHIFT_RIGHT :
                   tokenKind == .GREATER_THAN_OR_EQUAL ? .ASSIGN :
                   tokenKind == .ASSIGN_SHIFT_RIGHT ? .GREATER_THAN_OR_EQUAL :
                   tokenKind == .ASSIGN_UNSIGNED_SHIFT_RIGHT ? .ASSIGN_SHIFT_RIGHT :
                   .NULL
-                assert(tokenKind != .NULL)
+                assert(token.kind != .NULL)
                 loop = tokenKind != .GREATER_THAN_OR_EQUAL # Split this token again
               } else {
-                tokenKind = .PARAMETER_LIST_END
+                token.kind = .PARAMETER_LIST_END
               }
 
               # Convert the "<" into a bound for type parameter lists
-              const topToken = tokens[top]
-              tokens[top] = Token.new(topToken.range, .PARAMETER_LIST_START, topToken.comments)
+              top.kind = .PARAMETER_LIST_START
 
               # Stop the search since we found a match
               break
@@ -340,13 +337,13 @@ namespace Skew {
       # - "var x = 0 \n # comment \n .toString"
       # - "var x = 0 \n ### \n multi-line comment \n ### \n return 0"
       #
-      if previousKind == .NEWLINE && tokenKind == .NEWLINE {
+      if previousKind == .NEWLINE && token.kind == .NEWLINE {
         if comments != null && !previousWasComment {
           comments.last.hasGapBelow = true
         }
         previousWasComment = false
         continue
-      } else if previousKind == .NEWLINE && tokenKind in REMOVE_WHITESPACE_BEFORE {
+      } else if previousKind == .NEWLINE && token.kind in REMOVE_WHITESPACE_BEFORE {
         var last = tokens.takeLast
         if last.comments != null {
           comments ?= []
@@ -355,13 +352,14 @@ namespace Skew {
       }
 
       # Attach comments to tokens instead of having comments be tokens
-      previousWasComment = tokenKind == .COMMENT
+      previousWasComment = token.kind == .COMMENT
       if previousWasComment {
         comments ?= []
         if comments.isEmpty || comments.last.hasGapBelow {
-          comments.append(Comment.new(tokenRange, [], false, false))
+          comments.append(Comment.new(token.range, [], false, false))
         }
-        var line = source.contents.slice(tokenRange.start + 1, tokenRange.end)
+        var range = token.range
+        var line = source.contents.slice(range.start + 1, range.end)
         var hashes = 0
         for j in 0..line.count {
           if line[j] != '#' {
@@ -376,10 +374,10 @@ namespace Skew {
         continue
       }
 
-      previousKind = tokenKind
+      previousKind = token.kind
 
       if previousKind != .NEWLINE {
-        tokenComments = comments
+        token.comments = comments
         comments = null
       }
 
@@ -387,12 +385,12 @@ namespace Skew {
       if !tokens.isEmpty && comments != null && comments.count == 1 &&
           comments.first.lines.count == 1 && !comments.first.hasGapBelow {
         comments.first.isTrailing = true
-        tokenComments = comments
+        token.comments = comments
         comments = null
       }
 
       # Accumulate the token for this iteration
-      tokens.append(Token.new(tokenRange, tokenKind, tokenComments))
+      tokens.append(token)
     }
 
     # Every token stream ends in END_OF_FILE

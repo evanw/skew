@@ -25,7 +25,6 @@ namespace Skew {
     var inNonVoidFunction = false
     var _tokens List<Token>
     var _index = 0
-    var _stolen Token = null
     const warnAboutIgnoredComments bool
 
     # Keep track of the previous syntax error so only one syntax error is emitted
@@ -43,11 +42,9 @@ namespace Skew {
 
     def stealComments List<Comment> {
       var token = current
-      if _stolen == token {
-        return null
-      }
-      _stolen = token
-      return token.comments
+      var comments = token.comments
+      token.comments = null
+      return comments
     }
 
     def next Token {
