@@ -44,6 +44,7 @@ declare module "skew" {
   }
 
   export interface CompilerOptions {
+    release?: boolean
     foldAllConstants?: boolean
     globalizeAllFunctions?: boolean
     inlineAllFunctions?: boolean
