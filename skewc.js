@@ -6244,6 +6244,7 @@
     this._cache = _cache;
     this._specialVariables = new Map();
     this._ctors = new Map();
+    this._enclosingNamespaces = [];
     this._emittedComments = [];
     this._previousNode = null;
     this._previousSymbol = null;
@@ -6712,6 +6713,11 @@
       this._emit(' {\n');
       this._increaseIndent();
       this._expectedNextEnumValue = 0;
+
+      if (symbol.kind == Skew.SymbolKind.OBJECT_NAMESPACE) {
+        this._enclosingNamespaces.push(symbol);
+      }
+
       var variablesComeFirst = symbol.kind == Skew.SymbolKind.OBJECT_CLASS;
 
       if (variablesComeFirst) {
@@ -6739,6 +6745,10 @@
         }
       }
 
+      if (symbol.kind == Skew.SymbolKind.OBJECT_NAMESPACE) {
+        in_List.removeLast(this._enclosingNamespaces);
+      }
+
       this._emitComments(symbol.commentsInsideEndOfBlock);
       this._decreaseIndent();
       this._emit(this._indent + '}\n');
@@ -6751,6 +6761,10 @@
       this._emit(Skew.TypeScriptEmitter._mangleName(symbol));
       this._emit(' {\n');
       this._increaseIndent();
+
+      if (symbol.kind == Skew.SymbolKind.OBJECT_WRAPPED) {
+        this._enclosingNamespaces.push(symbol);
+      }
 
       for (var i4 = 0, list4 = symbol.objects, count4 = list4.length; i4 < count4; i4 = i4 + 1 | 0) {
         var object = in_List.get(list4, i4);
@@ -6767,6 +6781,10 @@
           var variable2 = in_List.get(list6, i6);
           this._emitVariable(variable2);
         }
+      }
+
+      if (symbol.kind == Skew.SymbolKind.OBJECT_WRAPPED) {
+        in_List.removeLast(this._enclosingNamespaces);
       }
 
       this._decreaseIndent();
@@ -7184,7 +7202,7 @@
     else {
       assert(type.kind == Skew.TypeKind.SYMBOL);
       this._handleSymbol(type.symbol);
-      this._emit(Skew.TypeScriptEmitter._fullName(type.symbol));
+      this._emit(this._fullName(type.symbol));
 
       if (type.isParameterized()) {
         this._emit('<');
@@ -7758,7 +7776,7 @@
       }
 
       case Skew.NodeKind.NAME: {
-        this._emit(symbol != null ? Skew.TypeScriptEmitter._fullName(symbol) : node.asString());
+        this._emit(symbol != null ? this._fullName(symbol) : node.asString());
         break;
       }
 
@@ -8242,6 +8260,22 @@
     }
   };
 
+  Skew.TypeScriptEmitter.prototype._fullName = function(symbol) {
+    var parent = symbol.parent;
+
+    if (parent != null && parent.kind != Skew.SymbolKind.OBJECT_GLOBAL && (!Skew.TypeScriptEmitter._shouldFlattenNamespace(parent) || parent.isImported()) && !Skew.in_SymbolKind.isParameter(symbol.kind) && !(this._enclosingNamespaces.indexOf(parent) != -1)) {
+      var enclosingName = this._fullName(parent);
+
+      if (symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
+        return enclosingName;
+      }
+
+      return enclosingName + '.' + Skew.TypeScriptEmitter._mangleName(symbol);
+    }
+
+    return Skew.TypeScriptEmitter._mangleName(symbol);
+  };
+
   Skew.TypeScriptEmitter._isInsideNamespaceOrGlobal = function(symbol) {
     var parent = symbol.parent;
     return parent != null && (parent.kind == Skew.SymbolKind.OBJECT_GLOBAL || parent.kind == Skew.SymbolKind.OBJECT_NAMESPACE && Skew.TypeScriptEmitter._isInsideNamespaceOrGlobal(parent));
@@ -8253,22 +8287,6 @@
 
   Skew.TypeScriptEmitter._isCompactNodeKind = function(kind) {
     return kind == Skew.NodeKind.EXPRESSION || kind == Skew.NodeKind.VARIABLES || Skew.in_NodeKind.isJump(kind);
-  };
-
-  Skew.TypeScriptEmitter._fullName = function(symbol) {
-    var parent = symbol.parent;
-
-    if (parent != null && parent.kind != Skew.SymbolKind.OBJECT_GLOBAL && (!Skew.TypeScriptEmitter._shouldFlattenNamespace(parent) || parent.isImported()) && !Skew.in_SymbolKind.isParameter(symbol.kind)) {
-      var enclosingName = Skew.TypeScriptEmitter._fullName(parent);
-
-      if (symbol.kind == Skew.SymbolKind.FUNCTION_CONSTRUCTOR) {
-        return enclosingName;
-      }
-
-      return enclosingName + '.' + Skew.TypeScriptEmitter._mangleName(symbol);
-    }
-
-    return Skew.TypeScriptEmitter._mangleName(symbol);
   };
 
   Skew.TypeScriptEmitter._mangleName = function(symbol) {

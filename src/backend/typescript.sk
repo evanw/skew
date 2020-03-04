@@ -30,6 +30,7 @@ namespace Skew {
     const _cache TypeCache
     const _specialVariables IntMap<VariableSymbol> = {}
     const _ctors IntMap<MultipleCtors> = {}
+    const _enclosingNamespaces List<Symbol> = []
     var _emittedComments List<Comment> = []
     var _previousNode Node = null
     var _previousSymbol Symbol = null
@@ -425,6 +426,9 @@ namespace Skew {
         _emit(" {\n")
         _increaseIndent
         _expectedNextEnumValue = 0
+        if symbol.kind == .OBJECT_NAMESPACE {
+          _enclosingNamespaces.append(symbol)
+        }
 
         var variablesComeFirst = symbol.kind == .OBJECT_CLASS
 
@@ -449,6 +453,9 @@ namespace Skew {
           }
         }
 
+        if symbol.kind == .OBJECT_NAMESPACE {
+          _enclosingNamespaces.removeLast
+        }
         _emitComments(symbol.commentsInsideEndOfBlock)
         _decreaseIndent
         _emit(_indent + "}\n")
@@ -461,6 +468,9 @@ namespace Skew {
         _emit(_mangleName(symbol))
         _emit(" {\n")
         _increaseIndent
+        if symbol.kind == .OBJECT_WRAPPED {
+          _enclosingNamespaces.append(symbol)
+        }
 
         for object in symbol.objects {
           _emitObject(object)
@@ -476,6 +486,9 @@ namespace Skew {
           }
         }
 
+        if symbol.kind == .OBJECT_WRAPPED {
+          _enclosingNamespaces.removeLast
+        }
         _decreaseIndent
         _emit(_indent + "}\n")
       }
@@ -1703,6 +1716,20 @@ namespace Skew {
         }
       }
     }
+
+    def _fullName(symbol Symbol) string {
+      var parent = symbol.parent
+      if parent != null && parent.kind != .OBJECT_GLOBAL &&
+          (!_shouldFlattenNamespace(parent) || parent.isImported) && !symbol.kind.isParameter &&
+          !(parent in _enclosingNamespaces) {
+        var enclosingName = _fullName(parent)
+        if symbol.kind == .FUNCTION_CONSTRUCTOR {
+          return enclosingName
+        }
+        return enclosingName + "." + _mangleName(symbol)
+      }
+      return _mangleName(symbol)
+    }
   }
 
   namespace TypeScriptEmitter {
@@ -1717,18 +1744,6 @@ namespace Skew {
 
     def _isCompactNodeKind(kind NodeKind) bool {
       return kind == .EXPRESSION || kind == .VARIABLES || kind.isJump
-    }
-
-    def _fullName(symbol Symbol) string {
-      var parent = symbol.parent
-      if parent != null && parent.kind != .OBJECT_GLOBAL && (!_shouldFlattenNamespace(parent) || parent.isImported) && !symbol.kind.isParameter {
-        var enclosingName = _fullName(parent)
-        if symbol.kind == .FUNCTION_CONSTRUCTOR {
-          return enclosingName
-        }
-        return enclosingName + "." + _mangleName(symbol)
-      }
-      return _mangleName(symbol)
     }
 
     def _mangleName(symbol Symbol) string {
