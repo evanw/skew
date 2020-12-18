@@ -1022,5 +1022,33 @@ public class Globals
 }
 ").csharp
 
+# CFG must-return check on a switch statement converted to an if-else chain
+test("
+@export
+def test(x string) int {
+  switch x {
+    case \"y\" { return 1 }
+    default { throw x }
+  }
+}
+", "
+public class Globals
+{
+    public static int test(string x)
+    {
+        string value = x;
+
+        if (value == \"y\")
+        {
+            return 1;
+        }
+        else
+        {
+            throw x;
+        }
+    }
+}
+").csharp
+
   }
 }

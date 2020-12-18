@@ -273,11 +273,17 @@ namespace Skew {
     const SORT_VARIABLES_BY_ID = (a VariableSymbol, b VariableSymbol) => a.id <=> b.id
 
     const SORT_BY_NAME = (a Symbol, b Symbol) int => {
-      var delta = a.name <=> b.name
-      if delta == 0 {
-        return a.id <=> b.id
+      var an = a.name
+      var bn = b.name
+      var ac = an.count
+      var bc = bn.count
+      for i = 0, c = Math.max(ac, bc); i < c; i++ {
+        var ai = i < ac ? an[i] : -1
+        var bi = i < bc ? bn[i] : -1
+        if ai < bi { return -1 }
+        if ai > bi { return 1 }
       }
-      return delta
+      return a.id <=> b.id
     }
 
     def _createID int {

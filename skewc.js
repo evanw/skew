@@ -18375,6 +18375,7 @@
     this._controlFlow.pushBlock(node);
 
     for (var child = node.firstChild(), next = null; child != null; child = next) {
+      var prev = child.previousSibling();
       next = child.nextSibling();
 
       // There is a well-known ambiguity in languages like JavaScript where
@@ -18406,12 +18407,16 @@
 
       this._resolveNode(child, scope, null);
 
+      // Visit control flow from the previous node to the next node, which
+      // should handle the case where this node was replaced with something
+      for (var n = prev != null ? prev.nextSibling() : node.firstChild(); n != next; n = n.nextSibling()) {
+        this._controlFlow.visitStatementInPostOrder(n);
+      }
+
       // Stop now if the child was removed
       if (child.parent() == null) {
         continue;
       }
-
-      this._controlFlow.visitStatementInPostOrder(child);
 
       // The "@skip" annotation removes function calls after type checking
       if (child.kind == Skew.NodeKind.EXPRESSION) {

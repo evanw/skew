@@ -290,7 +290,7 @@ def test_cs():
   # Multiple files
   rmtree('out/cs')
   mkdir('out/cs')
-  run_js('out/skewc.js', SOURCES + ['--target=cs', '--output-dir=out/cs'])
+  run_js('out/skewc.js', SOURCES + ['--target=cs', '--output-dir=out/cs', '--define:BUILD=TEST'])
   compile_cs(glob.glob('out/cs/*.cs'), 'out/test.exe')
   run_cs('out/test.exe', [])
 
