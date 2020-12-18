@@ -23,6 +23,7 @@ namespace Skew.Renaming {
     # Compute naming groups
     var labels = UnionFind.new.allocate(functions.count)
     var groups List<List<FunctionSymbol>> = []
+    var firstScopeForObject = IntMap<Scope>.new
     for i in 0..functions.count {
       functions[i].namingGroup = i
       groups.append(null)
@@ -48,6 +49,13 @@ namespace Skew.Renaming {
         assert(function.name == group.first.name)
       }
       group.append(function)
+
+      # Certain parent objects such as namespaces may have multiple scopes.
+      # However, we want to resolve name collisions in the same scope to detect
+      # collisions across all scopes. Do this by using the first scope.
+      if !(function.parent.id in firstScopeForObject) {
+        firstScopeForObject[function.parent.id] = function.scope.parent
+      }
     }
 
     # Rename stuff
@@ -120,12 +128,12 @@ namespace Skew.Renaming {
 
       # Generate a new name
       var name = start
-      while group.any(function => function.scope.parent.isNameUsed(name)) {
+      while group.any(function => firstScopeForObject[function.parent.id].isNameUsed(name)) {
         count++
         name = start + count.toString
       }
       for function in group {
-        function.scope.parent.reserveName(name, null)
+        firstScopeForObject[function.parent.id].reserveName(name, null)
         function.name = name
       }
     }

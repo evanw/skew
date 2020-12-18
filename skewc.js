@@ -25207,6 +25207,7 @@
     // Compute naming groups
     var labels = new Skew.UnionFind().allocate2(functions.length);
     var groups = [];
+    var firstScopeForObject = new Map();
 
     for (var i = 0, count1 = functions.length; i < count1; i = i + 1 | 0) {
       in_List.get(functions, i).namingGroup = i;
@@ -25244,6 +25245,13 @@
       }
 
       group.push(function1);
+
+      // Certain parent objects such as namespaces may have multiple scopes.
+      // However, we want to resolve name collisions in the same scope to detect
+      // collisions across all scopes. Do this by using the first scope.
+      if (!firstScopeForObject.has(function1.parent.id)) {
+        in_IntMap.set(firstScopeForObject, function1.parent.id, function1.scope.parent);
+      }
     }
 
     // Rename stuff
@@ -25332,7 +25340,7 @@
       var name = start;
 
       while (group1.some(function($function) {
-        return $function.scope.parent.isNameUsed(name);
+        return in_IntMap.get1(firstScopeForObject, $function.parent.id).isNameUsed(name);
       })) {
         count = count + 1 | 0;
         name = start + count.toString();
@@ -25340,7 +25348,7 @@
 
       for (var i6 = 0, count7 = group1.length; i6 < count7; i6 = i6 + 1 | 0) {
         var function4 = in_List.get(group1, i6);
-        function4.scope.parent.reserveName(name, null);
+        in_IntMap.get1(firstScopeForObject, function4.parent.id).reserveName(name, null);
         function4.name = name;
       }
     }

@@ -3781,5 +3781,53 @@ def main(x bool) int {
 })(this);
 ").js
 
+# Avoid name collisions across namespaces
+test("
+namespace A {
+  def foo { foo(1) }
+  def foo(x int) {}
+}
+
+namespace B {
+  def foo { foo(1) }
+}
+namespace B {
+  def foo(x int) {}
+}
+
+@entry
+def main {
+  A.foo
+  B.foo
+}
+", "
+(function() {
+  function main() {
+    A.foo1();
+    B.foo1();
+  }
+
+  var A = {};
+
+  A.foo1 = function() {
+    A.foo2(1);
+  };
+
+  A.foo2 = function(x) {
+  };
+
+  var B = {};
+
+  B.foo1 = function() {
+    B.foo2(1);
+  };
+
+  B.foo2 = function(x) {
+  };
+
+  main();
+})();
+").js
+
   }
 }
