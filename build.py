@@ -9,7 +9,6 @@ import time
 import pipes
 import base64
 import shutil
-import urllib2
 import subprocess
 
 SOURCES = (
@@ -73,7 +72,7 @@ def job(fn):
 
 def run(args, exit_on_failure=True, **kwargs):
   # Print the command for debugging so that it can be copied and pasted into a terminal directly
-  print ' '.join(map(pipes.quote, args))
+  print(' '.join(map(pipes.quote, args)))
 
   # Start the process
   process = subprocess.Popen(args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, **kwargs)
@@ -82,7 +81,7 @@ def run(args, exit_on_failure=True, **kwargs):
 
     # Abort on failure
     if exit_on_failure and process.returncode:
-      print 'error: command exited with code %d' % process.returncode
+      print('error: command exited with code %d' % process.returncode)
       sys.exit(1)
 
     return process.returncode
